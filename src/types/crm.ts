@@ -230,6 +230,14 @@ export interface OrganizationSettings {
   };
   emailAlertsEnabled: boolean;
   autoInvoiceGeneration: boolean;
+  smtp?: {
+    host: string;
+    port: number;
+    user: string;
+    pass: string;
+    from: string;
+    secure: boolean;
+  };
 }
 
 export interface ActivityLogItem {

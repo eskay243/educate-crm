@@ -283,11 +283,25 @@ class ApiService {
     });
   }
 
-  // Staff Welcome Email & Password Setup
-  async sendStaffWelcome(email: string, name: string, roleTitle: string) {
-    return this.request<{ setupUrl: string; log: any }>('/auth/send-welcome', {
+  async testSmtpConnection(smtpConfig?: any) {
+    return this.request<{ success: boolean; message: string; isTestAccount: boolean }>('/email/test-connection', {
       method: 'POST',
-      body: JSON.stringify({ email, name, roleTitle }),
+      body: JSON.stringify({ smtpConfig }),
+    });
+  }
+
+  async sendEmail(payload: { to: string; subject: string; html: string; smtpConfig?: any }) {
+    return this.request<{ success: boolean; messageId: string; previewUrl?: string; isTestAccount: boolean; message: string }>('/email/send-test', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // Staff Welcome Email & Password Setup
+  async sendStaffWelcome(email: string, name: string, roleTitle: string, html?: string) {
+    return this.request<{ setupUrl: string; previewUrl?: string; isTestAccount: boolean; message: string }>('/auth/send-welcome', {
+      method: 'POST',
+      body: JSON.stringify({ email, name, roleTitle, html }),
     });
   }
 

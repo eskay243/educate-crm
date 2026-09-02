@@ -13,8 +13,9 @@ export interface EmailDispatchLog {
   subject: string;
   type: EmailTemplatePayload['type'];
   timestamp: string;
-  status: 'Delivered' | 'Queued' | 'Failed';
-  previewHtml: string;
+  status: 'Delivered' | 'Queued' | 'Failed' | 'Delivered (Sandbox)' | 'Delivered (Live SMTP)';
+  previewHtml?: string;
+  previewUrl?: string;
 }
 
 export class EmailService {

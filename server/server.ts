@@ -3,6 +3,7 @@ import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import nodemailer from 'nodemailer';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -211,63 +212,145 @@ app.post('/api/production/flush-demo-data', (req: Request, res: Response) => {
 });
 
 // ----------------------------------------------------
+// Real Email & SMTP Dispatch Engine (Nodemailer)
+// ----------------------------------------------------
+const getTransporter = async (customSmtp?: any) => {
+  const host = customSmtp?.host || db.settings?.smtp?.host || process.env.SMTP_HOST;
+  const port = Number(customSmtp?.port || db.settings?.smtp?.port || process.env.SMTP_PORT || 465);
+  const user = customSmtp?.user || db.settings?.smtp?.user || process.env.SMTP_USER;
+  const pass = customSmtp?.pass || db.settings?.smtp?.pass || process.env.SMTP_PASS;
+  const secure = customSmtp?.secure !== undefined ? customSmtp.secure : (port === 465);
+  const fromAddress = customSmtp?.from || db.settings?.smtp?.from || process.env.SMTP_FROM || (user ? `"Nexus Institute" <${user}>` : '"Nexus Institute" <admissions@nexus-institute.ng>');
+
+  if (host && user && pass) {
+    return {
+      transporter: nodemailer.createTransport({
+        host,
+        port,
+        secure,
+        auth: { user, pass },
+        tls: { rejectUnauthorized: false },
+      }),
+      from: fromAddress,
+      isTestAccount: false,
+    };
+  }
+
+  // Fallback to test sandbox (Ethereal Email)
+  const testAccount = await nodemailer.createTestAccount();
+  return {
+    transporter: nodemailer.createTransport({
+      host: 'smtp.ethereal.email',
+      port: 587,
+      secure: false,
+      auth: {
+        user: testAccount.user,
+        pass: testAccount.pass,
+      },
+    }),
+    from: '"Nexus Institute of Technology" <admissions@nexus-institute.ng>',
+    isTestAccount: true,
+  };
+};
+
+app.post('/api/email/test-connection', async (req: Request, res: Response) => {
+  try {
+    const { smtpConfig } = req.body;
+    const { transporter, isTestAccount } = await getTransporter(smtpConfig);
+    await transporter.verify();
+
+    res.json({
+      success: true,
+      isTestAccount,
+      message: isTestAccount
+        ? 'Connected to Ethereal Test SMTP sandbox.'
+        : `Successfully authenticated with ${smtpConfig?.host || db.settings?.smtp?.host}. Ready for live inbox delivery!`,
+    });
+  } catch (err: any) {
+    console.error('SMTP Verify Error:', err);
+    res.status(500).json({
+      success: false,
+      message: `SMTP Connection Failed: ${err.message}`,
+    });
+  }
+});
+
+app.post('/api/email/send-test', async (req: Request, res: Response) => {
+  try {
+    const { to, subject, html, smtpConfig } = req.body;
+    const { transporter, from, isTestAccount } = await getTransporter(smtpConfig);
+
+    console.log(`📧 [DISPATCHING EMAIL] To: ${to} | Subject: ${subject} | isTestAccount: ${isTestAccount}`);
+
+    const info = await transporter.sendMail({
+      from,
+      to,
+      subject,
+      html: html || `<p>This is a test notification from Nexus Institute CRM.</p>`,
+    });
+
+    const previewUrl = isTestAccount ? nodemailer.getTestMessageUrl(info) : null;
+
+    res.json({
+      success: true,
+      messageId: info.messageId,
+      previewUrl,
+      isTestAccount,
+      message: isTestAccount
+        ? `Delivered to Ethereal sandbox. View message online: ${previewUrl}`
+        : `Email physically delivered to ${to} via SMTP server!`,
+    });
+  } catch (err: any) {
+    console.error('Email Dispatch Error:', err);
+    res.status(500).json({
+      success: false,
+      message: `Failed to dispatch email: ${err.message}`,
+    });
+  }
+});
+
+// ----------------------------------------------------
 // Staff Authentication & Password Setup
 // ----------------------------------------------------
-app.post('/api/auth/send-welcome', (req: Request, res: Response) => {
-  const { email, name, roleTitle } = req.body;
+app.post('/api/auth/send-welcome', async (req: Request, res: Response) => {
+  const { email, name, roleTitle, html } = req.body;
   const token = `token-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
   const setupUrl = `http://72.61.106.87/reset-password?email=${encodeURIComponent(email)}&token=${token}`;
 
-  const log = {
-    id: `mail-${Date.now()}`,
-    to: email,
-    recipientName: name,
-    subject: `Welcome to Nexus Institute — Set Your Password (${roleTitle})`,
-    type: 'staff_welcome',
-    timestamp: new Date().toISOString(),
-    status: 'Delivered',
-  };
+  try {
+    const { transporter, from, isTestAccount } = await getTransporter();
+    const info = await transporter.sendMail({
+      from,
+      to: email,
+      subject: `Welcome to Nexus Institute — Set Your Password (${roleTitle})`,
+      html: html || `<p>Welcome ${name}, click here to set your password: <a href="${setupUrl}">${setupUrl}</a></p>`,
+    });
 
-  const notif = {
-    id: `notif-${Date.now()}`,
-    title: 'Staff Welcome Email Dispatched',
-    message: `Account activation link sent to ${name} (${email}).`,
-    type: 'system',
-    timestamp: 'Just now',
-    read: false,
-    link: '/settings',
-  };
-  db.notifications.unshift(notif);
-  saveDatabase(db);
+    const previewUrl = isTestAccount ? nodemailer.getTestMessageUrl(info) : null;
 
-  res.json({ 
-    success: true, 
-    message: `Welcome email dispatched to ${email}`, 
-    setupUrl, 
-    log 
-  });
-});
+    const notif = {
+      id: `notif-${Date.now()}`,
+      title: 'Staff Welcome Email Dispatched',
+      message: `Account activation link sent to ${name} (${email}).`,
+      type: 'system',
+      timestamp: 'Just now',
+      read: false,
+      link: '/settings',
+    };
+    db.notifications.unshift(notif);
+    saveDatabase(db);
 
-app.post('/api/auth/reset-password', (req: Request, res: Response) => {
-  const { email } = req.body;
-  const notif = {
-    id: `notif-${Date.now()}`,
-    title: 'Staff Password Updated',
-    message: `Security credentials updated for ${email}.`,
-    type: 'system',
-    timestamp: 'Just now',
-    read: false,
-    link: '/settings',
-  };
-  db.notifications.unshift(notif);
-  saveDatabase(db);
-  res.json({ success: true, message: 'Password updated successfully.' });
-});
-
-app.post('/api/email/send-test', (req: Request, res: Response) => {
-  const emailLog = req.body;
-  console.log(`📧 [TRANSACTIONAL EMAIL DISPATCH] To: ${emailLog.to} | Subject: ${emailLog.subject}`);
-  res.json({ success: true, message: 'Email logged and dispatched successfully.' });
+    res.json({ 
+      success: true, 
+      message: `Welcome email dispatched to ${email}`, 
+      setupUrl,
+      previewUrl,
+      isTestAccount,
+    });
+  } catch (err: any) {
+    console.error('Error sending welcome email:', err);
+    res.status(500).json({ success: false, message: `Failed to send welcome email: ${err.message}` });
+  }
 });
 
 // ----------------------------------------------------

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useCRM } from '../context/CRMContext';
 import { UserRole } from '../types/crm';
 import { emailService, EmailTemplatePayload, EmailDispatchLog } from '../services/emailService';
+import { apiService } from '../services/api';
 
 export const SettingsPage: React.FC = () => {
   const { 
@@ -51,6 +52,16 @@ export const SettingsPage: React.FC = () => {
   const [emailLogs, setEmailLogs] = useState<EmailDispatchLog[]>([]);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
+  // SMTP Settings State
+  const [smtpHost, setSmtpHost] = useState(settings.smtp?.host || 'smtp.hostinger.com');
+  const [smtpPort, setSmtpPort] = useState(settings.smtp?.port || 465);
+  const [smtpUser, setSmtpUser] = useState(settings.smtp?.user || '');
+  const [smtpPass, setSmtpPass] = useState(settings.smtp?.pass || '');
+  const [smtpFrom, setSmtpFrom] = useState(settings.smtp?.from || `"Nexus Institute" <support@growpot.cloud>`);
+  const [smtpSecure, setSmtpSecure] = useState(settings.smtp?.secure ?? true);
+  const [smtpTesting, setSmtpTesting] = useState(false);
+  const [smtpStatusMessage, setSmtpStatusMessage] = useState<{ text: string; success: boolean } | null>(null);
+
   // Production Flush Confirmation Modal
   const [showFlushConfirm, setShowFlushConfirm] = useState(false);
 
@@ -70,10 +81,54 @@ export const SettingsPage: React.FC = () => {
       },
       emailAlertsEnabled,
       autoInvoiceGeneration,
+      smtp: {
+        host: smtpHost,
+        port: Number(smtpPort),
+        user: smtpUser,
+        pass: smtpPass,
+        from: smtpFrom,
+        secure: smtpSecure,
+      }
     });
 
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
+  };
+
+  const handleVerifySmtp = async () => {
+    setSmtpTesting(true);
+    setSmtpStatusMessage(null);
+    try {
+      const res = await apiService.testSmtpConnection({
+        host: smtpHost,
+        port: Number(smtpPort),
+        user: smtpUser,
+        pass: smtpPass,
+        secure: smtpSecure,
+      });
+
+      if (res?.success) {
+        setSmtpStatusMessage({
+          success: true,
+          text: res.message || 'SMTP Handshake Successful! Ready for live email delivery.',
+        });
+        showToast('SMTP Connected', res.message, 'success');
+      } else {
+        setSmtpStatusMessage({
+          success: false,
+          text: res?.message || 'SMTP Connection failed. Please check host, port, and credentials.',
+        });
+        showToast('SMTP Failed', res?.message || 'Check credentials', 'error');
+      }
+    } catch (err: any) {
+      setSmtpStatusMessage({
+        success: false,
+        text: `Error connecting to SMTP: ${err.message}`,
+      });
+      showToast('SMTP Error', err.message, 'error');
+    } finally {
+      setSmtpTesting(false);
+    }
   };
 
   const handleCreateStaff = (e: React.FormEvent) => {
@@ -116,62 +171,98 @@ export const SettingsPage: React.FC = () => {
     setShowAddStaffForm(false);
   };
 
+  const templateSubjects: Record<EmailTemplatePayload['type'], string> = {
+    staff_welcome: 'Welcome to Nexus Institute — Set Your Password',
+    password_reset: 'Security Notice: Password Reset Request',
+    payment_reminder: 'Payment Reminder: Outstanding Tuition Balance',
+    invoice_receipt: 'Official Tuition Invoice & Receipt #INV-2026-84912',
+    session_confirmation: '1-on-1 Mentorship Coaching Session Confirmed',
+  };
+
+  const templateData: Record<EmailTemplatePayload['type'], any> = {
+    staff_welcome: {
+      roleTitle: 'Senior Admissions Specialist',
+      department: 'Admissions & Student Success',
+      setupUrl: `http://72.61.106.87/reset-password?email=${encodeURIComponent(testRecipientEmail)}&token=demo-token`,
+    },
+    password_reset: {
+      resetUrl: `http://72.61.106.87/reset-password?email=${encodeURIComponent(testRecipientEmail)}&token=reset-token`,
+    },
+    payment_reminder: {
+      studentCode: 'STU-8492',
+      program: 'Full-Stack Software Engineering',
+      balance: 450000,
+      dueDate: '15th October 2026',
+      bankName: settings.defaultNIBSSBank.bankName,
+      accountNumber: settings.defaultNIBSSBank.accountNumber,
+      accountName: settings.defaultNIBSSBank.accountName,
+    },
+    invoice_receipt: {
+      invoiceNumber: 'INV-2026-84912',
+      program: 'Full-Stack Software Engineering',
+      amount: 850000,
+      status: 'Paid',
+      paymentRef: 'NIBSS-TRX-9481029',
+    },
+    session_confirmation: {
+      mentorName: 'Dr. Arthur Pendelton',
+      studentName: testRecipientName,
+      topic: 'Distributed Systems & Database Scaling in FinTech',
+      durationHours: 2,
+      compensationAmount: 50000,
+    }
+  };
+
+  const activeEmailPreviewHtml = emailService.generateHtml({
+    to: testRecipientEmail,
+    recipientName: testRecipientName,
+    subject: templateSubjects[selectedEmailTemplate],
+    type: selectedEmailTemplate,
+    data: templateData[selectedEmailTemplate],
+  });
+
   const handleSendTestEmail = async () => {
     setIsSendingEmail(true);
 
-    const templateSubjects: Record<EmailTemplatePayload['type'], string> = {
-      staff_welcome: 'Welcome to Nexus Institute — Set Your Password',
-      password_reset: 'Security Notice: Password Reset Request',
-      payment_reminder: 'Payment Reminder: Outstanding Tuition Balance',
-      invoice_receipt: 'Official Tuition Invoice & Receipt #INV-2026-84912',
-      session_confirmation: '1-on-1 Mentorship Coaching Session Confirmed',
-    };
+    try {
+      // Send real email via backend API (Nodemailer SMTP)
+      const res = await apiService.sendEmail({
+        to: testRecipientEmail,
+        subject: templateSubjects[selectedEmailTemplate],
+        html: activeEmailPreviewHtml,
+        smtpConfig: {
+          host: smtpHost,
+          port: Number(smtpPort),
+          user: smtpUser,
+          pass: smtpPass,
+          from: smtpFrom,
+          secure: smtpSecure,
+        }
+      });
 
-    const templateData: Record<EmailTemplatePayload['type'], any> = {
-      staff_welcome: {
-        roleTitle: 'Senior Admissions Specialist',
-        department: 'Admissions & Student Success',
-        setupUrl: `http://72.61.106.87/reset-password?email=${encodeURIComponent(testRecipientEmail)}&token=demo-token`,
-      },
-      password_reset: {
-        resetUrl: `http://72.61.106.87/reset-password?email=${encodeURIComponent(testRecipientEmail)}&token=reset-token`,
-      },
-      payment_reminder: {
-        studentCode: 'STU-8492',
-        program: 'Full-Stack Software Engineering',
-        balance: 450000,
-        dueDate: '15th October 2026',
-        bankName: settings.defaultNIBSSBank.bankName,
-        accountNumber: settings.defaultNIBSSBank.accountNumber,
-        accountName: settings.defaultNIBSSBank.accountName,
-      },
-      invoice_receipt: {
-        invoiceNumber: 'INV-2026-84912',
-        program: 'Full-Stack Software Engineering',
-        amount: 850000,
-        status: 'Paid',
-        paymentRef: 'NIBSS-TRX-9481029',
-      },
-      session_confirmation: {
-        mentorName: 'Dr. Arthur Pendelton',
-        studentName: testRecipientName,
-        topic: 'Distributed Systems & Database Scaling in FinTech',
-        durationHours: 2,
-        compensationAmount: 50000,
+      const log: EmailDispatchLog = {
+        id: `mail-${Date.now()}`,
+        to: testRecipientEmail,
+        recipientName: testRecipientName,
+        subject: templateSubjects[selectedEmailTemplate],
+        type: selectedEmailTemplate,
+        timestamp: new Date().toLocaleTimeString(),
+        status: res?.isTestAccount ? 'Delivered (Sandbox)' : 'Delivered (Live SMTP)',
+        previewUrl: res?.previewUrl,
+      };
+
+      setEmailLogs(prev => [log, ...prev]);
+
+      if (res?.previewUrl) {
+        showToast('Sandbox Dispatched', 'View the delivered email in the Sandbox link below.', 'info');
+      } else {
+        showToast('Email Dispatched', `Delivered to ${testRecipientEmail} via SMTP.`, 'success');
       }
-    };
-
-    const log = await emailService.sendEmail({
-      to: testRecipientEmail,
-      recipientName: testRecipientName,
-      subject: templateSubjects[selectedEmailTemplate],
-      type: selectedEmailTemplate,
-      data: templateData[selectedEmailTemplate],
-    });
-
-    setEmailLogs(prev => [log, ...prev]);
-    setIsSendingEmail(false);
-    showToast('Email Dispatched', `Test email dispatched to ${testRecipientEmail}.`, 'success');
+    } catch (err: any) {
+      showToast('Dispatch Error', err.message, 'error');
+    } finally {
+      setIsSendingEmail(false);
+    }
   };
 
   const handleBackupFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -195,35 +286,6 @@ export const SettingsPage: React.FC = () => {
     setShowFlushConfirm(false);
   };
 
-  const activeEmailPreviewHtml = emailService.generateHtml({
-    to: testRecipientEmail,
-    recipientName: testRecipientName,
-    subject: 'Template Preview',
-    type: selectedEmailTemplate,
-    data: {
-      roleTitle: 'Senior Admissions Officer',
-      department: 'Admissions & Enrollment',
-      setupUrl: `http://72.61.106.87/reset-password?email=${encodeURIComponent(testRecipientEmail)}&token=preview`,
-      resetUrl: `http://72.61.106.87/reset-password?email=${encodeURIComponent(testRecipientEmail)}&token=preview`,
-      studentCode: 'STU-8492',
-      program: 'Full-Stack Software Engineering',
-      balance: 450000,
-      dueDate: '15th October 2026',
-      bankName: settings.defaultNIBSSBank.bankName,
-      accountNumber: settings.defaultNIBSSBank.accountNumber,
-      accountName: settings.defaultNIBSSBank.accountName,
-      invoiceNumber: 'INV-2026-84912',
-      amount: 850000,
-      status: 'Paid',
-      paymentRef: 'NIBSS-TRX-9481029',
-      mentorName: 'Dr. Arthur Pendelton',
-      studentName: testRecipientName,
-      topic: 'FinTech Cloud Infrastructure',
-      durationHours: 2,
-      compensationAmount: 50000,
-    }
-  });
-
   return (
     <div className="space-y-stack-lg animate-in fade-in duration-200 max-w-5xl">
       {/* Page Header */}
@@ -232,7 +294,7 @@ export const SettingsPage: React.FC = () => {
           Organization &amp; System Operations
         </h2>
         <p className="font-body-md text-body-md text-secondary">
-          Configure corporate profiles, manage staff role security, test transactional emailing, and perform data backups or production flushes.
+          Configure corporate profiles, manage staff role security, test transactional emailing with real SMTP, and perform data backups or production flushes.
         </p>
       </div>
 
@@ -281,7 +343,7 @@ export const SettingsPage: React.FC = () => {
           }`}
         >
           <span className="material-symbols-outlined text-[18px]">mark_email_read</span>
-          <span>Email &amp; Messaging Center</span>
+          <span>Email &amp; SMTP Dispatch Center</span>
         </button>
 
         <button
@@ -597,17 +659,141 @@ export const SettingsPage: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 3: EMAIL & MESSAGING DISPATCH CENTER */}
+      {/* TAB 3: EMAIL & SMTP DISPATCH CENTER */}
       {/* ========================================================================= */}
       {activeTab === 'emailing' && (
         <div className="space-y-stack-md animate-in fade-in duration-200">
+          {/* SMTP Server Configuration Box */}
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-4">
+            <div className="flex justify-between items-start border-b border-outline-variant pb-3">
+              <div>
+                <h3 className="font-headline-sm text-base font-bold text-on-surface flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-[20px]">mark_email_read</span>
+                  <span>SMTP Outbound Server Configuration</span>
+                </h3>
+                <p className="text-xs text-secondary mt-0.5">
+                  Connect your Hostinger Business Email, Gmail App Password, or Brevo SMTP to deliver real emails to actual recipient inboxes.
+                </p>
+              </div>
+              <span className={`px-2.5 py-1 rounded-full text-xs font-bold font-mono ${
+                smtpUser ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#fef9c3] text-[#854d0e]'
+              }`}>
+                {smtpUser ? '● Custom SMTP Active' : '○ Ethereal Test Sandbox'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-xs">
+              <div>
+                <label className="block font-semibold text-on-surface mb-1">SMTP Host</label>
+                <input
+                  type="text"
+                  value={smtpHost}
+                  onChange={(e) => setSmtpHost(e.target.value)}
+                  placeholder="e.g. smtp.hostinger.com"
+                  className="w-full h-9 px-3 rounded bg-surface border border-outline-variant font-mono outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-on-surface mb-1">Port</label>
+                <input
+                  type="number"
+                  value={smtpPort}
+                  onChange={(e) => setSmtpPort(Number(e.target.value))}
+                  placeholder="465 or 587"
+                  className="w-full h-9 px-3 rounded bg-surface border border-outline-variant font-mono outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-on-surface mb-1">SMTP User / Email</label>
+                <input
+                  type="text"
+                  value={smtpUser}
+                  onChange={(e) => setSmtpUser(e.target.value)}
+                  placeholder="e.g. support@growpot.cloud"
+                  className="w-full h-9 px-3 rounded bg-surface border border-outline-variant outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-on-surface mb-1">SMTP Password</label>
+                <input
+                  type="password"
+                  value={smtpPass}
+                  onChange={(e) => setSmtpPass(e.target.value)}
+                  placeholder="••••••••••••"
+                  className="w-full h-9 px-3 rounded bg-surface border border-outline-variant outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-on-surface mb-1">Sender Name / Email</label>
+                <input
+                  type="text"
+                  value={smtpFrom}
+                  onChange={(e) => setSmtpFrom(e.target.value)}
+                  placeholder='"Nexus Institute" <noreply@domain.ng>'
+                  className="w-full h-9 px-3 rounded bg-surface border border-outline-variant outline-none focus:border-primary"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-outline-variant/60">
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-on-surface">
+                <input
+                  type="checkbox"
+                  checked={smtpSecure}
+                  onChange={(e) => setSmtpSecure(e.target.checked)}
+                  className="rounded border-outline-variant text-primary focus:ring-primary"
+                />
+                <span>Use SSL / Secure Connection (Port 465)</span>
+              </label>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleVerifySmtp}
+                  disabled={smtpTesting}
+                  className="h-9 px-4 rounded-lg bg-surface hover:bg-surface-container border border-outline-variant text-xs font-bold text-on-surface transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[16px]">{smtpTesting ? 'hourglass_top' : 'network_check'}</span>
+                  <span>{smtpTesting ? 'Testing Handshake...' : 'Verify SMTP Connection'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSaveSettings}
+                  className="h-9 px-4 rounded-lg bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+                >
+                  <span className="material-symbols-outlined text-[16px]">save</span>
+                  <span>Save SMTP Credentials</span>
+                </button>
+              </div>
+            </div>
+
+            {smtpStatusMessage && (
+              <div className={`p-3 rounded-lg text-xs font-semibold flex items-center gap-2 animate-in fade-in ${
+                smtpStatusMessage.success 
+                  ? 'bg-[#dcfce7] border border-[#86efac] text-[#166534]' 
+                  : 'bg-[#fef2f2] border border-[#fecaca] text-error'
+              }`}>
+                <span className="material-symbols-outlined text-[18px]">
+                  {smtpStatusMessage.success ? 'check_circle' : 'error'}
+                </span>
+                <span>{smtpStatusMessage.text}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Interactive Template Previewer & Dispatcher */}
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-6">
             <div className="border-b border-outline-variant pb-3">
               <h3 className="font-headline-sm text-base font-bold text-on-surface">
-                Transactional Email &amp; Messaging Dispatch Center
+                Interactive Email Template Dispatcher
               </h3>
               <p className="text-xs text-secondary mt-0.5">
-                Preview and test official institutional HTML templates for student billing, payment reminders, staff invitations, and session confirmations.
+                Send real transactional notices (invitations, tuition reminders, invoices, session bookings).
               </p>
             </div>
 
@@ -644,7 +830,7 @@ export const SettingsPage: React.FC = () => {
 
                 <div className="pt-4 border-t border-outline-variant space-y-3">
                   <div>
-                    <label className="block text-xs font-semibold text-on-surface mb-1">Test Recipient Email</label>
+                    <label className="block text-xs font-semibold text-on-surface mb-1">Target Recipient Email</label>
                     <input
                       type="email"
                       value={testRecipientEmail}
@@ -669,7 +855,7 @@ export const SettingsPage: React.FC = () => {
                     className="w-full h-10 rounded-lg bg-primary hover:bg-primary/90 text-on-primary font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
                     <span className="material-symbols-outlined text-[18px]">send</span>
-                    <span>{isSendingEmail ? 'Dispatching...' : 'Dispatch Test Email'}</span>
+                    <span>{isSendingEmail ? 'Dispatching Real Email...' : 'Dispatch Live Email'}</span>
                   </button>
                 </div>
               </div>
@@ -699,21 +885,37 @@ export const SettingsPage: React.FC = () => {
             {emailLogs.length > 0 && (
               <div className="pt-4 border-t border-outline-variant space-y-2">
                 <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider">
-                  Recent Email Dispatch Stream
+                  Real-Time Email Dispatch Stream
                 </h4>
-                <div className="max-h-40 overflow-y-auto divide-y divide-outline-variant/50 border border-outline-variant rounded-lg bg-surface">
+                <div className="max-h-48 overflow-y-auto divide-y divide-outline-variant/50 border border-outline-variant rounded-lg bg-surface">
                   {emailLogs.map((log) => (
-                    <div key={log.id} className="p-2.5 flex justify-between items-center text-xs">
+                    <div key={log.id} className="p-3 flex justify-between items-center text-xs">
                       <div className="space-y-0.5">
                         <div className="font-semibold text-on-surface flex items-center gap-2">
                           <span>{log.subject}</span>
-                          <span className="px-1.5 py-0.2 rounded bg-[#dcfce7] text-[#166534] text-[10px] font-bold">
+                          <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                            log.status.includes('Live') ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#fef9c3] text-[#854d0e]'
+                          }`}>
                             {log.status}
                           </span>
                         </div>
                         <p className="text-secondary text-[11px]">To: {log.recipientName} ({log.to})</p>
                       </div>
-                      <span className="font-mono text-[10px] text-secondary">{log.timestamp}</span>
+
+                      <div className="flex items-center gap-2">
+                        {log.previewUrl && (
+                          <a
+                            href={log.previewUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2.5 py-1 rounded bg-primary/10 text-primary hover:bg-primary/20 font-semibold text-[11px] inline-flex items-center gap-1 transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-[13px]">open_in_new</span>
+                            <span>View Delivered Email Online</span>
+                          </a>
+                        )}
+                        <span className="font-mono text-[10px] text-secondary">{log.timestamp}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
