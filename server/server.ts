@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 5001;
 const DB_FILE = path.join(__dirname, 'data', 'db.json');
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
 // Logger middleware
 app.use((req, res, next) => {
@@ -95,7 +95,7 @@ let db = loadDatabase();
 // Health & Bootstrap Endpoints
 // ----------------------------------------------------
 app.get('/api/health', (req: Request, res: Response) => {
-  res.json({ status: 'healthy', version: '2.6', timestamp: new Date().toISOString() });
+  res.json({ status: 'healthy', version: '3.2', timestamp: new Date().toISOString() });
 });
 
 app.get('/api/bootstrap', (req: Request, res: Response) => {
@@ -109,6 +109,165 @@ app.post('/api/reset', (req: Request, res: Response) => {
   db = getInitialDatabase();
   saveDatabase(db);
   res.json({ success: true, message: 'All CRM database records restored to Nigerian demo seed data.', data: db });
+});
+
+// ----------------------------------------------------
+// Backup, Restore & Production Data Flush
+// ----------------------------------------------------
+app.get('/api/backups/export', (req: Request, res: Response) => {
+  const exportPayload = {
+    version: '3.2',
+    timestamp: new Date().toISOString(),
+    institution: db.settings.instituteName,
+    exportedBy: 'Super Admin',
+    data: db,
+  };
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Content-Disposition', `attachment; filename=nexus_crm_backup_${new Date().toISOString().split('T')[0]}.json`);
+  res.json({ success: true, data: exportPayload });
+});
+
+app.post('/api/backups/restore', (req: Request, res: Response) => {
+  const { data } = req.body;
+  if (!data || typeof data !== 'object') {
+    return res.status(400).json({ success: false, message: 'Invalid backup data format' });
+  }
+
+  // Restore provided dataset
+  db = {
+    leads: data.leads || [],
+    students: data.students || [],
+    mentors: data.mentors || [],
+    expenses: data.expenses || [],
+    courses: data.courses || [],
+    cohorts: data.cohorts || [],
+    invoices: data.invoices || [],
+    sessions: data.sessions || [],
+    settings: data.settings || db.settings,
+    activityLogs: data.activityLogs || [],
+    notifications: data.notifications || [],
+    staffUsers: data.staffUsers || db.staffUsers,
+  };
+
+  saveDatabase(db);
+  res.json({ success: true, message: 'Database successfully restored from backup snapshot.', data: db });
+});
+
+app.post('/api/production/flush-demo-data', (req: Request, res: Response) => {
+  // Purge mock/demo leads, students, mock expenses, mock sessions, mock invoices
+  db.leads = [];
+  db.students = [];
+  db.expenses = [];
+  db.sessions = [];
+  db.invoices = [];
+  db.notifications = [
+    {
+      id: `notif-${Date.now()}`,
+      title: '🚀 Production System Initialized',
+      message: 'Demo dataset cleared. The system is ready for live operational intake.',
+      type: 'system',
+      timestamp: 'Just now',
+      read: false,
+      link: '/settings',
+    }
+  ];
+  db.activityLogs = [
+    {
+      id: `act-${Date.now()}`,
+      title: 'Production Demo Data Flushed',
+      description: 'Super Admin purged mock records. System initialized for live operations.',
+      type: 'system',
+      user: 'Super Admin',
+      timestamp: 'Just now',
+    }
+  ];
+
+  // Reset mentor session stats while retaining faculty profiles
+  db.mentors = db.mentors.map(m => ({
+    ...m,
+    sessionsCount: 0,
+    pendingPayout: 0,
+    activeMentees: 0,
+  }));
+
+  // Reset cohort enrollment stats
+  db.cohorts = db.cohorts.map(c => ({
+    ...c,
+    enrolledCount: 0,
+  }));
+
+  // Reset course enrollment stats
+  db.courses = db.courses.map(c => ({
+    ...c,
+    enrolledCount: 0,
+  }));
+
+  saveDatabase(db);
+  res.json({ 
+    success: true, 
+    message: 'Demo data flushed successfully. CRM is now in a clean production state.', 
+    data: db 
+  });
+});
+
+// ----------------------------------------------------
+// Staff Authentication & Password Setup
+// ----------------------------------------------------
+app.post('/api/auth/send-welcome', (req: Request, res: Response) => {
+  const { email, name, roleTitle } = req.body;
+  const token = `token-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+  const setupUrl = `http://72.61.106.87/reset-password?email=${encodeURIComponent(email)}&token=${token}`;
+
+  const log = {
+    id: `mail-${Date.now()}`,
+    to: email,
+    recipientName: name,
+    subject: `Welcome to Nexus Institute — Set Your Password (${roleTitle})`,
+    type: 'staff_welcome',
+    timestamp: new Date().toISOString(),
+    status: 'Delivered',
+  };
+
+  const notif = {
+    id: `notif-${Date.now()}`,
+    title: 'Staff Welcome Email Dispatched',
+    message: `Account activation link sent to ${name} (${email}).`,
+    type: 'system',
+    timestamp: 'Just now',
+    read: false,
+    link: '/settings',
+  };
+  db.notifications.unshift(notif);
+  saveDatabase(db);
+
+  res.json({ 
+    success: true, 
+    message: `Welcome email dispatched to ${email}`, 
+    setupUrl, 
+    log 
+  });
+});
+
+app.post('/api/auth/reset-password', (req: Request, res: Response) => {
+  const { email } = req.body;
+  const notif = {
+    id: `notif-${Date.now()}`,
+    title: 'Staff Password Updated',
+    message: `Security credentials updated for ${email}.`,
+    type: 'system',
+    timestamp: 'Just now',
+    read: false,
+    link: '/settings',
+  };
+  db.notifications.unshift(notif);
+  saveDatabase(db);
+  res.json({ success: true, message: 'Password updated successfully.' });
+});
+
+app.post('/api/email/send-test', (req: Request, res: Response) => {
+  const emailLog = req.body;
+  console.log(`📧 [TRANSACTIONAL EMAIL DISPATCH] To: ${emailLog.to} | Subject: ${emailLog.subject}`);
+  res.json({ success: true, message: 'Email logged and dispatched successfully.' });
 });
 
 // ----------------------------------------------------

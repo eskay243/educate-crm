@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { CRMProvider } from './context/CRMContext';
 import { AppLayout } from './components/layout/AppLayout';
 import { LoginPage } from './pages/LoginPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { ExecutiveReportPage } from './pages/ExecutiveReportPage';
 import { LeadManagementPage } from './pages/LeadManagementPage';
@@ -20,6 +21,8 @@ export const App: React.FC = () => {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/set-password" element={<ResetPasswordPage />} />
 
           <Route
             path="/"

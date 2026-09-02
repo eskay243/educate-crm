@@ -134,6 +134,12 @@ interface CRMContextType {
   updateSettings: (newSettings: Partial<OrganizationSettings>) => void;
   logActivity: (activity: Omit<ActivityLogItem, 'id' | 'timestamp'>) => void;
 
+  // Backups, Restore & Production Flush
+  exportDatabaseBackup: () => void;
+  restoreDatabaseBackup: (backupData: any) => Promise<boolean>;
+  flushProductionData: () => Promise<void>;
+  sendStaffWelcomeEmail: (staffId: string) => Promise<void>;
+
   // Reset to seed data
   resetAllData: () => void;
 }
@@ -910,6 +916,129 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const exportDatabaseBackup = () => {
+    const backupData = {
+      version: '3.2',
+      exportDate: new Date().toISOString(),
+      institution: settings.instituteName,
+      exportedBy: currentUser?.name || 'Super Admin',
+      data: {
+        leads,
+        students,
+        mentors,
+        expenses,
+        courses,
+        cohorts,
+        invoices,
+        sessions,
+        settings,
+        notifications,
+        staffUsers,
+        activityLogs,
+      }
+    };
+
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backupData, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('download', `nexus_crm_backup_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+
+    showToast('Backup Exported', 'Full institutional data snapshot downloaded successfully.', 'success');
+    logActivity({
+      title: 'Database Backup Exported',
+      description: `Full snapshot exported by ${currentUser?.name || 'Super Admin'}.`,
+      type: 'system',
+      user: currentUser?.name || 'Super Admin',
+    });
+  };
+
+  const restoreDatabaseBackup = async (backupPayload: any): Promise<boolean> => {
+    try {
+      const data = backupPayload.data || backupPayload;
+      if (!data || typeof data !== 'object') {
+        showToast('Restore Failed', 'Invalid backup file structure.', 'error');
+        return false;
+      }
+
+      if (data.leads) setLeads(data.leads);
+      if (data.students) setStudents(data.students);
+      if (data.mentors) setMentors(data.mentors);
+      if (data.expenses) setExpenses(data.expenses);
+      if (data.courses) setCourses(data.courses);
+      if (data.cohorts) setCohorts(data.cohorts);
+      if (data.invoices) setInvoices(data.invoices);
+      if (data.sessions) setSessions(data.sessions);
+      if (data.settings) setSettings(data.settings);
+      if (data.notifications) setNotifications(data.notifications);
+      if (data.staffUsers) setStaffUsers(data.staffUsers);
+      if (data.activityLogs) setActivityLogs(data.activityLogs);
+
+      await apiService.restoreBackup(data);
+
+      showToast('Database Restored', 'CRM database snapshot successfully restored!', 'success');
+      logActivity({
+        title: 'Database Restored from Backup',
+        description: 'System state restored from external backup file.',
+        type: 'system',
+        user: currentUser?.name || 'Super Admin',
+      });
+      return true;
+    } catch (err) {
+      console.error('Error restoring backup:', err);
+      showToast('Restore Error', 'Failed to restore backup.', 'error');
+      return false;
+    }
+  };
+
+  const flushProductionData = async () => {
+    setLeads([]);
+    setStudents([]);
+    setExpenses([]);
+    setSessions([]);
+    setInvoices([]);
+    setMentors(prev => prev.map(m => ({ ...m, sessionsCount: 0, pendingPayout: 0, activeMentees: 0 })));
+    setCohorts(prev => prev.map(c => ({ ...c, enrolledCount: 0 })));
+    setCourses(prev => prev.map(c => ({ ...c, enrolledCount: 0 })));
+    
+    setNotifications([
+      {
+        id: `notif-${Date.now()}`,
+        title: '🚀 Production Slate Initialized',
+        message: 'Demo dataset cleared. The system is ready for live operational intake.',
+        type: 'system',
+        timestamp: 'Just now',
+        read: false,
+        link: '/settings',
+      }
+    ]);
+
+    await apiService.flushDemoData();
+
+    showToast('Production Slate Cleaned', 'All demo data cleared. Ready for live operations!', 'success');
+    logActivity({
+      title: 'Demo Data Purged for Production',
+      description: 'Super Admin cleared mock records for live launch.',
+      type: 'system',
+      user: currentUser?.name || 'Super Admin',
+    });
+  };
+
+  const sendStaffWelcomeEmail = async (staffId: string) => {
+    const staff = staffUsers.find(u => u.id === staffId);
+    if (!staff) return;
+
+    await apiService.sendStaffWelcome(staff.email, staff.name, staff.roleTitle);
+
+    showToast(
+      'Welcome Email Sent',
+      `Invitation & password setup link dispatched to ${staff.name} (${staff.email}).`,
+      'success'
+    );
+  };
+
   const resetAllData = () => {
     localStorage.clear();
     setLeads(initialLeads);
@@ -1018,6 +1147,10 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         generateInvoice,
         updateSettings,
         logActivity,
+        exportDatabaseBackup,
+        restoreDatabaseBackup,
+        flushProductionData,
+        sendStaffWelcomeEmail,
         resetAllData,
       }}
     >

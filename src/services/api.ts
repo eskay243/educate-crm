@@ -258,6 +258,45 @@ class ApiService {
   async clearNotifications() {
     return this.request('/notifications', { method: 'DELETE' });
   }
+
+  // Backups, Restore & Production Flush
+  async exportBackup() {
+    return this.request<{
+      version: string;
+      timestamp: string;
+      institution: string;
+      exportedBy: string;
+      data: any;
+    }>('/backups/export');
+  }
+
+  async restoreBackup(backupData: any) {
+    return this.request('/backups/restore', {
+      method: 'POST',
+      body: JSON.stringify({ data: backupData }),
+    });
+  }
+
+  async flushDemoData() {
+    return this.request('/production/flush-demo-data', {
+      method: 'POST',
+    });
+  }
+
+  // Staff Welcome Email & Password Setup
+  async sendStaffWelcome(email: string, name: string, roleTitle: string) {
+    return this.request<{ setupUrl: string; log: any }>('/auth/send-welcome', {
+      method: 'POST',
+      body: JSON.stringify({ email, name, roleTitle }),
+    });
+  }
+
+  async resetPassword(email: string, password?: string) {
+    return this.request('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+  }
 }
 
 export const apiService = new ApiService();
