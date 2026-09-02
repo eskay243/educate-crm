@@ -1,14 +1,10 @@
 {
   "mcpServers": {
     "hostinger": {
-      "command": "npx",
+      "command": "node",
       "args": [
-        "-y",
-        "hostinger-api-mcp"
-      ],
-      "env": {
-        "HOSTINGER_API_TOKEN": ""
-      }
+        "/Users/abiolaadefowope/.gemini/mcp/hostinger/node_modules/hostinger-api-mcp/src/servers/all.js"
+      ]
     }
   }
 }
