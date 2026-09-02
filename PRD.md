@@ -3,13 +3,13 @@
 **Project Title**: Nexus Institute of Technology — Edu-Business Operations & CRM Suite  
 **Target Market & Localization**: Nigeria (Strict Nigerian Naira `₦` Pricing, CAC RC / TIN Compliance, NIBSS Banking Settlement)  
 **Design Standard**: Google Stitch "Kinetic Enterprise" System (Strict Palette, Inter/JetBrains Typography, High-Contrast Bento Layouts)  
-**Version**: 3.0 (Full-Stack Release: Node/Express REST Backend API, Database Persistence & Cloud Sync)
+**Version**: 3.1 (Production Release: Deployed Live on Hostinger VPS & GitHub)
 
 ---
 
 ## 1. Executive Summary & Vision
 
-The **Edu-Business Operations CRM** is a centralized full-stack web platform designed for managing accelerated technology education academies and corporate training hubs in Nigeria. The system bridges student admissions, corporate prospect lead nurturing, curriculum program configuration, student billing/invoicing, faculty mentorship scheduling, operating expense management, staff role permissions management, role-based privacy security, advanced interactive analytics, an event-driven automation engine, and a dedicated **Node/Express REST API backend with JSON/SQLite database persistence**.
+The **Edu-Business Operations CRM** is a centralized full-stack enterprise web platform designed for managing accelerated technology education academies and corporate training hubs in Nigeria. The system bridges student admissions, corporate prospect lead nurturing, curriculum program configuration, student billing/invoicing, faculty mentorship scheduling, operating expense management, staff role permissions management, role-based privacy security, advanced interactive analytics, an event-driven automation engine, and a dedicated **Node/Express REST API backend with live Hostinger VPS cloud deployment**.
 
 ---
 
@@ -26,27 +26,13 @@ The system enforces strict permission separation and multi-layered data privacy 
 
 ---
 
-## 3. Full-Stack Architecture & Backend Services
+## 3. Production Deployment & Cloud Infrastructure
 
-### 3.1. Express REST API Backend (`server/server.ts`)
-- **Port**: `5001` (proxied via Vite at `/api`).
-- **Persistence Store**: `server/data/db.json` with automatic seed data initialization on first boot.
-- **REST Endpoints**:
-  - `GET /api/health` — API health check.
-  - `GET /api/bootstrap` — High-speed bootstrap payload returning all CRM entities in 1 call.
-  - `GET|POST /api/leads`, `PATCH /api/leads/:id`, `POST /api/leads/:id/convert`.
-  - `GET|POST /api/students`, `PATCH /api/students/:id`, `POST /api/students/:id/payment-reminder`.
-  - `GET|POST /api/mentors`, `PATCH /api/mentors/:id`.
-  - `GET|POST /api/expenses`, `PATCH /api/expenses/:id`.
-  - `GET|POST /api/courses`, `PATCH /api/courses/:id`, `GET|POST /api/cohorts`.
-  - `GET|POST /api/invoices`, `GET|POST /api/sessions`.
-  - `GET|POST|PATCH /api/staff`, `GET|PUT /api/settings`.
-  - `GET|PATCH|DELETE /api/notifications`.
-  - `POST /api/reset` — Atomic database reset to Nigerian seed dataset.
-
-### 3.2. Asynchronous Frontend Service Layer (`src/services/api.ts`)
-- Type-safe HTTP client with optimistic UI updates.
-- Automatic fallback to local offline cache if the server is unreachable, ensuring continuous zero-downtime execution.
+- **Live Hostinger VPS**: `72.61.106.87` (`srv1120088.hstgr.cloud`)
+- **Process Management**: PM2 daemon managing `nexus-crm-api` with systemd startup persistence.
+- **Web Server & Reverse Proxy**: Nginx routing `/` to compiled SPA build and `/api/` to Express backend on port `5001`.
+- **GitHub Repository**: [https://github.com/eskay243/educate-crm](https://github.com/eskay243/educate-crm)
+- **1-Click Automation**: [`deploy.sh`](https://github.com/eskay243/educate-crm/blob/main/deploy.sh) and [`docker-compose.yml`](https://github.com/eskay243/educate-crm/blob/main/docker-compose.yml).
 
 ---
 
@@ -108,4 +94,4 @@ The system enforces strict permission separation and multi-layered data privacy 
 - **Frontend**: React 19, TypeScript, Vite, Tailwind CSS, Recharts.
 - **Backend API**: Node.js, Express, TypeScript (`tsx`), CORS, REST endpoints.
 - **Database Persistence**: File-based JSON Database (`server/data/db.json`) + LocalStorage offline sync.
-- **Build Status**: Clean ESM compilation with 0 TypeScript/ESLint errors.
+- **Deployment**: Ubuntu 24.04 VPS on Hostinger, PM2 Daemon, Nginx Reverse Proxy.
