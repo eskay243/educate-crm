@@ -1,0 +1,404 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Nexus CRM - Mentor Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#e0e3e5",
+                        "outline": "#757682",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed-dim": "#bec6e0",
+                        "on-primary-container": "#90a8ff",
+                        "on-primary-fixed-variant": "#264191",
+                        "on-surface-variant": "#444651",
+                        "surface-dim": "#d8dadc",
+                        "on-tertiary-fixed": "#131b2e",
+                        "on-surface": "#191c1e",
+                        "on-tertiary-fixed-variant": "#3f465c",
+                        "on-error": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-fixed": "#dae2fd",
+                        "primary-container": "#1e3a8a",
+                        "inverse-primary": "#b6c4ff",
+                        "surface-container-highest": "#e0e3e5",
+                        "secondary-container": "#d0e1fb",
+                        "primary": "#00236f",
+                        "on-secondary-container": "#54647a",
+                        "on-error-container": "#93000a",
+                        "surface-bright": "#f7f9fb",
+                        "on-primary-fixed": "#00164e",
+                        "secondary-fixed-dim": "#b7c8e1",
+                        "background": "#f7f9fb",
+                        "tertiary-container": "#384055",
+                        "error-container": "#ffdad6",
+                        "on-background": "#191c1e",
+                        "surface-container-low": "#f2f4f6",
+                        "primary-fixed-dim": "#b6c4ff",
+                        "secondary": "#505f76",
+                        "tertiary": "#222a3e",
+                        "on-secondary-fixed": "#0b1c30",
+                        "surface-container": "#eceef0",
+                        "primary-fixed": "#dce1ff",
+                        "surface": "#f7f9fb",
+                        "surface-tint": "#4059aa",
+                        "secondary-fixed": "#d3e4fe",
+                        "surface-container-high": "#e6e8ea",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-container": "#a4acc5",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-fixed-variant": "#38485d",
+                        "outline-variant": "#c5c5d3",
+                        "inverse-surface": "#2d3133"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "container-max": "1440px",
+                        "stack-md": "16px",
+                        "stack-sm": "8px",
+                        "gutter": "24px",
+                        "unit": "4px",
+                        "stack-lg": "32px",
+                        "margin-page": "32px"
+                    },
+                    "fontFamily": {
+                        "data-tabular": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "display": ["Inter"],
+                        "body-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "data-tabular": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "display": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-md": ["13px", { "lineHeight": "18px", "letterSpacing": "0.03em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0; }
+        .table-row-zebra:nth-child(even) { background-color: #F8FAFC; }
+        .table-row-zebra:nth-child(odd) { background-color: #FFFFFF; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex">
+<!-- SideNavBar -->
+<nav aria-label="Sidebar" class="bg-surface-container-low dark:bg-inverse-surface text-primary dark:text-primary-fixed-dim font-label-md text-label-md fixed left-0 top-0 h-screen w-64 border-r border-outline-variant dark:border-on-surface-variant flex flex-col h-full py-stack-md z-40 transition-all duration-200 ease-in-out hidden md:flex">
+<div class="px-gutter mb-stack-lg flex items-center gap-stack-sm">
+<img alt="Organization Logo" class="w-8 h-8 rounded-lg object-cover" data-alt="A small, professional abstract geometric logo in shades of dark blue and grey, suitable for an enterprise corporate portal header. Minimalist design on a transparent background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuACKX5GWl8b-BRrrNqB9qrniGILwpNflnO4xOFaX5iCtR-xhCMjAkkxz5aAybPHy2UNvIj8AniZYLxuyeLzoEm0nD_udm7-MluuRgljucWhUobVF8V8B0-fzQV0FQIwcebN5eepkqPPi8UaOnHKtd-lujgLGAjvMqGV1FY2xN92dSoW0wGboprpFLitHVax11r8vMS91Pd5bSexCByhKlFI86Vy4AzxOONXNvuQlX0QVclVwMYZlCLX">
+<div>
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed-dim">Enterprise Portal</h1>
+<p class="font-body-sm text-body-sm text-secondary">Management Suite</p>
+</div>
+</div>
+<div class="px-gutter mb-stack-md">
+<button class="w-full h-10 bg-primary text-on-primary rounded flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                Create New Record
+            </button>
+</div>
+<div class="flex-1 overflow-y-auto px-stack-sm space-y-1">
+<!-- Active Tab -->
+<a class="flex items-center gap-3 px-3 py-2 rounded text-primary dark:text-primary-fixed-dim font-bold border-r-4 border-primary bg-surface-container dark:bg-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-on-surface-variant transition-all duration-200 ease-in-out cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined">groups</span>
+                Mentors
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-secondary dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-on-surface-variant transition-all duration-200 ease-in-out cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined">school</span>
+                Students
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-secondary dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-on-surface-variant transition-all duration-200 ease-in-out cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined">leaderboard</span>
+                Leads
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-secondary dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-on-surface-variant transition-all duration-200 ease-in-out cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined">payments</span>
+                Expenses
+            </a>
+</div>
+<div class="mt-auto px-stack-sm space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded text-secondary dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-on-surface-variant transition-all duration-200 ease-in-out cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined">settings</span>
+                Settings
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-secondary dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-on-surface-variant transition-all duration-200 ease-in-out cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined">contact_support</span>
+                Support
+            </a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col md:ml-64 min-w-0">
+<!-- TopNavBar -->
+<header class="bg-surface dark:bg-inverse-surface border-b border-outline-variant dark:border-on-surface-variant flex justify-between items-center h-16 px-gutter w-full sticky top-0 z-50">
+<div class="flex items-center gap-stack-lg flex-1">
+<div class="md:hidden flex items-center gap-2">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low rounded transition-colors">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<span class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed-dim">Nexus CRM</span>
+</div>
+<!-- Search Bar -->
+<div class="hidden md:flex relative max-w-md w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full h-10 pl-10 pr-4 bg-surface-container-low border border-outline-variant rounded font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" placeholder="Search mentors, courses, or financial records..." type="text">
+</div>
+</div>
+<div class="flex items-center gap-stack-sm">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-on-surface-variant transition-colors rounded-full cursor-pointer active:opacity-80 relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-on-surface-variant transition-colors rounded-full cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined">help</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-on-surface-variant transition-colors rounded-full cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="ml-stack-sm w-8 h-8 rounded-full overflow-hidden border border-outline-variant cursor-pointer hover:opacity-90 transition-opacity">
+<img alt="User profile" class="w-full h-full object-cover" data-alt="A professional headshot portrait of a corporate CRM user, smiling slightly, well-lit against a clean white studio background. Sharp focus on face, corporate attire." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCSNd0mVejPWV3900c1cSBmh3GGNXcVPzS9GpS2ZwUhvqQmdIYu5GhmIPfcEaGxlzPCwTaI99kxSijiaZPByyB2v9SQd7p034rk3opGP6QVllGrPbeEKAMo-LISq_gJPflzX-6qwZW_xm5l1cC3_R7hrXtNjQSaKXocPadKeJXkdXj_AxGSsavJGDQyvW41XHvfYyr24frRalkJ3-nBexyiiNqaNJiw2ZOQOcjiJZ1ZIQkRm1wT0OjQ">
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<div class="flex-1 p-gutter overflow-auto max-w-container-max mx-auto w-full">
+<div class="flex justify-between items-end mb-stack-lg">
+<div>
+<h2 class="font-display text-display text-on-surface mb-1">Mentor Management</h2>
+<p class="font-body-md text-body-md text-secondary">Track recruited mentors, course assignments, and commission payouts.</p>
+</div>
+<div class="flex gap-3">
+<button class="h-10 px-4 bg-surface-container lowest border border-outline-variant text-on-surface font-label-md text-label-md rounded flex items-center gap-2 hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                        Export CSV
+                    </button>
+<button class="h-10 px-4 bg-primary text-on-primary font-label-md text-label-md rounded flex items-center gap-2 hover:bg-primary/90 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px]">person_add</span>
+                        Recruit Mentor
+                    </button>
+</div>
+</div>
+<!-- Dashboard Widgets Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-stack-lg">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md flex flex-col justify-between">
+<div class="flex justify-between items-start mb-4">
+<span class="font-label-md text-label-md text-secondary">Total Active Mentors</span>
+<span class="material-symbols-outlined text-outline">group</span>
+</div>
+<div>
+<div class="font-headline-lg text-headline-lg text-on-surface">142</div>
+<div class="font-body-sm text-body-sm text-secondary mt-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-primary">trending_up</span>
+<span class="text-primary font-medium">+12%</span> from last month
+                        </div>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md flex flex-col justify-between">
+<div class="flex justify-between items-start mb-4">
+<span class="font-label-md text-label-md text-secondary">Total Commission Pending</span>
+<span class="material-symbols-outlined text-outline">account_balance_wallet</span>
+</div>
+<div>
+<div class="font-headline-lg text-headline-lg text-on-surface">₦45,230</div>
+<div class="font-body-sm text-body-sm text-secondary mt-1 flex items-center gap-1">
+<span class="text-error font-medium">32 Mentors</span> awaiting payout
+                        </div>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md flex flex-col justify-between">
+<div class="flex justify-between items-start mb-4">
+<span class="font-label-md text-label-md text-secondary">Avg. Commission / Mentor</span>
+<span class="material-symbols-outlined text-outline">analytics</span>
+</div>
+<div>
+<div class="font-headline-lg text-headline-lg text-on-surface">₦3,180</div>
+<div class="font-body-sm text-body-sm text-secondary mt-1 flex items-center gap-1">
+<span class="text-secondary">Based on 37% rev share</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Data Table Container -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden flex flex-col">
+<div class="p-stack-md border-b border-outline-variant flex justify-between items-center bg-surface-bright">
+<div class="flex items-center gap-4">
+<h3 class="font-headline-md text-headline-md text-on-surface">Mentor Roster &amp; Financials</h3>
+<span class="bg-surface-container-high text-on-surface-variant font-label-md text-label-md px-2 py-0.5 rounded">All Mentors</span>
+</div>
+<div class="flex gap-2">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">filter_list</span>
+<select class="h-8 pl-8 pr-6 py-0 bg-transparent border border-outline-variant rounded font-body-sm text-body-sm text-on-surface focus:ring-1 focus:ring-primary focus:border-primary appearance-none">
+<option>Status: All</option>
+<option>Status: Outstanding</option>
+<option>Status: Paid</option>
+</select>
+</div>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant bg-surface-container-lowest">
+<th class="p-4 font-label-md text-label-md text-secondary font-medium sticky top-0 bg-surface-container-lowest z-10 w-10"><input class="rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"></th>
+<th class="p-4 font-label-md text-label-md text-secondary font-medium sticky top-0 bg-surface-container-lowest z-10">Mentor Name</th>
+<th class="p-4 font-label-md text-label-md text-secondary font-medium sticky top-0 bg-surface-container-lowest z-10">Assigned Courses</th>
+<th class="p-4 font-label-md text-label-md text-secondary font-medium sticky top-0 bg-surface-container-lowest z-10 text-right">Total Student Rev.</th>
+<th class="p-4 font-label-md text-label-md text-secondary font-medium sticky top-0 bg-surface-container-lowest z-10 text-right">Commission (37%)</th>
+<th class="p-4 font-label-md text-label-md text-secondary font-medium sticky top-0 bg-surface-container-lowest z-10">Status</th>
+<th class="p-4 font-label-md text-label-md text-secondary font-medium sticky top-0 bg-surface-container-lowest z-10 text-center">Actions</th>
+</tr>
+</thead>
+<tbody class="font-data-tabular text-data-tabular text-on-surface">
+<tr class="table-row-zebra border-b border-outline-variant/50 hover:bg-surface-container-low transition-colors group">
+<td class="p-4"><input class="rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"></td>
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-sm">EW</div>
+<div>
+<div class="font-medium text-on-surface">Elena Weaver</div>
+<div class="font-body-sm text-body-sm text-secondary">Joined Mar 2023</div>
+</div>
+</div>
+</td>
+<td class="p-4">
+<div class="flex flex-wrap gap-1">
+<span class="px-2 py-1 bg-surface-container-high rounded text-xs text-on-surface-variant border border-outline-variant/30">Advanced React</span>
+<span class="px-2 py-1 bg-surface-container-high rounded text-xs text-on-surface-variant border border-outline-variant/30">UI Systems</span>
+</div>
+</td>
+<td class="p-4 text-right font-medium">₦45,000</td>
+<td class="p-4 text-right font-bold text-primary">₦16,650</td>
+<td class="p-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-error-container text-on-error-container">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+                                        Outstanding
+                                    </span>
+</td>
+<td class="p-4">
+<div class="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-secondary hover:text-primary hover:bg-surface-container rounded transition-colors" title="Process Payment">
+<span class="material-symbols-outlined text-[18px]">payments</span>
+</button>
+<button class="p-1.5 text-secondary hover:text-on-surface hover:bg-surface-container rounded transition-colors" title="View Details">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="table-row-zebra border-b border-outline-variant/50 hover:bg-surface-container-low transition-colors group">
+<td class="p-4"><input class="rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"></td>
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-sm">MR</div>
+<div>
+<div class="font-medium text-on-surface">Marcus Reed</div>
+<div class="font-body-sm text-body-sm text-secondary">Joined Jan 2024</div>
+</div>
+</div>
+</td>
+<td class="p-4">
+<div class="flex flex-wrap gap-1">
+<span class="px-2 py-1 bg-surface-container-high rounded text-xs text-on-surface-variant border border-outline-variant/30">Backend Go</span>
+</div>
+</td>
+<td class="p-4 text-right font-medium">₦12,500</td>
+<td class="p-4 text-right font-bold text-primary">₦4,625</td>
+<td class="p-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-[#e6f4ea] text-[#137333]">
+<span class="w-1.5 h-1.5 rounded-full bg-[#137333]"></span>
+                                        Paid
+                                    </span>
+</td>
+<td class="p-4">
+<div class="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-secondary hover:text-on-surface hover:bg-surface-container rounded transition-colors" title="View Details">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="table-row-zebra border-b border-outline-variant/50 hover:bg-surface-container-low transition-colors group">
+<td class="p-4"><input class="rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"></td>
+<td class="p-4">
+<div class="flex items-center gap-3">
+<img alt="Sarah Jenkins" class="w-8 h-8 rounded-full object-cover" data-alt="A professional headshot of an older female corporate mentor wearing glasses and a blazer, smiling warmly. Clean grey studio background, well-lit, shallow depth of field." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkQ2RW5te3-tgXIxlCdRvzJCAp-bDHITdzem3bEM7xkRg6PjhrDpIfA9bnA9AfsbPlsWgfCdy2dmwcDg1QV3_lkTniZUD8sRTwxz7wQVMmwYcMOIysImt2z1LZuSmVt2h975FaRct5Hf4GmjNdzNu6vrsR74XLOHgOB5Y9RyHmVKL6Qx4duCUqxRK03h8yjicYxzhSvg-hn1wmDEgepalyrBYAq7hiGq1p9QavXsCBeDWPryXqxQlO">
+<div>
+<div class="font-medium text-on-surface">Sarah Jenkins</div>
+<div class="font-body-sm text-body-sm text-secondary">Joined Nov 2022</div>
+</div>
+</div>
+</td>
+<td class="p-4">
+<div class="flex flex-wrap gap-1">
+<span class="px-2 py-1 bg-surface-container-high rounded text-xs text-on-surface-variant border border-outline-variant/30">Product Mgmt 101</span>
+<span class="px-2 py-1 bg-surface-container-high rounded text-xs text-on-surface-variant border border-outline-variant/30">Agile</span>
+</div>
+</td>
+<td class="p-4 text-right font-medium">₦82,000</td>
+<td class="p-4 text-right font-bold text-primary">₦30,340</td>
+<td class="p-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-error-container text-on-error-container">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+                                        Outstanding
+                                    </span>
+</td>
+<td class="p-4">
+<div class="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-secondary hover:text-primary hover:bg-surface-container rounded transition-colors" title="Process Payment">
+<span class="material-symbols-outlined text-[18px]">payments</span>
+</button>
+<button class="p-1.5 text-secondary hover:text-on-surface hover:bg-surface-container rounded transition-colors" title="View Details">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination Footer -->
+<div class="p-4 border-t border-outline-variant flex items-center justify-between bg-surface-container-lowest text-secondary font-body-sm text-body-sm">
+<div class="">Showing 1 to 3 of 142 entries</div>
+<div class="flex gap-1">
+<button class="w-8 h-8 flex items-center justify-center rounded border border-outline-variant hover:bg-surface-container-low transition-colors disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded border border-primary bg-primary-container text-on-primary-container font-medium">1</button>
+<button class="w-8 h-8 flex items-center justify-center rounded border border-outline-variant hover:bg-surface-container-low transition-colors">2</button>
+<button class="w-8 h-8 flex items-center justify-center rounded border border-outline-variant hover:bg-surface-container-low transition-colors">3</button>
+<span class="w-8 h-8 flex items-center justify-center">...</span>
+<button class="w-8 h-8 flex items-center justify-center rounded border border-outline-variant hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

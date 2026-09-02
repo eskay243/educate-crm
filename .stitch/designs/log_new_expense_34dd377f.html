@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Log New Business Expense</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed-variant": "#3f465c",
+                        "surface-variant": "#e0e3e5",
+                        "outline-variant": "#c5c5d3",
+                        "on-surface": "#191c1e",
+                        "on-tertiary-container": "#a4acc5",
+                        "on-primary-container": "#90a8ff",
+                        "on-secondary-fixed-variant": "#38485d",
+                        "surface": "#f7f9fb",
+                        "on-error-container": "#93000a",
+                        "tertiary": "#222a3e",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "surface-dim": "#d8dadc",
+                        "primary-fixed": "#dce1ff",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-primary": "#b6c4ff",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-fixed-dim": "#bec6e0",
+                        "on-secondary-fixed": "#0b1c30",
+                        "secondary-fixed-dim": "#b7c8e1",
+                        "secondary": "#505f76",
+                        "surface-bright": "#f7f9fb",
+                        "on-surface-variant": "#444651",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed": "#dae2fd",
+                        "surface-container-high": "#e6e8ea",
+                        "secondary-fixed": "#d3e4fe",
+                        "error-container": "#ffdad6",
+                        "outline": "#757682",
+                        "primary-fixed-dim": "#b6c4ff",
+                        "inverse-surface": "#2d3133",
+                        "background": "#f7f9fb",
+                        "on-tertiary-fixed": "#131b2e",
+                        "primary-container": "#1e3a8a",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-tint": "#4059aa",
+                        "secondary-container": "#d0e1fb",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-background": "#191c1e",
+                        "primary": "#00236f",
+                        "surface-container": "#eceef0",
+                        "on-primary-fixed-variant": "#264191",
+                        "on-error": "#ffffff",
+                        "on-secondary-container": "#54647a",
+                        "tertiary-container": "#384055",
+                        "on-primary-fixed": "#00164e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .focused-input:focus { border-color: #00236f; ring: 2px; ring-color: rgba(0, 35, 111, 0.2); }
+        .dropzone-active { border-color: #00236f; background-color: #dce1ff; }
+    </style>
+</head>
+<body class="text-on-background">
+<!-- Focused View Header (Rule 3: Back-to-Main Exception) -->
+<nav class="sticky top-0 z-50 bg-surface border-b border-outline-variant px-margin-page py-4 flex items-center justify-between">
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-surface-container-high rounded-full transition-colors duration-200" onclick="window.history.back()">
+<span class="material-symbols-outlined text-on-surface">arrow_back</span>
+</button>
+<h1 class="text-headline-md text-on-surface">Log Business Expense</h1>
+</div>
+<div class="flex items-center gap-2">
+<div class="h-2 w-16 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary w-2/3"></div>
+</div>
+<span class="text-body-sm text-secondary">Step 1 of 1</span>
+</div>
+</nav>
+<main class="max-w-[800px] mx-auto px-gutter py-stack-lg">
+<!-- Form Container -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant overflow-hidden">
+<!-- Hero Image/Section -->
+<div class="relative h-48 w-full">
+<div class="bg-cover bg-center w-full h-full" data-alt="A professional, high-angle shot of a clean, minimalist workspace featuring a sleek laptop, a cup of coffee, and some business documents on a light oak desk. The lighting is soft and natural, streaming from a nearby window, creating a calm and productive atmosphere. The color palette is composed of soft blues, whites, and warm wood tones, matching a corporate light-mode design system." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBX9jhdXLgeqKORSpAhpD8l9-lYu0NEZm_29qV6i2qVcvJ9UzQJ4fATRNpZ3aBwOfURfCZjLePx3aK2bf-XYRfrnuF0BtduaIhlJEbXuut6Hxlr7D2onOs1huD-kYmgZpUkhfb0Iaf_oaUGt8ZFZqbJge7vcEmPwKyed4UszUNtPh_5wHFtRmIWU1IKTN7ZWH8Fi_8u1-cEInRbfa-TJv-2o0M0RTlPJgqT_11jnW_G9jQ20iZTu1Vp')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end p-gutter">
+<h2 class="text-display text-white text-2xl">Financial Records</h2>
+</div>
+</div>
+<form class="p-gutter space-y-stack-md" id="expenseForm">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<!-- Expense Description -->
+<div class="md:col-span-2">
+<label class="block text-label-md text-on-surface-variant mb-unit">Expense Description</label>
+<input class="w-full h-12 px-4 rounded border border-outline focus:border-primary focus:ring-1 focus:ring-primary bg-surface transition-all duration-200 text-body-md" placeholder="e.g. AWS Cloud Infrastructure - June 2024" required="" type="text"/>
+</div>
+<!-- Category Dropdown -->
+<div>
+<label class="block text-label-md text-on-surface-variant mb-unit">Category</label>
+<select class="w-full h-12 px-4 rounded border border-outline focus:border-primary focus:ring-1 focus:ring-primary bg-surface transition-all duration-200 text-body-md appearance-none" style="background-image: url('data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3e%3cpath stroke=%27%23444651%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/%3e%3c/svg%3e'); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em;">
+<option disabled="" selected="" value="">Select Category</option>
+<option value="infrastructure">Infrastructure</option>
+<option value="software">Software</option>
+<option value="marketing">Marketing</option>
+<option value="operations">Operations</option>
+<option value="travel">Travel &amp; Ent</option>
+</select>
+</div>
+<!-- Amount Field -->
+<div>
+<label class="block text-label-md text-on-surface-variant mb-unit">Amount (₦)</label>
+<div class="relative">
+<span class="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant font-semibold">₦</span>
+<input class="w-full h-12 pl-10 pr-4 rounded border border-outline focus:border-primary focus:ring-1 focus:ring-primary bg-surface transition-all duration-200 text-body-md" placeholder="0.00" required="" type="number"/>
+</div>
+</div>
+<!-- Date Picker -->
+<div>
+<label class="block text-label-md text-on-surface-variant mb-unit">Date of Expense</label>
+<input class="w-full h-12 px-4 rounded border border-outline focus:border-primary focus:ring-1 focus:ring-primary bg-surface transition-all duration-200 text-body-md" required="" type="date"/>
+</div>
+<!-- Receipt Upload Zone -->
+<div class="md:col-span-2">
+<label class="block text-label-md text-on-surface-variant mb-unit">Receipt / Proof of Purchase</label>
+<div class="relative border-2 border-dashed border-outline-variant rounded-xl p-8 flex flex-col items-center justify-center bg-surface-container-low hover:bg-surface-container transition-colors duration-200 cursor-pointer group" id="dropzone">
+<input accept="image/*,.pdf" class="absolute inset-0 opacity-0 cursor-pointer" id="fileInput" type="file"/>
+<div class="bg-primary-container p-4 rounded-full mb-4 group-hover:scale-110 transition-transform duration-200">
+<span class="material-symbols-outlined text-on-primary-container" style="font-size: 32px;">upload_file</span>
+</div>
+<p class="text-body-lg font-medium text-on-surface">Click to upload or drag and drop</p>
+<p class="text-body-sm text-secondary">PDF, JPG, or PNG (Max. 5MB)</p>
+<div class="mt-4 text-primary font-semibold hidden" id="fileName"></div>
+</div>
+</div>
+</div>
+<!-- Form Action Buttons -->
+<div class="flex items-center justify-end gap-4 pt-gutter border-t border-outline-variant">
+<button class="px-6 h-12 rounded-full text-primary font-semibold hover:bg-primary/5 transition-colors duration-200" onclick="window.history.back()" type="button">
+                        Cancel
+                    </button>
+<button class="px-8 h-12 rounded-full bg-primary text-on-primary font-bold shadow-md hover:bg-on-primary-fixed-variant hover:shadow-lg transition-all duration-200 flex items-center gap-2" type="submit">
+<span class="material-symbols-outlined" style="font-size: 20px;">check</span>
+                        Submit Expense
+                    </button>
+</div>
+</form>
+</div>
+<!-- Tip Card -->
+<div class="mt-gutter p-6 bg-tertiary-fixed rounded-xl flex gap-4 items-start border border-outline-variant">
+<span class="material-symbols-outlined text-on-tertiary-fixed" style="font-size: 24px;">info</span>
+<div>
+<p class="text-label-md text-on-tertiary-fixed font-bold">Policy Reminder</p>
+<p class="text-body-md text-on-tertiary-fixed-variant">All expenses over ₦50,000 require a digital receipt for audit compliance. Approvals are typically processed within 48 business hours.</p>
+</div>
+</div>
+</main>
+<footer class="mt-stack-lg py-8 text-center text-body-sm text-secondary">
+<p>© 2024 Business Expense Tracker. Internal Finance Operations.</p>
+</footer>
+<script>
+        // Micro-interactions for the form
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const fileNameDisplay = document.getElementById('fileName');
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropzone.classList.add('dropzone-active');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('dropzone-active');
+            });
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                fileNameDisplay.textContent = `Selected: ${file.name}`;
+                fileNameDisplay.classList.remove('hidden');
+            }
+        });
+
+        document.getElementById('expenseForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            // Simple success animation/feedback
+            const btn = e.submitter;
+            const originalContent = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<span class="material-symbols-outlined animate-spin" style="font-size: 20px;">progress_activity</span> Processing...`;
+            
+            setTimeout(() => {
+                btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">check_circle</span> Success!`;
+                btn.classList.replace('bg-primary', 'bg-green-600');
+                setTimeout(() => {
+                    alert('Expense logged successfully!');
+                    window.history.back();
+                }, 1000);
+            }, 1500);
+        });
+    </script>
+</body></html>

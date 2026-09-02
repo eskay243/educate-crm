@@ -1,0 +1,770 @@
+{
+  "leads": [
+    {
+      "id": "lead-1",
+      "name": "Sarah Jenkins",
+      "email": "s.jenkins@techcorp.com",
+      "phone": "+234 803 123 4567",
+      "company": "TechCorp West Africa",
+      "programInterest": "Enterprise Data Science Immersive",
+      "status": "Qualified",
+      "score": 94,
+      "source": "Webinar - Q3",
+      "lastContactDate": "24 Oct 2026",
+      "lastContactChannel": "via Email",
+      "assignedRep": "Babatunde Adeleke",
+      "dateAdded": "2026-10-24",
+      "initials": "SJ",
+      "dealValue": 850000,
+      "notes": "Completed technical pre-assessment with top marks. Budget approved by management."
+    },
+    {
+      "id": "lead-2",
+      "name": "Marcus Rodriguez",
+      "email": "marcus.r@globalflow.io",
+      "phone": "+234 812 987 6543",
+      "company": "GlobalFlow Logistics",
+      "programInterest": "Advanced UX/UI Product Design",
+      "status": "Negotiation",
+      "score": 88,
+      "source": "Referral",
+      "lastContactDate": "22 Oct 2026",
+      "lastContactChannel": "via Phone Call",
+      "assignedRep": "Folake Solanke",
+      "dateAdded": "2026-10-22",
+      "initials": "MR",
+      "dealValue": 650000,
+      "notes": "Requested corporate invoice for 3 team members."
+    },
+    {
+      "id": "lead-3",
+      "name": "Elena Vance",
+      "email": "elena@vanceholdings.net",
+      "phone": "+234 701 555 0192",
+      "company": "Vance Holdings Victoria Island",
+      "programInterest": "Full-Stack Software Engineering",
+      "status": "Overdue",
+      "score": 72,
+      "source": "Cold Outreach",
+      "lastContactDate": "10 Oct 2026",
+      "lastContactChannel": "via Email",
+      "assignedRep": "Babatunde Adeleke",
+      "dateAdded": "2026-10-10",
+      "initials": "EV",
+      "avatarUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
+      "dealValue": 850000,
+      "notes": "Follow-up overdue by 14 days. Needs urgent re-engagement call."
+    },
+    {
+      "id": "lead-4",
+      "name": "David Torres",
+      "email": "dtorres@nexussystems.ng",
+      "phone": "+234 809 333 4455",
+      "company": "Nexus Systems Lagos",
+      "programInterest": "Cloud DevOps & SRE Masterclass",
+      "status": "Qualified",
+      "score": 91,
+      "source": "Direct Referral",
+      "lastContactDate": "25 Oct 2026",
+      "lastContactChannel": "via WhatsApp",
+      "assignedRep": "Folake Solanke",
+      "dateAdded": "2026-10-25",
+      "initials": "DT",
+      "dealValue": 750000,
+      "notes": "Ready to pay tuition via corporate direct deposit."
+    },
+    {
+      "id": "lead-5",
+      "name": "Chioma Okonkwo",
+      "email": "chioma.o@paystack.com",
+      "phone": "+234 802 444 8899",
+      "company": "Paystack HQ",
+      "programInterest": "Product Leadership in FinTech",
+      "status": "Negotiation",
+      "score": 96,
+      "source": "Lagos FinTech Summit",
+      "lastContactDate": "26 Oct 2026",
+      "lastContactChannel": "via Phone Call",
+      "assignedRep": "Babatunde Adeleke",
+      "dateAdded": "2026-10-26",
+      "initials": "CO",
+      "dealValue": 1200000,
+      "notes": "Enrolling 2 product analysts for senior certification."
+    },
+    {
+      "id": "lead-6",
+      "name": "Tunde Bakare",
+      "email": "tunde@flutterwave.ng",
+      "phone": "+234 818 777 9900",
+      "company": "Flutterwave Engineering",
+      "programInterest": "Enterprise Data Science Immersive",
+      "status": "Discovery",
+      "score": 65,
+      "source": "LinkedIn Campaign",
+      "lastContactDate": "21 Oct 2026",
+      "lastContactChannel": "via Email",
+      "assignedRep": "Folake Solanke",
+      "dateAdded": "2026-10-21",
+      "initials": "TB",
+      "dealValue": 850000,
+      "notes": "Reviewing curriculum syllabus with team lead."
+    }
+  ],
+  "students": [
+    {
+      "id": "stu-1",
+      "studentCode": "STU-8492",
+      "name": "Eleanor Vance",
+      "email": "eleanor.vance@vancetech.ng",
+      "phone": "+234 803 765 4321",
+      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "program": "Enterprise Data Science Immersive",
+      "mentorId": "men-1",
+      "mentorName": "Dr. Sarah Jenkins",
+      "status": "Active",
+      "attendanceRate": 98,
+      "tuitionStatus": "Partial",
+      "cohort": "Cohort 2026-Q4",
+      "enrolledDate": "2026-08-15",
+      "totalFees": 1245000,
+      "outstandingBalance": 420000,
+      "courses": [
+        {
+          "id": "c-1",
+          "code": "CS-401",
+          "name": "Advanced Data Structures & Algorithms",
+          "semester": "Fall Semester 2026",
+          "instructor": "Dr. Sarah Jenkins",
+          "fee": 415000,
+          "billedDate": "15 Aug 2026"
+        },
+        {
+          "id": "c-2",
+          "code": "AI-302",
+          "name": "Machine Learning & Predictive Modeling",
+          "semester": "Fall Semester 2026",
+          "instructor": "Dr. Olumide Johnson",
+          "fee": 415000,
+          "billedDate": "15 Aug 2026"
+        },
+        {
+          "id": "c-3",
+          "code": "HUM-210",
+          "name": "Data Ethics & Regulatory Compliance in Nigeria",
+          "semester": "Fall Semester 2026",
+          "instructor": "Elena Rodriguez",
+          "fee": 415000,
+          "billedDate": "15 Aug 2026"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1",
+          "description": "1st Installment (Tuition Deposit)",
+          "dueDate": "15 Aug 2026",
+          "amount": 415000,
+          "status": "Paid"
+        },
+        {
+          "id": "inst-2",
+          "description": "2nd Installment (Mid-Term Evaluation)",
+          "dueDate": "15 Sep 2026",
+          "amount": 410000,
+          "status": "Paid"
+        },
+        {
+          "id": "inst-3",
+          "description": "3rd Installment (Final Capstone & Certification)",
+          "dueDate": "15 Nov 2026",
+          "amount": 420000,
+          "status": "Pending"
+        }
+      ]
+    },
+    {
+      "id": "stu-2",
+      "studentCode": "STU-8493",
+      "name": "Babatunde Adeleke",
+      "email": "b.adeleke@interswitch.com",
+      "phone": "+234 812 345 6789",
+      "program": "Cloud DevOps & SRE Masterclass",
+      "mentorId": "men-4",
+      "mentorName": "Dr. Olumide Johnson",
+      "status": "Active",
+      "attendanceRate": 94,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 2026-Q4",
+      "enrolledDate": "2026-08-20",
+      "totalFees": 850000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-4",
+          "code": "DO-501",
+          "name": "Enterprise Kubernetes & CI/CD Pipelines",
+          "semester": "Fall Semester 2026",
+          "instructor": "Dr. Olumide Johnson",
+          "fee": 850000,
+          "billedDate": "20 Aug 2026"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-4",
+          "description": "Full Tuition Payment",
+          "dueDate": "20 Aug 2026",
+          "amount": 850000,
+          "status": "Paid"
+        }
+      ]
+    },
+    {
+      "id": "stu-3",
+      "studentCode": "STU-8494",
+      "name": "Ngozi Okoye",
+      "email": "ngozi.okoye@sterling.ng",
+      "phone": "+234 805 111 2233",
+      "program": "Advanced UX/UI Product Design",
+      "mentorId": "men-2",
+      "mentorName": "Michael Chen",
+      "status": "Active",
+      "attendanceRate": 91,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 2026-Q3",
+      "enrolledDate": "2026-07-10",
+      "totalFees": 650000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-5",
+          "code": "UX-201",
+          "name": "Design Systems & High-Fidelity Prototyping",
+          "semester": "Summer Semester 2026",
+          "instructor": "Michael Chen",
+          "fee": 650000,
+          "billedDate": "10 Jul 2026"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-5",
+          "description": "Full Upfront Payment",
+          "dueDate": "10 Jul 2026",
+          "amount": 650000,
+          "status": "Paid"
+        }
+      ]
+    }
+  ],
+  "mentors": [
+    {
+      "id": "men-1",
+      "mentorCode": "MN-1029",
+      "name": "Dr. Sarah Jenkins",
+      "email": "sarah.jenkins@nexus.edu.ng",
+      "phone": "+234 803 555 1122",
+      "avatarUrl": "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80",
+      "role": "Lead Data Science Faculty",
+      "department": "Engineering",
+      "expertise": [
+        "Python",
+        "PyTorch",
+        "Distributed Systems",
+        "Data Pipelines"
+      ],
+      "hourlyRate": 25000,
+      "maxCapacity": 30,
+      "activeMentees": 24,
+      "rating": 4.9,
+      "sessionsCount": 24,
+      "commissionRate": 37,
+      "pendingPayout": 360000,
+      "payoutStatus": "Completed",
+      "status": "Active",
+      "joinedDate": "2024-03-15",
+      "bio": "Former Senior AI Researcher at Cambridge. 10+ years mentoring enterprise software teams in West Africa."
+    },
+    {
+      "id": "men-2",
+      "mentorCode": "MN-1044",
+      "name": "Michael Chen",
+      "email": "m.chen@nexus.edu.ng",
+      "phone": "+234 812 666 3344",
+      "avatarUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+      "role": "Principal Design Strategist",
+      "department": "Design",
+      "expertise": [
+        "Figma Design Systems",
+        "User Research",
+        "Design Operations"
+      ],
+      "hourlyRate": 20000,
+      "maxCapacity": 20,
+      "activeMentees": 18,
+      "rating": 4.8,
+      "sessionsCount": 18,
+      "commissionRate": 35,
+      "pendingPayout": 270000,
+      "payoutStatus": "Processing",
+      "status": "Active",
+      "joinedDate": "2024-06-01",
+      "bio": "Product Design Consultant with background at top tier African FinTech unicorns."
+    },
+    {
+      "id": "men-3",
+      "mentorCode": "MN-1082",
+      "name": "Elena Rodriguez",
+      "email": "e.rodriguez@nexus.edu.ng",
+      "phone": "+234 701 888 5566",
+      "avatarUrl": "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150&auto=format&fit=crop&q=80",
+      "role": "Director of Business & Strategy",
+      "department": "Business",
+      "expertise": [
+        "EdTech Operations",
+        "Venture Finance",
+        "Go-To-Market"
+      ],
+      "hourlyRate": 30000,
+      "maxCapacity": 35,
+      "activeMentees": 32,
+      "rating": 5,
+      "sessionsCount": 32,
+      "commissionRate": 40,
+      "pendingPayout": 480000,
+      "payoutStatus": "Completed",
+      "status": "Active",
+      "joinedDate": "2023-11-10",
+      "bio": "Executive coach and angel investor across Nigeria and Kenya tech ecosystems."
+    },
+    {
+      "id": "men-4",
+      "mentorCode": "MN-1105",
+      "name": "Dr. Olumide Johnson",
+      "email": "olumide.j@nexus.edu.ng",
+      "phone": "+234 809 222 9988",
+      "avatarUrl": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
+      "role": "Staff Cloud Architect",
+      "department": "Engineering",
+      "expertise": [
+        "AWS",
+        "Kubernetes",
+        "Terraform",
+        "Security Architecture"
+      ],
+      "hourlyRate": 28000,
+      "maxCapacity": 25,
+      "activeMentees": 15,
+      "rating": 4.7,
+      "sessionsCount": 15,
+      "commissionRate": 37,
+      "pendingPayout": 225000,
+      "payoutStatus": "Pending",
+      "status": "Available",
+      "joinedDate": "2025-01-15",
+      "bio": "Specialist in high-availability banking infrastructure and cloud migration."
+    }
+  ],
+  "expenses": [
+    {
+      "id": "exp-1",
+      "expenseCode": "EXP-9021",
+      "title": "AWS Cloud Infrastructure (Production)",
+      "category": "Software",
+      "amount": 145000,
+      "date": "26 Oct 2026",
+      "department": "Engineering",
+      "paymentMethod": "Corporate Visa Card",
+      "status": "Approved",
+      "vendor": "Amazon Web Services Nigeria",
+      "requestedBy": "Tunde Adebayo",
+      "description": "Monthly compute, S3 storage, and RDS Postgres database instances."
+    },
+    {
+      "id": "exp-2",
+      "expenseCode": "EXP-9022",
+      "title": "Lagos Victoria Island Hub Fiber Internet",
+      "category": "Facilities",
+      "amount": 68500,
+      "date": "25 Oct 2026",
+      "department": "Operations",
+      "paymentMethod": "Direct Bank Transfer",
+      "status": "Paid",
+      "vendor": "MainOne Cable Company",
+      "requestedBy": "Grace Danjuma",
+      "description": "Dedicated 500Mbps fiber internet connection for faculty classroom."
+    },
+    {
+      "id": "exp-3",
+      "expenseCode": "EXP-9023",
+      "title": "Faculty Commission Honorarium (October)",
+      "category": "Payroll",
+      "amount": 850000,
+      "date": "24 Oct 2026",
+      "department": "Academics",
+      "paymentMethod": "Automated Bank Settlement",
+      "status": "Approved",
+      "vendor": "Mentor Pool & Faculty",
+      "requestedBy": "Dr. Sarah Jenkins",
+      "description": "Monthly payout for verified completed 1-on-1 mentorship sessions."
+    },
+    {
+      "id": "exp-4",
+      "expenseCode": "EXP-9024",
+      "title": "Google & Meta Lead Acquisition Campaign",
+      "category": "Marketing",
+      "amount": 162000,
+      "date": "22 Oct 2026",
+      "department": "Growth",
+      "paymentMethod": "Mastercard Corporate",
+      "status": "Pending",
+      "vendor": "Google Ireland / Meta Ads",
+      "requestedBy": "Chuka Eze",
+      "description": "Sponsored search ads and LinkedIn lead-generation campaigns for Q4."
+    },
+    {
+      "id": "exp-5",
+      "expenseCode": "EXP-9025",
+      "title": "Zoom & Google Workspace Enterprise Suite",
+      "category": "Software",
+      "amount": 54000,
+      "date": "20 Oct 2026",
+      "department": "Operations",
+      "paymentMethod": "Corporate Visa Card",
+      "status": "Paid",
+      "vendor": "Zoom Video Communications",
+      "requestedBy": "Tunde Adebayo",
+      "description": "50 host accounts with cloud recording and webinar breakout rooms."
+    }
+  ],
+  "courses": [
+    {
+      "id": "course-1",
+      "code": "FS-501",
+      "title": "Full-Stack Software Engineering",
+      "category": "Software Engineering",
+      "description": "Master enterprise TypeScript, React 19, Node.js microservices, PostgreSQL, and AWS deployment.",
+      "durationWeeks": 16,
+      "tuitionFee": 850000,
+      "syllabusModules": [
+        "Frontend Architecture with React & TypeScript",
+        "Scalable Backend API Design & PostgreSQL",
+        "DevOps, Docker & CI/CD Pipelines",
+        "Capstone Project & System Design Interview"
+      ],
+      "leadInstructor": "Dr. Arthur Pendelton",
+      "enrolledCount": 48,
+      "status": "Active",
+      "rating": 4.9
+    },
+    {
+      "id": "course-2",
+      "code": "DS-402",
+      "title": "Enterprise Data Science & Machine Learning",
+      "category": "Data Science",
+      "description": "Deep dive into Python, PyTorch, statistical modeling, data pipelines, and LLM fine-tuning.",
+      "durationWeeks": 14,
+      "tuitionFee": 950000,
+      "syllabusModules": [
+        "Exploratory Data Analysis & Feature Engineering",
+        "Supervised & Unsupervised Machine Learning",
+        "Deep Learning & Neural Networks with PyTorch",
+        "MLOps, Model Serving & Automated Retraining"
+      ],
+      "leadInstructor": "Dr. Sarah Jenkins",
+      "enrolledCount": 36,
+      "status": "Active",
+      "rating": 4.8
+    },
+    {
+      "id": "course-3",
+      "code": "UX-301",
+      "title": "Advanced UX/UI Product Design",
+      "category": "Product Design",
+      "description": "User research, design systems in Figma, accessibility compliance (WCAG), and prototype usability testing.",
+      "durationWeeks": 12,
+      "tuitionFee": 650000,
+      "syllabusModules": [
+        "User Research & Behavioral Journey Mapping",
+        "Kinetic Design Systems & Material 3 Tokens",
+        "Interactive Micro-Animations & Prototyping",
+        "Design Hand-off & Dev Alignment"
+      ],
+      "leadInstructor": "Marcus Vance",
+      "enrolledCount": 32,
+      "status": "Active",
+      "rating": 5
+    },
+    {
+      "id": "course-4",
+      "code": "DO-201",
+      "title": "Cloud DevOps & Infrastructure as Code",
+      "category": "Cloud Engineering",
+      "description": "Kubernetes orchestration, Terraform, AWS multi-region architectures, and site reliability.",
+      "durationWeeks": 10,
+      "tuitionFee": 750000,
+      "syllabusModules": [
+        "Linux Kernel & Network Troubleshooting",
+        "Infrastructure as Code with Terraform",
+        "Kubernetes Cluster Provisioning & Helm",
+        "Observability: Prometheus, Grafana & ELK"
+      ],
+      "leadInstructor": "David Torres",
+      "enrolledCount": 26,
+      "status": "Active",
+      "rating": 4.7
+    }
+  ],
+  "cohorts": [
+    {
+      "id": "cohort-1",
+      "cohortCode": "COH-2026-Q3-FS",
+      "name": "Cohort 2026-Q3 Lagos Tech Hub",
+      "programId": "course-1",
+      "programName": "Full-Stack Software Engineering",
+      "startDate": "2026-07-01",
+      "endDate": "2026-10-30",
+      "maxCapacity": 50,
+      "enrolledCount": 48,
+      "instructorName": "Dr. Arthur Pendelton",
+      "status": "In Progress"
+    },
+    {
+      "id": "cohort-2",
+      "cohortCode": "COH-2026-Q4-DS",
+      "name": "Cohort 2026-Q4 Executive Data Science",
+      "programId": "course-2",
+      "programName": "Enterprise Data Science & Machine Learning",
+      "startDate": "2026-10-15",
+      "endDate": "2027-01-30",
+      "maxCapacity": 40,
+      "enrolledCount": 36,
+      "instructorName": "Dr. Sarah Jenkins",
+      "status": "In Progress"
+    },
+    {
+      "id": "cohort-3",
+      "cohortCode": "COH-2027-Q1-UX",
+      "name": "Cohort 2027-Q1 Product Design Leaders",
+      "programId": "course-3",
+      "programName": "Advanced UX/UI Product Design",
+      "startDate": "2027-01-10",
+      "endDate": "2027-04-10",
+      "maxCapacity": 35,
+      "enrolledCount": 14,
+      "instructorName": "Marcus Vance",
+      "status": "Upcoming"
+    }
+  ],
+  "invoices": [
+    {
+      "id": "inv-1",
+      "invoiceNumber": "INV-2026-08492",
+      "studentId": "stu-1",
+      "studentName": "Eleanor Vance",
+      "studentEmail": "e.vance@techcorp.com",
+      "programName": "Full-Stack Software Engineering",
+      "issueDate": "2026-10-15",
+      "dueDate": "2026-11-15",
+      "totalAmount": 1245000,
+      "paidAmount": 825000,
+      "status": "Partial",
+      "items": [
+        {
+          "id": "item-1",
+          "description": "Term 1 Core Immersive Tuition",
+          "amount": 825000
+        },
+        {
+          "id": "item-2",
+          "description": "Term 2 Advanced Specialization & Cloud Lab Fee",
+          "amount": 420000
+        }
+      ],
+      "paymentReference": "NIBSS-9048123049",
+      "nibssBankName": "Access Bank Nigeria"
+    },
+    {
+      "id": "inv-2",
+      "invoiceNumber": "INV-2026-08493",
+      "studentId": "stu-2",
+      "studentName": "Adeyemi Daniels",
+      "studentEmail": "a.daniels@financials.ng",
+      "programName": "Enterprise Data Science & Machine Learning",
+      "issueDate": "2026-10-01",
+      "dueDate": "2026-10-25",
+      "totalAmount": 950000,
+      "paidAmount": 950000,
+      "status": "Paid",
+      "items": [
+        {
+          "id": "item-1",
+          "description": "Full Program Tuition & GPU Compute Allocation",
+          "amount": 950000
+        }
+      ],
+      "paymentReference": "PAYSTACK-TRX-492019",
+      "nibssBankName": "Guaranty Trust Bank (GTB)"
+    }
+  ],
+  "sessions": [
+    {
+      "id": "sess-1",
+      "sessionCode": "SES-1049",
+      "mentorId": "men-1",
+      "mentorName": "Dr. Arthur Pendelton",
+      "studentId": "stu-1",
+      "studentName": "Eleanor Vance",
+      "date": "2026-10-25",
+      "time": "14:00 - 15:30",
+      "durationHours": 1.5,
+      "topic": "PostgreSQL Query Optimization & Database Indexing Review",
+      "notes": "Covered EXPLAIN ANALYZE, composite indexes, and connection pooling.",
+      "status": "Completed",
+      "compensationAmount": 37500
+    },
+    {
+      "id": "sess-2",
+      "sessionCode": "SES-1050",
+      "mentorId": "men-2",
+      "mentorName": "Dr. Sarah Jenkins",
+      "studentId": "stu-2",
+      "studentName": "Adeyemi Daniels",
+      "date": "2026-10-28",
+      "time": "16:00 - 17:00",
+      "durationHours": 1,
+      "topic": "PyTorch Loss Functions & Gradient Descent Debugging",
+      "notes": "Addressed learning rate decay and exploding gradient fixes.",
+      "status": "Completed",
+      "compensationAmount": 20000
+    }
+  ],
+  "settings": {
+    "instituteName": "Nexus Institute of Technology & Management",
+    "portalTitle": "Edu-Business Operations Enterprise Portal",
+    "address": "Plot 14, Victoria Island Financial District, Lagos, Nigeria",
+    "campusLocations": [
+      "Victoria Island Tech Hub, Lagos",
+      "Yaba Innovation Campus, Lagos",
+      "Maitama Innovation Center, Abuja"
+    ],
+    "email": "operations@nexus-institute.ng",
+    "phone": "+234 1 800 63987",
+    "tinNumber": "TIN-29481029-0001",
+    "cacNumber": "RC-1849201",
+    "defaultCurrency": "NGN (₦)",
+    "defaultNIBSSBank": {
+      "bankName": "Access Bank Nigeria PLC",
+      "accountNumber": "0812948192",
+      "accountName": "NEXUS TECH OPERATIONS LTD"
+    },
+    "emailAlertsEnabled": true,
+    "autoInvoiceGeneration": true
+  },
+  "activityLogs": [
+    {
+      "id": "act-1",
+      "timestamp": "10 mins ago",
+      "title": "Lead Converted to Student",
+      "description": "Eleanor Vance was enrolled in Full-Stack Software Engineering.",
+      "type": "student",
+      "user": "Babatunde Adeleke"
+    },
+    {
+      "id": "act-2",
+      "timestamp": "1 hour ago",
+      "title": "Operating Expense Approved",
+      "description": "EXP-9021 (Generator Diesel Fuel ₦420,000) approved by Finance.",
+      "type": "finance",
+      "user": "Adeyemi Daniels"
+    },
+    {
+      "id": "act-3",
+      "timestamp": "3 hours ago",
+      "title": "Mentor Session Completed",
+      "description": "Dr. Arthur Pendelton logged 1.5h mentorship with Eleanor Vance.",
+      "type": "mentor",
+      "user": "Dr. Arthur Pendelton"
+    },
+    {
+      "id": "act-4",
+      "timestamp": "5 hours ago",
+      "title": "New High-Value Lead Added",
+      "description": "Paystack HQ assigned to Babatunde Adeleke (₦1,200,000 value).",
+      "type": "lead",
+      "user": "Folake Solanke"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "notif-1",
+      "title": "Tuition Payment Due in 3 Days",
+      "message": "Eleanor Vance (#STU-8492) has an outstanding tuition balance of ₦395,000 due on 15 Sep 2026.",
+      "type": "finance",
+      "timestamp": "10m ago",
+      "read": false,
+      "link": "/students"
+    },
+    {
+      "id": "notif-2",
+      "title": "Lead Converted to Student",
+      "message": "Chukwudi Nwachukwu dropped to Converted! Admitted to Full-Stack Engineering with Invoice #INV-2026-94819.",
+      "type": "admissions",
+      "timestamp": "45m ago",
+      "read": false,
+      "link": "/students"
+    },
+    {
+      "id": "notif-3",
+      "title": "1-on-1 Mentorship Honorarium Credited",
+      "message": "Dr. Arthur Pendelton completed 1.5h session with Eleanor Vance. ₦37,500 credited to honorarium ledger.",
+      "type": "mentor",
+      "timestamp": "2h ago",
+      "read": true,
+      "link": "/mentors"
+    },
+    {
+      "id": "notif-4",
+      "title": "Operating Expense Approved",
+      "message": "Generator Diesel & Power Backup (₦145,000) approved for NIBSS electronic settlement by CFO.",
+      "type": "finance",
+      "timestamp": "4h ago",
+      "read": true,
+      "link": "/expenses"
+    }
+  ],
+  "staffUsers": [
+    {
+      "id": "user-admin",
+      "name": "Abiola Adefowope",
+      "email": "abiola@nexus-institute.ng",
+      "role": "super_admin",
+      "roleTitle": "Managing Director & Super Admin",
+      "department": "Executive Board"
+    },
+    {
+      "id": "user-admissions",
+      "name": "Folake Solanke",
+      "email": "folake@nexus-institute.ng",
+      "role": "admissions",
+      "roleTitle": "Head of Admissions & Lead Acquisition",
+      "department": "Admissions & Growth"
+    },
+    {
+      "id": "user-mentor",
+      "name": "Dr. Arthur Pendelton",
+      "email": "a.pendelton@nexus-institute.ng",
+      "role": "mentor",
+      "roleTitle": "Principal Faculty Mentor",
+      "department": "Backend & Cloud Systems",
+      "mentorId": "men-1"
+    },
+    {
+      "id": "user-finance",
+      "name": "Adeyemi Daniels",
+      "email": "daniels@nexus-institute.ng",
+      "role": "finance",
+      "roleTitle": "Chief Financial Officer / Controller",
+      "department": "Finance & Treasury"
+    }
+  ]
+}

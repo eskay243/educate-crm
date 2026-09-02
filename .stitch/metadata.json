@@ -1,0 +1,394 @@
+{
+  "project": {
+    "createTime": "2026-08-29T23:00:19.750860Z",
+    "designTheme": {
+      "bodyFont": "INTER",
+      "bodyFontFamily": "Inter",
+      "colorMode": "LIGHT",
+      "colorVariant": "FIDELITY",
+      "customColor": "#1e3a8a",
+      "designMd": "---\nname: Kinetic Enterprise\ncolors:\n  surface: '#f7f9fb'\n  surface-dim: '#d8dadc'\n  surface-bright: '#f7f9fb'\n  surface-container-lowest: '#ffffff'\n  surface-container-low: '#f2f4f6'\n  surface-container: '#eceef0'\n  surface-container-high: '#e6e8ea'\n  surface-container-highest: '#e0e3e5'\n  on-surface: '#191c1e'\n  on-surface-variant: '#444651'\n  inverse-surface: '#2d3133'\n  inverse-on-surface: '#eff1f3'\n  outline: '#757682'\n  outline-variant: '#c5c5d3'\n  surface-tint: '#4059aa'\n  primary: '#00236f'\n  on-primary: '#ffffff'\n  primary-container: '#1e3a8a'\n  on-primary-container: '#90a8ff'\n  inverse-primary: '#b6c4ff'\n  secondary: '#505f76'\n  on-secondary: '#ffffff'\n  secondary-container: '#d0e1fb'\n  on-secondary-container: '#54647a'\n  tertiary: '#222a3e'\n  on-tertiary: '#ffffff'\n  tertiary-container: '#384055'\n  on-tertiary-container: '#a4acc5'\n  error: '#ba1a1a'\n  on-error: '#ffffff'\n  error-container: '#ffdad6'\n  on-error-container: '#93000a'\n  primary-fixed: '#dce1ff'\n  primary-fixed-dim: '#b6c4ff'\n  on-primary-fixed: '#00164e'\n  on-primary-fixed-variant: '#264191'\n  secondary-fixed: '#d3e4fe'\n  secondary-fixed-dim: '#b7c8e1'\n  on-secondary-fixed: '#0b1c30'\n  on-secondary-fixed-variant: '#38485d'\n  tertiary-fixed: '#dae2fd'\n  tertiary-fixed-dim: '#bec6e0'\n  on-tertiary-fixed: '#131b2e'\n  on-tertiary-fixed-variant: '#3f465c'\n  background: '#f7f9fb'\n  on-background: '#191c1e'\n  surface-variant: '#e0e3e5'\ntypography:\n  display:\n    fontFamily: Inter\n    fontSize: 36px\n    fontWeight: '700'\n    lineHeight: 44px\n    letterSpacing: -0.02em\n  headline-lg:\n    fontFamily: Inter\n    fontSize: 28px\n    fontWeight: '600'\n    lineHeight: 36px\n    letterSpacing: -0.01em\n  headline-md:\n    fontFamily: Inter\n    fontSize: 20px\n    fontWeight: '600'\n    lineHeight: 28px\n  body-lg:\n    fontFamily: Inter\n    fontSize: 16px\n    fontWeight: '400'\n    lineHeight: 24px\n  body-md:\n    fontFamily: Inter\n    fontSize: 14px\n    fontWeight: '400'\n    lineHeight: 20px\n  body-sm:\n    fontFamily: Inter\n    fontSize: 12px\n    fontWeight: '400'\n    lineHeight: 16px\n  label-md:\n    fontFamily: Inter\n    fontSize: 13px\n    fontWeight: '600'\n    lineHeight: 18px\n    letterSpacing: 0.03em\n  data-tabular:\n    fontFamily: Inter\n    fontSize: 14px\n    fontWeight: '400'\n    lineHeight: 20px\nrounded:\n  sm: 0.125rem\n  DEFAULT: 0.25rem\n  md: 0.375rem\n  lg: 0.5rem\n  xl: 0.75rem\n  full: 9999px\nspacing:\n  unit: 4px\n  container-max: 1440px\n  gutter: 24px\n  margin-page: 32px\n  stack-sm: 8px\n  stack-md: 16px\n  stack-lg: 32px\n---\n\n## Brand & Style\nThe design system is engineered for high-density information management and professional CRM workflows. The brand personality is rooted in reliability, efficiency, and clarity, targeting enterprise users who require a focused environment for managing complex customer data and financial transactions.\n\nThe design style is **Minimalist / Corporate Modern**. It prioritizes function over form, utilizing generous whitespace to reduce cognitive load in data-heavy views. The aesthetic is characterized by a \"utilitarian elegance\"\u2014using precise alignment, subtle borders, and a restricted color palette to create a sense of order and institutional trust.\n\n## Colors\nThis design system utilizes a structured palette to reinforce hierarchy and state:\n- **Primary Blue (#1E3A8A):** Reserved for primary actions, active navigation states, and brand touchpoints.\n- **Surface Neutrals (#F8FAFC):** Used for large background areas to provide a clean, \"paper-like\" workspace. \n- **Functional Accents:** Success (Green), Warning (Amber), and Error (Red) are used exclusively for payment statuses and form validation to ensure immediate visual recognition.\n- **Text & Borders:** Uses high-contrast slates for text and soft grays for borders to maintain definition without visual noise.\n\n## Typography\nInter is the sole typeface for the design system, chosen for its exceptional legibility in tabular data and small-scale labels. \n- **Tabular Data:** Use the `data-tabular` style which enables monospaced numbers to ensure columns in financial reports align vertically.\n- **Hierarchy:** Use `label-md` for table headers and section titles to differentiate them from interactive data points.\n- **Mobile:** Headlines scale down to 24px (headline-md) on mobile devices to preserve screen real estate for data tables.\n\n## Layout & Spacing\nThe layout follows a **Fixed-Fluid Hybrid** model. While the sidebar and navigation occupy fixed widths, the primary workspace expands to fill the screen up to a max-width of 1440px to ensure line lengths remain readable.\n\n- **Grid:** A 12-column grid is used for dashboard widgets and multi-column forms.\n- **Spacing Rhythm:** Based on a 4px baseline. Most components use 16px (stack-md) padding to maintain a professional, airy feel.\n- **Responsive:** On tablet, margins reduce to 24px. On mobile, the 12-column grid collapses to a single column, and the sidebar transforms into a bottom-sheet or drawer navigation.\n\n## Elevation & Depth\nDepth in the design system is communicated through **Tonal Layering** and **Low-Contrast Outlines** rather than heavy shadows.\n- **Level 0 (Background):** #F8FAFC - The base canvas.\n- **Level 1 (Cards/Tables):** White (#FFFFFF) with a 1px solid border (#E2E8F0). No shadow.\n- **Level 2 (Popovers/Dropdowns):** White with a subtle, 4% opacity neutral shadow to distinguish transient elements from the page.\n- **Depth Logic:** Higher elevation is reserved for active inputs and floating action menus. Data containers stay \"flat\" to the page to imply permanence and stability.\n\n## Shapes\nThe design system uses a **Soft (0.25rem)** roundedness logic. This creates a modern look that is more approachable than sharp corners but maintains the architectural rigor required for a professional tool.\n- **Buttons & Inputs:** 4px (0.25rem) radius.\n- **Large Cards & Widgets:** 8px (0.5rem) radius.\n- **Badges:** Fully rounded (pill) to distinguish them from interactive buttons.\n\n## Components\n- **Data Tables:** Use a zebra-striping pattern (odd rows at #F8FAFC) for long records. Headers must remain sticky. Status badges for payments should use a subtle background tint with high-contrast text (e.g., Light Green background with Dark Green text).\n- **Multi-step Forms:** Utilize a horizontal stepper at the top of the container. Each step is contained within a white card. Validation errors must appear inline, shifting content downwards rather than overlapping.\n- **File Upload Zones:** A dashed border (#CBD5E1) marks the drop zone. Upon hover, the border changes to the Primary Blue. Provide clear file-size and type constraints below the action button.\n- **Dashboard Widgets:** Each widget should have a standard header containing the title and a \"More\" (ellipsis) action. Use simple line charts or bar graphs with the Primary and Secondary color palette for financial reporting.\n- **Inputs:** Standardize on a 40px height for all input fields and buttons to ensure a consistent horizontal rhythm.",
+      "font": "INTER",
+      "headlineFont": "INTER",
+      "headlineFontFamily": "Inter",
+      "labelFont": "INTER",
+      "labelFontFamily": "Inter",
+      "namedColors": {
+        "background": "#f7f9fb",
+        "error": "#ba1a1a",
+        "error_container": "#ffdad6",
+        "inverse_on_surface": "#eff1f3",
+        "inverse_primary": "#b6c4ff",
+        "inverse_surface": "#2d3133",
+        "on_background": "#191c1e",
+        "on_error": "#ffffff",
+        "on_error_container": "#93000a",
+        "on_primary": "#ffffff",
+        "on_primary_container": "#90a8ff",
+        "on_primary_fixed": "#00164e",
+        "on_primary_fixed_variant": "#264191",
+        "on_secondary": "#ffffff",
+        "on_secondary_container": "#54647a",
+        "on_secondary_fixed": "#0b1c30",
+        "on_secondary_fixed_variant": "#38485d",
+        "on_surface": "#191c1e",
+        "on_surface_variant": "#444651",
+        "on_tertiary": "#ffffff",
+        "on_tertiary_container": "#a4acc5",
+        "on_tertiary_fixed": "#131b2e",
+        "on_tertiary_fixed_variant": "#3f465c",
+        "outline": "#757682",
+        "outline_variant": "#c5c5d3",
+        "primary": "#00236f",
+        "primary_container": "#1e3a8a",
+        "primary_fixed": "#dce1ff",
+        "primary_fixed_dim": "#b6c4ff",
+        "secondary": "#505f76",
+        "secondary_container": "#d0e1fb",
+        "secondary_fixed": "#d3e4fe",
+        "secondary_fixed_dim": "#b7c8e1",
+        "surface": "#f7f9fb",
+        "surface_bright": "#f7f9fb",
+        "surface_container": "#eceef0",
+        "surface_container_high": "#e6e8ea",
+        "surface_container_highest": "#e0e3e5",
+        "surface_container_low": "#f2f4f6",
+        "surface_container_lowest": "#ffffff",
+        "surface_dim": "#d8dadc",
+        "surface_tint": "#4059aa",
+        "surface_variant": "#e0e3e5",
+        "tertiary": "#222a3e",
+        "tertiary_container": "#384055",
+        "tertiary_fixed": "#dae2fd",
+        "tertiary_fixed_dim": "#bec6e0"
+      },
+      "overrideNeutralColor": "#f8fafc",
+      "overridePrimaryColor": "#1e3a8a",
+      "overrideSecondaryColor": "#64748b",
+      "overrideTertiaryColor": "#0f172a",
+      "roundness": "ROUND_FOUR",
+      "spacing": {
+        "container-max": "1440px",
+        "gutter": "24px",
+        "margin-page": "32px",
+        "stack-lg": "32px",
+        "stack-md": "16px",
+        "stack-sm": "8px",
+        "unit": "4px"
+      },
+      "spacingScale": 2,
+      "typography": {
+        "body-lg": {
+          "fontFamily": "Inter",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "lineHeight": "24px"
+        },
+        "body-md": {
+          "fontFamily": "Inter",
+          "fontSize": "14px",
+          "fontWeight": "400",
+          "lineHeight": "20px"
+        },
+        "body-sm": {
+          "fontFamily": "Inter",
+          "fontSize": "12px",
+          "fontWeight": "400",
+          "lineHeight": "16px"
+        },
+        "data-tabular": {
+          "fontFamily": "Inter",
+          "fontSize": "14px",
+          "fontWeight": "400",
+          "lineHeight": "20px"
+        },
+        "display": {
+          "fontFamily": "Inter",
+          "fontSize": "36px",
+          "fontWeight": "700",
+          "letterSpacing": "-0.02em",
+          "lineHeight": "44px"
+        },
+        "headline-lg": {
+          "fontFamily": "Inter",
+          "fontSize": "28px",
+          "fontWeight": "600",
+          "letterSpacing": "-0.01em",
+          "lineHeight": "36px"
+        },
+        "headline-md": {
+          "fontFamily": "Inter",
+          "fontSize": "20px",
+          "fontWeight": "600",
+          "lineHeight": "28px"
+        },
+        "label-md": {
+          "fontFamily": "Inter",
+          "fontSize": "13px",
+          "fontWeight": "600",
+          "letterSpacing": "0.03em",
+          "lineHeight": "18px"
+        }
+      }
+    },
+    "deviceType": "DESKTOP",
+    "metadata": {
+      "userRole": "OWNER"
+    },
+    "name": "projects/1004875458584841938",
+    "origin": "STITCH",
+    "projectType": "TEXT_TO_UI_PRO",
+    "screenInstances": [
+      {
+        "height": 540,
+        "id": "assets_edaf09d355cd4645808ccdc98c52a6e6",
+        "sourceAsset": "assets/edaf09d355cd4645808ccdc98c52a6e6",
+        "type": "DESIGN_SYSTEM_INSTANCE",
+        "width": 960
+      },
+      {
+        "height": 1024,
+        "id": "204055763810458ab28230a1c24952ab",
+        "sourceScreen": "projects/1004875458584841938/screens/204055763810458ab28230a1c24952ab",
+        "width": 1280,
+        "x": 5056
+      },
+      {
+        "height": 1024,
+        "id": "2a88fc2cda3b4306a4b345f8bf26f6ff",
+        "sourceScreen": "projects/1004875458584841938/screens/2a88fc2cda3b4306a4b345f8bf26f6ff",
+        "width": 1280,
+        "x": 2368
+      },
+      {
+        "height": 834,
+        "id": "89b3ce0567f044738a338537230e95b1",
+        "sourceScreen": "projects/1004875458584841938/screens/89b3ce0567f044738a338537230e95b1",
+        "width": 1280,
+        "x": 1024
+      },
+      {
+        "height": 1024,
+        "id": "c0c87fbb3f9f468e81c6add4d0ab6923",
+        "sourceScreen": "projects/1004875458584841938/screens/c0c87fbb3f9f468e81c6add4d0ab6923",
+        "width": 1280,
+        "x": 3712
+      },
+      {
+        "height": 1024,
+        "id": "e44d0e5b2f9a44caa14c0fa638b12d66",
+        "sourceScreen": "projects/1004875458584841938/screens/e44d0e5b2f9a44caa14c0fa638b12d66",
+        "width": 1280,
+        "x": 6400
+      },
+      {
+        "height": 1318,
+        "id": "1b1d5ae596a14f25a7a72e312160f19b",
+        "sourceScreen": "projects/1004875458584841938/screens/1b1d5ae596a14f25a7a72e312160f19b",
+        "width": 1280,
+        "x": 2688,
+        "y": 1290
+      },
+      {
+        "height": 1024,
+        "id": "59a4800066da4c2a873ca0f85f5ee6c6",
+        "sourceScreen": "projects/1004875458584841938/screens/59a4800066da4c2a873ca0f85f5ee6c6",
+        "width": 1280,
+        "y": 1290
+      },
+      {
+        "height": 1024,
+        "id": "6541d1523afd45c3b49212d347fb22b8",
+        "sourceScreen": "projects/1004875458584841938/screens/6541d1523afd45c3b49212d347fb22b8",
+        "width": 1280,
+        "x": 1344,
+        "y": 1290
+      },
+      {
+        "height": 975,
+        "id": "25fd3049a63245c3b45c2b0ff0789739",
+        "sourceScreen": "projects/1004875458584841938/screens/34dd377f2be541da9ca6b71d6d260b54",
+        "width": 1280,
+        "x": -67,
+        "y": 2837
+      },
+      {
+        "height": 835,
+        "id": "e3d339d0e747480995be59591ba50e2f",
+        "sourceScreen": "projects/1004875458584841938/screens/e3d339d0e747480995be59591ba50e2f",
+        "width": 1280,
+        "x": 1344,
+        "y": 2864
+      }
+    ],
+    "thumbnailScreenshot": {
+      "downloadUrl": "https://lh3.googleusercontent.com/aida/AEtjO1W9frbqSrqmITgHyuKSBNWBy3wwznmzFA4LjUxunXcxiipVnzCHTkDB7sVb88qgvoTpSbYDwjF32DVNLzMd1lGxXxrmJlRuBohAxNaEG2fcMqQZ6x6C-rg-DZuN0uUe11BD2liPoP2-romzihP9SvkvxYnNhgbDWUj-dMvVw3NKu3iYnPp-oNFByZWmkgBgehPVQKUCe9aumCc0Zsihh1I9GyKvcia6QXhfI5nPKFSEv9npmLi2L8l6qQw",
+      "name": "projects/1004875458584841938/screens/204055763810458ab28230a1c24952ab/fileEntries/screenshot"
+    },
+    "title": "Edu-Business Operations CRM",
+    "updateTime": "2026-08-30T00:16:14.824873Z",
+    "visibility": "PRIVATE"
+  },
+  "screens": [
+    {
+      "deviceType": "DESKTOP",
+      "height": "2636",
+      "htmlCode": {
+        "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ7Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpaCiVodG1sXzAwMDY1YTM4MDE3NDlhOGUwNDRmNGE5NWFhMjFkY2MxEgsSBxC-xIDe0QMYAZIBIwoKcHJvamVjdF9pZBIVQhMxMDA0ODc1NDU4NTg0ODQxOTM4&filename=&opi=89354086",
+        "mimeType": "text/html",
+        "name": "projects/1004875458584841938/files/4876486902715132443"
+      },
+      "name": "projects/1004875458584841938/screens/1b1d5ae596a14f25a7a72e312160f19b",
+      "screenshot": {
+        "downloadUrl": "https://lh3.googleusercontent.com/aida/AEtjO1X3xTTMD0MsQ67vJ1VVFo-3FIDhALZ9C-fsu6BxJs9aqin0dSAHXQUCHiRA2fEZiRiKAaH0eNwnrS6WPEHIcHKe_hljxbir7o6XAXmoYedrLixfCGsfzJgfb861SJ2K9RPJAUJd8nbIwyNdwWjUZDJq_WYRjxbQAh4Qzn071i1Ug0zQ6Dtk3nuTVlfZvPm6x7KinD6CFdJkbQlD51MGxIs_juu9cntJSzW8XtdaOis1MZVkruoc-NGND38",
+        "name": "projects/1004875458584841938/files/5207316882960548158"
+      },
+      "title": "Recruit New Mentor",
+      "width": "2560"
+    },
+    {
+      "deviceType": "DESKTOP",
+      "height": "2048",
+      "htmlCode": {
+        "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ7Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpaCiVodG1sXzAwMDY1YTM4MDFhMjQ5ZTMwNGU3NTgwZTZkMWNkOGJjEgsSBxC-xIDe0QMYAZIBIwoKcHJvamVjdF9pZBIVQhMxMDA0ODc1NDU4NTg0ODQxOTM4&filename=&opi=89354086",
+        "mimeType": "text/html",
+        "name": "projects/1004875458584841938/files/8283871342246625844"
+      },
+      "name": "projects/1004875458584841938/screens/6541d1523afd45c3b49212d347fb22b8",
+      "screenshot": {
+        "downloadUrl": "https://lh3.googleusercontent.com/aida/AEtjO1XFEqt68PRfUMkmLZVEL1n5wXTO03E1yB0XvvRDxxD2H9z-YDi-ObCyY45hw8Xd1mYLuSM_eqP9VWn96GNVbpl7Jdcq7qVK2I-dIa8KEcZNO6lshEKwpgV6ZK9MFqKZ2cnMwkleP_6xrmCrAOc_3rmrFfmJ7yLppdJ4X3nQL2NhPyYENoOpNxHYlmrI-4b-Q8biy5InFFIo8DK2KXJo5o__Ex0mH6wAKXe-jQu6Zb-lUFzTQjmQEsnpd6w",
+        "name": "projects/1004875458584841938/files/7738778053136341327"
+      },
+      "title": "Enroll New Student",
+      "width": "2560"
+    },
+    {
+      "deviceType": "DESKTOP",
+      "height": "2048",
+      "htmlCode": {
+        "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ7Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpaCiVodG1sXzAwMDY1YTM4MDQ2ZmRlNmUwNGU3NTgwZTZkMWNkOGJjEgsSBxC-xIDe0QMYAZIBIwoKcHJvamVjdF9pZBIVQhMxMDA0ODc1NDU4NTg0ODQxOTM4&filename=&opi=89354086",
+        "mimeType": "text/html",
+        "name": "projects/1004875458584841938/screens/34dd377f2be541da9ca6b71d6d260b54/fileEntries/html"
+      },
+      "name": "projects/1004875458584841938/screens/34dd377f2be541da9ca6b71d6d260b54",
+      "screenshot": {
+        "downloadUrl": "https://lh3.googleusercontent.com/aida/AEtjO1XeEqyL7nUu1DJIo9ipgTOhBtKLdc11pZKrrNp4Ed8jzeLRjbQ6ZfkXbv_dRJ79zV_ETLCEDy4DARqQ3xyaog4xI3f_mgYfkFRs6yUeLh28Wzyu_9l-4IVszO7QBPusYzAUo1QJeGMsiCguY-d9O10epGkC8lghl3qeUnCVQONVbMeYjyDcOIHt6BvHGeTzorihd70JY5dy6cuhcuKmT1UoYXYTtEUQ9QcLezjdHGf6HKDQZkxNI4ErosQ",
+        "name": "projects/1004875458584841938/screens/34dd377f2be541da9ca6b71d6d260b54/fileEntries/screenshot"
+      },
+      "title": "Log New Expense",
+      "width": "2560"
+    },
+    {
+      "deviceType": "DESKTOP",
+      "height": "2048",
+      "htmlCode": {
+        "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ7Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpaCiVodG1sXzAwMDY1YTM4MDE4YjQwZTkwNWYxMDMwMGY0M2IzODZhEgsSBxC-xIDe0QMYAZIBIwoKcHJvamVjdF9pZBIVQhMxMDA0ODc1NDU4NTg0ODQxOTM4&filename=&opi=89354086",
+        "mimeType": "text/html",
+        "name": "projects/1004875458584841938/files/11796090005226837201"
+      },
+      "name": "projects/1004875458584841938/screens/e44d0e5b2f9a44caa14c0fa638b12d66",
+      "screenshot": {
+        "downloadUrl": "https://lh3.googleusercontent.com/aida/AEtjO1XfVTxzzjIF0NgNnzYaUcdt-BjHW4m2lHyh3k276nndjNlS63mKX8RFScjXPgaVwGwCpV-SK0vHK2Rak8WJdOT0rpkeoTx2Uk16UFUegO0kY52GwmZtwRmjqM_vBn9Avoq0x_vxKok9S6N-pIx2gkne0qEmJfn1vol6WufwVjnCUqNDCA8jy10InUOjqaXbnXSiT5WB8N819MjAR4M1hXxEI666Z795yG4eMo1-qA8uaXZf0stVv8TnZjY",
+        "name": "projects/1004875458584841938/files/17029002229221463067"
+      },
+      "title": "Executive Report",
+      "width": "2560"
+    },
+    {
+      "deviceType": "DESKTOP",
+      "height": "2048",
+      "htmlCode": {
+        "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ7Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpaCiVodG1sXzAwMDY1YTM4MDFkMzRjNjMwNWZkYTliODY5MWI2MTg3EgsSBxC-xIDe0QMYAZIBIwoKcHJvamVjdF9pZBIVQhMxMDA0ODc1NDU4NTg0ODQxOTM4&filename=&opi=89354086",
+        "mimeType": "text/html",
+        "name": "projects/1004875458584841938/files/13706704562437801967"
+      },
+      "name": "projects/1004875458584841938/screens/e3d339d0e747480995be59591ba50e2f",
+      "screenshot": {
+        "downloadUrl": "https://lh3.googleusercontent.com/aida/AEtjO1U_QYfqaZ7t1OopPv8XjCRmzpyVpc0d_McLf-fn7DkBTrXjst883ydYNTPIRAOkQziY_5EiWMu-17IS9vfHbZ0mm1gv2hbgsty4L82j7MWmztpd05scenTBenlAUq1ndQudQK_7AFghjW2-hJBguByoo8zxNlxoxhh_MHTmmOiL009RoKJMUQOO1vqaoW-bfDGDmSgaGNl5fjHbHl-Z3SlCJnSsVH4H8PNZEj_IkYXsp3yGvo1s7YSq9mg",
+        "name": "projects/1004875458584841938/files/10362900967210721447"
+      },
+      "title": "Export Executive Report",
+      "width": "2560"
+    },
+    {
+      "deviceType": "DESKTOP",
+      "height": "2048",
+      "htmlCode": {
+        "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ7Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpaCiVodG1sXzAwMDY1YTM4MDE1ZGYyMjYwNWZkYTliODY5MWI2MTg3EgsSBxC-xIDe0QMYAZIBIwoKcHJvamVjdF9pZBIVQhMxMDA0ODc1NDU4NTg0ODQxOTM4&filename=&opi=89354086",
+        "mimeType": "text/html",
+        "name": "projects/1004875458584841938/files/9518061739802989487"
+      },
+      "name": "projects/1004875458584841938/screens/59a4800066da4c2a873ca0f85f5ee6c6",
+      "screenshot": {
+        "downloadUrl": "https://lh3.googleusercontent.com/aida/AEtjO1UhxZExi8pUoR5q7ng8uOx_qALtRVvFW1F6a98No5choLZnphjF0OHWWLQW3mnd6NtZHXv4FznGEBJRMzZeArBveUuQI9YwouRvrv7zeXajVoLIPLgyht6uxPfyETlECogOUxwqPeSAvmzYc3FZjepT_3bmkwHCI334t9ybYad8pf1mWc7x_0avo4wYgDBW4TX9n2PRTOmDOtrlTh-79uyOGI0-hW_DdQCSppjJvHcUM1Js5gH8o5pycIE",
+        "name": "projects/1004875458584841938/files/1511253530879181094"
+      },
+      "title": "Create New Record Hub",
+      "width": "2560"
+    },
+    {
+      "deviceType": "DESKTOP",
+      "height": "2048",
+      "htmlCode": {
+        "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ7Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpaCiVodG1sXzAwMDY1YTM4MDExZTE0M2EwNWYxMDMwYTNmMmY3MzM5EgsSBxC-xIDe0QMYAZIBIwoKcHJvamVjdF9pZBIVQhMxMDA0ODc1NDU4NTg0ODQxOTM4&filename=&opi=89354086",
+        "mimeType": "text/html",
+        "name": "projects/1004875458584841938/files/12105480990686784526"
+      },
+      "name": "projects/1004875458584841938/screens/204055763810458ab28230a1c24952ab",
+      "screenshot": {
+        "downloadUrl": "https://lh3.googleusercontent.com/aida/AEtjO1UrBZ99ZFgA16wIA0B1dBvtiH2-MTFnBD52CosX2ta8O6Hxt68XAXnqLtUvmo_Yzd_S9J0zks3RynbG5noL7U0H-LZ8feSJV4uZBvxf9OWn8bgzKIfSB7V_UBLDz3cdur9pSwUpEsY9CU4ytum0cK3qepNacLJ8P7aN93rztcLsoIHZqh59L53nvqLBfUfuo-tGnWnQAR7GxJDLtMvvhPJYumMM6JYhzU-m2l_vBrP7bjM_SDBQjkO922Q",
+        "name": "projects/1004875458584841938/files/7978755167713361212"
+      },
+      "title": "Business Expenses",
+      "width": "2560"
+    },
+    {
+      "deviceType": "DESKTOP",
+      "height": "2048",
+      "htmlCode": {
+        "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ7Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpaCiVodG1sXzAwMDY1YTM4MDFiZDdlMDgwNDRmNGE5NWFhMjFkY2MxEgsSBxC-xIDe0QMYAZIBIwoKcHJvamVjdF9pZBIVQhMxMDA0ODc1NDU4NTg0ODQxOTM4&filename=&opi=89354086",
+        "mimeType": "text/html",
+        "name": "projects/1004875458584841938/files/4236557977881862632"
+      },
+      "name": "projects/1004875458584841938/screens/2a88fc2cda3b4306a4b345f8bf26f6ff",
+      "screenshot": {
+        "downloadUrl": "https://lh3.googleusercontent.com/aida/AEtjO1X_71VSM5L40rJVU05rvijIXWHuRqsk6_v9nE6pDiUQvpi4qDGYuqUwrGjTpsRZwAoK9mMSiY4giuC1O1lTknua5_wuds8IiauXmhYLwJf6BlphGlljbV1cbssXveAxyDIHX_4efVBit4hDqjlHs0uh2yZWbVypkS4EndHicf366UOqSFChPTb4AhRktP4gkrkaz7x8kJy_HLFj2NdH7Rkl5pa-Hw_Iz9CDNTGpA6c5wTI62RRr3Otnxl0",
+        "name": "projects/1004875458584841938/files/1827661600863250125"
+      },
+      "title": "Student Enrollment",
+      "width": "2560"
+    },
+    {
+      "deviceType": "DESKTOP",
+      "height": "2048",
+      "htmlCode": {
+        "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ7Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpaCiVodG1sXzAwMDY1YTM4MDE0OGUwNmMwNWZkYTliODY5MWI2MTg3EgsSBxC-xIDe0QMYAZIBIwoKcHJvamVjdF9pZBIVQhMxMDA0ODc1NDU4NTg0ODQxOTM4&filename=&opi=89354086",
+        "mimeType": "text/html",
+        "name": "projects/1004875458584841938/files/9518061739802989776"
+      },
+      "name": "projects/1004875458584841938/screens/c0c87fbb3f9f468e81c6add4d0ab6923",
+      "screenshot": {
+        "downloadUrl": "https://lh3.googleusercontent.com/aida/AEtjO1UcHl01F2XAr4E9AjD68olTsf9bfri8cBgYaZp-qtWII2JJKGxb32b5GapLPlZ-bPL2eMg5PD3HNAjXTQMjGCOevS_dsUjeyY61oyL7bzYjYOIg_nLcG-7zWKWWJICiyux06Ua1AY3Qism6ihttbMCLhusUNMfPc4qbSQFnrWbGnPxmZPNGOMPh5HazOVs29HvBnq1U2uFfUtMyOovW0b4mYOklFLq6u8THdxSIEAq7fpRnyoiwSLR7Tw",
+        "name": "projects/1004875458584841938/files/11625747268802741972"
+      },
+      "title": "Lead Management",
+      "width": "2560"
+    },
+    {
+      "deviceType": "DESKTOP",
+      "height": "2048",
+      "htmlCode": {
+        "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ7Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpaCiVodG1sXzAwMDY1YTM4MDEzM2U3NDYwNWYxMWQ1MDU0MmU1OWIzEgsSBxC-xIDe0QMYAZIBIwoKcHJvamVjdF9pZBIVQhMxMDA0ODc1NDU4NTg0ODQxOTM4&filename=&opi=89354086",
+        "mimeType": "text/html",
+        "name": "projects/1004875458584841938/files/15259419026083852095"
+      },
+      "name": "projects/1004875458584841938/screens/89b3ce0567f044738a338537230e95b1",
+      "screenshot": {
+        "downloadUrl": "https://lh3.googleusercontent.com/aida/AEtjO1U0DGDZsqQ4MUJ6U_kZpjPXtbO-rKdXX9YWjR4fKaNZ0rgQHho4AkvKZTTxVcIDUME1Hq3Oz8ue9YMFSZTExxaM6v8L0Ni1kTb0GLPM0HU8tLNHc5x1SjPXENSeB4rY5prPHQRRu2RhF3MpncYS-__4LXE7UdlyRkgzqBWoMqHWAJRU80uQtRTgiub7D5Rbq5v357u2v8sY3IcR2p9SxaG5Hms2aD_Huza9Yq4QR4Jl7rKlbAETZS9I2g",
+        "name": "projects/1004875458584841938/files/8743654161581128138"
+      },
+      "title": "Mentor Management",
+      "width": "2560"
+    }
+  ]
+}

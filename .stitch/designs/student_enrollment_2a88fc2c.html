@@ -1,0 +1,424 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Nexus CRM - Student Enrollment &amp; Billing</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#e0e3e5",
+                        "outline": "#757682",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed-dim": "#bec6e0",
+                        "on-primary-container": "#90a8ff",
+                        "on-primary-fixed-variant": "#264191",
+                        "on-surface-variant": "#444651",
+                        "surface-dim": "#d8dadc",
+                        "on-tertiary-fixed": "#131b2e",
+                        "on-surface": "#191c1e",
+                        "on-tertiary-fixed-variant": "#3f465c",
+                        "on-error": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-fixed": "#dae2fd",
+                        "primary-container": "#1e3a8a",
+                        "inverse-primary": "#b6c4ff",
+                        "surface-container-highest": "#e0e3e5",
+                        "secondary-container": "#d0e1fb",
+                        "primary": "#00236f",
+                        "on-secondary-container": "#54647a",
+                        "on-error-container": "#93000a",
+                        "surface-bright": "#f7f9fb",
+                        "on-primary-fixed": "#00164e",
+                        "secondary-fixed-dim": "#b7c8e1",
+                        "background": "#f7f9fb",
+                        "tertiary-container": "#384055",
+                        "error-container": "#ffdad6",
+                        "on-background": "#191c1e",
+                        "surface-container-low": "#f2f4f6",
+                        "primary-fixed-dim": "#b6c4ff",
+                        "secondary": "#505f76",
+                        "tertiary": "#222a3e",
+                        "on-secondary-fixed": "#0b1c30",
+                        "surface-container": "#eceef0",
+                        "primary-fixed": "#dce1ff",
+                        "surface": "#f7f9fb",
+                        "surface-tint": "#4059aa",
+                        "secondary-fixed": "#d3e4fe",
+                        "surface-container-high": "#e6e8ea",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-container": "#a4acc5",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-fixed-variant": "#38485d",
+                        "outline-variant": "#c5c5d3",
+                        "inverse-surface": "#2d3133"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "container-max": "1440px",
+                        "stack-md": "16px",
+                        "stack-sm": "8px",
+                        "gutter": "24px",
+                        "unit": "4px",
+                        "stack-lg": "32px",
+                        "margin-page": "32px"
+                    },
+                    "fontFamily": {
+                        "data-tabular": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "display": ["Inter"],
+                        "body-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "data-tabular": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "display": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-md": ["13px", { "lineHeight": "18px", "letterSpacing": "0.03em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .fill-icon { font-variation-settings: 'FILL' 1; }
+        
+        /* Custom scrollbar for data tables */
+        .table-scroll::-webkit-scrollbar { height: 6px; }
+        .table-scroll::-webkit-scrollbar-track { background: transparent; }
+        .table-scroll::-webkit-scrollbar-thumb { background-color: #c5c5d3; border-radius: 4px; }
+        
+        /* Dashed border hover effect */
+        .upload-zone:hover { border-color: #00236f; background-color: #f2f4f6; transition: all 0.2s ease; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden text-on-surface bg-background">
+<!-- SideNavBar -->
+<nav class="hidden md:flex flex-col h-full py-stack-md bg-surface-container-low border-r border-outline-variant fixed left-0 top-0 h-screen w-64 z-40 transition-all duration-200 ease-in-out">
+<!-- Header -->
+<div class="px-gutter mb-stack-lg flex items-center gap-stack-md">
+<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined fill-icon text-[20px]">apartment</span>
+</div>
+<div>
+<h1 class="font-headline-md text-headline-md font-bold text-primary truncate">Enterprise Portal</h1>
+<p class="font-body-sm text-body-sm text-secondary truncate">Management Suite</p>
+</div>
+</div>
+<!-- Main Navigation -->
+<div class="flex-1 overflow-y-auto px-stack-sm flex flex-col gap-unit">
+<a class="flex items-center gap-stack-md px-stack-md py-stack-sm rounded hover:bg-surface-container-high transition-colors text-secondary font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">groups</span>
+<span>Mentors</span>
+</a>
+<a class="flex items-center gap-stack-md px-stack-md py-stack-sm rounded text-primary font-bold border-r-4 border-primary bg-surface-container font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined fill-icon">school</span>
+<span>Students</span>
+</a>
+<a class="flex items-center gap-stack-md px-stack-md py-stack-sm rounded hover:bg-surface-container-high transition-colors text-secondary font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">leaderboard</span>
+<span>Leads</span>
+</a>
+<a class="flex items-center gap-stack-md px-stack-md py-stack-sm rounded hover:bg-surface-container-high transition-colors text-secondary font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span>Expenses</span>
+</a>
+</div>
+<!-- Footer Actions & Navigation -->
+<div class="mt-auto px-stack-sm flex flex-col gap-stack-sm">
+<button class="w-full flex items-center justify-center gap-unit bg-primary text-on-primary py-stack-sm rounded hover:bg-primary-container transition-colors font-label-md text-label-md mb-stack-sm">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                Create New Record
+            </button>
+<hr class="border-outline-variant mx-stack-sm mb-stack-sm">
+<a class="flex items-center gap-stack-md px-stack-md py-stack-sm rounded hover:bg-surface-container-high transition-colors text-secondary font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span>Settings</span>
+</a>
+<a class="flex items-center gap-stack-md px-stack-md py-stack-sm rounded hover:bg-surface-container-high transition-colors text-secondary font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">contact_support</span>
+<span>Support</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Wrapper -->
+<div class="flex-1 flex flex-col md:ml-64 w-full relative">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center h-16 px-gutter w-full sticky top-0 z-50 bg-surface border-b border-outline-variant flat no shadows">
+<div class="flex items-center gap-stack-md">
+<!-- Mobile Menu Trigger -->
+<button class="md:hidden p-unit rounded hover:bg-surface-container-low text-on-surface-variant transition-colors cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<div class="font-headline-md text-headline-md font-bold text-primary">Nexus CRM</div>
+</div>
+<!-- Search (On Left as per JSON logic, shifted here to be between brand and actions) -->
+<div class="hidden md:flex flex-1 max-w-md mx-stack-lg relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant text-[20px]">search</span>
+<input class="w-full h-10 pl-10 pr-4 rounded bg-surface-container-low border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary font-body-md text-body-md text-on-surface placeholder:text-outline-variant outline-none transition-all" placeholder="Search records..." type="text">
+</div>
+<div class="flex items-center gap-unit">
+<button class="p-2 rounded-full hover:bg-surface-container-low text-on-surface-variant transition-colors cursor-pointer active:opacity-80 relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="p-2 rounded-full hover:bg-surface-container-low text-on-surface-variant transition-colors cursor-pointer active:opacity-80 hidden sm:block">
+<span class="material-symbols-outlined">help</span>
+</button>
+<button class="p-2 rounded-full hover:bg-surface-container-low text-on-surface-variant transition-colors cursor-pointer active:opacity-80 hidden sm:block">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="ml-stack-sm w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center cursor-pointer active:opacity-80 border border-outline-variant overflow-hidden">
+<img alt="User profile" class="w-full h-full object-cover" data-alt="A professional headshot of a corporate user against a clean, light grey studio background. The lighting is soft and even, highlighting a friendly, confident expression suitable for an enterprise CRM avatar. High key, modern corporate aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVl1IjWzHhqQl0nyArzYiTlRxruzhX9ZnAITaVBgkFi7c_6ip7DtnaO-nCcyjeR5gmlQRtt_mTOzBSoXcgh5N66xisIrwcJqB0-KGQZcwVeCWVZNIiis_PysYpFbdtcG0LkBfJQA6dHpvgHcdx4Hq2ztsh2yz5na_DdRGs63uA1jGKAapRCE7CE8IyLH_KEIWvVWtCycx1QSeoObzs2wgK4iG_27CqKiSWXqqofQJIHwWfS1BJfs8h">
+</div>
+</div>
+</header>
+<!-- Canvas -->
+<main class="flex-1 overflow-y-auto p-gutter lg:p-margin-page bg-background">
+<div class="max-w-container-max mx-auto space-y-stack-lg">
+<!-- Page Header -->
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-stack-md">
+<div>
+<div class="flex items-center gap-stack-sm text-secondary font-body-sm text-body-sm mb-unit">
+<a class="hover:text-primary transition-colors" href="#">Students</a>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-on-surface">Record #STU-8492</span>
+</div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface flex items-center gap-stack-sm">
+                            Eleanor Vance
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-secondary-container text-on-secondary-container uppercase tracking-wider">Active</span>
+</h2>
+</div>
+<div class="flex gap-stack-sm">
+<button class="h-10 px-stack-md border border-outline-variant rounded font-label-md text-label-md text-on-surface hover:bg-surface-container-low transition-colors flex items-center gap-unit">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+                            Edit Record
+                        </button>
+<button class="h-10 px-stack-md bg-primary text-on-primary rounded font-label-md text-label-md hover:bg-primary-container transition-colors flex items-center gap-unit shadow-sm">
+<span class="material-symbols-outlined text-[18px]">mail</span>
+                            Send Invoice
+                        </button>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Left Column: Student Profile & Enrollment (8 cols) -->
+<div class="lg:col-span-8 flex flex-col gap-gutter">
+<!-- Quick Stats Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-stack-md">
+<div class="bg-surface-container-lowest border border-outline-variant rounded p-stack-md">
+<div class="text-secondary font-body-sm text-body-sm mb-1 flex items-center gap-unit">
+<span class="material-symbols-outlined text-[16px]">school</span> Enrolled Courses
+                                </div>
+<div class="font-display text-display text-on-surface">3</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded p-stack-md">
+<div class="text-secondary font-body-sm text-body-sm mb-1 flex items-center gap-unit">
+<span class="material-symbols-outlined text-[16px]">account_balance_wallet</span> Total Fees
+                                </div>
+<div class="font-display text-display text-on-surface">₦12,450</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded p-stack-md relative overflow-hidden">
+<div class="absolute right-0 top-0 w-16 h-16 bg-error-container rounded-bl-full opacity-50"></div>
+<div class="text-secondary font-body-sm text-body-sm mb-1 flex items-center gap-unit">
+<span class="material-symbols-outlined text-[16px]">warning</span> Outstanding Balance
+                                </div>
+<div class="font-display text-display text-error">₦4,200</div>
+</div>
+</div>
+<!-- Enrolled Courses Card -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded flex flex-col">
+<div class="px-stack-md py-stack-sm border-b border-outline-variant flex justify-between items-center bg-surface-bright">
+<h3 class="font-headline-md text-headline-md text-on-surface">Current Enrollments</h3>
+<button class="text-primary hover:text-primary-container transition-colors font-label-md text-label-md flex items-center gap-unit">
+<span class="material-symbols-outlined text-[18px]">add</span> Add Course
+                                </button>
+</div>
+<div class="p-0">
+<ul class="divide-y divide-outline-variant">
+<li class="p-stack-md flex justify-between items-start sm:items-center flex-col sm:flex-row gap-stack-sm hover:bg-surface-container-low transition-colors">
+<div>
+<div class="font-label-md text-label-md text-on-surface">Advanced Data Structures (CS-401)</div>
+<div class="font-body-sm text-body-sm text-secondary">Fall Semester 2024 • Prof. Alan Turing</div>
+</div>
+<div class="text-right">
+<div class="font-data-tabular text-data-tabular text-on-surface">₦4,150.00</div>
+<div class="font-body-sm text-body-sm text-secondary">Billed: Aug 15, 2024</div>
+</div>
+</li>
+<li class="p-stack-md flex justify-between items-start sm:items-center flex-col sm:flex-row gap-stack-sm hover:bg-surface-container-low transition-colors bg-surface">
+<div>
+<div class="font-label-md text-label-md text-on-surface">Machine Learning Foundations (AI-302)</div>
+<div class="font-body-sm text-body-sm text-secondary">Fall Semester 2024 • Prof. Grace Hopper</div>
+</div>
+<div class="text-right">
+<div class="font-data-tabular text-data-tabular text-on-surface">₦4,150.00</div>
+<div class="font-body-sm text-body-sm text-secondary">Billed: Aug 15, 2024</div>
+</div>
+</li>
+<li class="p-stack-md flex justify-between items-start sm:items-center flex-col sm:flex-row gap-stack-sm hover:bg-surface-container-low transition-colors">
+<div>
+<div class="font-label-md text-label-md text-on-surface">Ethics in Technology (HUM-210)</div>
+<div class="font-body-sm text-body-sm text-secondary">Fall Semester 2024 • Prof. John Locke</div>
+</div>
+<div class="text-right">
+<div class="font-data-tabular text-data-tabular text-on-surface">₦4,150.00</div>
+<div class="font-body-sm text-body-sm text-secondary">Billed: Aug 15, 2024</div>
+</div>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Right Column: Billing Actions & Upload (4 cols) -->
+<div class="lg:col-span-4 flex flex-col gap-gutter">
+<!-- Upload Receipt Zone -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded flex flex-col">
+<div class="px-stack-md py-stack-sm border-b border-outline-variant bg-surface-bright">
+<h3 class="font-headline-md text-headline-md text-on-surface">Upload Payment Proof</h3>
+</div>
+<div class="p-stack-md">
+<div class="upload-zone border-2 border-dashed border-outline-variant rounded bg-surface flex flex-col items-center justify-center py-stack-lg px-stack-md text-center cursor-pointer mb-stack-sm">
+<div class="w-12 h-12 rounded-full bg-secondary-container text-primary flex items-center justify-center mb-stack-sm">
+<span class="material-symbols-outlined text-[24px]">cloud_upload</span>
+</div>
+<div class="font-label-md text-label-md text-on-surface mb-1">Drag and drop receipt here</div>
+<div class="font-body-sm text-body-sm text-secondary">or click to browse from device</div>
+</div>
+<div class="flex justify-between items-center font-body-sm text-body-sm text-secondary">
+<span>Max file size: 5MB</span>
+<span>Supported: PDF, JPG, PNG</span>
+</div>
+<button class="w-full mt-stack-md h-10 bg-surface-container border border-outline-variant text-on-surface rounded font-label-md text-label-md hover:bg-surface-container-high transition-colors">
+                                    Select File
+                                </button>
+</div>
+</div>
+<!-- Payment Schedule Summary -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded p-stack-md">
+<h3 class="font-headline-md text-headline-md text-on-surface mb-stack-md">Upcoming Deadlines</h3>
+<div class="space-y-stack-sm">
+<div class="flex justify-between items-center p-stack-sm bg-error-container rounded border border-error/20">
+<div class="flex items-center gap-stack-sm">
+<span class="material-symbols-outlined text-error text-[18px]">event</span>
+<span class="font-label-md text-label-md text-error">Oct 15, 2024</span>
+</div>
+<span class="font-data-tabular text-data-tabular text-error font-bold">₦2,100.00</span>
+</div>
+<div class="flex justify-between items-center p-stack-sm bg-surface rounded border border-outline-variant">
+<div class="flex items-center gap-stack-sm text-secondary">
+<span class="material-symbols-outlined text-[18px]">event</span>
+<span class="font-body-md text-body-md">Nov 15, 2024</span>
+</div>
+<span class="font-data-tabular text-data-tabular text-secondary">₦2,100.00</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Payment History Table Card -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded flex flex-col w-full">
+<div class="px-stack-md py-stack-sm border-b border-outline-variant flex justify-between items-center bg-surface-bright">
+<h3 class="font-headline-md text-headline-md text-on-surface">Payment History</h3>
+<div class="flex items-center gap-stack-sm">
+<button class="p-unit rounded hover:bg-surface-container-low text-secondary transition-colors">
+<span class="material-symbols-outlined text-[20px]">filter_list</span>
+</button>
+<button class="p-unit rounded hover:bg-surface-container-low text-secondary transition-colors">
+<span class="material-symbols-outlined text-[20px]">download</span>
+</button>
+</div>
+</div>
+<div class="overflow-x-auto table-scroll w-full">
+<table class="w-full text-left border-collapse min-w-[800px]">
+<thead>
+<tr class="bg-surface border-b border-outline-variant font-label-md text-label-md text-secondary">
+<th class="p-stack-md font-normal w-32">Date</th>
+<th class="p-stack-md font-normal">Transaction ID</th>
+<th class="p-stack-md font-normal">Type</th>
+<th class="p-stack-md font-normal">Method</th>
+<th class="p-stack-md font-normal text-right">Amount</th>
+<th class="p-stack-md font-normal text-right">Balance</th>
+<th class="p-stack-md font-normal w-16"></th>
+</tr>
+</thead>
+<tbody class="font-data-tabular text-data-tabular text-on-surface">
+<!-- Row 1 (Even/White) -->
+<tr class="border-b border-outline-variant hover:bg-surface-container-low transition-colors">
+<td class="p-stack-md whitespace-nowrap">Sep 01, 2024</td>
+<td class="p-stack-md font-body-sm text-body-sm text-secondary">TRX-9982-AC</td>
+<td class="p-stack-md">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-[#E6F4EA] text-[#137333] uppercase tracking-wider">Part Payment</span>
+</td>
+<td class="p-stack-md text-secondary">Bank Transfer</td>
+<td class="p-stack-md text-right text-primary font-bold">-₦4,150.00</td>
+<td class="p-stack-md text-right">₦4,200.00</td>
+<td class="p-stack-md text-center">
+<button class="text-secondary hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">receipt_long</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 (Odd/Zebra) -->
+<tr class="bg-surface border-b border-outline-variant hover:bg-surface-container-low transition-colors">
+<td class="p-stack-md whitespace-nowrap">Aug 15, 2024</td>
+<td class="p-stack-md font-body-sm text-body-sm text-secondary">TRX-8741-FF</td>
+<td class="p-stack-md">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-[#E6F4EA] text-[#137333] uppercase tracking-wider">Part Payment</span>
+</td>
+<td class="p-stack-md text-secondary">Credit Card ending 4421</td>
+<td class="p-stack-md text-right text-primary font-bold">-₦4,100.00</td>
+<td class="p-stack-md text-right">₦8,350.00</td>
+<td class="p-stack-md text-center">
+<button class="text-secondary hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">receipt_long</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 (Even/White) -->
+<tr class="border-b border-outline-variant hover:bg-surface-container-low transition-colors">
+<td class="p-stack-md whitespace-nowrap">Aug 01, 2024</td>
+<td class="p-stack-md font-body-sm text-body-sm text-secondary">INV-2024-F</td>
+<td class="p-stack-md">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-surface-container-high text-on-surface-variant uppercase tracking-wider">Initial Billing</span>
+</td>
+<td class="p-stack-md text-secondary">System Generated</td>
+<td class="p-stack-md text-right">₦12,450.00</td>
+<td class="p-stack-md text-right">₦12,450.00</td>
+<td class="p-stack-md text-center">
+<button class="text-secondary hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">description</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>
