@@ -1,0 +1,80 @@
+name: 🚀 Production CI/CD — Auto Deploy to Hostinger VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_and_test:
+    name: 🧪 Build & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm install
+
+      - name: 🏗️ Verify Build & TypeScript Compilation
+        run: npm run build
+
+  deploy_to_vps:
+    name: 🚀 Deploy to Hostinger VPS
+    needs: build_and_test
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🌐 SSH Deploy to Hostinger VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOSTINGER_HOST || '72.61.106.87' }}
+          username: ${{ secrets.HOSTINGER_USER || 'root' }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          password: ${{ secrets.HOSTINGER_PASSWORD }}
+          port: 22
+          script_stop: true
+          script: |
+            echo "========================================================"
+            echo "🚀 Starting Automated Deployment on Hostinger VPS..."
+            echo "========================================================"
+            
+            # Navigate to project directory
+            cd /var/www/educate-crm
+            
+            # 1. Create safety backup of production database
+            mkdir -p /var/backups
+            if [ -f "server/data/db.json" ]; then
+              cp server/data/db.json /var/backups/db_backup_$(date +%Y%m%d_%H%M%S).json
+              echo "✓ Database backup created successfully"
+            fi
+            
+            # 2. Pull latest code from main
+            git fetch origin main
+            git reset --hard origin/main
+            echo "✓ Pulled latest code from GitHub main"
+            
+            # 3. Install dependencies
+            npm install
+            
+            # 4. Compile frontend production bundle
+            npm run build
+            echo "✓ Production build completed"
+            
+            # 5. Reload PM2 process with zero downtime
+            pm2 reload nexus-crm-api || pm2 start "npx tsx server/server.ts" --name "nexus-crm-api"
+            pm2 save
+            echo "✓ Backend API reloaded successfully on PM2"
+            
+            # 6. Reload Nginx
+            sudo systemctl reload nginx
+            echo "✓ Nginx web server reloaded"
+            
+            echo "========================================================"
+            echo "🎉 Deployment to http://72.61.106.87/ completed!"
+            echo "========================================================"
