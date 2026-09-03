@@ -56,7 +56,7 @@ export class EmailService {
         bodyContent = `
           <div style="padding: 32px 24px; font-family: 'Inter', sans-serif; color: #1e293b; line-height: 1.6;">
             <h2 style="color: ${primaryColor}; margin-top: 0; font-size: 18px;">Welcome to the Faculty &amp; Staff Team, ${payload.recipientName}!</h2>
-            <p>Your institutional staff account has been provisioned on the <strong>Nexus CRM Portal</strong>.</p>
+            <p>${payload.data.customWelcomeNote || 'Your institutional staff account has been provisioned on the Nexus CRM Portal.'}</p>
             
             <div style="background-color: #f1f5f9; border-left: 4px solid ${accentColor}; padding: 16px; margin: 20px 0; border-radius: 4px;">
               <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>Institutional Role:</strong> ${payload.data.roleTitle || 'Staff Member'}</p>
@@ -85,7 +85,7 @@ export class EmailService {
           <div style="padding: 32px 24px; font-family: 'Inter', sans-serif; color: #1e293b; line-height: 1.6;">
             <h2 style="color: ${primaryColor}; margin-top: 0; font-size: 18px;">Password Reset Request</h2>
             <p>Hello ${payload.recipientName},</p>
-            <p>We received a request to reset the password for your Nexus CRM account (<strong>${payload.to}</strong>).</p>
+            <p>${payload.data.securityNotice || `We received a request to reset the password for your Nexus CRM account (${payload.to}).`}</p>
             
             <div style="text-align: center; margin: 30px 0;">
               <a href="${payload.data.resetUrl || 'http://72.61.106.87/reset-password?email=' + encodeURIComponent(payload.to)}" 
@@ -95,7 +95,7 @@ export class EmailService {
             </div>
 
             <p style="font-size: 12px; color: #64748b;">
-              If you did not request a password reset, you can safely ignore this email. Your password will remain unchanged.
+              This link will expire in <strong>${payload.data.resetExpiryHours || '24 hours'}</strong>. If you did not request a password reset, you can safely ignore this email.
             </p>
           </div>
         `;
@@ -106,12 +106,16 @@ export class EmailService {
           <div style="padding: 32px 24px; font-family: 'Inter', sans-serif; color: #1e293b; line-height: 1.6;">
             <h2 style="color: #991b1b; margin-top: 0; font-size: 18px;">Payment Reminder: Outstanding Tuition Balance</h2>
             <p>Dear ${payload.recipientName},</p>
-            <p>This is a formal notification from the Finance Office regarding your tuition installment for the <strong>${payload.data.program || 'Technology Program'}</strong>.</p>
+            <p>${payload.data.paymentNotice || `This is a formal notification from the Finance Office regarding your tuition installment for the ${payload.data.program || 'Technology Program'}.`}</p>
             
             <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 18px; margin: 20px 0;">
               <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="color: #64748b; font-size: 13px;">Student Identification:</span>
                 <strong style="font-family: monospace; color: #1e293b;">${payload.data.studentCode || 'STU-XXXX'}</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #64748b; font-size: 13px;">Academic Program:</span>
+                <strong style="color: #1e293b;">${payload.data.program || 'Technology Program'}</strong>
               </div>
               <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="color: #64748b; font-size: 13px;">Outstanding Balance:</span>
@@ -131,7 +135,7 @@ export class EmailService {
             </div>
 
             <p style="font-size: 12px; color: #64748b; margin-top: 20px;">
-              Please include your Student ID (<strong>${payload.data.studentCode || 'STU-XXXX'}</strong>) in the payment reference. Once completed, upload your payment receipt to your student portal.
+              Please include your Student ID (<strong>${payload.data.studentCode || 'STU-XXXX'}</strong>) in the payment transfer remarks.
             </p>
           </div>
         `;
@@ -152,6 +156,7 @@ export class EmailService {
 
             <p>Billed to: <strong>${payload.recipientName}</strong> (${payload.to})</p>
             <p>Academic Program: <strong>${payload.data.program || 'Technology Track'}</strong></p>
+            ${payload.data.invoiceNote ? `<p style="font-size: 13px; color: #475569;"><em>${payload.data.invoiceNote}</em></p>` : ''}
 
             <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px;">
               <thead>
@@ -162,7 +167,7 @@ export class EmailService {
               </thead>
               <tbody>
                 <tr>
-                  <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${payload.data.program || 'Technology Program'} Full Tuition</td>
+                  <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${payload.data.program || 'Technology Program'} Tuition</td>
                   <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right; font-family: monospace; font-weight: bold;">₦${Number(payload.data.amount || 850000).toLocaleString()}</td>
                 </tr>
                 <tr style="background-color: #f8fafc; font-weight: bold;">
@@ -191,6 +196,7 @@ export class EmailService {
               <p style="margin: 0 0 8px 0;"><strong>Student / Mentee:</strong> ${payload.data.studentName || 'Student'}</p>
               <p style="margin: 0 0 8px 0;"><strong>Topic:</strong> ${payload.data.topic || 'System Architecture Review'}</p>
               <p style="margin: 0 0 8px 0;"><strong>Duration:</strong> ${payload.data.durationHours || 2} Hours</p>
+              <p style="margin: 0 0 8px 0;"><strong>Location / Link:</strong> ${payload.data.sessionLocation || 'Google Meet / Lagos Hub Lab 3'}</p>
               <p style="margin: 0;"><strong>Session Compensation (₦):</strong> <span style="color: #166534; font-weight: bold;">₦${Number(payload.data.compensationAmount || 50000).toLocaleString()}</span></p>
             </div>
           </div>

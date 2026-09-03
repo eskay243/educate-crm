@@ -45,13 +45,6 @@ export const SettingsPage: React.FC = () => {
   const [newStaffDept, setNewStaffDept] = useState('Admissions');
   const [newStaffMentorId, setNewStaffMentorId] = useState('');
 
-  // Email test center state
-  const [selectedEmailTemplate, setSelectedEmailTemplate] = useState<EmailTemplatePayload['type']>('staff_welcome');
-  const [testRecipientEmail, setTestRecipientEmail] = useState('abiolaadefowope@gmail.com');
-  const [testRecipientName, setTestRecipientName] = useState('Abiola Adefowope');
-  const [emailLogs, setEmailLogs] = useState<EmailDispatchLog[]>([]);
-  const [isSendingEmail, setIsSendingEmail] = useState(false);
-
   // SMTP Settings State
   const [smtpHost, setSmtpHost] = useState(settings.smtp?.host || 'smtp.hostinger.com');
   const [smtpPort, setSmtpPort] = useState(settings.smtp?.port || 465);
@@ -61,6 +54,119 @@ export const SettingsPage: React.FC = () => {
   const [smtpSecure, setSmtpSecure] = useState(settings.smtp?.secure ?? true);
   const [smtpTesting, setSmtpTesting] = useState(false);
   const [smtpStatusMessage, setSmtpStatusMessage] = useState<{ text: string; success: boolean } | null>(null);
+
+  // Email test center state & Customizable Template Values
+  const [selectedEmailTemplate, setSelectedEmailTemplate] = useState<EmailTemplatePayload['type']>('staff_welcome');
+  const [testRecipientEmail, setTestRecipientEmail] = useState('abiolaadefowope@gmail.com');
+  const [testRecipientName, setTestRecipientName] = useState('Abiola Adefowope');
+  const [emailSubject, setEmailSubject] = useState('Welcome to Nexus Institute — Set Your Password');
+  const [emailLogs, setEmailLogs] = useState<EmailDispatchLog[]>([]);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+
+  // 1. Staff Welcome Editable Fields
+  const [welcomeRoleTitle, setWelcomeRoleTitle] = useState('Senior Admissions Specialist');
+  const [welcomeDept, setWelcomeDept] = useState('Admissions & Student Success');
+  const [welcomeSetupUrl, setWelcomeSetupUrl] = useState('http://72.61.106.87/reset-password');
+  const [welcomeNote, setWelcomeNote] = useState('Your institutional staff account has been provisioned on the Nexus CRM Portal.');
+
+  // 2. Payment Reminder Editable Fields
+  const [reminderStudentCode, setReminderStudentCode] = useState('STU-8492');
+  const [reminderProgram, setReminderProgram] = useState('Full-Stack Software Engineering');
+  const [reminderBalance, setReminderBalance] = useState<number>(450000);
+  const [reminderDueDate, setReminderDueDate] = useState('15th October 2026');
+  const [reminderBankName, setReminderBankName] = useState(settings.defaultNIBSSBank.bankName);
+  const [reminderAccountNum, setReminderAccountNum] = useState(settings.defaultNIBSSBank.accountNumber);
+  const [reminderAccountName, setReminderAccountName] = useState(settings.defaultNIBSSBank.accountName);
+  const [reminderNote, setReminderNote] = useState('This is a formal notification from the Finance Office regarding your tuition installment.');
+
+  // 3. Invoice / Receipt Editable Fields
+  const [invoiceNum, setInvoiceNum] = useState('INV-2026-84912');
+  const [invoiceProg, setInvoiceProg] = useState('Full-Stack Software Engineering');
+  const [invoiceAmt, setInvoiceAmt] = useState<number>(850000);
+  const [invoiceStatus, setInvoiceStatus] = useState('Paid');
+  const [invoicePayRef, setInvoicePayRef] = useState('NIBSS-TRX-9481029');
+  const [invoiceNoteText, setInvoiceNoteText] = useState('Official tuition payment acknowledgment for academic enrollment.');
+
+  // 4. Mentorship Session Editable Fields
+  const [sessionMentorName, setSessionMentorName] = useState('Dr. Arthur Pendelton');
+  const [sessionTopicTitle, setSessionTopicTitle] = useState('Distributed Systems & Database Scaling in FinTech');
+  const [sessionHours, setSessionHours] = useState<number>(2);
+  const [sessionCompensation, setSessionCompensation] = useState<number>(50000);
+  const [sessionVenue, setSessionVenue] = useState('Google Meet / Lagos Hub Lab 3');
+
+  // 5. Password Reset Editable Fields
+  const [resetLinkUrl, setResetLinkUrl] = useState('http://72.61.106.87/reset-password');
+  const [resetExpiry, setResetExpiry] = useState('24 hours');
+  const [resetSecurityNote, setResetSecurityNote] = useState('We received a request to reset the password for your Nexus CRM account.');
+
+  // Update default subject when template changes
+  const handleSelectTemplate = (template: EmailTemplatePayload['type']) => {
+    setSelectedEmailTemplate(template);
+    const defaultSubjects: Record<EmailTemplatePayload['type'], string> = {
+      staff_welcome: 'Welcome to Nexus Institute — Set Your Password',
+      password_reset: 'Security Notice: Password Reset Request',
+      payment_reminder: `Payment Reminder: Outstanding Tuition Balance (${reminderProgram})`,
+      invoice_receipt: `Official Tuition Invoice & Receipt #${invoiceNum}`,
+      session_confirmation: `1-on-1 Mentorship Coaching Session Confirmed (${sessionMentorName})`,
+    };
+    setEmailSubject(defaultSubjects[template]);
+  };
+
+  // Build current template payload dynamically
+  const getCurrentTemplateData = () => {
+    switch (selectedEmailTemplate) {
+      case 'staff_welcome':
+        return {
+          roleTitle: welcomeRoleTitle,
+          department: welcomeDept,
+          setupUrl: welcomeSetupUrl.includes('?') ? welcomeSetupUrl : `${welcomeSetupUrl}?email=${encodeURIComponent(testRecipientEmail)}&token=welcome-${Date.now()}`,
+          customWelcomeNote: welcomeNote,
+        };
+      case 'payment_reminder':
+        return {
+          studentCode: reminderStudentCode,
+          program: reminderProgram,
+          balance: reminderBalance,
+          dueDate: reminderDueDate,
+          bankName: reminderBankName,
+          accountNumber: reminderAccountNum,
+          accountName: reminderAccountName,
+          paymentNotice: reminderNote,
+        };
+      case 'invoice_receipt':
+        return {
+          invoiceNumber: invoiceNum,
+          program: invoiceProg,
+          amount: invoiceAmt,
+          status: invoiceStatus,
+          paymentRef: invoicePayRef,
+          invoiceNote: invoiceNoteText,
+        };
+      case 'session_confirmation':
+        return {
+          mentorName: sessionMentorName,
+          studentName: testRecipientName,
+          topic: sessionTopicTitle,
+          durationHours: sessionHours,
+          compensationAmount: sessionCompensation,
+          sessionLocation: sessionVenue,
+        };
+      case 'password_reset':
+        return {
+          resetUrl: resetLinkUrl.includes('?') ? resetLinkUrl : `${resetLinkUrl}?email=${encodeURIComponent(testRecipientEmail)}&token=reset-${Date.now()}`,
+          resetExpiryHours: resetExpiry,
+          securityNotice: resetSecurityNote,
+        };
+    }
+  };
+
+  const activeEmailPreviewHtml = emailService.generateHtml({
+    to: testRecipientEmail,
+    recipientName: testRecipientName,
+    subject: emailSubject,
+    type: selectedEmailTemplate,
+    data: getCurrentTemplateData(),
+  });
 
   // Production Flush Confirmation Modal
   const [showFlushConfirm, setShowFlushConfirm] = useState(false);
@@ -171,56 +277,6 @@ export const SettingsPage: React.FC = () => {
     setShowAddStaffForm(false);
   };
 
-  const templateSubjects: Record<EmailTemplatePayload['type'], string> = {
-    staff_welcome: 'Welcome to Nexus Institute — Set Your Password',
-    password_reset: 'Security Notice: Password Reset Request',
-    payment_reminder: 'Payment Reminder: Outstanding Tuition Balance',
-    invoice_receipt: 'Official Tuition Invoice & Receipt #INV-2026-84912',
-    session_confirmation: '1-on-1 Mentorship Coaching Session Confirmed',
-  };
-
-  const templateData: Record<EmailTemplatePayload['type'], any> = {
-    staff_welcome: {
-      roleTitle: 'Senior Admissions Specialist',
-      department: 'Admissions & Student Success',
-      setupUrl: `http://72.61.106.87/reset-password?email=${encodeURIComponent(testRecipientEmail)}&token=demo-token`,
-    },
-    password_reset: {
-      resetUrl: `http://72.61.106.87/reset-password?email=${encodeURIComponent(testRecipientEmail)}&token=reset-token`,
-    },
-    payment_reminder: {
-      studentCode: 'STU-8492',
-      program: 'Full-Stack Software Engineering',
-      balance: 450000,
-      dueDate: '15th October 2026',
-      bankName: settings.defaultNIBSSBank.bankName,
-      accountNumber: settings.defaultNIBSSBank.accountNumber,
-      accountName: settings.defaultNIBSSBank.accountName,
-    },
-    invoice_receipt: {
-      invoiceNumber: 'INV-2026-84912',
-      program: 'Full-Stack Software Engineering',
-      amount: 850000,
-      status: 'Paid',
-      paymentRef: 'NIBSS-TRX-9481029',
-    },
-    session_confirmation: {
-      mentorName: 'Dr. Arthur Pendelton',
-      studentName: testRecipientName,
-      topic: 'Distributed Systems & Database Scaling in FinTech',
-      durationHours: 2,
-      compensationAmount: 50000,
-    }
-  };
-
-  const activeEmailPreviewHtml = emailService.generateHtml({
-    to: testRecipientEmail,
-    recipientName: testRecipientName,
-    subject: templateSubjects[selectedEmailTemplate],
-    type: selectedEmailTemplate,
-    data: templateData[selectedEmailTemplate],
-  });
-
   const handleSendTestEmail = async () => {
     setIsSendingEmail(true);
 
@@ -228,7 +284,7 @@ export const SettingsPage: React.FC = () => {
       // Send real email via backend API (Nodemailer SMTP)
       const res = await apiService.sendEmail({
         to: testRecipientEmail,
-        subject: templateSubjects[selectedEmailTemplate],
+        subject: emailSubject,
         html: activeEmailPreviewHtml,
         smtpConfig: {
           host: smtpHost,
@@ -244,7 +300,7 @@ export const SettingsPage: React.FC = () => {
         id: `mail-${Date.now()}`,
         to: testRecipientEmail,
         recipientName: testRecipientName,
-        subject: templateSubjects[selectedEmailTemplate],
+        subject: emailSubject,
         type: selectedEmailTemplate,
         timestamp: new Date().toLocaleTimeString(),
         status: res?.isTestAccount ? 'Delivered (Sandbox)' : 'Delivered (Live SMTP)',
@@ -287,14 +343,14 @@ export const SettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-stack-lg animate-in fade-in duration-200 max-w-5xl">
+    <div className="space-y-stack-lg animate-in fade-in duration-200 max-w-6xl">
       {/* Page Header */}
       <div>
         <h2 className="font-headline-lg text-headline-lg font-bold text-on-surface mb-unit">
           Organization &amp; System Operations
         </h2>
         <p className="font-body-md text-body-md text-secondary">
-          Configure corporate profiles, manage staff role security, test transactional emailing with real SMTP, and perform data backups or production flushes.
+          Configure corporate profiles, manage staff role security, customize and test transactional email dispatches, and perform data backups.
         </p>
       </div>
 
@@ -659,7 +715,7 @@ export const SettingsPage: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 3: EMAIL & SMTP DISPATCH CENTER */}
+      {/* TAB 3: EMAIL & SMTP DISPATCH CENTER (FULLY CUSTOMIZABLE) */}
       {/* ========================================================================= */}
       {activeTab === 'emailing' && (
         <div className="space-y-stack-md animate-in fade-in duration-200">
@@ -786,56 +842,71 @@ export const SettingsPage: React.FC = () => {
             )}
           </div>
 
-          {/* Interactive Template Previewer & Dispatcher */}
+          {/* Interactive & Editable Template Dispatcher */}
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-6">
-            <div className="border-b border-outline-variant pb-3">
-              <h3 className="font-headline-sm text-base font-bold text-on-surface">
-                Interactive Email Template Dispatcher
-              </h3>
-              <p className="text-xs text-secondary mt-0.5">
-                Send real transactional notices (invitations, tuition reminders, invoices, session bookings).
-              </p>
+            <div className="border-b border-outline-variant pb-3 flex justify-between items-center">
+              <div>
+                <h3 className="font-headline-sm text-base font-bold text-on-surface">
+                  Customizable Email Template &amp; Live Dispatcher
+                </h3>
+                <p className="text-xs text-secondary mt-0.5">
+                  Select a template, customize any data field in real-time, and preview or dispatch live emails.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleSelectTemplate(selectedEmailTemplate)}
+                className="text-xs text-primary hover:underline font-semibold flex items-center gap-1"
+                title="Reset this template's values to defaults"
+              >
+                <span className="material-symbols-outlined text-[14px]">restart_alt</span>
+                <span>Reset Fields</span>
+              </button>
             </div>
 
-            {/* Template Selector & Dispatch Form */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="space-y-3">
-                <label className="block text-xs font-bold text-on-surface uppercase tracking-wider">
-                  Select Email Template
-                </label>
-                
-                <div className="space-y-1.5">
-                  {[
-                    { type: 'staff_welcome', label: '1. Staff Welcome & Password Setup', icon: 'badge' },
-                    { type: 'payment_reminder', label: '2. Nigerian Payment Reminder (NUBAN)', icon: 'payments' },
-                    { type: 'invoice_receipt', label: '3. Official Tuition Invoice & Receipt', icon: 'receipt_long' },
-                    { type: 'session_confirmation', label: '4. Mentorship Session Confirmation', icon: 'school' },
-                    { type: 'password_reset', label: '5. Password Reset Request', icon: 'lock_reset' },
-                  ].map((t) => (
-                    <button
-                      key={t.type}
-                      type="button"
-                      onClick={() => setSelectedEmailTemplate(t.type as EmailTemplatePayload['type'])}
-                      className={`w-full p-2.5 rounded-lg border text-left text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
-                        selectedEmailTemplate === t.type
-                          ? 'border-primary bg-primary text-white shadow-xs'
-                          : 'border-outline-variant bg-surface hover:bg-surface-container text-on-surface'
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[18px]">{t.icon}</span>
-                      <span>{t.label}</span>
-                    </button>
-                  ))}
-                </div>
+            {/* Template Selector Pills */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+              {[
+                { type: 'staff_welcome', label: '1. Staff Welcome', icon: 'badge' },
+                { type: 'payment_reminder', label: '2. Payment Notice', icon: 'payments' },
+                { type: 'invoice_receipt', label: '3. Tuition Invoice', icon: 'receipt_long' },
+                { type: 'session_confirmation', label: '4. Mentorship Session', icon: 'school' },
+                { type: 'password_reset', label: '5. Password Reset', icon: 'lock_reset' },
+              ].map((t) => (
+                <button
+                  key={t.type}
+                  type="button"
+                  onClick={() => handleSelectTemplate(t.type as EmailTemplatePayload['type'])}
+                  className={`p-2.5 rounded-lg border text-left text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+                    selectedEmailTemplate === t.type
+                      ? 'border-primary bg-primary text-white shadow-xs'
+                      : 'border-outline-variant bg-surface hover:bg-surface-container text-on-surface'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">{t.icon}</span>
+                  <span className="truncate">{t.label}</span>
+                </button>
+              ))}
+            </div>
 
-                <div className="pt-4 border-t border-outline-variant space-y-3">
+            {/* Main 2-Column: Left = Form Inputs (Customizer), Right = Live Preview */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">
+              {/* LEFT COLUMN: CUSTOMIZATION EDITOR */}
+              <div className="lg:col-span-5 space-y-4">
+                <div className="bg-surface border border-outline-variant/80 rounded-xl p-4 space-y-3 shadow-xs">
+                  <h4 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5 border-b border-outline-variant pb-2">
+                    <span className="material-symbols-outlined text-[16px]">tune</span>
+                    <span>1. Dispatch &amp; Recipient Target</span>
+                  </h4>
+
                   <div>
                     <label className="block text-xs font-semibold text-on-surface mb-1">Target Recipient Email</label>
                     <input
                       type="email"
                       value={testRecipientEmail}
                       onChange={(e) => setTestRecipientEmail(e.target.value)}
-                      className="w-full h-9 px-3 rounded bg-surface border border-outline-variant text-xs outline-none focus:border-primary"
+                      placeholder="recipient@example.com"
+                      className="w-full h-9 px-3 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-medium"
                     />
                   </div>
 
@@ -845,33 +916,342 @@ export const SettingsPage: React.FC = () => {
                       type="text"
                       value={testRecipientName}
                       onChange={(e) => setTestRecipientName(e.target.value)}
-                      className="w-full h-9 px-3 rounded bg-surface border border-outline-variant text-xs outline-none focus:border-primary"
+                      placeholder="e.g. Abiola Adefowope"
+                      className="w-full h-9 px-3 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-medium"
                     />
                   </div>
 
-                  <button
-                    onClick={handleSendTestEmail}
-                    disabled={isSendingEmail}
-                    className="w-full h-10 rounded-lg bg-primary hover:bg-primary/90 text-on-primary font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">send</span>
-                    <span>{isSendingEmail ? 'Dispatching Real Email...' : 'Dispatch Live Email'}</span>
-                  </button>
+                  <div>
+                    <label className="block text-xs font-semibold text-on-surface mb-1">Email Subject Line</label>
+                    <input
+                      type="text"
+                      value={emailSubject}
+                      onChange={(e) => setEmailSubject(e.target.value)}
+                      className="w-full h-9 px-3 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-medium"
+                    />
+                  </div>
                 </div>
+
+                {/* TEMPLATE SPECIFIC CUSTOMIZABLE FORM */}
+                <div className="bg-surface border border-outline-variant/80 rounded-xl p-4 space-y-3 shadow-xs">
+                  <h4 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5 border-b border-outline-variant pb-2">
+                    <span className="material-symbols-outlined text-[16px]">edit_document</span>
+                    <span>2. Template Content Customizer</span>
+                  </h4>
+
+                  {/* 1. Staff Welcome Fields */}
+                  {selectedEmailTemplate === 'staff_welcome' && (
+                    <div className="space-y-3 animate-in fade-in">
+                      <div>
+                        <label className="block text-xs font-semibold text-on-surface mb-1">Staff Role Title</label>
+                        <input
+                          type="text"
+                          value={welcomeRoleTitle}
+                          onChange={(e) => setWelcomeRoleTitle(e.target.value)}
+                          className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-on-surface mb-1">Department</label>
+                        <input
+                          type="text"
+                          value={welcomeDept}
+                          onChange={(e) => setWelcomeDept(e.target.value)}
+                          className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-on-surface mb-1">Password Setup Base URL</label>
+                        <input
+                          type="text"
+                          value={welcomeSetupUrl}
+                          onChange={(e) => setWelcomeSetupUrl(e.target.value)}
+                          className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-on-surface mb-1">Custom Welcome Body Note</label>
+                        <textarea
+                          rows={2}
+                          value={welcomeNote}
+                          onChange={(e) => setWelcomeNote(e.target.value)}
+                          className="w-full p-2 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 2. Payment Reminder Fields */}
+                  {selectedEmailTemplate === 'payment_reminder' && (
+                    <div className="space-y-3 animate-in fade-in">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-semibold text-on-surface mb-1">Student ID Code</label>
+                          <input
+                            type="text"
+                            value={reminderStudentCode}
+                            onChange={(e) => setReminderStudentCode(e.target.value)}
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-mono"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-on-surface mb-1">Outstanding Balance (₦)</label>
+                          <input
+                            type="number"
+                            value={reminderBalance}
+                            onChange={(e) => setReminderBalance(Number(e.target.value))}
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-bold text-[#991b1b]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-on-surface mb-1">Program Track</label>
+                        <input
+                          type="text"
+                          value={reminderProgram}
+                          onChange={(e) => setReminderProgram(e.target.value)}
+                          className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-semibold text-on-surface mb-1">Due Date</label>
+                          <input
+                            type="text"
+                            value={reminderDueDate}
+                            onChange={(e) => setReminderDueDate(e.target.value)}
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-on-surface mb-1">NUBAN Account</label>
+                          <input
+                            type="text"
+                            value={reminderAccountNum}
+                            onChange={(e) => setReminderAccountNum(e.target.value)}
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-mono font-bold"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-on-surface mb-1">Settlement Bank &amp; Name</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            value={reminderBankName}
+                            onChange={(e) => setReminderBankName(e.target.value)}
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
+                          />
+                          <input
+                            type="text"
+                            value={reminderAccountName}
+                            onChange={(e) => setReminderAccountName(e.target.value)}
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-on-surface mb-1">Payment Notice Intro</label>
+                        <textarea
+                          rows={2}
+                          value={reminderNote}
+                          onChange={(e) => setReminderNote(e.target.value)}
+                          className="w-full p-2 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 3. Tuition Invoice Fields */}
+                  {selectedEmailTemplate === 'invoice_receipt' && (
+                    <div className="space-y-3 animate-in fade-in">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-semibold text-on-surface mb-1">Invoice Number</label>
+                          <input
+                            type="text"
+                            value={invoiceNum}
+                            onChange={(e) => setInvoiceNum(e.target.value)}
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-mono"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-on-surface mb-1">Invoice Status</label>
+                          <select
+                            value={invoiceStatus}
+                            onChange={(e) => setInvoiceStatus(e.target.value)}
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-bold"
+                          >
+                            <option value="Paid">Paid</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Partial">Partial</option>
+                            <option value="Overdue">Overdue</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-semibold text-on-surface mb-1">Program Name</label>
+                          <input
+                            type="text"
+                            value={invoiceProg}
+                            onChange={(e) => setInvoiceProg(e.target.value)}
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-on-surface mb-1">Billed Amount (₦)</label>
+                          <input
+                            type="number"
+                            value={invoiceAmt}
+                            onChange={(e) => setInvoiceAmt(Number(e.target.value))}
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-mono font-bold text-primary"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-on-surface mb-1">Payment Reference Code</label>
+                        <input
+                          type="text"
+                          value={invoicePayRef}
+                          onChange={(e) => setInvoicePayRef(e.target.value)}
+                          className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-on-surface mb-1">Invoice Remarks Note</label>
+                        <textarea
+                          rows={2}
+                          value={invoiceNoteText}
+                          onChange={(e) => setInvoiceNoteText(e.target.value)}
+                          className="w-full p-2 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 4. Mentorship Session Fields */}
+                  {selectedEmailTemplate === 'session_confirmation' && (
+                    <div className="space-y-3 animate-in fade-in">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-semibold text-on-surface mb-1">Faculty Mentor</label>
+                          <input
+                            type="text"
+                            value={sessionMentorName}
+                            onChange={(e) => setSessionMentorName(e.target.value)}
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-semibold"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-on-surface mb-1">Honorarium Payout (₦)</label>
+                          <input
+                            type="number"
+                            value={sessionCompensation}
+                            onChange={(e) => setSessionCompensation(Number(e.target.value))}
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-bold text-[#166534]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-on-surface mb-1">Session Topic / Curriculum Milestone</label>
+                        <input
+                          type="text"
+                          value={sessionTopicTitle}
+                          onChange={(e) => setSessionTopicTitle(e.target.value)}
+                          className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-semibold text-on-surface mb-1">Duration (Hours)</label>
+                          <input
+                            type="number"
+                            value={sessionHours}
+                            onChange={(e) => setSessionHours(Number(e.target.value))}
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-on-surface mb-1">Location / Meeting Link</label>
+                          <input
+                            type="text"
+                            value={sessionVenue}
+                            onChange={(e) => setSessionVenue(e.target.value)}
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 5. Password Reset Fields */}
+                  {selectedEmailTemplate === 'password_reset' && (
+                    <div className="space-y-3 animate-in fade-in">
+                      <div>
+                        <label className="block text-xs font-semibold text-on-surface mb-1">Password Reset URL</label>
+                        <input
+                          type="text"
+                          value={resetLinkUrl}
+                          onChange={(e) => setResetLinkUrl(e.target.value)}
+                          className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-on-surface mb-1">Expiry Duration</label>
+                        <input
+                          type="text"
+                          value={resetExpiry}
+                          onChange={(e) => setResetExpiry(e.target.value)}
+                          className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-on-surface mb-1">Security Notice Message</label>
+                        <textarea
+                          rows={2}
+                          value={resetSecurityNote}
+                          onChange={(e) => setResetSecurityNote(e.target.value)}
+                          className="w-full p-2 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Dispatch Button */}
+                <button
+                  onClick={handleSendTestEmail}
+                  disabled={isSendingEmail}
+                  className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-on-primary font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-[20px]">send</span>
+                  <span>{isSendingEmail ? 'Dispatching Custom Email...' : 'Dispatch Live Email with Custom Data'}</span>
+                </button>
               </div>
 
-              {/* Live HTML Email Preview Pane */}
-              <div className="lg:col-span-2 space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-secondary uppercase tracking-wider">
-                    Live HTML Render Preview
+              {/* RIGHT COLUMN: LIVE REAL-TIME HTML RENDER PREVIEW */}
+              <div className="lg:col-span-7 space-y-2">
+                <div className="flex justify-between items-center px-1">
+                  <span className="text-xs font-bold text-secondary uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px] text-primary">visibility</span>
+                    <span>Live HTML Preview (Updates in Real-Time)</span>
                   </span>
                   <span className="text-[11px] font-mono text-secondary">
                     Nexus Transactional Engine
                   </span>
                 </div>
 
-                <div className="border border-outline-variant rounded-xl overflow-hidden shadow-inner bg-[#f1f5f9] h-[480px]">
+                <div className="border border-outline-variant rounded-xl overflow-hidden shadow-inner bg-[#f1f5f9] h-[580px]">
                   <iframe
                     title="Email Preview"
                     srcDoc={activeEmailPreviewHtml}
@@ -881,11 +1261,11 @@ export const SettingsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Email Dispatch Audit Log */}
+            {/* Email Dispatch Audit Log Stream */}
             {emailLogs.length > 0 && (
               <div className="pt-4 border-t border-outline-variant space-y-2">
                 <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider">
-                  Real-Time Email Dispatch Stream
+                  Recent Email Dispatch Stream
                 </h4>
                 <div className="max-h-48 overflow-y-auto divide-y divide-outline-variant/50 border border-outline-variant rounded-lg bg-surface">
                   {emailLogs.map((log) => (
