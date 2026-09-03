@@ -6,6 +6,7 @@ export interface AuthUser {
   email: string;
   role: UserRole;
   roleTitle: string;
+  password?: string;
   avatarUrl?: string;
   department?: string;
   mentorId?: string; // Links to mentor profile if role is 'mentor'
@@ -281,6 +282,7 @@ export type ModalType =
   | 'edit-course' 
   | 'assign-mentor' 
   | 'edit-mentor' 
+  | 'change-password'
   | null;
 
 

@@ -156,10 +156,18 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-outline-variant">
+                <div className="pt-2 border-t border-outline-variant space-y-1">
+                  <button
+                    onClick={() => { openModal('change-password'); setIsProfileOpen(false); }}
+                    className="w-full h-8 px-3 rounded bg-surface hover:bg-surface-container text-on-surface font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px] text-primary">lock_reset</span>
+                    <span>Change My Password</span>
+                  </button>
+
                   <button
                     onClick={() => { logout(); setIsProfileOpen(false); }}
-                    className="w-full h-8 px-3 rounded bg-surface hover:bg-error-container/20 text-error font-semibold text-xs transition-colors flex items-center justify-center gap-1"
+                    className="w-full h-8 px-3 rounded bg-surface hover:bg-error-container/20 text-error font-semibold text-xs transition-colors flex items-center justify-center gap-1 cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[16px]">logout</span>
                     <span>Sign Out</span>

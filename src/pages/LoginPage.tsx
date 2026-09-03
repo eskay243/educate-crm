@@ -11,7 +11,7 @@ export const LoginPage: React.FC = () => {
 
   const from = (location.state as any)?.from?.pathname || '/';
 
-  const [email, setEmail] = useState('abiola@nexus-institute.ng');
+  const [email, setEmail] = useState('abiola.adefowope@codelab.institute');
   const [password, setPassword] = useState('••••••••••••');
   const [selectedRole, setSelectedRole] = useState<UserRole>('super_admin');
 
@@ -57,7 +57,7 @@ export const LoginPage: React.FC = () => {
                 onChange={e => {
                   const r = e.target.value as UserRole;
                   setSelectedRole(r);
-                  if (r === 'super_admin') setEmail('abiola@nexus-institute.ng');
+                  if (r === 'super_admin') setEmail('abiola.adefowope@codelab.institute');
                   else if (r === 'admissions') setEmail('folake@nexus-institute.ng');
                   else if (r === 'mentor') setEmail('a.pendelton@nexus-institute.ng');
                   else if (r === 'finance') setEmail('daniels@nexus-institute.ng');
@@ -82,14 +82,23 @@ export const LoginPage: React.FC = () => {
                   required
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="name@nexus-institute.ng"
+                  placeholder="name@codelab.institute"
                   className="w-full h-11 pl-9 pr-3 rounded bg-surface border border-outline-variant text-sm font-body-md focus:border-primary outline-none"
                 />
               </div>
             </div>
 
             <div className="space-y-1">
-              <label className="font-label-md text-xs text-secondary font-semibold">Access Password</label>
+              <div className="flex justify-between items-center">
+                <label className="font-label-md text-xs text-secondary font-semibold">Access Password</label>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/reset-password?email=${encodeURIComponent(email)}`)}
+                  className="text-xs text-primary hover:underline font-semibold"
+                >
+                  Forgot / Reset Password?
+                </button>
+              </div>
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">
                   lock
@@ -107,7 +116,7 @@ export const LoginPage: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full h-11 bg-primary text-on-primary rounded font-label-md text-xs font-bold hover:bg-primary-container transition-colors shadow-sm flex items-center justify-center gap-2"
+              className="w-full h-11 bg-primary text-on-primary rounded font-label-md text-xs font-bold hover:bg-primary-container transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>Sign In to Workspace</span>
               <span className="material-symbols-outlined text-[16px]">arrow_forward</span>

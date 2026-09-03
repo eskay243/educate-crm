@@ -18,6 +18,7 @@ export const SettingsPage: React.FC = () => {
     restoreDatabaseBackup,
     flushProductionData,
     sendStaffWelcomeEmail,
+    openModal,
     showToast
   } = useCRM();
 
@@ -41,6 +42,7 @@ export const SettingsPage: React.FC = () => {
   const [showAddStaffForm, setShowAddStaffForm] = useState(false);
   const [newStaffName, setNewStaffName] = useState('');
   const [newStaffEmail, setNewStaffEmail] = useState('');
+  const [newStaffPassword, setNewStaffPassword] = useState('');
   const [newStaffRole, setNewStaffRole] = useState<UserRole>('admissions');
   const [newStaffDept, setNewStaffDept] = useState('Admissions');
   const [newStaffMentorId, setNewStaffMentorId] = useState('');
@@ -254,6 +256,7 @@ export const SettingsPage: React.FC = () => {
       role: newStaffRole,
       roleTitle: roleTitleMap[newStaffRole],
       department: newStaffDept,
+      password: newStaffPassword || 'password123',
       mentorId: newStaffRole === 'mentor' ? (newStaffMentorId || mentors[0]?.id || 'men-1') : undefined,
     });
 
@@ -274,6 +277,7 @@ export const SettingsPage: React.FC = () => {
 
     setNewStaffName('');
     setNewStaffEmail('');
+    setNewStaffPassword('');
     setShowAddStaffForm(false);
   };
 
@@ -630,6 +634,16 @@ export const SettingsPage: React.FC = () => {
                       className="w-full h-9 px-3 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
                     />
                   </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-semibold text-on-surface mb-1">Initial Access Password (Optional)</label>
+                    <input
+                      type="password"
+                      value={newStaffPassword}
+                      onChange={(e) => setNewStaffPassword(e.target.value)}
+                      placeholder="Leave blank or enter initial password (default: password123)"
+                      className="w-full h-9 px-3 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
+                    />
+                  </div>
                   {newStaffRole === 'mentor' && (
                     <div className="md:col-span-2">
                       <label className="block text-xs font-semibold text-on-surface mb-1">Link Faculty Profile</label>
@@ -648,7 +662,7 @@ export const SettingsPage: React.FC = () => {
                 <div className="flex justify-end pt-2">
                   <button
                     type="submit"
-                    className="h-8 px-4 rounded bg-primary text-white text-xs font-bold hover:bg-primary/90 transition-colors flex items-center gap-1.5"
+                    className="h-8 px-4 rounded bg-primary text-white text-xs font-bold hover:bg-primary/90 transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[16px]">send</span>
                     <span>Provision &amp; Send Setup Email</span>
@@ -656,6 +670,28 @@ export const SettingsPage: React.FC = () => {
                 </div>
               </form>
             )}
+
+            {/* My Account Password Security Box */}
+            <div className="p-4 rounded-lg bg-surface border border-outline-variant flex flex-wrap justify-between items-center gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[20px]">lock</span>
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-on-surface">Your Account Security &amp; Password</h4>
+                  <p className="text-[11px] text-secondary">Logged in as <strong>{currentUser?.name}</strong> ({currentUser?.email})</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => openModal('change-password')}
+                className="h-8 px-3 rounded bg-primary text-white text-xs font-bold hover:bg-primary/90 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <span className="material-symbols-outlined text-[16px]">lock_reset</span>
+                <span>Change My Password</span>
+              </button>
+            </div>
 
             {/* Staff Table */}
             <div className="overflow-x-auto">
@@ -696,14 +732,26 @@ export const SettingsPage: React.FC = () => {
                       </td>
                       <td className="p-3 text-secondary">{user.department || 'Executive'}</td>
                       <td className="p-3 text-right">
-                        <button
-                          onClick={() => sendStaffWelcomeEmail(user.id)}
-                          className="px-2.5 py-1 rounded bg-secondary-container/40 text-primary hover:bg-secondary-container font-semibold text-[11px] transition-colors inline-flex items-center gap-1 cursor-pointer"
-                          title="Resend Password Setup Email"
-                        >
-                          <span className="material-symbols-outlined text-[14px]">mail</span>
-                          <span>Send Password Setup</span>
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {currentUser?.id === user.id && (
+                            <button
+                              onClick={() => openModal('change-password')}
+                              className="px-2 py-1 rounded bg-surface border border-outline-variant text-on-surface hover:bg-surface-container font-semibold text-[11px] transition-colors inline-flex items-center gap-1 cursor-pointer"
+                              title="Change Password"
+                            >
+                              <span className="material-symbols-outlined text-[13px]">lock_reset</span>
+                              <span>Reset Password</span>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => sendStaffWelcomeEmail(user.id)}
+                            className="px-2.5 py-1 rounded bg-secondary-container/40 text-primary hover:bg-secondary-container font-semibold text-[11px] transition-colors inline-flex items-center gap-1 cursor-pointer"
+                            title="Resend Password Setup Email"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">mail</span>
+                            <span>Send Setup Link</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

@@ -155,12 +155,26 @@ app.post('/api/backups/restore', (req: Request, res: Response) => {
 });
 
 app.post('/api/production/flush-demo-data', (req: Request, res: Response) => {
-  // Purge mock/demo leads, students, mock expenses, mock sessions, mock invoices
+  // Purge mock/demo leads, students, mock expenses, mock sessions, mock invoices, courses, cohorts, mentors
   db.leads = [];
   db.students = [];
   db.expenses = [];
   db.sessions = [];
   db.invoices = [];
+  db.mentors = [];
+  db.cohorts = [];
+  db.courses = [];
+  db.staffUsers = [
+    {
+      id: 'user-admin',
+      name: 'Abiola Adefowope',
+      email: 'abiola.adefowope@codelab.institute',
+      role: 'super_admin',
+      roleTitle: 'Managing Director & Super Admin',
+      department: 'Executive Board',
+      password: 'password123',
+    }
+  ];
   db.notifications = [
     {
       id: `notif-${Date.now()}`,
@@ -182,26 +196,6 @@ app.post('/api/production/flush-demo-data', (req: Request, res: Response) => {
       timestamp: 'Just now',
     }
   ];
-
-  // Reset mentor session stats while retaining faculty profiles
-  db.mentors = db.mentors.map(m => ({
-    ...m,
-    sessionsCount: 0,
-    pendingPayout: 0,
-    activeMentees: 0,
-  }));
-
-  // Reset cohort enrollment stats
-  db.cohorts = db.cohorts.map(c => ({
-    ...c,
-    enrolledCount: 0,
-  }));
-
-  // Reset course enrollment stats
-  db.courses = db.courses.map(c => ({
-    ...c,
-    enrolledCount: 0,
-  }));
 
   saveDatabase(db);
   res.json({ 

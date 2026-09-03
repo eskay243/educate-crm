@@ -16,6 +16,7 @@ import { CreateCourseModal } from '../modals/CreateCourseModal';
 import { EditCourseModal } from '../modals/EditCourseModal';
 import { AssignMentorModal } from '../modals/AssignMentorModal';
 import { EditMentorModal } from '../modals/EditMentorModal';
+import { ChangePasswordModal } from '../modals/ChangePasswordModal';
 
 export const AppLayout: React.FC = () => {
   const { activeModal, closeModal } = useCRM();
@@ -105,6 +106,7 @@ export const AppLayout: React.FC = () => {
         isOpen={activeModal === 'edit-mentor'}
         onClose={closeModal}
       />
+      <ChangePasswordModal />
     </div>
   );
 };

@@ -147,19 +147,19 @@ interface CRMContextType {
 const CRMContext = createContext<CRMContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
-  AUTH: 'nexus_crm_auth_v1',
-  STAFF: 'nexus_crm_staff_v1',
-  LEADS: 'nexus_crm_leads_v3',
-  STUDENTS: 'nexus_crm_students_v3',
-  MENTORS: 'nexus_crm_mentors_v3',
-  EXPENSES: 'nexus_crm_expenses_v3',
-  COURSES: 'nexus_crm_courses_v3',
-  COHORTS: 'nexus_crm_cohorts_v3',
-  INVOICES: 'nexus_crm_invoices_v3',
-  SESSIONS: 'nexus_crm_sessions_v3',
-  SETTINGS: 'nexus_crm_settings_v3',
-  LOGS: 'nexus_crm_logs_v3',
-  NOTIFICATIONS: 'nexus_crm_notifications_v3',
+  AUTH: 'nexus_clean_prod_auth_v1',
+  STAFF: 'nexus_clean_prod_staff_v1',
+  LEADS: 'nexus_clean_prod_leads_v1',
+  STUDENTS: 'nexus_clean_prod_students_v1',
+  MENTORS: 'nexus_clean_prod_mentors_v1',
+  EXPENSES: 'nexus_clean_prod_expenses_v1',
+  COURSES: 'nexus_clean_prod_courses_v1',
+  COHORTS: 'nexus_clean_prod_cohorts_v1',
+  INVOICES: 'nexus_clean_prod_invoices_v1',
+  SESSIONS: 'nexus_clean_prod_sessions_v1',
+  SETTINGS: 'nexus_clean_prod_settings_v1',
+  LOGS: 'nexus_clean_prod_logs_v1',
+  NOTIFICATIONS: 'nexus_clean_prod_notifications_v1',
 };
 
 export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -335,10 +335,11 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Auth actions
   const login = (role: UserRole, email?: string) => {
-    const matched = staffUsers.find(u => u.role === role || (email && u.email === email)) || demoUsers.find(u => u.role === role) || {
+    const defaultEmail = role === 'super_admin' ? 'abiola.adefowope@codelab.institute' : `${role}@nexus-institute.ng`;
+    const matched = staffUsers.find(u => (email && u.email.toLowerCase() === email.toLowerCase()) || u.role === role) || demoUsers.find(u => u.role === role) || {
       id: `user-${role}`,
       name: role === 'super_admin' ? 'Abiola Adefowope' : role === 'admissions' ? 'Folake Solanke' : role === 'mentor' ? 'Dr. Arthur Pendelton' : 'Adeyemi Daniels',
-      email: email || `${role}@nexus-institute.ng`,
+      email: email || defaultEmail,
       role,
       roleTitle: role === 'super_admin' ? 'Managing Director & Super Admin' : role === 'admissions' ? 'Head of Admissions' : role === 'mentor' ? 'Principal Faculty Mentor' : 'Chief Financial Officer',
       mentorId: role === 'mentor' ? 'men-1' : undefined,
@@ -994,14 +995,26 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const flushProductionData = async () => {
+    const superAdmin: AuthUser = {
+      id: 'user-admin',
+      name: 'Abiola Adefowope',
+      email: 'abiola.adefowope@codelab.institute',
+      role: 'super_admin',
+      roleTitle: 'Managing Director & Super Admin',
+      department: 'Executive Board',
+      password: 'password123',
+    };
+
     setLeads([]);
     setStudents([]);
     setExpenses([]);
     setSessions([]);
     setInvoices([]);
-    setMentors(prev => prev.map(m => ({ ...m, sessionsCount: 0, pendingPayout: 0, activeMentees: 0 })));
-    setCohorts(prev => prev.map(c => ({ ...c, enrolledCount: 0 })));
-    setCourses(prev => prev.map(c => ({ ...c, enrolledCount: 0 })));
+    setMentors([]);
+    setCohorts([]);
+    setCourses([]);
+    setStaffUsers([superAdmin]);
+    setCurrentUser(superAdmin);
     
     setNotifications([
       {
@@ -1022,7 +1035,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       title: 'Demo Data Purged for Production',
       description: 'Super Admin cleared mock records for live launch.',
       type: 'system',
-      user: currentUser?.name || 'Super Admin',
+      user: superAdmin.name,
     });
   };
 
