@@ -150,11 +150,15 @@ export const CreateCourseModal: React.FC<CreateCourseModalProps> = ({ isOpen, on
                 onChange={e => setLeadInstructor(e.target.value)}
                 className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
               >
-                {mentors.map(m => (
-                  <option key={m.id} value={m.name}>
-                    {m.name} ({m.department})
-                  </option>
-                ))}
+                {mentors.length === 0 ? (
+                  <option value="General Faculty">General Faculty Pool (Unassigned)</option>
+                ) : (
+                  mentors.map(m => (
+                    <option key={m.id} value={m.name}>
+                      {m.name} ({m.department})
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 

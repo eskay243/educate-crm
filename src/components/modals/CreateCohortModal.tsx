@@ -10,15 +10,22 @@ export const CreateCohortModal: React.FC<CreateCohortModalProps> = ({ isOpen, on
   const { courses, mentors, addCohort } = useCRM();
 
   const [name, setName] = useState('');
-  const [programId, setProgramId] = useState(courses[0]?.id || '');
+  const [selectedCourseId, setSelectedCourseId] = useState<string>(courses[0]?.id || '__custom__');
+  const [customProgramName, setCustomProgramName] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [maxCapacity, setMaxCapacity] = useState(40);
-  const [instructorName, setInstructorName] = useState(mentors[0]?.name || 'Dr. Arthur Pendelton');
+  const [instructorName, setInstructorName] = useState(mentors[0]?.name || 'Faculty Mentor Assigned');
 
   if (!isOpen) return null;
 
-  const selectedProgram = courses.find(c => c.id === programId) || courses[0];
+  const effectiveProgram = selectedCourseId === '__custom__'
+    ? (customProgramName || 'Core Technology Immersive')
+    : (courses.find(c => c.id === selectedCourseId)?.title || 'Core Technology Immersive');
+
+  const effectiveProgramId = selectedCourseId === '__custom__'
+    ? `prog-${Date.now()}`
+    : selectedCourseId;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,12 +34,12 @@ export const CreateCohortModal: React.FC<CreateCohortModalProps> = ({ isOpen, on
     addCohort({
       cohortCode: `COH-${new Date().getFullYear()}-${name.replace(/\s+/g, '-').slice(0, 8).toUpperCase()}`,
       name,
-      programId: selectedProgram.id,
-      programName: selectedProgram.title,
+      programId: effectiveProgramId,
+      programName: effectiveProgram,
       startDate,
       endDate,
       maxCapacity: Number(maxCapacity),
-      instructorName,
+      instructorName: instructorName || 'Faculty Mentor Assigned',
       status: 'Upcoming',
     });
 
@@ -56,7 +63,7 @@ export const CreateCohortModal: React.FC<CreateCohortModalProps> = ({ isOpen, on
           <button
             onClick={onClose}
             aria-label="Close"
-            className="text-secondary hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-container"
+            className="text-secondary hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-container cursor-pointer"
           >
             <span className="material-symbols-outlined text-[24px]">close</span>
           </button>
@@ -77,11 +84,11 @@ export const CreateCohortModal: React.FC<CreateCohortModalProps> = ({ isOpen, on
               />
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1 sm:col-span-2">
               <label className="font-label-md text-xs text-secondary font-semibold">Academic Program <span className="text-error">*</span></label>
               <select
-                value={programId}
-                onChange={e => setProgramId(e.target.value)}
+                value={selectedCourseId}
+                onChange={e => setSelectedCourseId(e.target.value)}
                 className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
               >
                 {courses.map(c => (
@@ -89,7 +96,21 @@ export const CreateCohortModal: React.FC<CreateCohortModalProps> = ({ isOpen, on
                     {c.title} ({c.durationWeeks} Weeks)
                   </option>
                 ))}
+                <option value="__custom__">+ Enter Custom Academic Program...</option>
               </select>
+
+              {selectedCourseId === '__custom__' && (
+                <div className="pt-2 animate-in fade-in">
+                  <input
+                    type="text"
+                    required
+                    value={customProgramName}
+                    onChange={e => setCustomProgramName(e.target.value)}
+                    placeholder="e.g. Full-Stack Software Engineering"
+                    className="w-full h-10 px-3 bg-surface border border-primary rounded font-body-md text-sm text-on-surface outline-none"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="space-y-1">
@@ -99,12 +120,28 @@ export const CreateCohortModal: React.FC<CreateCohortModalProps> = ({ isOpen, on
                 onChange={e => setInstructorName(e.target.value)}
                 className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
               >
-                {mentors.map(m => (
-                  <option key={m.id} value={m.name}>
-                    {m.name} ({m.department})
-                  </option>
-                ))}
+                {mentors.length === 0 ? (
+                  <option value="Faculty Mentor Assigned">General Faculty Pool (Unassigned)</option>
+                ) : (
+                  mentors.map(m => (
+                    <option key={m.id} value={m.name}>
+                      {m.name} ({m.department})
+                    </option>
+                  ))
+                )}
               </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-label-md text-xs text-secondary font-semibold">Max Student Capacity</label>
+              <input
+                type="number"
+                min="5"
+                max="200"
+                value={maxCapacity}
+                onChange={e => setMaxCapacity(Number(e.target.value))}
+                className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none"
+              />
             </div>
 
             <div className="space-y-1">
@@ -125,18 +162,6 @@ export const CreateCohortModal: React.FC<CreateCohortModalProps> = ({ isOpen, on
                 required
                 value={endDate}
                 onChange={e => setEndDate(e.target.value)}
-                className="w-full h-10 px-3 border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="font-label-md text-xs text-secondary font-semibold">Max Student Capacity</label>
-              <input
-                type="number"
-                min="5"
-                max="200"
-                value={maxCapacity}
-                onChange={e => setMaxCapacity(Number(e.target.value))}
                 className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none"
               />
             </div>
@@ -147,13 +172,13 @@ export const CreateCohortModal: React.FC<CreateCohortModalProps> = ({ isOpen, on
             <button
               type="button"
               onClick={onClose}
-              className="px-4 h-10 rounded border border-outline-variant font-label-md text-xs font-semibold text-secondary hover:bg-surface-container transition-colors"
+              className="px-4 h-10 rounded border border-outline-variant font-label-md text-xs font-semibold text-secondary hover:bg-surface-container transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-6 h-10 rounded bg-primary text-on-primary font-label-md text-xs font-bold hover:bg-primary-container transition-colors shadow-xs flex items-center gap-1.5"
+              className="px-6 h-10 rounded bg-primary text-on-primary font-label-md text-xs font-bold hover:bg-primary/90 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">add_circle</span>
               <span>Launch Cohort</span>

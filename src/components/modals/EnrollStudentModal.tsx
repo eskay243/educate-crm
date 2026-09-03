@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCRM, formatNaira } from '../../context/CRMContext';
 
 export interface EnrollStudentModalProps {
@@ -7,28 +7,50 @@ export interface EnrollStudentModalProps {
 }
 
 export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose }) => {
-  const { enrollStudent, mentors } = useCRM();
+  const { enrollStudent, mentors, courses, cohorts } = useCRM();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [program, setProgram] = useState('Enterprise Data Science Immersive');
-  const [mentorName, setMentorName] = useState(mentors[0]?.name || 'Dr. Sarah Jenkins');
-  const [totalCourseFee] = useState(850000);
-  const [initialPayment, setInitialPayment] = useState(425000);
+  
+  // Program selection
+  const [selectedCourseId, setSelectedCourseId] = useState<string>(courses[0]?.id || '__custom__');
+  const [customProgramTitle, setCustomProgramTitle] = useState('');
+  
+  // Mentor selection
+  const [mentorName, setMentorName] = useState(mentors[0]?.name || 'Faculty Mentor Assigned');
+  
+  // Cohort selection
+  const [selectedCohortCode, setSelectedCohortCode] = useState<string>(cohorts[0]?.cohortCode || '__custom__');
+  const [customCohortName, setCustomCohortName] = useState(`Cohort ${new Date().getFullYear()}-Q${Math.floor((new Date().getMonth() + 3) / 3)} (Lagos Hub)`);
+
+  // Financial fields
+  const [totalCourseFee, setTotalCourseFee] = useState<number>(courses[0]?.tuitionFee || 850000);
+  const [initialPayment, setInitialPayment] = useState<number>(courses[0]?.tuitionFee ? Math.round(courses[0].tuitionFee / 2) : 425000);
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
   const [proofFileName, setProofFileName] = useState<string | null>(null);
 
+  // Sync fee when selected course changes
+  useEffect(() => {
+    if (selectedCourseId !== '__custom__') {
+      const course = courses.find(c => c.id === selectedCourseId);
+      if (course) {
+        setTotalCourseFee(course.tuitionFee);
+        setInitialPayment(Math.round(course.tuitionFee / 2));
+      }
+    }
+  }, [selectedCourseId, courses]);
+
   if (!isOpen) return null;
 
-  const programsList = [
-    'Enterprise Data Science Immersive',
-    'Advanced UX/UI Product Design',
-    'Full-Stack Software Engineering',
-    'AI & Machine Learning Bootcamp',
-    'Cloud DevOps & SRE Masterclass',
-  ];
+  const effectiveProgramName = selectedCourseId === '__custom__' 
+    ? (customProgramTitle || 'Professional Technology Track')
+    : (courses.find(c => c.id === selectedCourseId)?.title || 'Professional Technology Track');
+
+  const effectiveCohortName = selectedCohortCode === '__custom__'
+    ? (customCohortName || 'Cohort Active')
+    : (cohorts.find(c => c.cohortCode === selectedCohortCode)?.name || customCohortName);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -46,22 +68,22 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
       name,
       email,
       phone: phone || '+234 800 000 0000',
-      program,
-      mentorName,
+      program: effectiveProgramName,
+      mentorName: mentorName || 'Faculty Mentor Assigned',
       status: 'Active',
       attendanceRate: 100,
       tuitionStatus: outstanding === 0 ? 'Paid' : initialPayment > 0 ? 'Partial' : 'Overdue',
-      cohort: 'Cohort 2026-Q3 (Lagos)',
-      totalFees: totalCourseFee,
+      cohort: effectiveCohortName,
+      totalFees: Number(totalCourseFee),
       outstandingBalance: outstanding,
       courses: [
         {
           id: `c-${Date.now()}`,
-          code: 'CS-401',
-          name: program,
-          semester: 'Fall Semester 2026',
-          instructor: mentorName,
-          fee: totalCourseFee,
+          code: courses.find(c => c.id === selectedCourseId)?.code || 'TECH-101',
+          name: effectiveProgramName,
+          semester: `Term ${new Date().getFullYear()}`,
+          instructor: mentorName || 'Faculty Mentor Assigned',
+          fee: Number(totalCourseFee),
           billedDate: paymentDate,
         }
       ],
@@ -70,13 +92,13 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
           id: `inst-1-${Date.now()}`,
           description: 'Initial Deposit / Seat Lock',
           dueDate: paymentDate,
-          amount: initialPayment,
+          amount: Number(initialPayment),
           status: 'Paid',
         },
         ...(outstanding > 0 ? [{
           id: `inst-2-${Date.now()}`,
-          description: 'Installment 2 (Mid-Cohort Balance)',
-          dueDate: '2026-10-15',
+          description: 'Installment 2 (Tuition Balance Settlement)',
+          dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
           amount: outstanding,
           status: 'Pending' as const,
         }] : [])
@@ -87,7 +109,7 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
   };
 
   const outstanding = Math.max(0, totalCourseFee - initialPayment);
-  const paidPercent = Math.min(100, Math.round((initialPayment / totalCourseFee) * 100));
+  const paidPercent = totalCourseFee > 0 ? Math.min(100, Math.round((initialPayment / totalCourseFee) * 100)) : 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-margin-page animate-in fade-in duration-200">
@@ -103,13 +125,13 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
           <button
             onClick={onClose}
             aria-label="Close"
-            className="text-secondary hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-container"
+            className="text-secondary hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-container cursor-pointer"
           >
             <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>close</span>
           </button>
         </div>
 
-        {/* Form Body with 2 Columns matching Stitch */}
+        {/* Form Body with 2 Columns */}
         <form onSubmit={handleSubmit} className="overflow-y-auto p-stack-lg flex-1">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
             {/* Left 8 Cols: Student & Payment Details */}
@@ -119,118 +141,181 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
                 <h3 className="font-headline-md text-headline-md font-bold text-on-surface flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary">person</span> Student Information
                 </h3>
+                
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="font-label-md text-label-md text-secondary">Full Name <span className="text-error">*</span></label>
+                    <label className="font-label-md text-xs font-semibold text-secondary">Full Name <span className="text-error">*</span></label>
                     <input
                       type="text"
                       required
                       value={name}
                       onChange={e => setName(e.target.value)}
                       placeholder="e.g. Babatunde Adeleke"
-                      className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-on-surface focus:border-primary outline-none"
+                      className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded font-body-md text-on-surface focus:border-primary outline-none"
                     />
                   </div>
+
                   <div className="space-y-1">
-                    <label className="font-label-md text-label-md text-secondary">Contact Email <span className="text-error">*</span></label>
+                    <label className="font-label-md text-xs font-semibold text-secondary">Contact Email <span className="text-error">*</span></label>
                     <input
                       type="email"
                       required
                       value={email}
                       onChange={e => setEmail(e.target.value)}
                       placeholder="babatunde@example.ng"
-                      className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-on-surface focus:border-primary outline-none"
+                      className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded font-body-md text-on-surface focus:border-primary outline-none"
                     />
                   </div>
+
                   <div className="space-y-1">
-                    <label className="font-label-md text-label-md text-secondary">Phone Number (WhatsApp)</label>
+                    <label className="font-label-md text-xs font-semibold text-secondary">Phone Number (WhatsApp)</label>
                     <input
                       type="tel"
                       value={phone}
                       onChange={e => setPhone(e.target.value)}
                       placeholder="+234 803 123 4567"
-                      className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-on-surface focus:border-primary outline-none"
+                      className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded font-body-md text-on-surface focus:border-primary outline-none"
                     />
                   </div>
+
                   <div className="space-y-1">
-                    <label className="font-label-md text-label-md text-secondary">Assigned Faculty Mentor</label>
+                    <label className="font-label-md text-xs font-semibold text-secondary">Assigned Faculty Mentor</label>
                     <select
                       value={mentorName}
                       onChange={e => setMentorName(e.target.value)}
-                      className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-on-surface focus:border-primary outline-none cursor-pointer"
+                      className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded font-body-md text-on-surface focus:border-primary outline-none cursor-pointer"
                     >
-                      {mentors.map(m => (
-                        <option key={m.id} value={m.name}>{m.name} ({m.department})</option>
-                      ))}
+                      {mentors.length === 0 ? (
+                        <option value="Faculty Mentor Assigned">General Faculty Pool (Unassigned)</option>
+                      ) : (
+                        mentors.map(m => (
+                          <option key={m.id} value={m.name}>{m.name} ({m.department})</option>
+                        ))
+                      )}
                     </select>
                   </div>
+
+                  {/* Academic Course Track Selection */}
                   <div className="space-y-1 sm:col-span-2">
-                    <label className="font-label-md text-label-md text-secondary">Course Track Selection <span className="text-error">*</span></label>
+                    <label className="font-label-md text-xs font-semibold text-secondary">Academic Program Track <span className="text-error">*</span></label>
                     <select
-                      value={program}
-                      onChange={e => setProgram(e.target.value)}
-                      className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-on-surface focus:border-primary outline-none cursor-pointer"
+                      value={selectedCourseId}
+                      onChange={e => setSelectedCourseId(e.target.value)}
+                      className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded font-body-md text-on-surface focus:border-primary outline-none cursor-pointer"
                     >
-                      {programsList.map(p => (
-                        <option key={p} value={p}>{p}</option>
+                      {courses.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.title} — {formatNaira(c.tuitionFee)} ({c.durationWeeks} Weeks)
+                        </option>
                       ))}
+                      <option value="__custom__">+ Enter Custom Program / Track...</option>
                     </select>
+
+                    {selectedCourseId === '__custom__' && (
+                      <div className="pt-2 animate-in fade-in">
+                        <input
+                          type="text"
+                          required
+                          value={customProgramTitle}
+                          onChange={e => setCustomProgramTitle(e.target.value)}
+                          placeholder="e.g. Full-Stack Software Engineering or Enterprise Data Science"
+                          className="w-full h-10 px-3 bg-surface-container-lowest border border-primary rounded font-body-md text-on-surface outline-none"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Academic Cohort Selection */}
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="font-label-md text-xs font-semibold text-secondary">Academic Cohort Assignment <span className="text-error">*</span></label>
+                    <select
+                      value={selectedCohortCode}
+                      onChange={e => setSelectedCohortCode(e.target.value)}
+                      className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded font-body-md text-on-surface focus:border-primary outline-none cursor-pointer"
+                    >
+                      {cohorts.map(c => (
+                        <option key={c.id} value={c.cohortCode}>
+                          {c.name} ({c.cohortCode})
+                        </option>
+                      ))}
+                      <option value="__custom__">+ Enter Custom Cohort Tag...</option>
+                    </select>
+
+                    {selectedCohortCode === '__custom__' && (
+                      <div className="pt-2 animate-in fade-in">
+                        <input
+                          type="text"
+                          required
+                          value={customCohortName}
+                          onChange={e => setCustomCohortName(e.target.value)}
+                          placeholder="e.g. Cohort 2026-Q4 Lagos Hub"
+                          className="w-full h-10 px-3 bg-surface-container-lowest border border-primary rounded font-body-md text-on-surface outline-none"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Initial Payment Card */}
+              {/* Initial Payment & Tuition Pricing Card */}
               <div className="bg-surface rounded-lg border border-outline-variant p-stack-md space-y-4">
                 <div className="flex justify-between items-center">
                   <h3 className="font-headline-md text-headline-md font-bold text-on-surface flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary">account_balance_wallet</span> Initial Payment
+                    <span className="material-symbols-outlined text-primary">account_balance_wallet</span> 
+                    <span>Tuition Pricing &amp; Initial Payment</span>
                   </h3>
-                  <span className="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-md text-[11px] uppercase">
+                  <span className="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-md text-[11px] uppercase font-bold">
                     Draft Receipt
                   </span>
                 </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="font-label-md text-label-md text-secondary">Total Course Fee</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary font-bold">₦</span>
-                      <input
-                        type="text"
-                        readOnly
-                        value={formatNaira(totalCourseFee).replace('₦', '')}
-                        className="w-full h-10 pl-8 pr-3 bg-surface-container-low border border-transparent rounded font-data-tabular font-bold text-on-surface outline-none"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="font-label-md text-label-md text-secondary">Initial Payment Amount <span className="text-error">*</span></label>
+                    <label className="font-label-md text-xs font-semibold text-secondary">Total Course Fee (₦) <span className="text-error">*</span></label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary font-bold">₦</span>
                       <input
                         type="number"
-                        value={initialPayment}
-                        onChange={e => setInitialPayment(Number(e.target.value))}
-                        className="w-full h-10 pl-8 pr-3 bg-surface border border-outline-variant rounded font-data-tabular font-bold text-on-surface focus:border-primary outline-none"
+                        required
+                        value={totalCourseFee}
+                        onChange={e => setTotalCourseFee(Number(e.target.value))}
+                        className="w-full h-10 pl-8 pr-3 bg-surface-container-lowest border border-outline-variant rounded font-data-tabular font-bold text-on-surface focus:border-primary outline-none"
                       />
                     </div>
                   </div>
+
                   <div className="space-y-1">
-                    <label className="font-label-md text-label-md text-secondary">Payment Date</label>
+                    <label className="font-label-md text-xs font-semibold text-secondary">Initial Payment Deposit (₦) <span className="text-error">*</span></label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary font-bold">₦</span>
+                      <input
+                        type="number"
+                        required
+                        value={initialPayment}
+                        onChange={e => setInitialPayment(Number(e.target.value))}
+                        className="w-full h-10 pl-8 pr-3 bg-surface-container-lowest border border-outline-variant rounded font-data-tabular font-bold text-on-surface focus:border-primary outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-label-md text-xs font-semibold text-secondary">Payment Date</label>
                     <input
                       type="date"
                       value={paymentDate}
                       onChange={e => setPaymentDate(e.target.value)}
-                      className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-on-surface focus:border-primary outline-none"
+                      className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded font-body-md text-on-surface focus:border-primary outline-none"
                     />
                   </div>
+
                   <div className="space-y-1">
-                    <label className="font-label-md text-label-md text-secondary">Payment Channel</label>
+                    <label className="font-label-md text-xs font-semibold text-secondary">Payment Channel</label>
                     <select
                       value={paymentMethod}
                       onChange={e => setPaymentMethod(e.target.value)}
-                      className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-on-surface focus:border-primary outline-none cursor-pointer"
+                      className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded font-body-md text-on-surface focus:border-primary outline-none cursor-pointer"
                     >
-                      <option value="bank_transfer">Nigerian Bank Transfer (NIBSS / Instant)</option>
+                      <option value="bank_transfer">Nigerian Bank Transfer (NIBSS / Access Bank)</option>
                       <option value="card">Debit Card (Paystack / Flutterwave)</option>
                       <option value="corporate">Corporate Sponsored Invoice</option>
                     </select>
@@ -239,10 +324,10 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
 
                 {/* Upload Proof */}
                 <div className="space-y-2 pt-2">
-                  <label className="font-label-md text-label-md text-secondary">Upload Proof of Payment (Bank Receipt)</label>
+                  <label className="font-label-md text-xs font-semibold text-secondary">Upload Proof of Payment (Bank Receipt)</label>
                   <label 
                     htmlFor="modal-proof-upload"
-                    className="border-2 border-dashed border-outline-variant rounded-lg p-6 flex flex-col items-center justify-center bg-surface hover:border-primary transition-colors cursor-pointer block text-center"
+                    className="border-2 border-dashed border-outline-variant rounded-lg p-5 flex flex-col items-center justify-center bg-surface-container-lowest hover:border-primary transition-colors cursor-pointer block text-center"
                   >
                     <input 
                       id="modal-proof-upload"
@@ -254,82 +339,98 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
                     <div className="w-10 h-10 rounded-full bg-secondary-container text-primary flex items-center justify-center mb-2 mx-auto">
                       <span className="material-symbols-outlined text-[20px]">cloud_upload</span>
                     </div>
-                    <p className="font-body-md text-sm text-on-surface">
+                    <p className="font-body-md text-xs text-on-surface">
                       <span className="font-bold text-primary">Click to upload</span> or drag and drop receipt
                     </p>
-                    <p className="font-body-sm text-xs text-secondary">PDF, JPG, or PNG (max. 5MB)</p>
+                    {proofFileName ? (
+                      <p className="font-bold text-xs text-[#166534] mt-1 flex items-center justify-center gap-1">
+                        <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                        <span>{proofFileName}</span>
+                      </p>
+                    ) : (
+                      <p className="font-body-sm text-[11px] text-secondary mt-0.5">PDF, JPG, or PNG (max. 5MB)</p>
+                    )}
                   </label>
-                  {proofFileName && (
-                    <div className="flex items-center justify-between p-2.5 rounded bg-surface-container border border-outline-variant text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-primary text-[18px]">picture_as_pdf</span>
-                        <span className="font-semibold text-on-surface">{proofFileName}</span>
-                      </div>
-                      <button type="button" onClick={() => setProofFileName(null)} className="text-error hover:text-error/80">
-                        <span className="material-symbols-outlined text-[16px]">close</span>
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
 
-            {/* Right 4 Cols: Schedule & Summary */}
+            {/* Right 4 Cols: Live Settlement Summary */}
             <div className="lg:col-span-4 space-y-stack-md">
               <div className="bg-surface rounded-lg border border-outline-variant p-stack-md space-y-4">
-                <h3 className="font-headline-md text-headline-md font-bold text-on-surface flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">calendar_month</span> Future Schedule
-                </h3>
-                <p className="font-body-sm text-body-sm text-secondary pb-3 border-b border-outline-variant">
-                  Record expected future payments for remaining balance.
-                </p>
+                <h3 className="font-headline-md text-headline-md font-bold text-on-surface">Enrollment Summary</h3>
+                
+                <div className="space-y-3 text-xs">
+                  <div className="flex justify-between items-center py-2 border-b border-outline-variant/60">
+                    <span className="text-secondary">Program Track:</span>
+                    <span className="font-semibold text-on-surface text-right truncate max-w-[160px]">{effectiveProgramName}</span>
+                  </div>
 
-                {outstanding > 0 ? (
-                  <div className="p-3 border border-outline-variant rounded bg-surface-container-low/50 space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="font-label-md text-xs font-bold text-on-surface">Installment 2</span>
-                      <span className="text-[11px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">Pending</span>
-                    </div>
-                    <div className="flex justify-between text-xs font-data-tabular">
-                      <span className="text-secondary">Due: 15 Oct 2026</span>
-                      <span className="font-bold text-on-surface">{formatNaira(outstanding)}</span>
-                    </div>
+                  <div className="flex justify-between items-center py-2 border-b border-outline-variant/60">
+                    <span className="text-secondary">Cohort:</span>
+                    <span className="font-semibold text-on-surface text-right truncate max-w-[160px]">{effectiveCohortName}</span>
                   </div>
-                ) : (
-                  <div className="p-3 border border-emerald-300 rounded bg-emerald-50 text-emerald-800 text-xs font-semibold text-center">
-                    Paid in full! No future installments required.
-                  </div>
-                )}
 
-                <div className="pt-3 border-t border-outline-variant space-y-2">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-secondary">Outstanding Balance</span>
-                    <span className="font-bold font-data-tabular text-error">{formatNaira(outstanding)}</span>
+                  <div className="flex justify-between items-center py-2 border-b border-outline-variant/60">
+                    <span className="text-secondary">Total Billed Fee:</span>
+                    <span className="font-bold text-primary font-mono">{formatNaira(totalCourseFee)}</span>
                   </div>
-                  <div className="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
-                    <div className="bg-primary h-1.5 rounded-full transition-all duration-300" style={{ width: `${paidPercent}%` }} />
+
+                  <div className="flex justify-between items-center py-2 border-b border-outline-variant/60">
+                    <span className="text-secondary">Initial Paid:</span>
+                    <span className="font-bold text-[#166534] font-mono">{formatNaira(initialPayment)}</span>
                   </div>
-                  <p className="text-[11px] text-secondary text-right font-data-tabular">{paidPercent}% paid</p>
+
+                  <div className="flex justify-between items-center py-2 border-b border-outline-variant/60">
+                    <span className="text-secondary">Balance Due:</span>
+                    <span className={`font-bold font-mono ${outstanding > 0 ? 'text-error' : 'text-[#166534]'}`}>
+                      {formatNaira(outstanding)}
+                    </span>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="space-y-1 pt-1">
+                    <div className="flex justify-between text-[11px] font-semibold text-secondary">
+                      <span>Tuition Covered:</span>
+                      <span className="font-bold text-primary">{paidPercent}%</span>
+                    </div>
+                    <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary transition-all duration-300 rounded-full"
+                        style={{ width: `${paidPercent}%` }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* Footer Submit Buttons */}
-          <div className="mt-stack-lg pt-stack-md border-t border-outline-variant flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-5 h-10 rounded border border-outline-variant font-label-md text-label-md font-semibold text-secondary hover:bg-surface-container transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-6 h-10 rounded bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-primary-container transition-colors shadow-xs"
-            >
-              Enroll &amp; Generate Invoice
-            </button>
+              {/* Settlement Bank Card */}
+              <div className="p-3.5 bg-secondary-container/30 border border-primary/20 rounded-lg text-xs space-y-1.5">
+                <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Settlement Target (NIBSS)</span>
+                <p className="font-bold text-on-surface">Access Bank Nigeria PLC</p>
+                <p className="font-mono text-secondary text-[11px]">NUBAN: 0812948192</p>
+                <p className="text-[11px] text-secondary">Beneficiary: Nexus Tech Operations Ltd</p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-2 pt-2">
+                <button
+                  type="submit"
+                  className="w-full h-11 bg-primary text-on-primary rounded-lg font-label-md text-xs font-bold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">verified</span>
+                  <span>Confirm &amp; Enroll Student</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-full h-10 border border-outline-variant rounded-lg font-label-md text-xs font-semibold text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           </div>
         </form>
       </div>

@@ -504,11 +504,20 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const convertLeadToStudent = async (leadId: string, program: string, mentorName: string) => {
+  const convertLeadToStudent = async (leadId: string, program?: string, mentorName?: string) => {
     const lead = leads.find(l => l.id === leadId);
     if (!lead) return;
 
     updateLeadStatus(leadId, 'Converted');
+
+    const effectiveProgram = program || lead.programInterest || 'Professional Technology Immersive';
+    const matchedCourse = courses.find(c => c.title.toLowerCase() === effectiveProgram.toLowerCase()) || courses[0];
+    const matchedCohort = cohorts[0];
+    const matchedMentor = mentors.find(m => m.name === mentorName) || mentors[0];
+    
+    const feeAmount = lead.dealValue || matchedCourse?.tuitionFee || 850000;
+    const effectiveMentorName = mentorName || matchedMentor?.name || matchedCourse?.leadInstructor || 'Faculty Mentor Assigned';
+    const effectiveCohortName = matchedCohort ? `${matchedCohort.name} (${matchedCohort.cohortCode})` : `Cohort ${new Date().getFullYear()}-Q${Math.floor((new Date().getMonth() + 3) / 3)}`;
 
     const newStudent: Student = {
       id: `stu-${Date.now()}`,
@@ -516,32 +525,32 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       name: lead.name,
       email: lead.email,
       phone: lead.phone,
-      program: program || lead.programInterest,
-      mentorName: mentorName || 'Dr. Arthur Pendelton',
+      program: effectiveProgram,
+      mentorName: effectiveMentorName,
       status: 'Active',
       attendanceRate: 100,
       tuitionStatus: 'Paid',
-      cohort: `Cohort ${new Date().getFullYear()}-Q4`,
+      cohort: effectiveCohortName,
       enrolledDate: new Date().toISOString().split('T')[0],
-      totalFees: 850000,
+      totalFees: feeAmount,
       outstandingBalance: 0,
       courses: [
         {
           id: `c-${Date.now()}`,
-          code: 'FS-501',
-          name: program || lead.programInterest,
-          semester: 'Fall Semester 2026',
-          instructor: mentorName || 'Dr. Arthur Pendelton',
-          fee: 850000,
+          code: matchedCourse?.code || 'TECH-101',
+          name: effectiveProgram,
+          semester: `Term ${new Date().getFullYear()}`,
+          instructor: effectiveMentorName,
+          fee: feeAmount,
           billedDate: new Date().toISOString().split('T')[0],
         }
       ],
       installments: [
         {
           id: `inst-${Date.now()}`,
-          description: 'Full Course Tuition',
+          description: 'Full Course Tuition Settlement',
           dueDate: new Date().toISOString().split('T')[0],
-          amount: 850000,
+          amount: feeAmount,
           status: 'Paid',
         }
       ]
@@ -551,23 +560,23 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Create corresponding invoice
     const newInv: Invoice = {
       id: `inv-${Date.now()}`,
-      invoiceNumber: `INV-2026-${Math.floor(10000 + Math.random() * 90000)}`,
+      invoiceNumber: `INV-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`,
       studentId: newStudent.id,
       studentName: newStudent.name,
       studentEmail: newStudent.email,
       programName: newStudent.program,
       issueDate: new Date().toISOString().split('T')[0],
       dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-      totalAmount: 850000,
-      paidAmount: 850000,
+      totalAmount: feeAmount,
+      paidAmount: feeAmount,
       status: 'Paid',
-      items: [{ id: `item-1`, description: `${newStudent.program} Tuition`, amount: 850000 }],
+      items: [{ id: `item-1`, description: `${newStudent.program} Tuition`, amount: feeAmount }],
       paymentReference: `NIBSS-TRX-${Math.floor(1000000 + Math.random() * 9000000)}`,
-      nibssBankName: 'Access Bank Nigeria PLC',
+      nibssBankName: settings.defaultNIBSSBank?.bankName || 'Access Bank Nigeria PLC',
     };
     setInvoices(prev => [newInv, ...prev]);
 
-    apiService.convertLead(leadId, program, mentorName);
+    apiService.convertLead(leadId, effectiveProgram, effectiveMentorName);
 
     showToast(
       '🎉 Student Admitted!',
@@ -577,7 +586,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     addNotification({
       title: 'Lead Converted to Active Student',
-      message: `${lead.name} enrolled in ${newStudent.program}. Invoice #${newInv.invoiceNumber} (₦850,000) generated.`,
+      message: `${lead.name} enrolled in ${newStudent.program}. Invoice #${newInv.invoiceNumber} (${formatNaira(feeAmount)}) generated.`,
       type: 'admissions',
       link: '/students',
     });
