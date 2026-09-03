@@ -9,7 +9,7 @@ import { DepartmentMarginChart } from '../components/analytics/DepartmentMarginC
 export interface ExecutiveReportPageProps {}
 
 export const ExecutiveReportPage: React.FC<ExecutiveReportPageProps> = () => {
-  const { kpis, mentors, openModal } = useCRM();
+  const { kpis, mentors, openModal, students, leads } = useCRM();
   const [filterQuery, setFilterQuery] = useState('');
   const [timeRange, setTimeRange] = useState<'Q3' | 'Q4' | 'YTD'>('YTD');
 
@@ -24,8 +24,12 @@ export const ExecutiveReportPage: React.FC<ExecutiveReportPageProps> = () => {
       {/* Page Header */}
       <div className="flex justify-between items-end flex-wrap gap-4">
         <div>
-          <h2 className="font-headline-lg text-headline-lg font-bold text-on-surface mb-unit">Executive Financial &amp; Operational Intelligence</h2>
-          <p className="font-body-md text-body-md text-secondary">Interactive graphical revenue trends, Nigerian lead acquisition channels, cohort retention, and department margins.</p>
+          <h2 className="font-headline-lg text-headline-lg font-bold text-on-surface mb-unit">
+            Executive Financial &amp; Operational Intelligence
+          </h2>
+          <p className="font-body-md text-body-md text-secondary">
+            Real-time graphical tuition trends, Nigerian lead acquisition channels, cohort retention, and department margins.
+          </p>
         </div>
         <div className="flex gap-2">
           {/* Time Range Selector */}
@@ -45,7 +49,7 @@ export const ExecutiveReportPage: React.FC<ExecutiveReportPageProps> = () => {
 
           <button 
             onClick={() => openModal('export-report')}
-            className="h-10 px-4 flex items-center gap-2 bg-primary text-on-primary rounded font-label-md text-label-md hover:bg-primary-container hover:text-on-primary-container transition-colors shadow-xs"
+            className="h-10 px-4 flex items-center gap-2 bg-primary text-on-primary rounded font-label-md text-label-md hover:bg-primary/90 transition-colors shadow-xs cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">download</span>
             <span>Export Executive PDF</span>
@@ -53,7 +57,7 @@ export const ExecutiveReportPage: React.FC<ExecutiveReportPageProps> = () => {
         </div>
       </div>
 
-      {/* 4 KPIs Cards in Naira */}
+      {/* 4 KPIs Cards in Naira - Fully Dynamic */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
         {/* Student Revenue */}
         <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs">
@@ -62,12 +66,14 @@ export const ExecutiveReportPage: React.FC<ExecutiveReportPageProps> = () => {
               <span className="material-symbols-outlined">payments</span>
             </div>
             <span className="flex items-center text-[12px] font-bold text-[#166534] bg-[#dcfce7] px-2 py-1 rounded">
-              <span className="material-symbols-outlined text-[14px] mr-1">trending_up</span>
-              +{kpis.revenueGrowth}%
+              <span className="material-symbols-outlined text-[14px] mr-1">school</span>
+              {students.length} Students
             </span>
           </div>
-          <p className="font-body-sm text-body-sm text-secondary mb-unit">Gross Tuition Revenue</p>
-          <h3 className="font-display text-display font-bold text-on-surface">₦2.45M</h3>
+          <p className="font-body-sm text-body-sm text-secondary mb-unit">Gross Tuition Collected</p>
+          <h3 className="font-display text-display font-bold text-on-surface font-mono">
+            {formatNaira(kpis.totalRevenue)}
+          </h3>
         </div>
 
         {/* Mentor Payouts */}
@@ -76,13 +82,15 @@ export const ExecutiveReportPage: React.FC<ExecutiveReportPageProps> = () => {
             <div className="w-10 h-10 rounded bg-primary-container flex items-center justify-center text-on-primary">
               <span className="material-symbols-outlined">account_balance_wallet</span>
             </div>
-            <span className="flex items-center text-[12px] font-bold text-[#166534] bg-[#dcfce7] px-2 py-1 rounded">
-              <span className="material-symbols-outlined text-[14px] mr-1">trending_up</span>
-              +4.2%
+            <span className="flex items-center text-[12px] font-bold text-primary bg-secondary-container px-2 py-1 rounded">
+              <span className="material-symbols-outlined text-[14px] mr-1">supervisor_account</span>
+              {mentors.length} Mentors
             </span>
           </div>
           <p className="font-body-sm text-body-sm text-secondary mb-unit">Faculty Honorariums (₦)</p>
-          <h3 className="font-display text-display font-bold text-on-surface">₦850K</h3>
+          <h3 className="font-display text-display font-bold text-on-surface font-mono">
+            {formatNaira(kpis.mentorPayouts)}
+          </h3>
         </div>
 
         {/* Operating Costs */}
@@ -91,13 +99,14 @@ export const ExecutiveReportPage: React.FC<ExecutiveReportPageProps> = () => {
             <div className="w-10 h-10 rounded bg-error-container/40 flex items-center justify-center text-error">
               <span className="material-symbols-outlined">receipt_long</span>
             </div>
-            <span className="flex items-center text-[12px] font-bold text-[#166534] bg-[#dcfce7] px-2 py-1 rounded">
-              <span className="material-symbols-outlined text-[14px] mr-1">trending_down</span>
-              -0.8%
+            <span className="flex items-center text-[12px] font-bold text-secondary bg-surface-container px-2 py-1 rounded">
+              Operating
             </span>
           </div>
           <p className="font-body-sm text-body-sm text-secondary mb-unit">Total Operating Costs (₦)</p>
-          <h3 className="font-display text-display font-bold text-on-surface">₦320K</h3>
+          <h3 className="font-display text-display font-bold text-on-surface font-mono">
+            {formatNaira(kpis.totalExpenses)}
+          </h3>
         </div>
 
         {/* Operating Profit Margin */}
@@ -107,12 +116,14 @@ export const ExecutiveReportPage: React.FC<ExecutiveReportPageProps> = () => {
               <span className="material-symbols-outlined">show_chart</span>
             </div>
             <span className="flex items-center text-[12px] font-bold text-[#166534] bg-[#dcfce7] px-2 py-1 rounded">
-              <span className="material-symbols-outlined text-[14px] mr-1">verified</span>
-              Optimal
+              <span className="material-symbols-outlined text-[14px] mr-1">group</span>
+              {leads.length} Leads
             </span>
           </div>
           <p className="font-body-sm text-body-sm text-secondary mb-unit">Net Operating Margin</p>
-          <h3 className="font-display text-display font-bold text-primary">51.2%</h3>
+          <h3 className="font-display text-display font-bold text-primary font-mono">
+            {kpis.operatingMargin}%
+          </h3>
         </div>
       </div>
 
@@ -128,7 +139,7 @@ export const ExecutiveReportPage: React.FC<ExecutiveReportPageProps> = () => {
               </h3>
             </div>
             <span className="text-xs font-mono text-primary font-bold bg-secondary-container px-2 py-0.5 rounded">
-              Monthly Trend (₦)
+              Live Trend (₦)
             </span>
           </div>
 
@@ -161,11 +172,11 @@ export const ExecutiveReportPage: React.FC<ExecutiveReportPageProps> = () => {
             <div>
               <span className="text-[11px] font-bold text-secondary uppercase tracking-wider">Academic Quality &amp; Outcomes</span>
               <h3 className="font-headline-md text-base font-bold text-on-surface">
-                Cohort Enrollment vs. Graduation &amp; Placement
+                Cohort Admissions vs. Graduation Progress
               </h3>
             </div>
-            <span className="text-xs font-mono text-[#166534] font-bold bg-[#dcfce7] px-2 py-0.5 rounded">
-              92.3% Placement
+            <span className="text-xs font-mono text-primary font-bold bg-secondary-container px-2 py-0.5 rounded">
+              Cohort Tracking
             </span>
           </div>
 
@@ -212,52 +223,58 @@ export const ExecutiveReportPage: React.FC<ExecutiveReportPageProps> = () => {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[700px] text-xs">
-            <thead>
-              <tr className="border-b border-outline-variant bg-surface-container-low text-secondary font-label-md">
-                <th className="px-stack-md py-3 font-semibold">Mentor ID</th>
-                <th className="px-stack-md py-3 font-semibold">Faculty Mentor</th>
-                <th className="px-stack-md py-3 font-semibold">Department</th>
-                <th className="px-stack-md py-3 font-semibold">1-on-1 Sessions</th>
-                <th className="px-stack-md py-3 font-semibold">Pending Honorarium (₦)</th>
-                <th className="px-stack-md py-3 font-semibold">Disbursement Status</th>
-              </tr>
-            </thead>
-            <tbody className="font-data-tabular text-on-surface divide-y divide-outline-variant/50">
-              {filteredMentors.map((mentor, index) => (
-                <tr 
-                  key={mentor.id}
-                  className={`hover:bg-surface-bright transition-colors ${index % 2 === 1 ? 'bg-surface-container-low/30' : ''}`}
-                >
-                  <td className="px-stack-md py-3 font-mono font-bold text-primary">#{mentor.mentorCode}</td>
-                  <td className="px-stack-md py-3 font-medium">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs">
-                        {mentor.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                      </div>
-                      <span className="font-sans font-bold">{mentor.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-stack-md py-3 text-secondary font-sans">{mentor.department}</td>
-                  <td className="px-stack-md py-3 font-semibold">{mentor.sessionsCount}</td>
-                  <td className="px-stack-md py-3 font-bold text-on-surface">{formatNaira(mentor.pendingPayout)}</td>
-                  <td className="px-stack-md py-3">
-                    <span 
-                      className={`px-2 py-0.5 rounded text-[11px] font-bold inline-block ${
-                        mentor.payoutStatus === 'Completed'
-                          ? 'bg-[#dcfce7] text-[#166534]'
-                          : mentor.payoutStatus === 'Processing'
-                          ? 'bg-[#fef9c3] text-[#854d0e]'
-                          : 'bg-[#fee2e2] text-[#991b1b]'
-                      }`}
-                    >
-                      {mentor.payoutStatus}
-                    </span>
-                  </td>
+          {filteredMentors.length === 0 ? (
+            <div className="p-8 text-center text-xs text-secondary">
+              No faculty honorarium payouts or mentor disbursements recorded yet.
+            </div>
+          ) : (
+            <table className="w-full text-left border-collapse min-w-[700px] text-xs">
+              <thead>
+                <tr className="border-b border-outline-variant bg-surface-container-low text-secondary font-label-md">
+                  <th className="px-stack-md py-3 font-semibold">Mentor ID</th>
+                  <th className="px-stack-md py-3 font-semibold">Faculty Mentor</th>
+                  <th className="px-stack-md py-3 font-semibold">Department</th>
+                  <th className="px-stack-md py-3 font-semibold">1-on-1 Sessions</th>
+                  <th className="px-stack-md py-3 font-semibold">Pending Honorarium (₦)</th>
+                  <th className="px-stack-md py-3 font-semibold">Disbursement Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="font-data-tabular text-on-surface divide-y divide-outline-variant/50">
+                {filteredMentors.map((mentor, index) => (
+                  <tr 
+                    key={mentor.id}
+                    className={`hover:bg-surface-bright transition-colors ${index % 2 === 1 ? 'bg-surface-container-low/30' : ''}`}
+                  >
+                    <td className="px-stack-md py-3 font-mono font-bold text-primary">#{mentor.mentorCode}</td>
+                    <td className="px-stack-md py-3 font-medium">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs">
+                          {mentor.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                        </div>
+                        <span className="font-sans font-bold">{mentor.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-stack-md py-3 text-secondary font-sans">{mentor.department}</td>
+                    <td className="px-stack-md py-3 font-semibold">{mentor.sessionsCount}</td>
+                    <td className="px-stack-md py-3 font-bold text-on-surface">{formatNaira(mentor.pendingPayout)}</td>
+                    <td className="px-stack-md py-3">
+                      <span 
+                        className={`px-2 py-0.5 rounded text-[11px] font-bold inline-block ${
+                          mentor.payoutStatus === 'Completed'
+                            ? 'bg-[#dcfce7] text-[#166534]'
+                            : mentor.payoutStatus === 'Processing'
+                            ? 'bg-[#fef9c3] text-[#854d0e]'
+                            : 'bg-[#fee2e2] text-[#991b1b]'
+                        }`}
+                      >
+                        {mentor.payoutStatus}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

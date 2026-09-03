@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   ResponsiveContainer,
   BarChart,
@@ -9,25 +9,7 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
-import { formatNaira } from '../../context/CRMContext';
-
-interface RevenueCostChartProps {
-  data?: Array<{
-    month: string;
-    revenue: number;
-    operatingCost: number;
-    honorariums: number;
-  }>;
-}
-
-const defaultMonthlyFinancials = [
-  { month: 'May 2026', revenue: 1850000, operatingCost: 280000, honorariums: 620000 },
-  { month: 'Jun 2026', revenue: 2100000, operatingCost: 310000, honorariums: 710000 },
-  { month: 'Jul 2026', revenue: 1950000, operatingCost: 295000, honorariums: 680000 },
-  { month: 'Aug 2026', revenue: 2300000, operatingCost: 340000, honorariums: 790000 },
-  { month: 'Sep 2026', revenue: 2450000, operatingCost: 320000, honorariums: 850000 },
-  { month: 'Oct 2026', revenue: 2800000, operatingCost: 350000, honorariums: 920000 },
-];
+import { useCRM, formatNaira } from '../../context/CRMContext';
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -35,7 +17,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     const op = payload.find((p: any) => p.dataKey === 'operatingCost')?.value || 0;
     const hon = payload.find((p: any) => p.dataKey === 'honorariums')?.value || 0;
     const netProfit = rev - op - hon;
-    const margin = rev > 0 ? ((netProfit / rev) * 100).toFixed(1) : 0;
+    const margin = rev > 0 ? ((netProfit / rev) * 100).toFixed(1) : '0.0';
 
     return (
       <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 shadow-lg text-xs space-y-1.5 font-sans z-50 min-w-[200px]">
@@ -75,11 +57,46 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export const RevenueCostChart: React.FC<RevenueCostChartProps> = ({ data = defaultMonthlyFinancials }) => {
+export const RevenueCostChart: React.FC = () => {
+  const { students, sessions, expenses, mentors } = useCRM();
+
+  const chartData = useMemo(() => {
+    const totalRev = students.reduce((sum, s) => sum + (s.totalFees - (s.outstandingBalance || 0)), 0);
+    const totalHonorariums = sessions.reduce((sum, s) => sum + s.compensationAmount, 0) + mentors.reduce((sum, m) => sum + m.pendingPayout, 0);
+    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+
+    const currentMonth = new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+
+    if (totalRev === 0 && totalHonorariums === 0 && totalExpenses === 0) {
+      return [];
+    }
+
+    return [
+      {
+        month: currentMonth,
+        revenue: totalRev,
+        operatingCost: totalExpenses,
+        honorariums: totalHonorariums,
+      }
+    ];
+  }, [students, sessions, expenses, mentors]);
+
+  if (chartData.length === 0) {
+    return (
+      <div className="w-full h-72 flex flex-col items-center justify-center text-center p-6 border border-dashed border-outline-variant rounded-lg bg-surface-container-low/20">
+        <span className="material-symbols-outlined text-secondary text-[36px] mb-2">bar_chart</span>
+        <h4 className="font-bold text-xs text-on-surface">No Financial Transactions Yet</h4>
+        <p className="text-[11px] text-secondary max-w-xs mt-1">
+          Tuition revenue and operating overhead will automatically populate here as you enroll students and record business expenses.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full h-72">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+        <BarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
           <XAxis 
             dataKey="month" 

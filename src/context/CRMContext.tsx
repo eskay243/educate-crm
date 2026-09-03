@@ -1083,24 +1083,30 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // KPIs
   const kpis: ExecutiveKPIs = useMemo(() => {
     const activeStudentCount = students.filter(s => s.status === 'Active').length;
-    const totalRev = students.reduce((acc, s) => acc + (s.totalFees || 850000), 0);
-    const mentorPay = mentors.reduce((acc, m) => acc + m.pendingPayout, 0);
+    const totalRev = students.reduce((acc, s) => acc + (s.totalFees - (s.outstandingBalance || 0)), 0);
+    const mentorPay = sessions.reduce((acc, s) => acc + s.compensationAmount, 0) + mentors.reduce((acc, m) => acc + m.pendingPayout, 0);
     const totalExp = expenses.reduce((acc, e) => acc + e.amount, 0);
-    const margin = totalRev > 0 ? Math.round(((totalRev - (mentorPay + totalExp)) / totalRev) * 100) : 51;
+    const totalCosts = mentorPay + totalExp;
+    const netProfit = totalRev - totalCosts;
+    const margin = totalRev > 0 ? Number(((netProfit / totalRev) * 100).toFixed(1)) : 0;
+
+    const totalLeads = leads.length;
+    const convertedLeads = leads.filter(l => l.status === 'Converted').length;
+    const convRate = totalLeads > 0 ? Number(((convertedLeads / totalLeads) * 100).toFixed(1)) : 0;
 
     return {
       totalRevenue: totalRev,
-      revenueGrowth: 12.5,
+      revenueGrowth: 0,
       activeStudents: activeStudentCount,
-      studentGrowth: 12.5,
+      studentGrowth: 0,
       mentorPayouts: mentorPay,
-      mentorGrowth: 4.2,
+      mentorGrowth: 0,
       totalExpenses: totalExp,
-      expensesGrowth: -0.8,
-      leadConversionRate: 18.4,
-      operatingMargin: margin > 0 ? margin : 51,
+      expensesGrowth: 0,
+      leadConversionRate: convRate,
+      operatingMargin: margin,
     };
-  }, [students, mentors, expenses]);
+  }, [students, mentors, sessions, expenses, leads]);
 
   return (
     <CRMContext.Provider
