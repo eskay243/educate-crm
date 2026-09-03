@@ -30,7 +30,7 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
     ? students.filter(s => s.mentorId === currentUser?.mentorId || s.mentorName === currentUser?.name)
     : students;
 
-  const currentStudent = displayedStudents.find(s => s.id === selectedStudentId) || displayedStudents[0] || students[0];
+  const currentStudent = displayedStudents.find(s => s.id === selectedStudentId) || displayedStudents[0];
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -41,10 +41,89 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
   };
 
   const handleSendPaymentReminder = () => {
+    if (!currentStudent) return;
     setReminderSent(true);
     sendPaymentReminder(currentStudent.id);
     setTimeout(() => setReminderSent(false), 3000);
   };
+
+  // Graceful Empty State when 0 students exist
+  if (!currentStudent || displayedStudents.length === 0) {
+    return (
+      <div className="space-y-stack-lg animate-in fade-in duration-200 max-w-5xl">
+        {/* Mentor Portal Role Notice */}
+        {isMentor && (
+          <div className="p-3 bg-secondary-container/30 border border-outline-variant rounded-lg flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-[20px]">badge</span>
+              <span className="text-on-surface font-semibold">
+                Faculty Mentorship Portal: Financial data is hidden. Showing academic syllabus &amp; assigned mentees.
+              </span>
+            </div>
+            <span className="font-mono text-primary font-bold">0 Assigned Mentees</span>
+          </div>
+        )}
+
+        <div className="flex justify-between items-center flex-wrap gap-4">
+          <div>
+            <h2 className="font-headline-lg text-headline-lg font-bold text-on-surface">
+              Student Enrollment &amp; Tuition Billing
+            </h2>
+            <p className="font-body-md text-body-md text-secondary mt-1">
+              Manage academic course registrations, installment tracking, and NIBSS tuition settlement.
+            </p>
+          </div>
+
+          {isAdminOrAdmissions && (
+            <button 
+              onClick={() => openModal('enroll-student')}
+              className="h-10 px-5 bg-primary text-on-primary rounded-lg font-label-md text-xs font-bold hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-sm cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">person_add</span>
+              <span>+ Enroll New Student</span>
+            </button>
+          )}
+        </div>
+
+        {/* Empty State Card */}
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-12 text-center shadow-xs flex flex-col items-center justify-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto">
+            <span className="material-symbols-outlined text-[36px]">school</span>
+          </div>
+
+          <div className="max-w-md mx-auto space-y-1">
+            <h3 className="font-headline-md text-base font-bold text-on-surface">
+              {isMentor ? 'No Assigned Mentees Found' : 'No Students Enrolled Yet'}
+            </h3>
+            <p className="text-xs text-secondary leading-relaxed">
+              {isMentor 
+                ? 'You do not have any active student mentees assigned to your faculty profile yet.' 
+                : 'Your database is in a clean production state. You can admit prospective leads or directly register your first student enrollment below.'}
+            </p>
+          </div>
+
+          {isAdminOrAdmissions && (
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => openModal('enroll-student')}
+                className="h-10 px-5 rounded-lg bg-primary hover:bg-primary/90 text-on-primary font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">person_add</span>
+                <span>Directly Enroll Student</span>
+              </button>
+              <button
+                onClick={() => window.location.href = '/leads'}
+                className="h-10 px-4 rounded-lg bg-surface hover:bg-surface-container border border-outline-variant font-bold text-xs text-on-surface transition-colors flex items-center gap-2 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">group</span>
+                <span>Go to Admissions Pipeline</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-stack-lg animate-in fade-in duration-200">
@@ -98,7 +177,7 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                 setSelectedMentorForBookingId(currentUser?.mentorId || 'men-1');
                 openModal('book-session');
               }}
-              className="h-10 px-stack-md bg-primary text-on-primary rounded font-label-md text-label-md font-bold hover:bg-primary-container transition-colors flex items-center gap-2 shadow-xs"
+              className="h-10 px-stack-md bg-primary text-on-primary rounded font-label-md text-label-md font-bold hover:bg-primary-container transition-colors flex items-center gap-2 shadow-xs cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">calendar_month</span>
               <span>Log 1-on-1 Coaching Session</span>
@@ -113,14 +192,14 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                       setSelectedStudentForAssignmentId(currentStudent.id);
                       openModal('assign-mentor');
                     }}
-                    className="h-10 px-stack-md border border-outline-variant rounded font-label-md text-label-md font-semibold text-on-surface hover:bg-surface-container-low transition-colors flex items-center gap-unit shadow-xs"
+                    className="h-10 px-stack-md border border-outline-variant rounded font-label-md text-label-md font-semibold text-on-surface hover:bg-surface-container-low transition-colors flex items-center gap-unit shadow-xs cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[18px]">assignment_ind</span>
                     <span>Assign Mentor</span>
                   </button>
                   <button 
                     onClick={() => openModal('enroll-student')}
-                    className="h-10 px-stack-md border border-outline-variant rounded font-label-md text-label-md font-semibold text-on-surface hover:bg-surface-container-low transition-colors flex items-center gap-unit shadow-xs"
+                    className="h-10 px-stack-md border border-outline-variant rounded font-label-md text-label-md font-semibold text-on-surface hover:bg-surface-container-low transition-colors flex items-center gap-unit shadow-xs cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[18px]">person_add</span>
                     <span>New Student</span>
@@ -136,7 +215,7 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                       setSelectedInvoiceId(null);
                       openModal('view-invoice');
                     }}
-                    className="h-10 px-stack-md border border-outline-variant rounded font-label-md text-label-md font-semibold text-primary hover:bg-secondary-container transition-colors flex items-center gap-unit shadow-xs"
+                    className="h-10 px-stack-md border border-outline-variant rounded font-label-md text-label-md font-semibold text-primary hover:bg-secondary-container transition-colors flex items-center gap-unit shadow-xs cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[18px]">receipt_long</span>
                     <span>View Official Invoice (₦)</span>
@@ -144,7 +223,7 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
 
                   <button 
                     onClick={handleSendPaymentReminder}
-                    className="h-10 px-stack-md bg-secondary-container text-primary rounded font-label-md text-label-md font-bold hover:bg-secondary-container/80 transition-colors flex items-center gap-unit shadow-xs"
+                    className="h-10 px-stack-md bg-secondary-container text-primary rounded font-label-md text-label-md font-bold hover:bg-secondary-container/80 transition-colors flex items-center gap-unit shadow-xs cursor-pointer"
                     title="Send automated due date reminder to student"
                   >
                     <span className="material-symbols-outlined text-[18px]">notifications_active</span>
@@ -156,7 +235,7 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                       setInvoiceSent(true);
                       setTimeout(() => setInvoiceSent(false), 3000);
                     }}
-                    className="h-10 px-stack-md bg-primary text-on-primary rounded font-label-md text-label-md font-semibold hover:bg-primary-container transition-colors flex items-center gap-unit shadow-xs"
+                    className="h-10 px-stack-md bg-primary text-on-primary rounded font-label-md text-label-md font-semibold hover:bg-primary-container transition-colors flex items-center gap-unit shadow-xs cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[18px]">mail</span>
                     <span>{invoiceSent ? 'Invoice Sent!' : 'Email Invoice'}</span>
@@ -193,7 +272,7 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                     <span>Total Fees (₦)</span>
                   </div>
                   <div className="font-display text-display font-bold text-on-surface">
-                    {formatNaira(currentStudent.totalFees || 1245000)}
+                    {formatNaira(currentStudent.totalFees || 0)}
                   </div>
                 </div>
 
@@ -241,70 +320,47 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
               {isAdminOrAdmissions && (
                 <button 
                   onClick={() => openModal('enroll-student')}
-                  className="text-primary hover:text-primary-container transition-colors font-label-md text-label-md font-semibold flex items-center gap-unit"
+                  className="text-primary hover:text-primary-container transition-colors font-label-md text-label-md font-semibold flex items-center gap-unit cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[18px]">add</span>
                   <span>Add Course</span>
                 </button>
               )}
             </div>
-            <div>
-              <ul className="divide-y divide-outline-variant">
-                {(currentStudent.courses && currentStudent.courses.length > 0 ? currentStudent.courses : [
-                  {
-                    id: 'c-1',
-                    code: 'CS-401',
-                    name: 'Advanced Data Structures & Algorithms',
-                    semester: 'Fall Semester 2026',
-                    instructor: 'Dr. Sarah Jenkins',
-                    fee: 415000,
-                    billedDate: '15 Aug 2026',
-                  },
-                  {
-                    id: 'c-2',
-                    code: 'AI-302',
-                    name: 'Machine Learning & Predictive Modeling',
-                    semester: 'Fall Semester 2026',
-                    instructor: 'Dr. Olumide Johnson',
-                    fee: 415000,
-                    billedDate: '15 Aug 2026',
-                  },
-                  {
-                    id: 'c-3',
-                    code: 'HUM-210',
-                    name: 'Data Ethics & Regulatory Compliance in Nigeria',
-                    semester: 'Fall Semester 2026',
-                    instructor: 'Elena Rodriguez',
-                    fee: 415000,
-                    billedDate: '15 Aug 2026',
-                  }
-                ]).map((course, index) => (
-                  <li 
-                    key={course.id} 
-                    className={`p-stack-md flex justify-between items-start sm:items-center flex-col sm:flex-row gap-stack-sm hover:bg-surface-container-low transition-colors ${
-                      index % 2 === 1 ? 'bg-surface' : ''
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-bold text-primary px-1.5 py-0.5 rounded bg-primary-container/20">
-                          {course.code}
-                        </span>
-                        <h4 className="font-headline-sm text-sm font-bold text-on-surface">{course.name}</h4>
-                      </div>
-                      <p className="font-body-sm text-xs text-secondary mt-0.5">
-                        {course.semester} • Instructor: <span className="font-semibold text-on-surface">{course.instructor}</span>
-                      </p>
-                    </div>
 
-                    {!isMentor && (
-                      <div className="text-right">
-                        <p className="font-data-tabular font-bold text-sm text-primary">{formatNaira(course.fee)}</p>
-                        <p className="text-[11px] text-secondary">Billed: {course.billedDate}</p>
+            <div className="p-stack-md">
+              <ul className="divide-y divide-outline-variant/60">
+                {(currentStudent.courses || []).length === 0 ? (
+                  <li className="py-4 text-center text-xs text-secondary">No specific course modules attached to this student record.</li>
+                ) : (
+                  (currentStudent.courses || []).map((course) => (
+                    <li key={course.id} className="py-stack-md first:pt-0 last:pb-0 flex items-center justify-between">
+                      <div className="flex items-center gap-stack-md">
+                        <div className="w-9 h-9 rounded bg-secondary-container text-primary flex items-center justify-center font-bold text-xs">
+                          {course.code?.slice(0, 2) || 'CS'}
+                        </div>
+                        <div>
+                          <div className="font-label-md text-sm font-bold text-on-surface flex items-center gap-unit">
+                            {course.name}
+                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-surface-container text-secondary">
+                              {course.code}
+                            </span>
+                          </div>
+                          <div className="font-body-sm text-xs text-secondary mt-0.5">
+                            Instructor: {course.instructor || currentStudent.mentorName || 'Faculty Assigned'} • {course.semester}
+                          </div>
+                        </div>
                       </div>
-                    )}
-                  </li>
-                ))}
+
+                      {!isMentor && (
+                        <div className="text-right">
+                          <p className="font-data-tabular font-bold text-sm text-primary">{formatNaira(course.fee)}</p>
+                          <p className="text-[11px] text-secondary">Billed: {course.billedDate}</p>
+                        </div>
+                      )}
+                    </li>
+                  ))
+                )}
               </ul>
             </div>
           </div>
@@ -320,30 +376,34 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
               </div>
 
               <div className="space-y-3">
-                {(currentStudent.installments || []).map((inst) => (
-                  <div key={inst.id} className="flex items-center justify-between p-3 rounded bg-surface border border-outline-variant/50">
-                    <div className="flex items-center gap-3">
-                      <span className={`material-symbols-outlined ${inst.status === 'Paid' ? 'text-emerald-700' : 'text-amber-600'}`}>
-                        {inst.status === 'Paid' ? 'check_circle' : 'pending'}
-                      </span>
-                      <div>
-                        <p className="font-label-md text-sm font-semibold text-on-surface">{inst.description}</p>
-                        <p className="text-xs text-secondary flex items-center gap-1.5 mt-0.5">
-                          <span className="material-symbols-outlined text-[14px]">event</span>
-                          <span>Due Date: <strong className="text-on-surface font-mono">{inst.dueDate}</strong></span>
-                        </p>
+                {(currentStudent.installments || []).length === 0 ? (
+                  <p className="text-xs text-secondary text-center py-4">No scheduled installments recorded.</p>
+                ) : (
+                  (currentStudent.installments || []).map((inst) => (
+                    <div key={inst.id} className="flex items-center justify-between p-3 rounded bg-surface border border-outline-variant/50">
+                      <div className="flex items-center gap-3">
+                        <span className={`material-symbols-outlined ${inst.status === 'Paid' ? 'text-emerald-700' : 'text-amber-600'}`}>
+                          {inst.status === 'Paid' ? 'check_circle' : 'pending'}
+                        </span>
+                        <div>
+                          <p className="font-label-md text-sm font-semibold text-on-surface">{inst.description}</p>
+                          <p className="text-xs text-secondary flex items-center gap-1.5 mt-0.5">
+                            <span className="material-symbols-outlined text-[14px]">event</span>
+                            <span>Due Date: <strong className="text-on-surface font-mono">{inst.dueDate}</strong></span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-data-tabular font-bold text-on-surface">{formatNaira(inst.amount)}</p>
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                          inst.status === 'Paid' ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#fef9c3] text-[#854d0e]'
+                        }`}>
+                          {inst.status}
+                        </span>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-data-tabular font-bold text-on-surface">{formatNaira(inst.amount)}</p>
-                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                        inst.status === 'Paid' ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#fef9c3] text-[#854d0e]'
-                      }`}>
-                        {inst.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           ) : (
@@ -358,7 +418,7 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                   <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">On Track</span>
                 </div>
                 <p className="text-on-surface leading-relaxed">
-                  Student is currently completing the end-to-end cloud deployment assignment using Docker &amp; FastApi. Recommended next focus: High-throughput async database tuning.
+                  Student is currently enrolled and working through core modules with the assigned faculty mentor.
                 </p>
               </div>
             </div>
@@ -371,28 +431,28 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
           <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md shadow-xs space-y-4">
             <h3 className="font-headline-md text-headline-md font-bold text-on-surface">Student &amp; Mentor Profile</h3>
             
-            {/* Mentor Assignment Box (Both students and mentors can see who is paired) */}
+            {/* Mentor Assignment Box */}
             <div className="p-3 bg-secondary-container/40 border border-primary/20 rounded-lg space-y-1">
               <span className="text-[10px] uppercase font-bold text-secondary tracking-wider">Assigned Lead Faculty Mentor</span>
               <p className="text-sm font-bold text-primary flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-[18px]">verified_user</span>
-                <span>{currentStudent.mentorName || 'Dr. Arthur Pendelton'}</span>
+                <span>{currentStudent.mentorName || 'Faculty Mentor Assigned'}</span>
               </p>
-              <p className="text-[11px] text-secondary">Department: Backend &amp; Cloud Systems</p>
+              <p className="text-[11px] text-secondary">Department: Academic Faculty</p>
             </div>
 
             <div className="text-xs space-y-2.5 divide-y divide-outline-variant/60">
               <div className="pt-2">
                 <span className="text-secondary text-xs">Student Email:</span>
-                <p className="font-mono text-on-surface font-medium">{currentStudent.email}</p>
+                <p className="font-mono text-on-surface font-medium">{currentStudent.email || 'N/A'}</p>
               </div>
               <div className="pt-2">
                 <span className="text-secondary text-xs">Phone (WhatsApp):</span>
-                <p className="font-mono text-on-surface font-medium">{currentStudent.phone}</p>
+                <p className="font-mono text-on-surface font-medium">{currentStudent.phone || 'N/A'}</p>
               </div>
               <div className="pt-2">
                 <span className="text-secondary text-xs">Enrolled Academic Cohort:</span>
-                <p className="text-on-surface font-semibold">{currentStudent.cohort}</p>
+                <p className="text-on-surface font-semibold">{currentStudent.cohort || 'Cohort In Progress'}</p>
               </div>
             </div>
           </div>
