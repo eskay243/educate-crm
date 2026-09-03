@@ -112,7 +112,7 @@ export const EditCourseModal: React.FC<EditCourseModalProps> = ({ isOpen, onClos
                 required
                 value={code}
                 onChange={e => setCode(e.target.value)}
-                className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-mono text-sm text-on-surface focus:border-primary outline-none"
+                className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-data-tabular text-sm text-on-surface focus:border-primary outline-none"
               />
             </div>
 

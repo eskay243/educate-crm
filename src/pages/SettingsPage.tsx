@@ -389,7 +389,7 @@ export const SettingsPage: React.FC = () => {
         >
           <span className="material-symbols-outlined text-[18px]">badge</span>
           <span>Staff &amp; Role Security</span>
-          <span className="px-1.5 py-0.5 rounded-full bg-surface-container text-secondary text-[11px] font-mono">
+          <span className="px-1.5 py-0.5 rounded-full bg-surface-container text-secondary text-[11px] font-data-tabular">
             {staffUsers.length}
           </span>
         </button>
@@ -476,7 +476,7 @@ export const SettingsPage: React.FC = () => {
                   type="text"
                   value={cacNumber}
                   onChange={(e) => setCacNumber(e.target.value)}
-                  className="w-full h-10 px-3 rounded bg-surface border border-outline-variant text-sm font-mono focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                  className="w-full h-10 px-3 rounded bg-surface border border-outline-variant text-sm font-data-tabular focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                 />
               </div>
 
@@ -486,7 +486,7 @@ export const SettingsPage: React.FC = () => {
                   type="text"
                   value={tinNumber}
                   onChange={(e) => setTinNumber(e.target.value)}
-                  className="w-full h-10 px-3 rounded bg-surface border border-outline-variant text-sm font-mono focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                  className="w-full h-10 px-3 rounded bg-surface border border-outline-variant text-sm font-data-tabular focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                 />
               </div>
             </div>
@@ -514,7 +514,7 @@ export const SettingsPage: React.FC = () => {
                   type="text"
                   value={accountNumber}
                   onChange={(e) => setAccountNumber(e.target.value)}
-                  className="w-full h-10 px-3 rounded bg-surface border border-outline-variant text-sm font-mono font-bold text-primary focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                  className="w-full h-10 px-3 rounded bg-surface border border-outline-variant text-sm font-data-tabular font-bold text-primary focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                 />
               </div>
 
@@ -697,7 +697,7 @@ export const SettingsPage: React.FC = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-outline-variant/60 bg-surface-container-low text-secondary text-[11px] uppercase tracking-wider font-mono">
+                  <tr className="border-b border-outline-variant/60 bg-surface-container-low text-secondary text-[11px] uppercase tracking-wider font-data-tabular">
                     <th className="p-3">Staff Member</th>
                     <th className="p-3">Email</th>
                     <th className="p-3">Role Permission</th>
@@ -717,7 +717,7 @@ export const SettingsPage: React.FC = () => {
                           <span className="px-1.5 py-0.2 rounded bg-[#dcfce7] text-[#166534] text-[9px] font-bold">YOU</span>
                         )}
                       </td>
-                      <td className="p-3 text-secondary font-mono">{user.email}</td>
+                      <td className="p-3 text-secondary font-data-tabular">{user.email}</td>
                       <td className="p-3">
                         <select
                           value={user.role}
@@ -779,7 +779,7 @@ export const SettingsPage: React.FC = () => {
                   Connect your Hostinger Business Email, Gmail App Password, or Brevo SMTP to deliver real emails to actual recipient inboxes.
                 </p>
               </div>
-              <span className={`px-2.5 py-1 rounded-full text-xs font-bold font-mono ${
+              <span className={`px-2.5 py-1 rounded-full text-xs font-bold font-data-tabular ${
                 smtpUser ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#fef9c3] text-[#854d0e]'
               }`}>
                 {smtpUser ? '● Custom SMTP Active' : '○ Ethereal Test Sandbox'}
@@ -794,7 +794,7 @@ export const SettingsPage: React.FC = () => {
                   value={smtpHost}
                   onChange={(e) => setSmtpHost(e.target.value)}
                   placeholder="e.g. smtp.hostinger.com"
-                  className="w-full h-9 px-3 rounded bg-surface border border-outline-variant font-mono outline-none focus:border-primary"
+                  className="w-full h-9 px-3 rounded bg-surface border border-outline-variant font-data-tabular outline-none focus:border-primary"
                 />
               </div>
 
@@ -805,7 +805,7 @@ export const SettingsPage: React.FC = () => {
                   value={smtpPort}
                   onChange={(e) => setSmtpPort(Number(e.target.value))}
                   placeholder="465 or 587"
-                  className="w-full h-9 px-3 rounded bg-surface border border-outline-variant font-mono outline-none focus:border-primary"
+                  className="w-full h-9 px-3 rounded bg-surface border border-outline-variant font-data-tabular outline-none focus:border-primary"
                 />
               </div>
 
@@ -1014,7 +1014,7 @@ export const SettingsPage: React.FC = () => {
                           type="text"
                           value={welcomeSetupUrl}
                           onChange={(e) => setWelcomeSetupUrl(e.target.value)}
-                          className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-mono"
+                          className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-data-tabular"
                         />
                       </div>
                       <div>
@@ -1039,7 +1039,7 @@ export const SettingsPage: React.FC = () => {
                             type="text"
                             value={reminderStudentCode}
                             onChange={(e) => setReminderStudentCode(e.target.value)}
-                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-mono"
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-data-tabular"
                           />
                         </div>
                         <div>
@@ -1079,7 +1079,7 @@ export const SettingsPage: React.FC = () => {
                             type="text"
                             value={reminderAccountNum}
                             onChange={(e) => setReminderAccountNum(e.target.value)}
-                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-mono font-bold"
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-data-tabular font-bold"
                           />
                         </div>
                       </div>
@@ -1124,7 +1124,7 @@ export const SettingsPage: React.FC = () => {
                             type="text"
                             value={invoiceNum}
                             onChange={(e) => setInvoiceNum(e.target.value)}
-                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-mono"
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-data-tabular"
                           />
                         </div>
                         <div>
@@ -1158,7 +1158,7 @@ export const SettingsPage: React.FC = () => {
                             type="number"
                             value={invoiceAmt}
                             onChange={(e) => setInvoiceAmt(Number(e.target.value))}
-                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-mono font-bold text-primary"
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-data-tabular font-bold text-primary"
                           />
                         </div>
                       </div>
@@ -1169,7 +1169,7 @@ export const SettingsPage: React.FC = () => {
                           type="text"
                           value={invoicePayRef}
                           onChange={(e) => setInvoicePayRef(e.target.value)}
-                          className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-mono"
+                          className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-data-tabular"
                         />
                       </div>
 
@@ -1251,7 +1251,7 @@ export const SettingsPage: React.FC = () => {
                           type="text"
                           value={resetLinkUrl}
                           onChange={(e) => setResetLinkUrl(e.target.value)}
-                          className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-mono"
+                          className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-data-tabular"
                         />
                       </div>
                       <div>
@@ -1294,7 +1294,7 @@ export const SettingsPage: React.FC = () => {
                     <span className="material-symbols-outlined text-[16px] text-primary">visibility</span>
                     <span>Live HTML Preview (Updates in Real-Time)</span>
                   </span>
-                  <span className="text-[11px] font-mono text-secondary">
+                  <span className="text-[11px] font-data-tabular text-secondary">
                     Nexus Transactional Engine
                   </span>
                 </div>
@@ -1342,7 +1342,7 @@ export const SettingsPage: React.FC = () => {
                             <span>View Delivered Email Online</span>
                           </a>
                         )}
-                        <span className="font-mono text-[10px] text-secondary">{log.timestamp}</span>
+                        <span className="font-data-tabular text-[10px] text-secondary">{log.timestamp}</span>
                       </div>
                     </div>
                   ))}
@@ -1479,7 +1479,7 @@ export const SettingsPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="p-3 rounded-lg bg-surface border border-outline-variant text-[11px] text-secondary space-y-1 font-mono">
+            <div className="p-3 rounded-lg bg-surface border border-outline-variant text-[11px] text-secondary space-y-1 font-data-tabular">
               <p>• Leads: Wiped to 0</p>
               <p>• Students &amp; Invoices: Wiped to 0</p>
               <p>• Expenses: Wiped to 0</p>

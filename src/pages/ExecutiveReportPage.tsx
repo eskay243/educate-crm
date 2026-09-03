@@ -71,7 +71,7 @@ export const ExecutiveReportPage: React.FC<ExecutiveReportPageProps> = () => {
             </span>
           </div>
           <p className="font-body-sm text-body-sm text-secondary mb-unit">Gross Tuition Collected</p>
-          <h3 className="font-display text-display font-bold text-on-surface font-mono">
+          <h3 className="font-display text-display font-bold text-on-surface">
             {formatNaira(kpis.totalRevenue)}
           </h3>
         </div>
@@ -88,7 +88,7 @@ export const ExecutiveReportPage: React.FC<ExecutiveReportPageProps> = () => {
             </span>
           </div>
           <p className="font-body-sm text-body-sm text-secondary mb-unit">Faculty Honorariums (₦)</p>
-          <h3 className="font-display text-display font-bold text-on-surface font-mono">
+          <h3 className="font-display text-display font-bold text-on-surface">
             {formatNaira(kpis.mentorPayouts)}
           </h3>
         </div>
@@ -104,7 +104,7 @@ export const ExecutiveReportPage: React.FC<ExecutiveReportPageProps> = () => {
             </span>
           </div>
           <p className="font-body-sm text-body-sm text-secondary mb-unit">Total Operating Costs (₦)</p>
-          <h3 className="font-display text-display font-bold text-on-surface font-mono">
+          <h3 className="font-display text-display font-bold text-on-surface">
             {formatNaira(kpis.totalExpenses)}
           </h3>
         </div>
@@ -121,7 +121,7 @@ export const ExecutiveReportPage: React.FC<ExecutiveReportPageProps> = () => {
             </span>
           </div>
           <p className="font-body-sm text-body-sm text-secondary mb-unit">Net Operating Margin</p>
-          <h3 className="font-display text-display font-bold text-primary font-mono">
+          <h3 className="font-display text-display font-bold text-primary">
             {kpis.operatingMargin}%
           </h3>
         </div>
@@ -138,7 +138,7 @@ export const ExecutiveReportPage: React.FC<ExecutiveReportPageProps> = () => {
                 Tuition Revenue vs. Faculty Honorariums &amp; Operating Overhead
               </h3>
             </div>
-            <span className="text-xs font-mono text-primary font-bold bg-secondary-container px-2 py-0.5 rounded">
+            <span className="text-xs font-data-tabular text-primary font-bold bg-secondary-container px-2 py-0.5 rounded">
               Live Trend (₦)
             </span>
           </div>
@@ -175,7 +175,7 @@ export const ExecutiveReportPage: React.FC<ExecutiveReportPageProps> = () => {
                 Cohort Admissions vs. Graduation Progress
               </h3>
             </div>
-            <span className="text-xs font-mono text-primary font-bold bg-secondary-container px-2 py-0.5 rounded">
+            <span className="text-xs font-data-tabular text-primary font-bold bg-secondary-container px-2 py-0.5 rounded">
               Cohort Tracking
             </span>
           </div>
@@ -245,18 +245,18 @@ export const ExecutiveReportPage: React.FC<ExecutiveReportPageProps> = () => {
                     key={mentor.id}
                     className={`hover:bg-surface-bright transition-colors ${index % 2 === 1 ? 'bg-surface-container-low/30' : ''}`}
                   >
-                    <td className="px-stack-md py-3 font-mono font-bold text-primary">#{mentor.mentorCode}</td>
+                    <td className="px-stack-md py-3 font-data-tabular font-bold text-primary">#{mentor.mentorCode}</td>
                     <td className="px-stack-md py-3 font-medium">
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs">
                           {mentor.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                         </div>
-                        <span className="font-sans font-bold">{mentor.name}</span>
+                        <span className="font-bold text-on-surface">{mentor.name}</span>
                       </div>
                     </td>
-                    <td className="px-stack-md py-3 text-secondary font-sans">{mentor.department}</td>
+                    <td className="px-stack-md py-3 text-secondary">{mentor.department}</td>
                     <td className="px-stack-md py-3 font-semibold">{mentor.sessionsCount}</td>
-                    <td className="px-stack-md py-3 font-bold text-on-surface">{formatNaira(mentor.pendingPayout)}</td>
+                    <td className="px-stack-md py-3 font-bold text-on-surface font-data-tabular">{formatNaira(mentor.pendingPayout)}</td>
                     <td className="px-stack-md py-3">
                       <span 
                         className={`px-2 py-0.5 rounded text-[11px] font-bold inline-block ${

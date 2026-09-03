@@ -22,11 +22,11 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         <div className="space-y-1 font-data-tabular">
           <div className="flex justify-between items-center text-[#00236f]">
             <span>Admitted Capacity:</span>
-            <strong className="font-mono">{enrolled}</strong>
+            <strong className="font-bold">{enrolled}</strong>
           </div>
           <div className="flex justify-between items-center text-[#10b981]">
             <span>Active Enrolled Students:</span>
-            <strong className="font-mono">{activeStudents}</strong>
+            <strong className="font-bold">{activeStudents}</strong>
           </div>
         </div>
       </div>

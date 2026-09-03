@@ -28,11 +28,11 @@ const CustomTooltip = ({ active, payload }: any) => {
         </div>
         <div className="text-secondary font-data-tabular flex justify-between">
           <span>Prospect Leads:</span>
-          <strong className="text-on-surface font-mono">{data.count}</strong>
+          <strong className="text-on-surface font-bold">{data.count}</strong>
         </div>
         <div className="text-secondary font-data-tabular flex justify-between">
           <span>Pipeline Value (₦):</span>
-          <strong className="text-primary font-mono">{formatNaira(data.value)}</strong>
+          <strong className="text-primary font-bold">{formatNaira(data.value)}</strong>
         </div>
       </div>
     );
@@ -123,7 +123,7 @@ export const LeadSourceDonutChart: React.FC = () => {
 
         {/* Center Donut Hole Text */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="font-display text-xl font-bold text-on-surface leading-tight font-mono">{totalLeads}</span>
+          <span className="font-display text-xl font-bold text-on-surface leading-tight font-data-tabular">{totalLeads}</span>
           <span className="text-[10px] text-secondary font-medium uppercase tracking-wider">Total Leads</span>
         </div>
       </div>
@@ -148,8 +148,8 @@ export const LeadSourceDonutChart: React.FC = () => {
                 <span className="font-medium text-on-surface truncate">{entry.name}</span>
               </div>
               <div className="flex items-center gap-2 font-data-tabular shrink-0 pl-2">
-                <span className="font-bold text-on-surface font-mono">{entry.count}</span>
-                <span className="text-[11px] text-secondary w-7 text-right font-mono">{percent}%</span>
+                <span className="font-bold text-on-surface">{entry.count}</span>
+                <span className="text-[11px] text-secondary w-7 text-right">{percent}%</span>
               </div>
             </div>
           );

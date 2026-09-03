@@ -190,7 +190,7 @@ export const BookSessionModal: React.FC<BookSessionModalProps> = ({ isOpen, onCl
 
               <div className="space-y-1">
                 <label className="font-label-md text-xs text-secondary font-semibold">Calculated Honorarium Payout (₦)</label>
-                <div className="w-full h-10 px-3 bg-secondary-container/40 border border-primary/20 rounded flex items-center font-bold text-sm text-primary font-mono">
+                <div className="w-full h-10 px-3 bg-secondary-container/40 border border-primary/20 rounded flex items-center font-bold text-sm text-primary font-data-tabular">
                   {formatNaira(estimatedCompensation)}
                 </div>
               </div>

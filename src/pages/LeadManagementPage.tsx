@@ -276,7 +276,7 @@ export const LeadManagementPage: React.FC = () => {
                                 <span className="font-bold text-xs text-on-surface">{lead.name}</span>
                               </div>
                               {lead.dealValue && (
-                                <span className="font-mono text-[11px] font-bold text-primary">{formatNaira(lead.dealValue)}</span>
+                                <span className="font-data-tabular text-[11px] font-bold text-primary">{formatNaira(lead.dealValue)}</span>
                               )}
                             </div>
 
@@ -407,8 +407,8 @@ export const LeadManagementPage: React.FC = () => {
                         {lead.status}
                       </span>
                     </td>
-                    <td className="p-stack-md font-mono font-bold text-primary">
-                      {lead.dealValue ? formatNaira(lead.dealValue) : '₦850,000'}
+                    <td className="p-stack-md font-data-tabular font-bold text-primary">
+                      {formatNaira(lead.dealValue || 0)}
                     </td>
                     <td className="p-stack-md text-secondary">{lead.source}</td>
                     <td className="p-stack-md text-on-surface font-medium">{lead.assignedRep}</td>

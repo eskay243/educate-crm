@@ -90,7 +90,8 @@ export default {
         "body-md": ["Inter", "sans-serif"],
         "body-sm": ["Inter", "sans-serif"],
         "label-md": ["Inter", "sans-serif"],
-        "data-tabular": ["Inter", "monospace"],
+        "data-tabular": ["Inter", "sans-serif"],
+        mono: ["Inter", "monospace"],
       },
       fontSize: {
         "display": ["36px", { lineHeight: "44px", letterSpacing: "-0.02em", fontWeight: "700" }],

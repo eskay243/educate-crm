@@ -60,7 +60,7 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                 Faculty Mentorship Portal: Financial data is hidden. Showing academic syllabus &amp; assigned mentees.
               </span>
             </div>
-            <span className="font-mono text-primary font-bold">0 Assigned Mentees</span>
+            <span className="font-data-tabular text-primary font-bold">0 Assigned Mentees</span>
           </div>
         )}
 
@@ -134,7 +134,7 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
             <span className="material-symbols-outlined text-primary text-[20px]">badge</span>
             <span className="text-on-surface font-semibold">Faculty Mentorship Portal: Financial data is hidden. Showing academic syllabus &amp; assigned mentees.</span>
           </div>
-          <span className="font-mono text-primary font-bold">{displayedStudents.length} Assigned Mentees</span>
+          <span className="font-data-tabular text-primary font-bold">{displayedStudents.length} Assigned Mentees</span>
         </div>
       )}
 
@@ -342,7 +342,7 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                         <div>
                           <div className="font-label-md text-sm font-bold text-on-surface flex items-center gap-unit">
                             {course.name}
-                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-surface-container text-secondary">
+                            <span className="text-[10px] font-data-tabular px-1.5 py-0.2 rounded bg-surface-container text-secondary">
                               {course.code}
                             </span>
                           </div>
@@ -389,7 +389,7 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                           <p className="font-label-md text-sm font-semibold text-on-surface">{inst.description}</p>
                           <p className="text-xs text-secondary flex items-center gap-1.5 mt-0.5">
                             <span className="material-symbols-outlined text-[14px]">event</span>
-                            <span>Due Date: <strong className="text-on-surface font-mono">{inst.dueDate}</strong></span>
+                            <span>Due Date: <strong className="text-on-surface font-data-tabular">{inst.dueDate}</strong></span>
                           </p>
                         </div>
                       </div>
@@ -444,11 +444,11 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
             <div className="text-xs space-y-2.5 divide-y divide-outline-variant/60">
               <div className="pt-2">
                 <span className="text-secondary text-xs">Student Email:</span>
-                <p className="font-mono text-on-surface font-medium">{currentStudent.email || 'N/A'}</p>
+                <p className="text-on-surface font-medium">{currentStudent.email || 'N/A'}</p>
               </div>
               <div className="pt-2">
                 <span className="text-secondary text-xs">Phone (WhatsApp):</span>
-                <p className="font-mono text-on-surface font-medium">{currentStudent.phone || 'N/A'}</p>
+                <p className="font-data-tabular text-on-surface font-medium">{currentStudent.phone || 'N/A'}</p>
               </div>
               <div className="pt-2">
                 <span className="text-secondary text-xs">Enrolled Academic Cohort:</span>

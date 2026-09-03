@@ -131,7 +131,7 @@ export const ResetPasswordPage: React.FC = () => {
                       style={{ width: strength.width }}
                     />
                   </div>
-                  <div className="flex justify-between text-[10px] text-secondary font-mono">
+                  <div className="flex justify-between text-[10px] text-secondary font-data-tabular">
                     <span>Strength: {strength.text}</span>
                     <span>Min. 8 characters</span>
                   </div>
@@ -190,7 +190,7 @@ export const ResetPasswordPage: React.FC = () => {
         </div>
       </div>
 
-      <p className="font-mono text-[11px] text-secondary mt-6">
+      <p className="font-data-tabular text-[11px] text-secondary mt-6">
         NEXUS INSTITUTE SECURITY &amp; ACCESS CONTROL • LAGOS, NIGERIA
       </p>
     </div>

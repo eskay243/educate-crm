@@ -100,7 +100,7 @@ export const CreateCourseModal: React.FC<CreateCourseModalProps> = ({ isOpen, on
                 value={code}
                 onChange={e => setCode(e.target.value)}
                 placeholder="e.g. AI-601"
-                className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-mono text-sm text-on-surface focus:border-primary outline-none"
+                className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-data-tabular text-sm text-on-surface focus:border-primary outline-none"
               />
             </div>
 

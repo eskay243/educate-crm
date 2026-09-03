@@ -82,7 +82,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
           >
             <span className="material-symbols-outlined">notifications</span>
             {unreadNotificationCount > 0 && (
-              <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-error text-white font-mono text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-surface animate-in zoom-in-50">
+              <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-error text-white font-data-tabular text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-surface animate-in zoom-in-50">
                 {unreadNotificationCount}
               </span>
             )}

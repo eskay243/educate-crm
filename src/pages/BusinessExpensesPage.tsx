@@ -108,7 +108,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
             <span className="material-symbols-outlined text-outline">payments</span>
           </div>
           <div>
-            <div className="font-headline-lg text-headline-lg font-bold text-on-surface font-mono">
+            <div className="font-headline-lg text-headline-lg font-bold text-on-surface">
               {formatNaira(totalSpend)}
             </div>
             <div className="font-body-sm text-body-sm text-secondary mt-1 flex items-center gap-1">
@@ -125,7 +125,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
             <span className="material-symbols-outlined text-outline">hourglass_empty</span>
           </div>
           <div>
-            <div className="font-headline-lg text-headline-lg font-bold text-on-surface font-mono">
+            <div className="font-headline-lg text-headline-lg font-bold text-on-surface">
               {formatNaira(pendingFunding)}
             </div>
             <div className="font-body-sm text-body-sm text-secondary mt-1">
@@ -164,7 +164,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                     min="100000"
                     value={newBudgetValue}
                     onChange={e => setNewBudgetValue(Number(e.target.value))}
-                    className="w-full h-8 pl-7 pr-2 rounded bg-surface border border-primary text-xs font-mono font-bold outline-none"
+                    className="w-full h-8 pl-7 pr-2 rounded bg-surface border border-primary text-xs font-bold outline-none font-data-tabular"
                     autoFocus
                   />
                 </div>
@@ -187,7 +187,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
             ) : (
               <>
                 <div className="flex justify-between items-baseline mb-2">
-                  <span className="font-headline-lg text-headline-lg font-bold text-on-surface font-mono">
+                  <span className="font-headline-lg text-headline-lg font-bold text-on-surface">
                     {formatNaira(approvedBudget)}
                   </span>
                   <span className="font-body-sm text-body-sm text-secondary font-data-tabular">
@@ -200,7 +200,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                     style={{ width: `${budgetUtilization}%` }}
                   />
                 </div>
-                <div className="flex justify-between text-[11px] text-secondary font-mono">
+                <div className="flex justify-between text-[11px] text-secondary font-data-tabular">
                   <span>Spent: {formatNaira(totalSpend)}</span>
                   <span>Remaining: {formatNaira(Math.max(0, approvedBudget - totalSpend))}</span>
                 </div>
@@ -287,20 +287,20 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                     key={expense.id}
                     className={`hover:bg-surface-bright transition-colors ${index % 2 === 1 ? 'bg-surface-container-low/20' : ''}`}
                   >
-                    <td className="px-stack-md py-3 font-mono font-medium text-primary">
+                    <td className="px-stack-md py-3 font-data-tabular font-bold text-primary">
                       #{expense.expenseCode || `EXP-${index + 1000}`}
                     </td>
-                    <td className="px-stack-md py-3 font-sans font-medium text-on-surface">
+                    <td className="px-stack-md py-3 font-medium text-on-surface">
                       {expense.title}
                     </td>
-                    <td className="px-stack-md py-3 font-sans text-secondary">
+                    <td className="px-stack-md py-3 text-secondary">
                       <span className="px-2 py-0.5 rounded bg-surface-container text-xs font-semibold">
                         {expense.category}
                       </span>
                     </td>
-                    <td className="px-stack-md py-3 text-secondary font-sans">{expense.date}</td>
-                    <td className="px-stack-md py-3 font-sans font-medium">{expense.vendor}</td>
-                    <td className="px-stack-md py-3 font-bold text-on-surface font-mono">
+                    <td className="px-stack-md py-3 text-secondary">{expense.date}</td>
+                    <td className="px-stack-md py-3 font-medium">{expense.vendor}</td>
+                    <td className="px-stack-md py-3 font-bold text-on-surface font-data-tabular">
                       {formatNaira(expense.amount)}
                     </td>
                     <td className="px-stack-md py-3">

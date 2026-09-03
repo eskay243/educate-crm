@@ -79,7 +79,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ isOpen, onClose }) =
               </div>
               <p className="font-body-sm text-xs text-secondary">{settings.address}</p>
               <p className="font-body-sm text-xs text-secondary">
-                RC: <span className="font-mono text-on-surface font-semibold">{settings.cacNumber}</span> | TIN: <span className="font-mono text-on-surface font-semibold">{settings.tinNumber}</span>
+                RC: <span className="font-data-tabular text-on-surface font-semibold">{settings.cacNumber}</span> | TIN: <span className="font-data-tabular text-on-surface font-semibold">{settings.tinNumber}</span>
               </p>
               <p className="font-body-sm text-xs text-secondary">Email: {settings.email} | Tel: {settings.phone}</p>
             </div>
@@ -90,7 +90,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ isOpen, onClose }) =
               }`}>
                 {currentInvoice.status}
               </span>
-              <p className="font-mono text-xs font-bold text-primary">{currentInvoice.invoiceNumber}</p>
+              <p className="font-data-tabular text-xs font-bold text-primary">{currentInvoice.invoiceNumber}</p>
               <p className="font-body-sm text-xs text-secondary">Issue Date: {currentInvoice.issueDate}</p>
               <p className="font-body-sm text-xs text-secondary">Due Date: {currentInvoice.dueDate}</p>
             </div>
@@ -108,10 +108,10 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ isOpen, onClose }) =
             <div>
               <p className="font-bold text-secondary uppercase tracking-wider mb-1">Remittance &amp; Settlement Account</p>
               <p className="font-semibold text-on-surface">{settings.defaultNIBSSBank.bankName}</p>
-              <p className="font-mono text-secondary">Account: <span className="text-on-surface font-bold">{settings.defaultNIBSSBank.accountNumber}</span></p>
+              <p className="font-data-tabular text-secondary">Account: <span className="text-on-surface font-bold">{settings.defaultNIBSSBank.accountNumber}</span></p>
               <p className="text-secondary">Name: {settings.defaultNIBSSBank.accountName}</p>
               {currentInvoice.paymentReference && (
-                <p className="mt-1 text-primary font-mono text-[11px] font-semibold">
+                <p className="mt-1 text-primary font-data-tabular text-[11px] font-semibold">
                   Ref: {currentInvoice.paymentReference}
                 </p>
               )}

@@ -371,27 +371,27 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
                     <span className="font-semibold text-on-surface text-right truncate max-w-[160px]">{effectiveCohortName}</span>
                   </div>
 
-                  <div className="flex justify-between items-center py-2 border-b border-outline-variant/60">
-                    <span className="text-secondary">Total Billed Fee:</span>
-                    <span className="font-bold text-primary font-mono">{formatNaira(totalCourseFee)}</span>
+                  <div className="flex justify-between items-center py-2 border-b border-outline-variant/60 font-data-tabular">
+                    <span className="text-secondary font-sans">Total Billed Fee:</span>
+                    <span className="font-bold text-primary">{formatNaira(totalCourseFee)}</span>
                   </div>
 
-                  <div className="flex justify-between items-center py-2 border-b border-outline-variant/60">
-                    <span className="text-secondary">Initial Paid:</span>
-                    <span className="font-bold text-[#166534] font-mono">{formatNaira(initialPayment)}</span>
+                  <div className="flex justify-between items-center py-2 border-b border-outline-variant/60 font-data-tabular">
+                    <span className="text-secondary font-sans">Initial Paid:</span>
+                    <span className="font-bold text-[#166534]">{formatNaira(initialPayment)}</span>
                   </div>
 
-                  <div className="flex justify-between items-center py-2 border-b border-outline-variant/60">
-                    <span className="text-secondary">Balance Due:</span>
-                    <span className={`font-bold font-mono ${outstanding > 0 ? 'text-error' : 'text-[#166534]'}`}>
+                  <div className="flex justify-between items-center py-2 border-b border-outline-variant/60 font-data-tabular">
+                    <span className="text-secondary font-sans">Balance Due:</span>
+                    <span className={`font-bold ${outstanding > 0 ? 'text-error' : 'text-[#166534]'}`}>
                       {formatNaira(outstanding)}
                     </span>
                   </div>
 
                   {/* Progress Bar */}
-                  <div className="space-y-1 pt-1">
+                  <div className="space-y-1 pt-1 font-data-tabular">
                     <div className="flex justify-between text-[11px] font-semibold text-secondary">
-                      <span>Tuition Covered:</span>
+                      <span className="font-sans">Tuition Covered:</span>
                       <span className="font-bold text-primary">{paidPercent}%</span>
                     </div>
                     <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
@@ -408,7 +408,7 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
               <div className="p-3.5 bg-secondary-container/30 border border-primary/20 rounded-lg text-xs space-y-1.5">
                 <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Settlement Target (NIBSS)</span>
                 <p className="font-bold text-on-surface">Access Bank Nigeria PLC</p>
-                <p className="font-mono text-secondary text-[11px]">NUBAN: 0812948192</p>
+                <p className="font-data-tabular text-secondary text-[11px]">NUBAN: 0812948192</p>
                 <p className="text-[11px] text-secondary">Beneficiary: Nexus Tech Operations Ltd</p>
               </div>
 

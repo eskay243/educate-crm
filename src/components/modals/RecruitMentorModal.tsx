@@ -229,7 +229,7 @@ export const RecruitMentorModal: React.FC<RecruitMentorModalProps> = ({ isOpen, 
                       value={accountNumber}
                       onChange={e => setAccountNumber(e.target.value)}
                       placeholder="0123456789"
-                      className="w-full h-9 px-2 bg-surface border border-outline-variant rounded font-mono text-xs text-on-surface outline-none"
+                      className="w-full h-9 px-2 bg-surface border border-outline-variant rounded font-data-tabular text-xs text-on-surface outline-none"
                     />
                   </div>
                   <div className="space-y-1">

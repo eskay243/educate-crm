@@ -223,7 +223,7 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) =
                 type="number"
                 value={dealValue}
                 onChange={e => setDealValue(Number(e.target.value))}
-                className="w-full h-10 px-3 border border-outline-variant/80 rounded-md bg-surface text-body-md font-bold font-mono focus:border-primary outline-hidden"
+                className="w-full h-10 px-3 border border-outline-variant/80 rounded-md bg-surface text-body-md font-bold font-data-tabular focus:border-primary outline-hidden"
               />
             </div>
 
@@ -232,7 +232,7 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) =
                 <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
                   Lead Qualification Score
                 </label>
-                <span className="text-xs font-bold text-primary font-mono">{score}/100</span>
+                <span className="text-xs font-bold text-primary font-data-tabular">{score}/100</span>
               </div>
               <input
                 type="range"

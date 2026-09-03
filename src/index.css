@@ -16,6 +16,13 @@
   }
 }
 
+@layer utilities {
+  .font-data-tabular {
+    font-feature-settings: "tnum" 1, "cv02" 1, "cv03" 1, "cv04" 1;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined';
   font-weight: normal;

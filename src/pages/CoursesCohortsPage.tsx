@@ -73,7 +73,7 @@ export const CoursesCohortsPage: React.FC = () => {
             <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-1 rounded">Catalog</span>
           </div>
           <p className="font-body-sm text-body-sm text-secondary mb-unit">Academic Programs</p>
-          <h3 className="font-display text-display font-bold text-on-surface font-mono">{courses.length} Tracks</h3>
+          <h3 className="font-display text-display font-bold text-on-surface">{courses.length} Tracks</h3>
         </div>
 
         <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs">
@@ -84,7 +84,7 @@ export const CoursesCohortsPage: React.FC = () => {
             <span className="text-xs font-bold text-primary bg-secondary-container px-2 py-1 rounded">Schedules</span>
           </div>
           <p className="font-body-sm text-body-sm text-secondary mb-unit">Active Cohorts</p>
-          <h3 className="font-display text-display font-bold text-on-surface font-mono">{cohorts.length} Batches</h3>
+          <h3 className="font-display text-display font-bold text-on-surface">{cohorts.length} Batches</h3>
         </div>
 
         <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs">
@@ -92,13 +92,13 @@ export const CoursesCohortsPage: React.FC = () => {
             <div className="w-10 h-10 rounded bg-tertiary-container flex items-center justify-center text-on-tertiary">
               <span className="material-symbols-outlined">chair</span>
             </div>
-            <span className="text-xs font-bold text-on-tertiary-container bg-surface-container px-2 py-1 rounded font-mono">
+            <span className="text-xs font-bold text-on-tertiary-container bg-surface-container px-2 py-1 rounded font-data-tabular">
               {capacityPercent}% Enrolled
             </span>
           </div>
           <p className="font-body-sm text-body-sm text-secondary mb-unit">Total Seat Capacity</p>
           <div className="flex items-baseline gap-2">
-            <h3 className="font-display text-display font-bold text-on-surface font-mono">{totalEnrolled} / {totalSeats}</h3>
+            <h3 className="font-display text-display font-bold text-on-surface font-data-tabular">{totalEnrolled} / {totalSeats}</h3>
             <span className="text-xs text-secondary">Seats</span>
           </div>
           <div className="w-full bg-surface-container-high rounded-full h-1.5 mt-2 overflow-hidden">
@@ -202,12 +202,12 @@ export const CoursesCohortsPage: React.FC = () => {
                     <div>
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-bold text-primary px-2 py-0.5 rounded bg-primary-container/20">
+                          <span className="font-data-tabular text-xs font-bold text-primary px-2 py-0.5 rounded bg-primary-container/20">
                             #{course.code}
                           </span>
                           <span className="text-xs font-semibold text-secondary">{course.category}</span>
                         </div>
-                        <span className="flex items-center gap-1 text-xs font-bold text-primary bg-secondary-container px-2 py-0.5 rounded font-mono">
+                        <span className="flex items-center gap-1 text-xs font-bold text-primary bg-secondary-container px-2 py-0.5 rounded font-data-tabular">
                           <span className="material-symbols-outlined text-[14px]">schedule</span>
                           {course.durationWeeks} Weeks
                         </span>
@@ -237,7 +237,7 @@ export const CoursesCohortsPage: React.FC = () => {
                     <div className="pt-3 border-t border-outline-variant flex justify-between items-center mt-2">
                       <div>
                         <p className="font-body-sm text-[11px] text-secondary">Standard Tuition (₦)</p>
-                        <p className="font-data-tabular font-bold text-base text-primary font-mono">
+                        <p className="font-data-tabular font-bold text-base text-primary">
                           {formatNaira(course.tuitionFee)}
                         </p>
                       </div>
@@ -312,7 +312,7 @@ export const CoursesCohortsPage: React.FC = () => {
                         key={coh.id}
                         className={`hover:bg-surface-bright transition-colors ${index % 2 === 1 ? 'bg-surface-container-low/30' : ''}`}
                       >
-                        <td className="px-stack-md py-3 font-mono font-medium text-primary text-xs">
+                        <td className="px-stack-md py-3 font-data-tabular font-bold text-primary text-xs">
                           #{coh.cohortCode}
                         </td>
                         <td className="px-stack-md py-3 font-semibold text-on-surface text-sm">

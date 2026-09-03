@@ -104,7 +104,7 @@ export const MentorManagementPage: React.FC = () => {
               Faculty Discretion Active: You can only view co-faculty in your academic department/shared tracks. Other mentors' rates &amp; earnings are confidential.
             </span>
           </div>
-          <span className="font-mono text-primary font-bold">
+          <span className="font-data-tabular text-primary font-bold">
             {myMentorProfile?.name || 'Faculty Member'} ({myMentorProfile?.department || 'Faculty Pool'})
           </span>
         </div>
@@ -157,7 +157,7 @@ export const MentorManagementPage: React.FC = () => {
           <p className="font-body-sm text-body-sm text-secondary mb-unit">
             {isMentor ? 'Connected Faculty Pool' : 'Total Faculty Pool'}
           </p>
-          <h3 className="font-display text-display font-bold text-on-surface font-mono">
+          <h3 className="font-display text-display font-bold text-on-surface">
             {filteredMentors.length} Mentors
           </h3>
         </div>
@@ -167,14 +167,14 @@ export const MentorManagementPage: React.FC = () => {
             <div className="w-10 h-10 rounded bg-primary-container flex items-center justify-center text-on-primary">
               <span className="material-symbols-outlined">forum</span>
             </div>
-            <span className="text-xs font-bold text-primary bg-secondary-container px-2 py-1 rounded font-mono">
+            <span className="text-xs font-bold text-primary bg-secondary-container px-2 py-1 rounded font-data-tabular">
               {totalHoursLogged} Hours Logged
             </span>
           </div>
           <p className="font-body-sm text-body-sm text-secondary mb-unit">
             {isMentor ? 'My 1-on-1 Coaching Sessions' : 'Total Sessions Conducted'}
           </p>
-          <h3 className="font-display text-display font-bold text-on-surface font-mono">{totalSessionsLogged} Sessions</h3>
+          <h3 className="font-display text-display font-bold text-on-surface">{totalSessionsLogged} Sessions</h3>
         </div>
 
         <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs">
@@ -187,7 +187,7 @@ export const MentorManagementPage: React.FC = () => {
           <p className="font-body-sm text-body-sm text-secondary mb-unit">
             {isMentor ? 'My Pending Honorarium' : 'Pending Faculty Honorariums'}
           </p>
-          <h3 className="font-display text-display font-bold text-on-surface font-mono">
+          <h3 className="font-display text-display font-bold text-on-surface">
             {formatNaira(pendingHonorariumTotal)}
           </h3>
         </div>
@@ -322,11 +322,11 @@ export const MentorManagementPage: React.FC = () => {
                             </div>
                           </td>
 
-                          <td className="px-stack-md py-3 font-bold font-mono text-primary">
+                          <td className="px-stack-md py-3 font-bold font-data-tabular text-primary">
                             {canViewFinancials ? `${formatNaira(mentor.hourlyRate)}/hr` : 'Confidential'}
                           </td>
 
-                          <td className="px-stack-md py-3 font-bold font-mono text-on-surface">
+                          <td className="px-stack-md py-3 font-bold font-data-tabular text-on-surface">
                             {canViewFinancials ? formatNaira(mentor.pendingPayout) : 'Confidential'}
                           </td>
 
@@ -443,7 +443,7 @@ export const MentorManagementPage: React.FC = () => {
                       key={s.id}
                       className={`hover:bg-surface-bright transition-colors ${index % 2 === 1 ? 'bg-surface-container-low/20' : ''}`}
                     >
-                      <td className="px-stack-md py-3 font-mono font-bold text-xs text-primary">
+                      <td className="px-stack-md py-3 font-data-tabular font-bold text-xs text-primary">
                         #{s.sessionCode}
                       </td>
                       <td className="px-stack-md py-3 text-xs text-secondary">
@@ -460,10 +460,10 @@ export const MentorManagementPage: React.FC = () => {
                         <p className="font-medium text-on-surface truncate">{s.topic}</p>
                         {s.notes && <p className="text-secondary text-[11px] truncate">{s.notes}</p>}
                       </td>
-                      <td className="px-stack-md py-3 font-mono text-xs font-semibold text-primary">
+                      <td className="px-stack-md py-3 font-data-tabular text-xs font-semibold text-primary">
                         {s.durationHours}h
                       </td>
-                      <td className="px-stack-md py-3 font-bold text-xs text-on-surface font-mono">
+                      <td className="px-stack-md py-3 font-bold text-xs text-on-surface font-data-tabular">
                         {formatNaira(s.compensationAmount)}
                       </td>
                       <td className="px-stack-md py-3">

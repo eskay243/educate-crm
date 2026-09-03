@@ -153,7 +153,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
                         <h4 className="font-headline-sm text-xs font-bold text-on-surface truncate">
                           {notif.title}
                         </h4>
-                        <span className="font-mono text-[10px] text-secondary whitespace-nowrap">
+                        <span className="font-data-tabular text-[10px] text-secondary whitespace-nowrap">
                           {notif.timestamp}
                         </span>
                       </div>
@@ -174,7 +174,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
           </div>
 
           {/* Footer Status Bar */}
-          <div className="p-3 border-t border-outline-variant bg-surface-container-low flex justify-between items-center text-[11px] text-secondary font-mono">
+          <div className="p-3 border-t border-outline-variant bg-surface-container-low flex justify-between items-center text-[11px] text-secondary font-data-tabular">
             <span>NEXUS REAL-TIME EVENT STREAM</span>
             <span className="flex items-center gap-1 text-[#166534]">
               <span className="w-1.5 h-1.5 rounded-full bg-[#166534] animate-pulse"></span>
