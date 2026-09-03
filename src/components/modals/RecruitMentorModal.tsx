@@ -7,7 +7,7 @@ export interface RecruitMentorModalProps {
 }
 
 export const RecruitMentorModal: React.FC<RecruitMentorModalProps> = ({ isOpen, onClose }) => {
-  const { recruitMentor } = useCRM();
+  const { recruitMentor, courses } = useCRM();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -15,22 +15,24 @@ export const RecruitMentorModal: React.FC<RecruitMentorModalProps> = ({ isOpen, 
   const [department, setDepartment] = useState('Software Engineering');
   const [hourlyRate, setHourlyRate] = useState(35000);
   const [commissionRate, setCommissionRate] = useState(37);
+  const [maxCapacity, setMaxCapacity] = useState(15);
   const [payoutFrequency, setPayoutFrequency] = useState('Monthly');
   const [bankName, setBankName] = useState('Access Bank Nigeria');
   const [accountNumber, setAccountNumber] = useState('');
   const [accountName, setAccountName] = useState('');
-  const [selectedCourses, setSelectedCourses] = useState<string[]>(['Frontend Development', 'Backend Architecture']);
+  const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
 
   if (!isOpen) return null;
 
-  const coursesList = [
-    'Frontend Development',
-    'Backend Architecture',
-    'UI/UX Fundamentals',
-    'Machine Learning & AI',
-    'Cloud DevOps & CI/CD',
-    'Data Science Analytics',
-  ];
+  const coursesList = courses.length > 0 
+    ? courses.map(c => c.title) 
+    : [
+      'Full-Stack Software Engineering',
+      'Data Science & Analytics',
+      'Product UI/UX Design',
+      'Cloud DevOps & SRE',
+      'AI & Machine Learning',
+    ];
 
   const toggleCourse = (course: string) => {
     setSelectedCourses(prev =>
@@ -52,7 +54,7 @@ export const RecruitMentorModal: React.FC<RecruitMentorModalProps> = ({ isOpen, 
       hourlyRate: Number(hourlyRate),
       commissionRate: Number(commissionRate),
       activeMentees: 0,
-      maxCapacity: 8,
+      maxCapacity: Number(maxCapacity),
       rating: 5.0,
       status: 'Active',
       pendingPayout: 0,
@@ -176,6 +178,17 @@ export const RecruitMentorModal: React.FC<RecruitMentorModalProps> = ({ isOpen, 
                   type="number"
                   value={commissionRate}
                   onChange={e => setCommissionRate(Number(e.target.value))}
+                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-on-surface focus:border-primary outline-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="font-label-md text-label-md text-secondary">Max Mentee Capacity</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="50"
+                  value={maxCapacity}
+                  onChange={e => setMaxCapacity(Number(e.target.value))}
                   className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-on-surface focus:border-primary outline-none"
                 />
               </div>

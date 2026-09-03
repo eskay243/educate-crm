@@ -13,7 +13,8 @@ export const MentorManagementPage: React.FC = () => {
     globalSearch, 
     setSelectedMentorForBookingId,
     setSelectedMentorForEditId,
-    currentUser
+    currentUser,
+    showToast
   } = useCRM();
 
   const [activeTab, setActiveTab] = useState<'roster' | 'sessions'>('roster');
@@ -72,15 +73,15 @@ export const MentorManagementPage: React.FC = () => {
   const filteredSessions = useMemo(() => {
     return accessibleSessions.filter((s) => {
       return (
+        s.sessionCode.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
         s.mentorName.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
         s.studentName.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
-        s.topic.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
-        s.sessionCode.toLowerCase().includes(effectiveSearch.toLowerCase())
+        s.topic.toLowerCase().includes(effectiveSearch.toLowerCase())
       );
     });
   }, [accessibleSessions, effectiveSearch]);
 
-  const departments = ['All', 'Data & AI', 'Design Systems', 'Backend & Cloud', 'Frontend', 'Product'];
+  const departments = ['All', 'Software Engineering', 'Data & AI', 'Design Systems', 'Backend & Cloud', 'Frontend', 'Product'];
 
   // Metrics
   const totalSessionsLogged = isMentor ? accessibleSessions.length : sessions.length;
@@ -104,7 +105,7 @@ export const MentorManagementPage: React.FC = () => {
             </span>
           </div>
           <span className="font-mono text-primary font-bold">
-            {myMentorProfile?.name} ({myMentorProfile?.department})
+            {myMentorProfile?.name || 'Faculty Member'} ({myMentorProfile?.department || 'Faculty Pool'})
           </span>
         </div>
       )}
@@ -121,13 +122,13 @@ export const MentorManagementPage: React.FC = () => {
               : 'Manage instructor capacity, 1-on-1 student coaching hours, and Nigerian honorarium payouts.'}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => {
               setSelectedMentorForBookingId(isMentor ? myMentorProfile?.id : null);
               openModal('book-session');
             }}
-            className="h-10 px-4 bg-secondary-container text-primary rounded font-label-md text-label-md font-bold hover:bg-surface-container-high transition-colors shadow-xs flex items-center gap-1.5"
+            className="h-10 px-4 bg-secondary-container text-primary rounded font-label-md text-label-md font-bold hover:bg-surface-container-high transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">calendar_month</span>
             <span>+ Log 1-on-1 Session</span>
@@ -135,7 +136,7 @@ export const MentorManagementPage: React.FC = () => {
           {isSuperAdmin && (
             <button
               onClick={() => openModal('recruit-mentor')}
-              className="h-10 px-4 bg-primary text-on-primary rounded font-label-md text-label-md font-bold hover:bg-primary-container transition-colors shadow-xs flex items-center gap-2"
+              className="h-10 px-4 bg-primary text-on-primary rounded font-label-md text-label-md font-bold hover:bg-primary/90 transition-colors shadow-xs flex items-center gap-2 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">person_add</span>
               <span>Recruit Faculty Mentor</span>
@@ -146,7 +147,7 @@ export const MentorManagementPage: React.FC = () => {
 
       {/* 3 Bento Summary Widgets */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter">
-        <div className="bg-surface p-stack-md border border-outline-variant rounded-lg shadow-xs">
+        <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs">
           <div className="flex justify-between items-start mb-stack-md">
             <div className="w-10 h-10 rounded bg-secondary-container flex items-center justify-center text-primary">
               <span className="material-symbols-outlined">supervisor_account</span>
@@ -156,27 +157,27 @@ export const MentorManagementPage: React.FC = () => {
           <p className="font-body-sm text-body-sm text-secondary mb-unit">
             {isMentor ? 'Connected Faculty Pool' : 'Total Faculty Pool'}
           </p>
-          <h3 className="font-display text-display font-bold text-on-surface">
+          <h3 className="font-display text-display font-bold text-on-surface font-mono">
             {filteredMentors.length} Mentors
           </h3>
         </div>
 
-        <div className="bg-surface p-stack-md border border-outline-variant rounded-lg shadow-xs">
+        <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs">
           <div className="flex justify-between items-start mb-stack-md">
             <div className="w-10 h-10 rounded bg-primary-container flex items-center justify-center text-on-primary">
               <span className="material-symbols-outlined">forum</span>
             </div>
-            <span className="text-xs font-bold text-primary bg-secondary-container px-2 py-1 rounded">
+            <span className="text-xs font-bold text-primary bg-secondary-container px-2 py-1 rounded font-mono">
               {totalHoursLogged} Hours Logged
             </span>
           </div>
           <p className="font-body-sm text-body-sm text-secondary mb-unit">
             {isMentor ? 'My 1-on-1 Coaching Sessions' : 'Total Sessions Conducted'}
           </p>
-          <h3 className="font-display text-display font-bold text-on-surface">{totalSessionsLogged} Sessions</h3>
+          <h3 className="font-display text-display font-bold text-on-surface font-mono">{totalSessionsLogged} Sessions</h3>
         </div>
 
-        <div className="bg-surface p-stack-md border border-outline-variant rounded-lg shadow-xs">
+        <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs">
           <div className="flex justify-between items-start mb-stack-md">
             <div className="w-10 h-10 rounded bg-surface-container flex items-center justify-center text-on-surface">
               <span className="material-symbols-outlined">account_balance_wallet</span>
@@ -186,20 +187,20 @@ export const MentorManagementPage: React.FC = () => {
           <p className="font-body-sm text-body-sm text-secondary mb-unit">
             {isMentor ? 'My Pending Honorarium' : 'Pending Faculty Honorariums'}
           </p>
-          <h3 className="font-display text-display font-bold text-on-surface">
+          <h3 className="font-display text-display font-bold text-on-surface font-mono">
             {formatNaira(pendingHonorariumTotal)}
           </h3>
         </div>
       </div>
 
       {/* Main Container with Tabs */}
-      <div className="bg-surface border border-outline-variant rounded-lg overflow-hidden shadow-xs">
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden shadow-xs">
         {/* Navigation Tabs & Search Controls */}
         <div className="p-stack-md border-b border-outline-variant flex justify-between items-center bg-surface-bright flex-wrap gap-4">
           <div className="flex border border-outline-variant rounded p-1 bg-surface">
             <button
               onClick={() => setActiveTab('roster')}
-              className={`px-4 py-1.5 rounded text-xs font-bold transition-all flex items-center gap-1.5 ${
+              className={`px-4 py-1.5 rounded text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'roster'
                   ? 'bg-primary text-on-primary shadow-xs'
                   : 'text-secondary hover:text-on-surface'
@@ -210,7 +211,7 @@ export const MentorManagementPage: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveTab('sessions')}
-              className={`px-4 py-1.5 rounded text-xs font-bold transition-all flex items-center gap-1.5 ${
+              className={`px-4 py-1.5 rounded text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'sessions'
                   ? 'bg-primary text-on-primary shadow-xs'
                   : 'text-secondary hover:text-on-surface'
@@ -252,159 +253,150 @@ export const MentorManagementPage: React.FC = () => {
         {/* Tab 1: Faculty Roster Table */}
         {activeTab === 'roster' && (
           <div className="p-stack-md space-y-4">
-            {/* Expertise Tags Chips */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-xs font-bold text-secondary mr-1">Faculty Domains:</span>
-              {['Python & AI', 'System Design', 'React / TypeScript', 'FastAPI', 'UI/UX Design', 'Cloud Architecture'].map(skill => (
-                <span key={skill} className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-container border border-outline-variant text-secondary">
-                  {skill}
-                </span>
-              ))}
-            </div>
-
             {/* Mentor Table */}
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[700px]">
-                <thead>
-                  <tr className="border-b border-outline-variant bg-surface text-secondary font-label-md text-label-md">
-                    <th className="px-stack-md py-3 font-semibold">Faculty Mentor</th>
-                    <th className="px-stack-md py-3 font-semibold">Department</th>
-                    <th className="px-stack-md py-3 font-semibold">Mentees / Cap</th>
-                    <th className="px-stack-md py-3 font-semibold">Honorarium Rate (₦)</th>
-                    <th className="px-stack-md py-3 font-semibold">Pending Honorarium (₦)</th>
-                    <th className="px-stack-md py-3 font-semibold">Status</th>
-                    <th className="px-stack-md py-3 text-right font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="font-data-tabular text-body-md text-on-surface divide-y divide-outline-variant">
-                  {filteredMentors.map((mentor, index) => {
-                    const isSelf = mentor.id === myMentorProfile?.id;
-                    const canViewFinancials = !isMentor || isSelf;
+              {filteredMentors.length === 0 ? (
+                <div className="p-12 text-center flex flex-col items-center justify-center space-y-3">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                    <span className="material-symbols-outlined text-[28px]">supervisor_account</span>
+                  </div>
+                  <div className="max-w-sm space-y-1">
+                    <h3 className="font-bold text-sm text-on-surface">No Faculty Mentors Found</h3>
+                    <p className="text-xs text-secondary">
+                      Your faculty directory is clean. You can recruit instructors, define their ₦ hourly rates, and assign them to academic tracks.
+                    </p>
+                  </div>
+                  {isSuperAdmin && (
+                    <button
+                      onClick={() => openModal('recruit-mentor')}
+                      className="px-4 h-9 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">person_add</span>
+                      <span>+ Recruit Faculty Mentor</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <table className="w-full text-left border-collapse min-w-[700px] text-xs">
+                  <thead>
+                    <tr className="border-b border-outline-variant bg-surface text-secondary font-label-md">
+                      <th className="px-stack-md py-3 font-semibold">Faculty Mentor</th>
+                      <th className="px-stack-md py-3 font-semibold">Department</th>
+                      <th className="px-stack-md py-3 font-semibold">Mentees / Cap</th>
+                      <th className="px-stack-md py-3 font-semibold">Honorarium Rate (₦)</th>
+                      <th className="px-stack-md py-3 font-semibold">Pending Honorarium (₦)</th>
+                      <th className="px-stack-md py-3 font-semibold">Status</th>
+                      <th className="px-stack-md py-3 text-right font-semibold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="font-data-tabular text-on-surface divide-y divide-outline-variant">
+                    {filteredMentors.map((mentor, index) => {
+                      const isSelf = mentor.id === myMentorProfile?.id;
+                      const canViewFinancials = !isMentor || isSelf;
 
-                    return (
-                      <tr 
-                        key={mentor.id}
-                        className={`hover:bg-surface-bright transition-colors ${index % 2 === 1 ? 'bg-surface' : ''}`}
-                      >
-                        <td className="px-stack-md py-3">
-                          <div className="flex items-center gap-3">
-                            {mentor.avatarUrl ? (
-                              <img 
-                                src={mentor.avatarUrl} 
-                                alt={mentor.name}
-                                className="w-9 h-9 rounded-full object-cover border border-outline-variant"
-                              />
-                            ) : (
+                      return (
+                        <tr 
+                          key={mentor.id}
+                          className={`hover:bg-surface-bright transition-colors ${index % 2 === 1 ? 'bg-surface' : ''}`}
+                        >
+                          <td className="px-stack-md py-3">
+                            <div className="flex items-center gap-3">
                               <div className="w-9 h-9 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs">
-                                {mentor.name.split(' ').map(n => n[0]).join('')}
+                                {mentor.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                               </div>
+                              <div>
+                                <p className="font-bold text-on-surface text-sm">{mentor.name}</p>
+                                <p className="text-secondary text-[11px]">{mentor.email}</p>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="px-stack-md py-3 font-medium text-on-surface">
+                            {mentor.department}
+                          </td>
+
+                          <td className="px-stack-md py-3">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold">{mentor.activeMentees}</span>
+                              <span className="text-secondary text-[11px]">/ {mentor.maxCapacity} max</span>
+                            </div>
+                          </td>
+
+                          <td className="px-stack-md py-3 font-bold font-mono text-primary">
+                            {canViewFinancials ? `${formatNaira(mentor.hourlyRate)}/hr` : 'Confidential'}
+                          </td>
+
+                          <td className="px-stack-md py-3 font-bold font-mono text-on-surface">
+                            {canViewFinancials ? formatNaira(mentor.pendingPayout) : 'Confidential'}
+                          </td>
+
+                          <td className="px-stack-md py-3">
+                            {isSuperAdmin ? (
+                              <select 
+                                value={mentor.status}
+                                onChange={(e) => updateMentorStatus(mentor.id, e.target.value as MentorStatus)}
+                                className="text-xs font-semibold px-2 py-1 rounded border border-outline-variant bg-surface outline-none cursor-pointer"
+                              >
+                                <option value="Active">Active</option>
+                                <option value="Available">Available</option>
+                                <option value="On Leave">On Leave</option>
+                              </select>
+                            ) : (
+                              <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                                mentor.status === 'Active' ? 'bg-[#dcfce7] text-[#166534]' : 'bg-surface-container text-secondary'
+                              }`}>
+                                {mentor.status}
+                              </span>
                             )}
-                            <div>
-                              <div className="font-medium text-on-surface font-sans flex items-center gap-1.5">
-                                <span>{mentor.name}</span>
-                                {isSelf && (
-                                  <span className="px-1.5 py-0.2 text-[10px] bg-primary-container text-primary rounded font-bold">
-                                    You
-                                  </span>
-                                )}
-                              </div>
-                              <div className="text-xs text-secondary font-sans font-mono">#{mentor.mentorCode} • {mentor.email}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-stack-md py-3 font-sans text-secondary font-medium">{mentor.department}</td>
-                        <td className="px-stack-md py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-16 h-2 bg-surface-container rounded-full overflow-hidden">
-                              <div 
-                                className="bg-primary h-full rounded-full" 
-                                style={{ width: `${Math.min(100, (mentor.activeMentees / (mentor.maxCapacity || 1)) * 100)}%` }}
-                              />
-                            </div>
-                            <span className="font-bold text-xs">{mentor.activeMentees}/{mentor.maxCapacity}</span>
-                          </div>
-                        </td>
+                          </td>
 
-                        {/* Hourly Rate in Naira - Masked for other mentors */}
-                        <td className="px-stack-md py-3 font-semibold text-primary">
-                          {canViewFinancials ? `${formatNaira(mentor.hourlyRate)}/h` : (
-                            <span className="text-secondary font-normal text-xs italic">Confidential</span>
-                          )}
-                        </td>
+                          <td className="px-stack-md py-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {isSuperAdmin && (
+                                <button 
+                                  onClick={() => {
+                                    setSelectedMentorForEditId(mentor.id);
+                                    openModal('edit-mentor');
+                                  }}
+                                  className="px-2.5 py-1 rounded border border-outline-variant hover:border-primary text-secondary hover:text-primary font-sans text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                                  title="Edit Faculty Mentor Profile"
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">edit</span>
+                                  <span>Edit Profile</span>
+                                </button>
+                              )}
 
-                        {/* Pending Honorarium in Naira - Masked for other mentors */}
-                        <td className="px-stack-md py-3 font-bold text-on-surface">
-                          {canViewFinancials ? formatNaira(mentor.pendingPayout) : (
-                            <span className="text-secondary font-normal text-xs italic">Confidential</span>
-                          )}
-                        </td>
-
-                        <td className="px-stack-md py-3">
-                          {isSuperAdmin ? (
-                            <select
-                              value={mentor.status}
-                              onChange={(e) => updateMentorStatus(mentor.id, e.target.value as MentorStatus)}
-                              className={`text-xs font-semibold px-2 py-1 rounded border border-outline-variant bg-surface outline-none cursor-pointer ${
-                                mentor.status === 'Active' ? 'text-[#166534]' : 'text-secondary'
-                              }`}
-                            >
-                              <option value="Active">Active</option>
-                              <option value="Available">Available</option>
-                              <option value="On Leave">On Leave</option>
-                            </select>
-                          ) : (
-                            <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                              mentor.status === 'Active' ? 'bg-[#dcfce7] text-[#166534]' : 'bg-surface-container text-secondary'
-                            }`}>
-                              {mentor.status}
-                            </span>
-                          )}
-                        </td>
-
-                        <td className="px-stack-md py-3 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {isSuperAdmin && (
                               <button 
                                 onClick={() => {
-                                  setSelectedMentorForEditId(mentor.id);
-                                  openModal('edit-mentor');
+                                  setSelectedMentorForBookingId(mentor.id);
+                                  openModal('book-session');
                                 }}
-                                className="px-2.5 py-1 rounded border border-outline-variant hover:border-primary text-secondary hover:text-primary font-sans text-xs font-semibold transition-colors flex items-center gap-1"
-                                title="Edit Faculty Mentor Profile"
+                                className="px-2.5 py-1 rounded border border-outline-variant hover:border-primary text-secondary hover:text-primary font-sans text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                                title="Log 1-on-1 Mentorship Session"
                               >
-                                <span className="material-symbols-outlined text-[14px]">edit</span>
-                                <span>Edit Profile</span>
+                                <span className="material-symbols-outlined text-[14px]">calendar_month</span>
+                                <span>Log Session</span>
                               </button>
-                            )}
 
-                            <button 
-                              onClick={() => {
-                                setSelectedMentorForBookingId(mentor.id);
-                                openModal('book-session');
-                              }}
-                              className="px-2.5 py-1 rounded border border-outline-variant hover:border-primary text-secondary hover:text-primary font-sans text-xs font-semibold transition-colors flex items-center gap-1"
-                              title="Log 1-on-1 Mentorship Session"
-                            >
-                              <span className="material-symbols-outlined text-[14px]">calendar_month</span>
-                              <span>Log Session</span>
-                            </button>
-
-                            {(isSuperAdmin || isFinance) && (
-                              <button 
-                                onClick={() => alert(`Initiating payment transfer of ${formatNaira(mentor.pendingPayout)} to ${mentor.name} via NIBSS bank settlement.`)}
-                                className="px-2.5 py-1 rounded bg-secondary-container text-primary font-sans text-xs font-bold hover:bg-secondary-container/80 transition-colors"
-                                title="Process Payout"
-                              >
-                                Disburse
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                              {(isSuperAdmin || isFinance) && mentor.pendingPayout > 0 && (
+                                <button 
+                                  onClick={() => {
+                                    showToast('Disbursement Initiated', `NIBSS electronic settlement of ${formatNaira(mentor.pendingPayout)} queued for ${mentor.name}.`, 'success');
+                                  }}
+                                  className="px-2.5 py-1 rounded bg-secondary-container text-primary font-sans text-xs font-bold hover:bg-secondary-container/80 transition-colors cursor-pointer"
+                                  title="Process Payout"
+                                >
+                                  Disburse
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         )}
@@ -412,57 +404,78 @@ export const MentorManagementPage: React.FC = () => {
         {/* Tab 2: 1-on-1 Mentorship Sessions Log */}
         {activeTab === 'sessions' && (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[750px]">
-              <thead>
-                <tr className="border-b border-outline-variant bg-surface-container-low text-secondary font-label-md text-label-md">
-                  <th className="px-stack-md py-3 font-semibold">Session Code</th>
-                  <th className="px-stack-md py-3 font-semibold">Date &amp; Time Slot</th>
-                  <th className="px-stack-md py-3 font-semibold">Faculty Mentor</th>
-                  <th className="px-stack-md py-3 font-semibold">Student Mentee</th>
-                  <th className="px-stack-md py-3 font-semibold">Topic &amp; Review Focus</th>
-                  <th className="px-stack-md py-3 font-semibold">Duration</th>
-                  <th className="px-stack-md py-3 font-semibold">Honorarium (₦)</th>
-                  <th className="px-stack-md py-3 font-semibold">Status</th>
-                </tr>
-              </thead>
-              <tbody className="font-data-tabular text-body-md text-on-surface divide-y divide-outline-variant/60">
-                {filteredSessions.map((s, index) => (
-                  <tr 
-                    key={s.id}
-                    className={`hover:bg-surface-bright transition-colors ${index % 2 === 1 ? 'bg-surface-container-low/20' : ''}`}
-                  >
-                    <td className="px-stack-md py-3 font-mono font-bold text-xs text-primary">
-                      #{s.sessionCode}
-                    </td>
-                    <td className="px-stack-md py-3 text-xs text-secondary">
-                      <p className="font-medium text-on-surface">{s.date}</p>
-                      <p className="text-[11px]">{s.time}</p>
-                    </td>
-                    <td className="px-stack-md py-3 text-xs font-semibold text-on-surface">
-                      {s.mentorName}
-                    </td>
-                    <td className="px-stack-md py-3 text-xs text-on-surface">
-                      {s.studentName}
-                    </td>
-                    <td className="px-stack-md py-3 text-xs max-w-xs">
-                      <p className="font-medium text-on-surface truncate">{s.topic}</p>
-                      {s.notes && <p className="text-secondary text-[11px] truncate">{s.notes}</p>}
-                    </td>
-                    <td className="px-stack-md py-3 font-mono text-xs font-semibold text-primary">
-                      {s.durationHours}h
-                    </td>
-                    <td className="px-stack-md py-3 font-bold text-xs text-on-surface">
-                      {formatNaira(s.compensationAmount)}
-                    </td>
-                    <td className="px-stack-md py-3">
-                      <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-[#dcfce7] text-[#166534] uppercase tracking-wider">
-                        {s.status}
-                      </span>
-                    </td>
+            {filteredSessions.length === 0 ? (
+              <div className="p-12 text-center flex flex-col items-center justify-center space-y-3">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[28px]">calendar_month</span>
+                </div>
+                <div className="max-w-sm space-y-1">
+                  <h3 className="font-bold text-sm text-on-surface">No Coaching Sessions Logged</h3>
+                  <p className="text-xs text-secondary">
+                    Log completed 1-on-1 student technical mentoring hours to automatically calculate honorariums.
+                  </p>
+                </div>
+                <button
+                  onClick={() => openModal('book-session')}
+                  className="px-4 h-9 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <span className="material-symbols-outlined text-[16px]">calendar_add_on</span>
+                  <span>+ Log 1-on-1 Session</span>
+                </button>
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse min-w-[750px] text-xs">
+                <thead>
+                  <tr className="border-b border-outline-variant bg-surface-container-low text-secondary font-label-md">
+                    <th className="px-stack-md py-3 font-semibold">Session Code</th>
+                    <th className="px-stack-md py-3 font-semibold">Date &amp; Time Slot</th>
+                    <th className="px-stack-md py-3 font-semibold">Faculty Mentor</th>
+                    <th className="px-stack-md py-3 font-semibold">Student Mentee</th>
+                    <th className="px-stack-md py-3 font-semibold">Topic &amp; Review Focus</th>
+                    <th className="px-stack-md py-3 font-semibold">Duration</th>
+                    <th className="px-stack-md py-3 font-semibold">Honorarium (₦)</th>
+                    <th className="px-stack-md py-3 font-semibold">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="font-data-tabular text-on-surface divide-y divide-outline-variant/60">
+                  {filteredSessions.map((s, index) => (
+                    <tr 
+                      key={s.id}
+                      className={`hover:bg-surface-bright transition-colors ${index % 2 === 1 ? 'bg-surface-container-low/20' : ''}`}
+                    >
+                      <td className="px-stack-md py-3 font-mono font-bold text-xs text-primary">
+                        #{s.sessionCode}
+                      </td>
+                      <td className="px-stack-md py-3 text-xs text-secondary">
+                        <p className="font-medium text-on-surface">{s.date}</p>
+                        <p className="text-[11px]">{s.time}</p>
+                      </td>
+                      <td className="px-stack-md py-3 text-xs font-semibold text-on-surface">
+                        {s.mentorName}
+                      </td>
+                      <td className="px-stack-md py-3 text-xs text-on-surface">
+                        {s.studentName}
+                      </td>
+                      <td className="px-stack-md py-3 text-xs max-w-xs">
+                        <p className="font-medium text-on-surface truncate">{s.topic}</p>
+                        {s.notes && <p className="text-secondary text-[11px] truncate">{s.notes}</p>}
+                      </td>
+                      <td className="px-stack-md py-3 font-mono text-xs font-semibold text-primary">
+                        {s.durationHours}h
+                      </td>
+                      <td className="px-stack-md py-3 font-bold text-xs text-on-surface font-mono">
+                        {formatNaira(s.compensationAmount)}
+                      </td>
+                      <td className="px-stack-md py-3">
+                        <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-[#dcfce7] text-[#166534] uppercase tracking-wider">
+                          {s.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         )}
       </div>

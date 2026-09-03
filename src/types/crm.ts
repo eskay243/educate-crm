@@ -231,6 +231,7 @@ export interface OrganizationSettings {
   };
   emailAlertsEnabled: boolean;
   autoInvoiceGeneration: boolean;
+  operatingBudget?: number;
   smtp?: {
     host: string;
     port: number;

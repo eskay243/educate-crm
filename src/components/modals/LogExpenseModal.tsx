@@ -8,7 +8,7 @@ export interface LogExpenseModalProps {
 }
 
 export const LogExpenseModal: React.FC<LogExpenseModalProps> = ({ isOpen, onClose }) => {
-  const { logExpense } = useCRM();
+  const { logExpense, currentUser } = useCRM();
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<ExpenseCategory>('Software & Tools');
@@ -40,7 +40,7 @@ export const LogExpenseModal: React.FC<LogExpenseModalProps> = ({ isOpen, onClos
       paymentMethod,
       status: 'Pending',
       vendor: vendor || 'Corporate Vendor NG',
-      requestedBy: 'Adeyemi Daniels',
+      requestedBy: currentUser?.name || 'Managing Director',
       receiptName: receiptFileName || 'receipt_attached.pdf',
     });
 
