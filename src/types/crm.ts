@@ -115,7 +115,14 @@ export type ExpenseCategory =
   | 'Operations' 
   | 'Equipment';
 
-export type ExpenseStatus = 'Approved' | 'Pending' | 'Flagged' | 'Paid' | 'In Review' | 'Rejected';
+export type ExpenseStatus = 
+  | 'Awaiting Approval' 
+  | 'Approved' 
+  | 'Rejected' 
+  | 'Pending' 
+  | 'Flagged' 
+  | 'Paid' 
+  | 'In Review';
 
 export interface Expense {
   id: string;
@@ -131,6 +138,10 @@ export interface Expense {
   requestedBy?: string;
   receiptName?: string;
   description?: string;
+  rejectionReason?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  urgency?: 'Standard' | 'Urgent' | 'Emergency';
 }
 
 export interface ExecutiveKPIs {
@@ -232,6 +243,7 @@ export interface OrganizationSettings {
   emailAlertsEnabled: boolean;
   autoInvoiceGeneration: boolean;
   operatingBudget?: number;
+  showBudgetToStaff?: boolean;
   smtp?: {
     host: string;
     port: number;

@@ -44,6 +44,7 @@ export const initialSettings: OrganizationSettings = {
   emailAlertsEnabled: true,
   autoInvoiceGeneration: true,
   operatingBudget: 1500000,
+  showBudgetToStaff: true,
   smtp: {
     host: 'smtp.hostinger.com',
     port: 465,

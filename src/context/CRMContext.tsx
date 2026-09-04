@@ -124,7 +124,9 @@ interface CRMContextType {
   updateMentor: (id: string, updatedData: Partial<Mentor>) => void;
   
   logExpense: (expense: Omit<Expense, 'id' | 'expenseCode'>) => void;
-  updateExpenseStatus: (id: string, status: ExpenseStatus) => void;
+  updateExpenseStatus: (id: string, status: ExpenseStatus, extra?: { rejectionReason?: string; reviewedBy?: string; reviewedAt?: string }) => void;
+  approveExpense: (id: string) => void;
+  rejectExpense: (id: string, reason: string) => void;
 
   addCourse: (course: Omit<CourseProgram, 'id' | 'enrolledCount' | 'rating'>) => void;
   updateCourse: (id: string, updatedData: Partial<CourseProgram>) => void;
@@ -751,48 +753,123 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  // Expense mutations
+  // Expense & OpEx mutations
   const logExpense = (expenseData: Omit<Expense, 'id' | 'expenseCode'>) => {
     const newExpense: Expense = {
       ...expenseData,
+      status: expenseData.status || 'Awaiting Approval',
       id: `exp-${Date.now()}`,
       expenseCode: `EXP-${Math.floor(1000 + Math.random() * 9000)}`,
     };
     setExpenses(prev => [newExpense, ...prev]);
-    apiService.createExpense(expenseData);
-    showToast('Expense Submitted', `${newExpense.title} (${formatNaira(newExpense.amount)}) submitted.`, 'info');
+    apiService.createExpense(newExpense);
+    showToast('OpEx Requisition Submitted', `${newExpense.title} (${formatNaira(newExpense.amount)}) submitted for Super Admin review.`, 'info');
     addNotification({
-      title: 'Operating Expense Submitted',
-      message: `${newExpense.title} (${formatNaira(newExpense.amount)}) submitted by ${newExpense.requestedBy}.`,
+      title: 'OpEx Requisition Awaiting Approval',
+      message: `${newExpense.title} (${formatNaira(newExpense.amount)}) submitted by ${newExpense.requestedBy || 'Staff'}. Awaiting Super Admin review.`,
       type: 'finance',
       link: '/expenses',
     });
     logActivity({
-      title: 'Operating Expense Logged',
-      description: `${newExpense.title} (${formatNaira(newExpense.amount)}) submitted for funding.`,
+      title: 'OpEx Requisition Submitted',
+      description: `${newExpense.title} (${formatNaira(newExpense.amount)}) submitted for funding release.`,
       type: 'finance',
-      user: newExpense.requestedBy || 'Finance',
+      user: newExpense.requestedBy || currentUser?.name || 'Staff Requester',
     });
   };
 
-  const updateExpenseStatus = (id: string, status: ExpenseStatus) => {
+  const updateExpenseStatus = (
+    id: string, 
+    status: ExpenseStatus, 
+    extra?: { rejectionReason?: string; reviewedBy?: string; reviewedAt?: string }
+  ) => {
     const expense = expenses.find(e => e.id === id);
-    setExpenses(prev => prev.map(e => e.id === id ? { ...e, status } : e));
-    apiService.updateExpenseStatus(id, status);
+    setExpenses(prev => prev.map(e => e.id === id ? { ...e, status, ...extra } : e));
+    apiService.updateExpenseStatus(id, status, extra);
     if (expense) {
       showToast('Expense Updated', `${expense.title} status changed to ${status}.`, status === 'Approved' ? 'success' : 'info');
       addNotification({
         title: `Expense ${status}`,
-        message: `${expense.title} (${formatNaira(expense.amount)}) was ${status.toLowerCase()} by Controller.`,
+        message: `${expense.title} (${formatNaira(expense.amount)}) status updated to ${status}.`,
         type: 'finance',
         link: '/expenses',
       });
     }
     logActivity({
       title: 'Expense Status Updated',
-      description: `Expense record status updated to ${status}.`,
+      description: `Expense #${expense?.expenseCode || id} status updated to ${status}.`,
       type: 'finance',
-      user: 'Finance Controller',
+      user: currentUser?.name || 'Super Admin',
+    });
+  };
+
+  const approveExpense = (id: string) => {
+    const expense = expenses.find(e => e.id === id);
+    if (!expense) return;
+
+    const reviewer = currentUser?.name || 'Super Admin';
+    const timestamp = new Date().toISOString().split('T')[0];
+
+    setExpenses(prev => prev.map(e => e.id === id ? {
+      ...e,
+      status: 'Approved',
+      reviewedBy: reviewer,
+      reviewedAt: timestamp,
+    } : e));
+
+    apiService.updateExpenseStatus(id, 'Approved', {
+      reviewedBy: reviewer,
+      reviewedAt: timestamp,
+    });
+
+    showToast('OpEx Request Approved', `${expense.title} approved. Amount deducted from monthly operating budget.`, 'success');
+    addNotification({
+      title: 'OpEx Request Approved',
+      message: `${expense.title} (${formatNaira(expense.amount)}) was approved by ${reviewer}. Funds allocated.`,
+      type: 'finance',
+      link: '/expenses',
+    });
+    logActivity({
+      title: 'OpEx Requisition Approved',
+      description: `${expense.title} (${formatNaira(expense.amount)}) approved by ${reviewer}.`,
+      type: 'finance',
+      user: reviewer,
+    });
+  };
+
+  const rejectExpense = (id: string, reason: string) => {
+    const expense = expenses.find(e => e.id === id);
+    if (!expense) return;
+
+    const reviewer = currentUser?.name || 'Super Admin';
+    const timestamp = new Date().toISOString().split('T')[0];
+
+    setExpenses(prev => prev.map(e => e.id === id ? {
+      ...e,
+      status: 'Rejected',
+      rejectionReason: reason,
+      reviewedBy: reviewer,
+      reviewedAt: timestamp,
+    } : e));
+
+    apiService.updateExpenseStatus(id, 'Rejected', {
+      rejectionReason: reason,
+      reviewedBy: reviewer,
+      reviewedAt: timestamp,
+    });
+
+    showToast('OpEx Request Rejected', `Requisition #${expense.expenseCode} rejected. Reason logged.`, 'warning');
+    addNotification({
+      title: 'OpEx Request Rejected',
+      message: `${expense.title} (${formatNaira(expense.amount)}) was rejected by ${reviewer}. Reason: ${reason}`,
+      type: 'finance',
+      link: '/expenses',
+    });
+    logActivity({
+      title: 'OpEx Requisition Rejected',
+      description: `${expense.title} rejected by ${reviewer}. Note: ${reason}`,
+      type: 'finance',
+      user: reviewer,
     });
   };
 
@@ -1168,6 +1245,8 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateMentor,
         logExpense,
         updateExpenseStatus,
+        approveExpense,
+        rejectExpense,
         addCourse,
         updateCourse,
         addCohort,

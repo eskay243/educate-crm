@@ -152,10 +152,10 @@ class ApiService {
     });
   }
 
-  async updateExpenseStatus(id: string, status: ExpenseStatus): Promise<Expense | null> {
+  async updateExpenseStatus(id: string, status: ExpenseStatus, extra?: { rejectionReason?: string; reviewedBy?: string; reviewedAt?: string }): Promise<Expense | null> {
     return this.request<Expense>(`/expenses/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, ...extra }),
     });
   }
 

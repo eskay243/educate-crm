@@ -63,7 +63,9 @@ export const RevenueCostChart: React.FC = () => {
   const chartData = useMemo(() => {
     const totalRev = students.reduce((sum, s) => sum + (s.totalFees - (s.outstandingBalance || 0)), 0);
     const totalHonorariums = sessions.reduce((sum, s) => sum + s.compensationAmount, 0) + mentors.reduce((sum, m) => sum + m.pendingPayout, 0);
-    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const totalExpenses = expenses
+      .filter(e => e.status === 'Approved' || e.status === 'Paid')
+      .reduce((sum, e) => sum + e.amount, 0);
 
     const currentMonth = new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 

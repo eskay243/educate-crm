@@ -38,11 +38,11 @@ export const CreateRecordHubModal: React.FC<CreateRecordHubModalProps> = ({ isOp
     },
     {
       id: 'log-expense',
-      title: 'Log Expense',
-      desc: 'Record business expenditures, attach receipts, and assign to departments.',
-      icon: 'receipt_long',
-      colorClass: 'bg-surface-tint/15 text-surface-tint group-hover:bg-surface-tint group-hover:text-white',
-      borderHover: 'hover:border-surface-tint',
+      title: 'Request OpEx',
+      desc: 'Submit an operational expense requisition for office, marketing, or hub facilities.',
+      icon: 'payments',
+      colorClass: 'bg-primary-container/15 text-primary group-hover:bg-primary group-hover:text-white',
+      borderHover: 'hover:border-primary',
     },
   ];
 

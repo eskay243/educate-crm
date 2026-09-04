@@ -36,6 +36,7 @@ export const SettingsPage: React.FC = () => {
   const [accountName, setAccountName] = useState(settings.defaultNIBSSBank.accountName);
   const [emailAlertsEnabled, setEmailAlertsEnabled] = useState(settings.emailAlertsEnabled);
   const [autoInvoiceGeneration, setAutoInvoiceGeneration] = useState(settings.autoInvoiceGeneration);
+  const [showBudgetToStaff, setShowBudgetToStaff] = useState(settings.showBudgetToStaff !== false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   // Form states for creating new staff member
@@ -189,6 +190,7 @@ export const SettingsPage: React.FC = () => {
       },
       emailAlertsEnabled,
       autoInvoiceGeneration,
+      showBudgetToStaff,
       smtp: {
         host: smtpHost,
         port: Number(smtpPort),
@@ -529,13 +531,13 @@ export const SettingsPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="pt-3 border-t border-outline-variant flex gap-6">
+            <div className="pt-3 border-t border-outline-variant flex flex-wrap gap-6">
               <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-on-surface">
                 <input
                   type="checkbox"
                   checked={emailAlertsEnabled}
                   onChange={(e) => setEmailAlertsEnabled(e.target.checked)}
-                  className="rounded border-outline-variant text-primary focus:ring-primary"
+                  className="rounded border-outline-variant text-primary focus:ring-primary cursor-pointer"
                 />
                 <span>Enable Real-Time Email Notifications &amp; Alerts</span>
               </label>
@@ -545,9 +547,19 @@ export const SettingsPage: React.FC = () => {
                   type="checkbox"
                   checked={autoInvoiceGeneration}
                   onChange={(e) => setAutoInvoiceGeneration(e.target.checked)}
-                  className="rounded border-outline-variant text-primary focus:ring-primary"
+                  className="rounded border-outline-variant text-primary focus:ring-primary cursor-pointer"
                 />
                 <span>Auto-Generate Official Invoices on Lead Conversion</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-on-surface">
+                <input
+                  type="checkbox"
+                  checked={showBudgetToStaff}
+                  onChange={(e) => setShowBudgetToStaff(e.target.checked)}
+                  className="rounded border-outline-variant text-primary focus:ring-primary cursor-pointer"
+                />
+                <span>Allow Staff (Admissions &amp; Finance) to View Monthly Budget &amp; Deductions</span>
               </label>
             </div>
           </div>

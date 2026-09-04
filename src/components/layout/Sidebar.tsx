@@ -25,7 +25,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     { to: '/leads', label: 'Leads Pipeline', icon: 'leaderboard', allowedRoles: ['super_admin', 'admissions'] },
     { to: '/students', label: 'Students & Billing', icon: 'school', allowedRoles: ['super_admin', 'admissions', 'mentor', 'finance'] },
     { to: '/mentors', label: 'Mentors & Sessions', icon: 'groups', allowedRoles: ['super_admin', 'mentor'] },
-    { to: '/expenses', label: 'Expenses & Budget', icon: 'payments', allowedRoles: ['super_admin', 'finance'] },
+    { to: '/expenses', label: 'Expenses & Budget', icon: 'payments', allowedRoles: ['super_admin', 'admissions', 'finance'] },
     { to: '/settings', label: 'Settings', icon: 'settings', allowedRoles: ['super_admin'] },
   ];
 
