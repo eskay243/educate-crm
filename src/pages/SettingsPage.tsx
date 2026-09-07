@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useCRM } from '../context/CRMContext';
 import { UserRole } from '../types/crm';
 import { emailService, EmailTemplatePayload, EmailDispatchLog } from '../services/emailService';
@@ -37,6 +37,26 @@ export const SettingsPage: React.FC = () => {
   const [accountNumber, setAccountNumber] = useState(settings.defaultNIBSSBank.accountNumber);
   const [accountName, setAccountName] = useState(settings.defaultNIBSSBank.accountName);
   const [logoUrl, setLogoUrl] = useState(settings.logoUrl || '');
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      showToast('File Too Large', 'Please select an image file under 2MB.', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        setLogoUrl(dataUrl);
+        showToast('Logo Selected', 'Brand logo preview updated. Click "Save Configuration Changes" to persist.', 'success');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const [emailAlertsEnabled, setEmailAlertsEnabled] = useState(settings.emailAlertsEnabled);
   const [autoInvoiceGeneration, setAutoInvoiceGeneration] = useState(settings.autoInvoiceGeneration);
   const [showBudgetToStaff, setShowBudgetToStaff] = useState(settings.showBudgetToStaff !== false);
@@ -68,6 +88,7 @@ export const SettingsPage: React.FC = () => {
   const [emailSubject, setEmailSubject] = useState('🎓 Welcome to CODELAB EDUCARE LTD — Admission Confirmation');
   const [emailLogs, setEmailLogs] = useState<EmailDispatchLog[]>([]);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [saveTemplateSuccess, setSaveTemplateSuccess] = useState(false);
 
   // 1. Staff Welcome Editable Fields
   const [welcomeRoleTitle, setWelcomeRoleTitle] = useState('Senior Admissions Specialist');
@@ -105,11 +126,24 @@ export const SettingsPage: React.FC = () => {
   const [resetExpiry, setResetExpiry] = useState('24 hours');
   const [resetSecurityNote, setResetSecurityNote] = useState('We received a request to reset the password for your Nexus CRM account.');
 
+  // 6. Mentor Welcome / Faculty Appointment Editable Fields
+  const [mentorFacultyId, setMentorFacultyId] = useState('FAC-2026-084');
+  const [mentorDepartment, setMentorDepartment] = useState('Software Engineering');
+  const [mentorCourses, setMentorCourses] = useState('Full-Stack Software Engineering, Cloud DevOps');
+  const [mentorCommissionRate, setMentorCommissionRate] = useState('37% per student enrollment');
+  const [mentorBankDetails, setMentorBankDetails] = useState('Access Bank - 0123456789 (Verified ✅)');
+
   // Update default subject when template changes
   const handleSelectTemplate = (template: EmailTemplatePayload['type']) => {
     setSelectedEmailTemplate(template);
+    const custom = settings.customEmailTemplates?.[template];
+    if (custom?.subject) {
+      setEmailSubject(custom.subject);
+      return;
+    }
     const defaultSubjects: Record<EmailTemplatePayload['type'], string> = {
       student_welcome: '🎓 Welcome to CODELAB EDUCARE LTD — Admission Confirmation',
+      mentor_welcome: '💼 Faculty Appointment & Onboarding — CODELAB EDUCARE LTD (FAC-2026-084)',
       staff_welcome: 'Welcome to CODELAB EDUCARE LTD — Set Your Password',
       password_reset: 'Security Notice: Password Reset Request',
       payment_reminder: `Payment Reminder: Outstanding Tuition Balance (${reminderProgram})`,
@@ -129,6 +163,15 @@ export const SettingsPage: React.FC = () => {
           cohort: 'Executive Cohort 2026',
           mentorName: sessionMentorName,
           paymentStatus: 'Cleared & Active (Full Tuition Paid)',
+          portalUrl: 'http://72.61.106.87/login',
+        };
+      case 'mentor_welcome':
+        return {
+          facultyId: mentorFacultyId,
+          department: mentorDepartment,
+          courses: mentorCourses,
+          commissionRate: mentorCommissionRate,
+          bankDetails: mentorBankDetails,
           portalUrl: 'http://72.61.106.87/login',
         };
       case 'staff_welcome':
@@ -183,6 +226,37 @@ export const SettingsPage: React.FC = () => {
     type: selectedEmailTemplate,
     data: getCurrentTemplateData(),
   });
+
+  const handleSaveTemplateCustomization = () => {
+    const existingCustomTemplates = settings.customEmailTemplates || {};
+    const updatedCustomTemplates = {
+      ...existingCustomTemplates,
+      [selectedEmailTemplate]: {
+        subject: emailSubject,
+        body: activeEmailPreviewHtml,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: currentUser?.name || 'Administrator',
+      },
+    };
+
+    updateSettings({
+      customEmailTemplates: updatedCustomTemplates,
+    });
+
+    setSaveTemplateSuccess(true);
+    showToast('Template Saved', `Customizations for ${selectedEmailTemplate} persisted to database.`, 'success');
+    setTimeout(() => setSaveTemplateSuccess(false), 4000);
+  };
+
+  const handleResetTemplateToDefault = () => {
+    const existingCustomTemplates = { ...(settings.customEmailTemplates || {}) };
+    delete existingCustomTemplates[selectedEmailTemplate];
+    updateSettings({
+      customEmailTemplates: existingCustomTemplates,
+    });
+    handleSelectTemplate(selectedEmailTemplate);
+    showToast('Template Reset', `Restored standard system template for ${selectedEmailTemplate}.`, 'info');
+  };
 
   // Production Flush Confirmation Modal
   const [showFlushConfirm, setShowFlushConfirm] = useState(false);
@@ -448,33 +522,50 @@ export const SettingsPage: React.FC = () => {
             </h3>
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pt-2">
-              <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant flex items-center justify-center shrink-0">
+              <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant flex items-center justify-center shrink-0 w-32 h-32">
                 <BrandLogo size="lg" logoUrl={logoUrl} />
               </div>
-              <div className="flex-1 space-y-2 w-full">
-                <label className="block font-label-md text-xs font-semibold text-on-surface">
-                  Custom Brand Logo URL (Optional)
-                </label>
-                <div className="flex gap-2">
+              <div className="flex-1 space-y-3 w-full">
+                <div>
+                  <label className="block font-label-md text-xs font-semibold text-on-surface mb-1">
+                    Institutional Brand Logo (Upload Image)
+                  </label>
                   <input
-                    type="url"
-                    value={logoUrl}
-                    onChange={(e) => setLogoUrl(e.target.value)}
-                    placeholder="https://example.com/logo.png (leave empty for institutional vector emblem)"
-                    className="flex-1 h-10 px-3 rounded bg-surface border border-outline-variant text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                    type="file"
+                    ref={logoFileInputRef}
+                    onChange={handleLogoFileUpload}
+                    accept="image/png, image/jpeg, image/webp, image/svg+xml"
+                    className="hidden"
                   />
-                  {logoUrl && (
+                  <div className="flex flex-wrap items-center gap-3">
                     <button
                       type="button"
-                      onClick={() => setLogoUrl('')}
-                      className="px-3 h-10 border border-outline-variant rounded text-xs text-secondary hover:bg-surface-container transition-colors"
+                      onClick={() => logoFileInputRef.current?.click()}
+                      className="px-4 h-10 bg-primary text-on-primary rounded-lg text-xs font-bold hover:bg-primary/90 transition-colors flex items-center gap-2 cursor-pointer shadow-xs"
                     >
-                      Clear Logo
+                      <span className="material-symbols-outlined text-[18px]">upload_file</span>
+                      <span>{logoUrl ? 'Change Brand Logo' : 'Upload Brand Logo'}</span>
                     </button>
-                  )}
+
+                    {logoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLogoUrl('');
+                          if (logoFileInputRef.current) logoFileInputRef.current.value = '';
+                          showToast('Logo Cleared', 'Reverted to default institutional vector emblem.', 'info');
+                        }}
+                        className="px-3 h-10 border border-outline-variant rounded-lg text-xs text-secondary hover:text-error hover:bg-surface-container transition-colors flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">delete</span>
+                        <span>Revert to Default Vector Emblem</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
+
                 <p className="text-[11px] text-secondary">
-                  If left blank, the system automatically uses the official <strong>CODELAB EDUCARE LTD</strong> geometric vector emblem.
+                  Supported formats: PNG, JPG, WebP, SVG (max 2MB). Uploaded image is embedded and used in headers, student onboarding emails, and invoices. If not uploaded, the system displays the official <strong>CODELAB EDUCARE LTD</strong> geometric vector emblem.
                 </p>
               </div>
             </div>
@@ -1001,29 +1092,36 @@ export const SettingsPage: React.FC = () => {
             </div>
 
             {/* Template Selector Pills */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
               {[
-                { type: 'student_welcome', label: '1. Student Welcome', icon: 'school' },
-                { type: 'staff_welcome', label: '2. Staff Welcome', icon: 'badge' },
-                { type: 'payment_reminder', label: '3. Payment Notice', icon: 'payments' },
-                { type: 'invoice_receipt', label: '4. Tuition Invoice', icon: 'receipt_long' },
-                { type: 'session_confirmation', label: '5. Mentorship', icon: 'groups' },
-                { type: 'password_reset', label: '6. Password Reset', icon: 'lock_reset' },
-              ].map((t) => (
-                <button
-                  key={t.type}
-                  type="button"
-                  onClick={() => handleSelectTemplate(t.type as EmailTemplatePayload['type'])}
-                  className={`p-2.5 rounded-lg border text-left text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
-                    selectedEmailTemplate === t.type
-                      ? 'border-primary bg-primary text-white shadow-xs'
-                      : 'border-outline-variant bg-surface hover:bg-surface-container text-on-surface'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[18px]">{t.icon}</span>
-                  <span className="truncate">{t.label}</span>
-                </button>
-              ))}
+                { type: 'student_welcome', label: '1. Student', icon: 'school' },
+                { type: 'mentor_welcome', label: '2. Mentor Appt', icon: 'person_celebrate' },
+                { type: 'staff_welcome', label: '3. Staff', icon: 'badge' },
+                { type: 'payment_reminder', label: '4. Reminder', icon: 'payments' },
+                { type: 'invoice_receipt', label: '5. Invoice', icon: 'receipt_long' },
+                { type: 'session_confirmation', label: '6. Coaching', icon: 'groups' },
+                { type: 'password_reset', label: '7. Pass Reset', icon: 'lock_reset' },
+              ].map((t) => {
+                const isCustom = Boolean(settings.customEmailTemplates?.[t.type as EmailTemplatePayload['type']]);
+                return (
+                  <button
+                    key={t.type}
+                    type="button"
+                    onClick={() => handleSelectTemplate(t.type as EmailTemplatePayload['type'])}
+                    className={`p-2.5 rounded-lg border text-left text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer relative ${
+                      selectedEmailTemplate === t.type
+                        ? 'border-primary bg-primary text-white shadow-xs'
+                        : 'border-outline-variant bg-surface hover:bg-surface-container text-on-surface'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[16px]">{t.icon}</span>
+                    <span className="truncate">{t.label}</span>
+                    {isCustom && (
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 absolute top-1 right-1" title="Saved custom template" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Main 2-Column: Left = Form Inputs (Customizer), Right = Live Preview */}
@@ -1115,7 +1213,68 @@ export const SettingsPage: React.FC = () => {
                     </div>
                   )}
 
-                  {/* 2. Staff Welcome Fields */}
+                  {/* 2. Mentor Appointment / Welcome Fields */}
+                  {selectedEmailTemplate === 'mentor_welcome' && (
+                    <div className="space-y-3 animate-in fade-in">
+                      <div className="p-3 bg-primary/5 rounded-lg border border-primary/20 text-xs text-primary font-medium flex items-center gap-2">
+                        <span className="material-symbols-outlined text-sm">handshake</span>
+                        <span>Dispatched automatically to newly recruited mentors upon contract creation.</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-semibold text-on-surface mb-1">Faculty ID</label>
+                          <input
+                            type="text"
+                            value={mentorFacultyId}
+                            onChange={(e) => setMentorFacultyId(e.target.value)}
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-data-tabular"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-on-surface mb-1">Specialized Department</label>
+                          <input
+                            type="text"
+                            value={mentorDepartment}
+                            onChange={(e) => setMentorDepartment(e.target.value)}
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-on-surface mb-1">Assigned Course Tracks</label>
+                        <input
+                          type="text"
+                          value={mentorCourses}
+                          onChange={(e) => setMentorCourses(e.target.value)}
+                          className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-semibold text-on-surface mb-1">Remuneration Policy</label>
+                          <input
+                            type="text"
+                            value={mentorCommissionRate}
+                            onChange={(e) => setMentorCommissionRate(e.target.value)}
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-on-surface mb-1">Disbursement Account</label>
+                          <input
+                            type="text"
+                            value={mentorBankDetails}
+                            onChange={(e) => setMentorBankDetails(e.target.value)}
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 3. Staff Welcome Fields */}
                   {selectedEmailTemplate === 'staff_welcome' && (
                     <div className="space-y-3 animate-in fade-in">
                       <div>
@@ -1404,15 +1563,51 @@ export const SettingsPage: React.FC = () => {
                   )}
                 </div>
 
-                {/* Dispatch Button */}
-                <button
-                  onClick={handleSendTestEmail}
-                  disabled={isSendingEmail}
-                  className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-on-primary font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  <span className="material-symbols-outlined text-[20px]">send</span>
-                  <span>{isSendingEmail ? 'Dispatching Custom Email...' : 'Dispatch Live Email with Custom Data'}</span>
-                </button>
+                <div className="space-y-2 pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSaveTemplateCustomization}
+                      className="w-full h-10 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">save</span>
+                      <span>Save Template Customizations</span>
+                    </button>
+
+                    {settings.customEmailTemplates?.[selectedEmailTemplate] ? (
+                      <button
+                        type="button"
+                        onClick={handleResetTemplateToDefault}
+                        className="w-full h-10 rounded-xl border border-outline-variant text-secondary hover:text-error hover:bg-surface-container font-semibold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        title="Revert this template to standard built-in format"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">restore</span>
+                        <span>Reset to Default Format</span>
+                      </button>
+                    ) : (
+                      <div className="flex items-center justify-center text-[11px] text-secondary font-medium px-2 py-1 bg-surface-container-low rounded-xl border border-outline-variant/60">
+                        <span>Using Standard Template</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {saveTemplateSuccess && (
+                    <div className="p-2.5 bg-[#dcfce7] border border-[#86efac] text-[#166534] rounded-lg text-xs font-bold flex items-center gap-1.5 animate-in fade-in">
+                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                      <span>Template Customization Saved! Future automated emails will use this version.</span>
+                    </div>
+                  )}
+
+                  {/* Dispatch Button */}
+                  <button
+                    onClick={handleSendTestEmail}
+                    disabled={isSendingEmail}
+                    className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-on-primary font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">send</span>
+                    <span>{isSendingEmail ? 'Dispatching Custom Email...' : 'Dispatch Live Email with Custom Data'}</span>
+                  </button>
+                </div>
               </div>
 
               {/* RIGHT COLUMN: LIVE REAL-TIME HTML RENDER PREVIEW */}

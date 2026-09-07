@@ -31,6 +31,40 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
   const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
   const [proofFileName, setProofFileName] = useState<string | null>(null);
 
+  // Reset form to blank on modal open
+  const resetForm = () => {
+    setName('');
+    setEmail('');
+    setPhone('');
+    setCustomProgramTitle('');
+    setProofFileName(null);
+    setPaymentDate(new Date().toISOString().split('T')[0]);
+    setPaymentMethod('bank_transfer');
+    if (courses.length > 0) {
+      setSelectedCourseId(courses[0].id);
+      setTotalCourseFee(courses[0].tuitionFee);
+      setInitialPayment(Math.round(courses[0].tuitionFee / 2));
+    } else {
+      setSelectedCourseId('__custom__');
+      setTotalCourseFee(850000);
+      setInitialPayment(425000);
+    }
+    if (mentors.length > 0) {
+      setMentorName(mentors[0].name);
+    }
+    if (cohorts.length > 0) {
+      setSelectedCohortCode(cohorts[0].cohortCode);
+    } else {
+      setSelectedCohortCode('__custom__');
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      resetForm();
+    }
+  }, [isOpen]);
+
   // Sync fee when selected course changes
   useEffect(() => {
     if (selectedCourseId !== '__custom__') {
@@ -105,6 +139,7 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
       ]
     });
 
+    resetForm();
     onClose();
   };
 

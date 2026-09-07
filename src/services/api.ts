@@ -332,6 +332,22 @@ class ApiService {
       body: JSON.stringify(data),
     });
   }
+
+  // Nigerian Banking / NUBAN Verification
+  async verifyBankAccount(payload: { bankCode: string; accountNumber: string; bankName?: string; accountName?: string }) {
+    return this.request<{
+      success: boolean;
+      verified: boolean;
+      accountName: string;
+      accountNumber: string;
+      bankCode: string;
+      source: string;
+      message: string;
+    }>('/banks/verify-account', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
 }
 
 export const apiService = new ApiService();

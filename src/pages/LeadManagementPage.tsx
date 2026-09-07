@@ -24,6 +24,18 @@ export const LeadManagementPage: React.FC = () => {
 
   const effectiveSearch = globalSearch || tableSearch;
 
+  const activePipelineValue = useMemo(() => {
+    return leads
+      .filter(l => l.status !== 'Lost' && l.status !== 'Converted')
+      .reduce((sum, l) => sum + (l.dealValue || 850000), 0);
+  }, [leads]);
+
+  const qualifiedDealsValue = useMemo(() => {
+    return leads
+      .filter(l => l.status === 'Qualified' || l.status === 'Negotiation')
+      .reduce((sum, l) => sum + (l.dealValue || 850000), 0);
+  }, [leads]);
+
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
       const matchesTab = activeTab === 'All' || lead.status === activeTab;
@@ -183,10 +195,10 @@ export const LeadManagementPage: React.FC = () => {
             <span className="text-secondary font-label-md text-label-md">Total Active Leads</span>
             <span className="material-symbols-outlined text-primary-container">groups</span>
           </div>
-          <div className="font-headline-lg text-headline-lg font-bold text-on-surface">{leads.length}</div>
+          <div className="font-headline-lg text-headline-lg font-bold text-on-surface font-data-tabular">{leads.length}</div>
           <div className="mt-2 flex items-center gap-1 text-xs text-secondary">
             <span className="material-symbols-outlined text-[14px] text-[#006A60]">trending_up</span>
-            <span className="text-[#006A60] font-medium">+18%</span> intake velocity
+            <span className="text-[#006A60] font-medium">{leads.filter(l => l.status === 'New' || l.status === 'Discovery').length} new</span> intake prospects
           </div>
         </div>
 
@@ -195,10 +207,12 @@ export const LeadManagementPage: React.FC = () => {
             <span className="text-secondary font-label-md text-label-md">Active Pipeline Value</span>
             <span className="material-symbols-outlined text-primary-container">payments</span>
           </div>
-          <div className="font-headline-lg text-headline-lg font-bold text-on-surface">₦3,250,000</div>
+          <div className="font-headline-lg text-headline-lg font-bold text-on-surface font-data-tabular">
+            {formatNaira(activePipelineValue)}
+          </div>
           <div className="mt-2 flex items-center gap-1 text-xs text-secondary">
             <span className="material-symbols-outlined text-[14px] text-[#006A60]">trending_up</span>
-            <span className="text-[#006A60] font-medium">+₦450K</span> qualified corporate deals
+            <span className="text-[#006A60] font-medium">{formatNaira(qualifiedDealsValue)}</span> in qualified negotiations
           </div>
         </div>
 
@@ -207,7 +221,7 @@ export const LeadManagementPage: React.FC = () => {
             <span className="text-secondary font-label-md text-label-md">Needs Action &amp; Follow-up</span>
             <span className="material-symbols-outlined text-error">notification_important</span>
           </div>
-          <div className="font-headline-lg text-headline-lg font-bold text-on-surface">
+          <div className="font-headline-lg text-headline-lg font-bold text-on-surface font-data-tabular">
             {leads.filter(l => l.status === 'Overdue' || l.status === 'New').length}
           </div>
           <div className="mt-2 flex items-center gap-1 text-xs text-secondary">

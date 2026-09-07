@@ -2,7 +2,7 @@ export interface EmailTemplatePayload {
   to: string;
   recipientName: string;
   subject: string;
-  type: 'student_welcome' | 'staff_welcome' | 'password_reset' | 'payment_reminder' | 'invoice_receipt' | 'session_confirmation';
+  type: 'student_welcome' | 'mentor_welcome' | 'staff_welcome' | 'password_reset' | 'payment_reminder' | 'invoice_receipt' | 'session_confirmation';
   data: Record<string, any>;
 }
 
@@ -57,6 +57,68 @@ export class EmailService {
     let bodyContent = '';
 
     switch (payload.type) {
+      case 'mentor_welcome':
+        bodyContent = `
+          <div style="padding: 32px 24px; font-family: 'Inter', sans-serif; color: #1e293b; line-height: 1.6;">
+            <div style="text-align: center; margin-bottom: 24px;">
+              <span style="background-color: #eff6ff; color: #1d4ed8; font-weight: 700; font-size: 11px; padding: 6px 14px; border-radius: 20px; border: 1px solid #bfdbfe; text-transform: uppercase; letter-spacing: 0.5px;">
+                ✓ Faculty Mentor Onboarding &amp; Agreement
+              </span>
+              <h2 style="color: ${primaryColor}; margin: 12px 0 6px 0; font-size: 20px; font-weight: 800;">
+                Welcome to the Academic Faculty, ${payload.recipientName}!
+              </h2>
+              <p style="margin: 0; color: #64748b; font-size: 14px;">
+                ${payload.data.customWelcomeNote || 'We are thrilled to welcome you to CODELAB EDUCARE LTD as a distinguished faculty mentor.'}
+              </p>
+            </div>
+
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+              <h3 style="margin: 0 0 14px 0; font-size: 13px; color: ${primaryColor}; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+                Mentor Profile &amp; Compensation Agreement
+              </h3>
+              <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; width: 40%;">Faculty Mentor ID:</td>
+                  <td style="padding: 6px 0; font-family: monospace; font-weight: bold; color: ${primaryColor}; font-size: 14px;">${payload.data.mentorCode || 'MN-PROD'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b;">Specialized Department:</td>
+                  <td style="padding: 6px 0; font-weight: 600; color: #1e293b;">${payload.data.department || 'Technology & Engineering'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b;">Assigned Courses:</td>
+                  <td style="padding: 6px 0; color: #1e293b;">${Array.isArray(payload.data.courses) ? payload.data.courses.join(', ') : (payload.data.courses || 'Full-Stack Software Engineering')}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b;">Compensation Agreement:</td>
+                  <td style="padding: 6px 0; color: #166534; font-weight: 700;">
+                    ${payload.data.commissionRate || 37}% per Student Enrollment
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b;">Disbursement Schedule:</td>
+                  <td style="padding: 6px 0; color: #1e293b;">Monthly via Direct NIBSS Electronic Settlement</td>
+                </tr>
+              </table>
+            </div>
+
+            <h3 style="color: ${primaryColor}; font-size: 15px; margin: 24px 0 10px 0;">Faculty Responsibilities &amp; Next Steps:</h3>
+            <ol style="padding-left: 20px; margin: 0 0 24px 0; font-size: 13px; color: #334155;">
+              <li style="margin-bottom: 8px;"><strong>Portal Authentication:</strong> Sign in to your Faculty Operations portal using your registered email (<code>${payload.to}</code>) to view assigned mentees and live cohorts.</li>
+              <li style="margin-bottom: 8px;"><strong>1-on-1 Mentorship Sessions:</strong> Log and verify coaching hours directly in the portal to credit your monthly honorarium disbursements.</li>
+              <li style="margin-bottom: 8px;"><strong>Banking &amp; Settlement:</strong> Ensure your registered Nigerian bank settlement details are verified for automated payouts.</li>
+            </ol>
+
+            <div style="text-align: center; margin: 28px 0;">
+              <a href="${payload.data.setupUrl || 'http://72.61.106.87/login'}" 
+                 style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block; box-shadow: 0 2px 4px rgba(0,35,111,0.2);">
+                Access Faculty Portal →
+              </a>
+            </div>
+          </div>
+        `;
+        break;
+
       case 'student_welcome':
         bodyContent = `
           <div style="padding: 32px 24px; font-family: 'Inter', sans-serif; color: #1e293b; line-height: 1.6;">

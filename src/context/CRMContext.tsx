@@ -693,7 +693,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       emailService.sendEmail({
         to: newStudent.email,
         recipientName: newStudent.name,
-        subject: `🎓 Welcome to CODELAB EDUCARE LTD — Admission Confirmation (${newStudent.studentCode})`,
+        subject: settings.customEmailTemplates?.student_welcome?.subject || `🎓 Welcome to CODELAB EDUCARE LTD — Admission Confirmation (${newStudent.studentCode})`,
         type: 'student_welcome',
         data: {
           studentCode: newStudent.studentCode,
@@ -849,16 +849,35 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setMentors(prev => [newMentor, ...prev]);
     apiService.createMentor(mentorData);
-    showToast('Mentor Recruited', `${newMentor.name} joined the faculty.`, 'success');
+
+    // Dispatch automated mentor welcome / faculty appointment email via Zoho SMTP
+    if (newMentor.email) {
+      emailService.sendEmail({
+        to: newMentor.email,
+        recipientName: newMentor.name,
+        subject: settings.customEmailTemplates?.mentor_welcome?.subject || `💼 Faculty Appointment & Onboarding — CODELAB EDUCARE LTD (${newMentor.mentorCode})`,
+        type: 'mentor_welcome',
+        data: {
+          facultyId: newMentor.mentorCode,
+          department: newMentor.department,
+          courses: Array.isArray(newMentor.courses) ? newMentor.courses.join(', ') : (newMentor.expertise?.join(', ') || 'Academic Track'),
+          commissionRate: `${newMentor.commissionRate || 37}% per student enrollment`,
+          bankDetails: `${newMentor.bankName || ''} - ${newMentor.accountNumber || ''} (${newMentor.accountName || newMentor.name})`,
+          portalUrl: 'http://72.61.106.87/login',
+        }
+      }).catch(err => console.error('Error sending mentor welcome email:', err));
+    }
+
+    showToast('Mentor Recruited & Appointment Sent', `${newMentor.name} joined faculty. Welcome email dispatched.`, 'success');
     addNotification({
-      title: 'Faculty Mentor Recruited',
-      message: `${newMentor.name} joined as ${newMentor.role} (${newMentor.department}).`,
+      title: 'Faculty Mentor Recruited & Onboarded',
+      message: `${newMentor.name} joined as ${newMentor.role} (${newMentor.department}). Welcome email sent.`,
       type: 'mentor',
       link: '/mentors',
     });
     logActivity({
       title: 'Faculty Mentor Recruited',
-      description: `${newMentor.name} joined as ${newMentor.role}.`,
+      description: `${newMentor.name} joined as ${newMentor.role}. Appointment email dispatched.`,
       type: 'mentor',
       user: 'Academic Director',
     });

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useCRM } from '../../context/CRMContext';
 import { MentorStatus } from '../../types/crm';
 import { NIGERIAN_BANKS } from '../../data/nigerianBanks';
+import { apiService } from '../../services/api';
 
 export interface EditMentorModalProps {
   isOpen: boolean;
@@ -9,13 +10,17 @@ export interface EditMentorModalProps {
 }
 
 export const EditMentorModal: React.FC<EditMentorModalProps> = ({ isOpen, onClose }) => {
-  const { mentors, updateMentor, selectedMentorForEditId } = useCRM();
+  const { mentors, updateMentor, selectedMentorForEditId, settings } = useCRM();
 
   const currentMentor = mentors.find(m => m.id === selectedMentorForEditId) || mentors[0];
 
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [department, setDepartment] = useState('Data & AI');
+  const [isAddingDept, setIsAddingDept] = useState(false);
+  const [newDeptInput, setNewDeptInput] = useState('');
+  const [departmentsList, setDepartmentsList] = useState<string[]>([]);
+
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [commissionRate, setCommissionRate] = useState(37);
@@ -27,11 +32,27 @@ export const EditMentorModal: React.FC<EditMentorModalProps> = ({ isOpen, onClos
   const [accountNumber, setAccountNumber] = useState('');
   const [accountName, setAccountName] = useState('');
 
+  // Bank Verification State
+  const [isVerifyingBank, setIsVerifyingBank] = useState(false);
+  const [bankVerificationResult, setBankVerificationResult] = useState<{
+    verified: boolean;
+    accountName?: string;
+    message?: string;
+  } | null>(null);
+
   useEffect(() => {
     if (currentMentor) {
       setName(currentMentor.name || '');
       setRole(currentMentor.role || '');
-      setDepartment(currentMentor.department || 'Data & AI');
+      
+      const depts = settings.courseCategories && settings.courseCategories.length > 0
+        ? settings.courseCategories
+        : ['Software Engineering', 'Data Science & AI', 'Product UI/UX Design', 'Cloud DevOps & SRE', 'Cybersecurity'];
+      setDepartmentsList(depts);
+      setDepartment(currentMentor.department || depts[0] || 'Software Engineering');
+      setIsAddingDept(false);
+      setNewDeptInput('');
+
       setEmail(currentMentor.email || '');
       setPhone(currentMentor.phone || '');
       setCommissionRate(currentMentor.commissionRate || 37);
@@ -42,10 +63,64 @@ export const EditMentorModal: React.FC<EditMentorModalProps> = ({ isOpen, onClos
       setBankName(currentMentor.bankName || NIGERIAN_BANKS[0].name);
       setAccountNumber(currentMentor.accountNumber || '');
       setAccountName(currentMentor.accountName || (currentMentor.name ? currentMentor.name.toUpperCase() : ''));
+
+      if (currentMentor.isAccountVerified) {
+        setBankVerificationResult({
+          verified: true,
+          accountName: currentMentor.accountName,
+          message: `Verified Account ✅ (${currentMentor.accountVerificationSource || 'NIBSS Registry'})`,
+        });
+      } else {
+        setBankVerificationResult(null);
+      }
+      setIsVerifyingBank(false);
     }
-  }, [currentMentor, isOpen]);
+  }, [currentMentor, isOpen, settings.courseCategories]);
 
   if (!isOpen || !currentMentor) return null;
+
+  const handleVerifyBank = async () => {
+    if (!accountNumber || accountNumber.trim().length !== 10) {
+      setBankVerificationResult({
+        verified: false,
+        message: 'Please enter a valid 10-digit NUBAN account number.',
+      });
+      return;
+    }
+    setIsVerifyingBank(true);
+    setBankVerificationResult(null);
+    try {
+      const selectedBank = NIGERIAN_BANKS.find(b => b.name === bankName) || NIGERIAN_BANKS[0];
+      const res = await apiService.verifyBankAccount({
+        bankCode: selectedBank.code,
+        accountNumber: accountNumber.trim(),
+        bankName: selectedBank.name,
+        accountName: accountName || name,
+      });
+      if (res?.verified) {
+        setBankVerificationResult({
+          verified: true,
+          accountName: res.accountName,
+          message: res.message,
+        });
+        if (res.accountName) {
+          setAccountName(res.accountName);
+        }
+      } else {
+        setBankVerificationResult({
+          verified: false,
+          message: res?.message || 'Verification failed. Please verify bank and 10-digit account number.',
+        });
+      }
+    } catch (err: any) {
+      setBankVerificationResult({
+        verified: false,
+        message: 'Network verification error. Please try again.',
+      });
+    } finally {
+      setIsVerifyingBank(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,6 +145,9 @@ export const EditMentorModal: React.FC<EditMentorModalProps> = ({ isOpen, onClos
       bankName,
       accountNumber,
       accountName,
+      isAccountVerified: bankVerificationResult?.verified ?? currentMentor.isAccountVerified ?? false,
+      accountVerificationSource: bankVerificationResult?.verified ? 'cbn_nuban_verified' : currentMentor.accountVerificationSource,
+      accountVerifiedAt: bankVerificationResult?.verified ? new Date().toISOString() : currentMentor.accountVerifiedAt,
     });
 
     onClose();
@@ -92,7 +170,7 @@ export const EditMentorModal: React.FC<EditMentorModalProps> = ({ isOpen, onClos
           <button
             onClick={onClose}
             aria-label="Close"
-            className="text-secondary hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-container"
+            className="text-secondary hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-container cursor-pointer"
           >
             <span className="material-symbols-outlined text-[24px]">close</span>
           </button>
@@ -123,19 +201,57 @@ export const EditMentorModal: React.FC<EditMentorModalProps> = ({ isOpen, onClos
               />
             </div>
 
+            {/* Department with Add Option */}
             <div className="space-y-1">
-              <label className="font-label-md text-xs text-secondary font-semibold">Academic Department</label>
-              <select
-                value={department}
-                onChange={e => setDepartment(e.target.value)}
-                className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
-              >
-                <option value="Data & AI">Data &amp; AI</option>
-                <option value="Design Systems">Design Systems</option>
-                <option value="Backend & Cloud">Backend &amp; Cloud</option>
-                <option value="Frontend">Frontend</option>
-                <option value="Product">Product</option>
-              </select>
+              <div className="flex items-center justify-between">
+                <label className="font-label-md text-xs text-secondary font-semibold">Academic Department</label>
+                <button
+                  type="button"
+                  onClick={() => setIsAddingDept(!isAddingDept)}
+                  className="text-xs text-primary font-semibold hover:underline flex items-center gap-0.5 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[14px]">add</span>
+                  <span>{isAddingDept ? 'Choose from list' : '+ Add Department'}</span>
+                </button>
+              </div>
+              {isAddingDept ? (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newDeptInput}
+                    onChange={e => setNewDeptInput(e.target.value)}
+                    placeholder="New department name..."
+                    className="flex-1 h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (newDeptInput.trim()) {
+                        const trimmed = newDeptInput.trim();
+                        if (!departmentsList.includes(trimmed)) {
+                          setDepartmentsList(prev => [...prev, trimmed]);
+                        }
+                        setDepartment(trimmed);
+                        setNewDeptInput('');
+                        setIsAddingDept(false);
+                      }
+                    }}
+                    className="px-3 h-10 bg-primary text-on-primary rounded text-xs font-bold hover:bg-primary/90 cursor-pointer"
+                  >
+                    Add
+                  </button>
+                </div>
+              ) : (
+                <select
+                  value={department}
+                  onChange={e => setDepartment(e.target.value)}
+                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
+                >
+                  {departmentsList.map(dept => (
+                    <option key={dept} value={dept}>{dept}</option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div className="space-y-1">
@@ -221,14 +337,22 @@ export const EditMentorModal: React.FC<EditMentorModalProps> = ({ isOpen, onClos
               />
             </div>
 
+            {/* Nigerian Bank & NUBAN Verification Section */}
             <div className="sm:col-span-2 space-y-3 pt-2">
-              <h4 className="font-label-md text-xs text-on-surface font-semibold">Nigerian Bank Account Details for Payouts (₦)</h4>
+              <div className="flex items-center justify-between">
+                <h4 className="font-label-md text-xs text-on-surface font-semibold">Nigerian Bank Account Details for Payouts (₦)</h4>
+                <span className="text-[11px] text-secondary">CBN NUBAN 10-Digit Standard</span>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-surface-container-low/50 rounded-lg border border-outline-variant">
                 <div className="space-y-1">
                   <label className="font-body-sm text-xs text-secondary">Bank Name ({NIGERIAN_BANKS.length} Banks &amp; Neobanks)</label>
                   <select
                     value={bankName}
-                    onChange={e => setBankName(e.target.value)}
+                    onChange={e => {
+                      setBankName(e.target.value);
+                      setBankVerificationResult(null);
+                    }}
                     className="w-full h-9 px-2 bg-surface border border-outline-variant rounded text-xs text-on-surface outline-none cursor-pointer"
                   >
                     <optgroup label="Commercial Banks">
@@ -253,17 +377,44 @@ export const EditMentorModal: React.FC<EditMentorModalProps> = ({ isOpen, onClos
                     </optgroup>
                   </select>
                 </div>
+
                 <div className="space-y-1">
-                  <label className="font-body-sm text-xs text-secondary">Account Number</label>
-                  <input
-                    type="text"
-                    maxLength={10}
-                    value={accountNumber}
-                    onChange={e => setAccountNumber(e.target.value)}
-                    placeholder="0123456789"
-                    className="w-full h-9 px-2 bg-surface border border-outline-variant rounded font-data-tabular text-xs text-on-surface outline-none"
-                  />
+                  <div className="flex items-center justify-between">
+                    <label className="font-body-sm text-xs text-secondary">Account Number</label>
+                    {bankVerificationResult?.verified && (
+                      <span className="text-[10px] font-bold text-[#166534] bg-[#dcfce7] px-1.5 py-0.2 rounded">Verified ✅</span>
+                    )}
+                  </div>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      maxLength={10}
+                      value={accountNumber}
+                      onChange={e => {
+                        setAccountNumber(e.target.value.replace(/\D/g, '').slice(0, 10));
+                        setBankVerificationResult(null);
+                      }}
+                      placeholder="0123456789"
+                      className="flex-1 h-9 px-2 bg-surface border border-outline-variant rounded font-data-tabular text-xs text-on-surface outline-none"
+                    />
+                    <button
+                      type="button"
+                      disabled={accountNumber.length !== 10 || isVerifyingBank}
+                      onClick={handleVerifyBank}
+                      className="px-2.5 h-9 bg-primary text-on-primary rounded text-xs font-semibold hover:bg-primary/90 disabled:opacity-40 flex items-center gap-1 cursor-pointer shrink-0"
+                    >
+                      {isVerifyingBank ? (
+                        <span className="text-[11px]">Verifying...</span>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined text-[14px]">verified_user</span>
+                          <span>Verify</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
+
                 <div className="space-y-1">
                   <label className="font-body-sm text-xs text-secondary">Account Name</label>
                   <input
@@ -275,6 +426,19 @@ export const EditMentorModal: React.FC<EditMentorModalProps> = ({ isOpen, onClos
                   />
                 </div>
               </div>
+
+              {bankVerificationResult && (
+                <div className={`p-2.5 rounded-lg border text-xs flex items-center gap-2 ${
+                  bankVerificationResult.verified
+                    ? 'bg-[#dcfce7]/60 border-[#86efac] text-[#166534]'
+                    : 'bg-red-50 border-red-200 text-red-700'
+                }`}>
+                  <span className="material-symbols-outlined text-[16px]">
+                    {bankVerificationResult.verified ? 'check_circle' : 'error'}
+                  </span>
+                  <span>{bankVerificationResult.message}</span>
+                </div>
+              )}
             </div>
 
             <div className="space-y-1 sm:col-span-2">
@@ -293,16 +457,15 @@ export const EditMentorModal: React.FC<EditMentorModalProps> = ({ isOpen, onClos
             <button
               type="button"
               onClick={onClose}
-              className="px-4 h-10 rounded border border-outline-variant font-label-md text-xs font-semibold text-secondary hover:bg-surface-container transition-colors"
+              className="px-4 h-10 rounded border border-outline-variant font-label-md text-xs font-semibold text-secondary hover:bg-surface-container transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-6 h-10 rounded bg-primary text-on-primary font-label-md text-xs font-bold hover:bg-primary-container transition-colors shadow-xs flex items-center gap-1.5"
+              className="px-6 h-10 rounded bg-primary text-on-primary font-label-md text-xs font-bold hover:bg-primary-container transition-colors shadow-xs cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[16px]">save</span>
-              <span>Save Mentor Profile</span>
+              Save Profile Changes
             </button>
           </div>
         </form>

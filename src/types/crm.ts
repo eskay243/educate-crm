@@ -89,6 +89,7 @@ export interface Mentor {
   role: string;
   department: string;
   expertise: string[];
+  courses?: string[];
   hourlyRate?: number; // Deprecated - replaced by 37% enrollment commission
   maxCapacity: number;
   activeMentees: number;
@@ -105,6 +106,9 @@ export interface Mentor {
   bankName?: string;
   accountNumber?: string;
   accountName?: string;
+  isAccountVerified?: boolean;
+  accountVerificationSource?: string;
+  accountVerifiedAt?: string;
 }
 
 // ----------------------------------------------------
@@ -313,6 +317,10 @@ export interface OrganizationSettings {
   };
   courseCategories?: string[];
   logoUrl?: string;
+  customEmailTemplates?: Record<string, {
+    subject?: string;
+    data?: Record<string, any>;
+  }>;
 }
 
 export interface ActivityLogItem {

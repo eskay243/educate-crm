@@ -305,8 +305,21 @@ export const MentorManagementPage: React.FC = () => {
                                 {mentor.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                               </div>
                               <div>
-                                <p className="font-bold text-on-surface text-sm">{mentor.name}</p>
-                                <p className="text-secondary text-[11px]">{mentor.email}</p>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <p className="font-bold text-on-surface text-sm">{mentor.name}</p>
+                                  {mentor.isAccountVerified ? (
+                                    <span className="text-[10px] font-bold text-[#166534] bg-[#dcfce7] px-1.5 py-0.2 rounded flex items-center gap-0.5" title="Bank account verified via NIBSS/CBN standard">
+                                      <span className="material-symbols-outlined text-[12px]">verified</span> Verified ✅
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200/60 px-1 py-0.2 rounded" title="Bank account pending verification">
+                                      Unverified Account
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-secondary text-[11px]">
+                                  {mentor.email} {mentor.bankName ? `• ${mentor.bankName} (${mentor.accountNumber || 'N/A'})` : ''}
+                                </p>
                               </div>
                             </div>
                           </td>
@@ -387,12 +400,19 @@ export const MentorManagementPage: React.FC = () => {
                               {(isSuperAdmin || isFinance) && mentor.pendingPayout > 0 && (
                                 <button 
                                   onClick={() => {
-                                    showToast('Disbursement Initiated', `NIBSS electronic settlement of ${formatNaira(mentor.pendingPayout)} queued for ${mentor.name}.`, 'success');
+                                    if (!mentor.isAccountVerified) {
+                                      showToast('Verification Notice', `${mentor.name}'s bank account is not verified yet. Please verify in Edit Profile before final settlement.`, 'warning');
+                                    } else {
+                                      showToast('Disbursement Initiated', `NIBSS electronic settlement of ${formatNaira(mentor.pendingPayout)} queued for ${mentor.name} (${mentor.bankName} - ${mentor.accountNumber}).`, 'success');
+                                    }
                                   }}
-                                  className="px-2.5 py-1 rounded bg-secondary-container text-primary font-sans text-xs font-bold hover:bg-secondary-container/80 transition-colors cursor-pointer"
-                                  title="Process Payout"
+                                  className={`px-2.5 py-1 rounded text-white font-sans text-xs font-semibold shadow-xs transition-colors flex items-center gap-1 cursor-pointer ${
+                                    mentor.isAccountVerified ? 'bg-[#166534] hover:bg-[#15803d]' : 'bg-amber-600 hover:bg-amber-700'
+                                  }`}
+                                  title={mentor.isAccountVerified ? "Disburse 37% Commission Share via NIBSS" : "Account Unverified - Check details before disbursement"}
                                 >
-                                  Disburse
+                                  <span className="material-symbols-outlined text-[14px]">send_money</span>
+                                  <span>{mentor.isAccountVerified ? 'Disburse Share' : 'Verify & Disburse'}</span>
                                 </button>
                               )}
                             </div>
