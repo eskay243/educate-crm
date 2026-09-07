@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useCRM } from '../../context/CRMContext';
+import { NIGERIAN_BANKS } from '../../data/nigerianBanks';
 
 export interface RecruitMentorModalProps {
   isOpen: boolean;
@@ -13,11 +14,10 @@ export const RecruitMentorModal: React.FC<RecruitMentorModalProps> = ({ isOpen, 
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [department, setDepartment] = useState('Software Engineering');
-  const [hourlyRate, setHourlyRate] = useState(35000);
   const [commissionRate, setCommissionRate] = useState(37);
   const [maxCapacity, setMaxCapacity] = useState(15);
   const [payoutFrequency, setPayoutFrequency] = useState('Monthly');
-  const [bankName, setBankName] = useState('Access Bank Nigeria');
+  const [bankName, setBankName] = useState(NIGERIAN_BANKS[0].name);
   const [accountNumber, setAccountNumber] = useState('');
   const [accountName, setAccountName] = useState('');
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
@@ -51,14 +51,18 @@ export const RecruitMentorModal: React.FC<RecruitMentorModalProps> = ({ isOpen, 
       role: `${department} Lead Mentor`,
       department,
       expertise: selectedCourses,
-      hourlyRate: Number(hourlyRate),
       commissionRate: Number(commissionRate),
       activeMentees: 0,
+      assignedEnrollmentsCount: 0,
       maxCapacity: Number(maxCapacity),
       rating: 5.0,
       status: 'Active',
       pendingPayout: 0,
+      totalEarned: 0,
       payoutStatus: 'Completed',
+      bankName,
+      accountNumber,
+      accountName: accountName || name.toUpperCase(),
     });
 
     onClose();
@@ -163,34 +167,31 @@ export const RecruitMentorModal: React.FC<RecruitMentorModalProps> = ({ isOpen, 
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1">
-                <label className="font-label-md text-label-md text-secondary">Hourly Rate (₦/h)</label>
+                <div className="flex items-center justify-between">
+                  <label className="font-label-md text-label-md text-secondary">Tuition Commission (%)</label>
+                  <span className="text-[10px] font-bold text-[#166534] bg-[#dcfce7] px-1.5 py-0.2 rounded">Fixed 37%</span>
+                </div>
                 <input
                   type="number"
-                  step="1000"
-                  value={hourlyRate}
-                  onChange={e => setHourlyRate(Number(e.target.value))}
-                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-on-surface focus:border-primary outline-none"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="font-label-md text-label-md text-secondary">Commission Share (%)</label>
-                <input
-                  type="number"
+                  min="1"
+                  max="100"
                   value={commissionRate}
                   onChange={e => setCommissionRate(Number(e.target.value))}
-                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-on-surface focus:border-primary outline-none"
+                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-data-tabular text-on-surface focus:border-primary outline-none"
                 />
+                <p className="text-[10px] text-secondary">37% share per admitted student enrolled</p>
               </div>
               <div className="space-y-1">
                 <label className="font-label-md text-label-md text-secondary">Max Mentee Capacity</label>
                 <input
                   type="number"
                   min="1"
-                  max="50"
+                  max="100"
                   value={maxCapacity}
                   onChange={e => setMaxCapacity(Number(e.target.value))}
                   className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-on-surface focus:border-primary outline-none"
                 />
+                <p className="text-[10px] text-secondary">Maximum active students assigned</p>
               </div>
               <div className="space-y-1">
                 <label className="font-label-md text-label-md text-secondary">Payout Frequency</label>
@@ -199,26 +200,43 @@ export const RecruitMentorModal: React.FC<RecruitMentorModalProps> = ({ isOpen, 
                   onChange={e => setPayoutFrequency(e.target.value)}
                   className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-on-surface focus:border-primary outline-none cursor-pointer"
                 >
+                  <option value="Per Enrollment">Per Enrollment (Direct)</option>
+                  <option value="Monthly">Monthly Consolidated</option>
                   <option value="Bi-Weekly">Bi-Weekly</option>
-                  <option value="Monthly">Monthly</option>
                   <option value="Per Cohort">Per Cohort</option>
                 </select>
+                <p className="text-[10px] text-secondary">Revenue share disbursement cycle</p>
               </div>
               <div className="sm:col-span-2 space-y-3 pt-2">
                 <h4 className="font-label-md text-label-md text-on-surface font-semibold">Nigerian Bank Account Details (₦)</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-surface-container-low/50 rounded-lg border border-outline-variant">
                   <div className="space-y-1">
-                    <label className="font-body-sm text-xs text-secondary">Bank Name</label>
+                    <label className="font-body-sm text-xs text-secondary">Bank Name ({NIGERIAN_BANKS.length} Banks &amp; Neobanks)</label>
                     <select
                       value={bankName}
                       onChange={e => setBankName(e.target.value)}
-                      className="w-full h-9 px-2 bg-surface border border-outline-variant rounded text-xs text-on-surface outline-none"
+                      className="w-full h-9 px-2 bg-surface border border-outline-variant rounded text-xs text-on-surface outline-none cursor-pointer"
                     >
-                      <option value="Access Bank Nigeria">Access Bank</option>
-                      <option value="Guaranty Trust Bank (GTB)">Guaranty Trust Bank (GTB)</option>
-                      <option value="Zenith Bank">Zenith Bank</option>
-                      <option value="First Bank of Nigeria">First Bank</option>
-                      <option value="United Bank for Africa (UBA)">UBA</option>
+                      <optgroup label="Commercial Banks">
+                        {NIGERIAN_BANKS.filter(b => b.category === 'Commercial').map(b => (
+                          <option key={b.code} value={b.name}>{b.name}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="FinTechs &amp; Neobanks (MFBs)">
+                        {NIGERIAN_BANKS.filter(b => b.category === 'FinTech / Neobank').map(b => (
+                          <option key={b.code} value={b.name}>{b.name}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Non-Interest / Islamic Banks">
+                        {NIGERIAN_BANKS.filter(b => b.category === 'Non-Interest').map(b => (
+                          <option key={b.code} value={b.name}>{b.name}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Merchant Banks">
+                        {NIGERIAN_BANKS.filter(b => b.category === 'Merchant').map(b => (
+                          <option key={b.code} value={b.name}>{b.name}</option>
+                        ))}
+                      </optgroup>
                     </select>
                   </div>
                   <div className="space-y-1">

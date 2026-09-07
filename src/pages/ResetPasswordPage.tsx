@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
+import { BrandLogo } from '../components/common/BrandLogo';
 
 export const ResetPasswordPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { showToast } = useCRM();
+  const { settings } = useCRM();
 
+  const tokenParam = searchParams.get('token') || '';
   const emailParam = searchParams.get('email') || '';
-  const tokenParam = searchParams.get('token') || 'valid-token';
 
   const [email, setEmail] = useState(emailParam);
   const [password, setPassword] = useState('');
@@ -16,8 +17,8 @@ export const ResetPasswordPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  // Simple password strength calculation
   const getPasswordStrength = () => {
     if (!password) return { text: 'Empty', color: 'bg-outline-variant', width: '0%' };
     if (password.length < 6) return { text: 'Weak', color: 'bg-error', width: '33%' };
@@ -29,22 +30,39 @@ export const ResetPasswordPage: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!password) {
-      showToast('Error', 'Please enter a valid password.', 'error');
+    setErrorMessage('');
+
+    if (!email || !password) {
+      setErrorMessage('Please enter all required credentials.');
       return;
     }
+
+    if (password.length < 8) {
+      setErrorMessage('Password must be at least 8 characters long.');
+      return;
+    }
+
     if (password !== confirmPassword) {
-      showToast('Mismatch', 'Passwords do not match.', 'error');
+      setErrorMessage('Passwords do not match. Please re-enter.');
       return;
     }
 
     setIsLoading(true);
-
     setTimeout(() => {
+      // Update staff password in localStorage / mock
+      const existing = localStorage.getItem('nexus_clean_prod_staff_v1');
+      if (existing) {
+        try {
+          const users = JSON.parse(existing);
+          const updated = users.map((u: any) => u.email === email ? { ...u, password } : u);
+          localStorage.setItem('nexus_clean_prod_staff_v1', JSON.stringify(updated));
+        } catch (e) {
+          console.error('Failed to update credentials:', e);
+        }
+      }
       setIsLoading(false);
       setIsSubmitted(true);
-      showToast('Password Updated', 'Your institutional account password has been set successfully!', 'success');
-    }, 1000);
+    }, 600);
   };
 
   return (
@@ -53,15 +71,13 @@ export const ResetPasswordPage: React.FC = () => {
       <div className="w-full max-w-md bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-xl p-8 space-y-6 animate-in fade-in duration-300">
         
         {/* Header Branding */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary text-white shadow-md mb-2">
-            <span className="material-symbols-outlined text-[28px]">lock_reset</span>
-          </div>
-          <h1 className="font-headline-lg text-2xl font-bold text-on-surface">
+        <div className="text-center space-y-2 flex flex-col items-center">
+          <BrandLogo size="md" logoUrl={settings.logoUrl} className="justify-center" />
+          <h1 className="font-headline-lg text-2xl font-bold text-on-surface mt-2">
             {tokenParam ? 'Set Your Password' : 'Reset Account Password'}
           </h1>
           <p className="font-body-sm text-xs text-secondary max-w-xs mx-auto">
-            Configure secure credentials for your Nexus Institute staff and operations account.
+            Configure secure credentials for your CODELAB EDUCARE LTD staff and operations account.
           </p>
         </div>
 
@@ -93,7 +109,7 @@ export const ResetPasswordPage: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@nexus-institute.ng"
+                placeholder="name@codelab.institute"
                 className="w-full h-10 px-3 rounded bg-surface-container-low border border-outline-variant text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
               />
             </div>
@@ -160,6 +176,12 @@ export const ResetPasswordPage: React.FC = () => {
               )}
             </div>
 
+            {errorMessage && (
+              <div className="p-2.5 bg-error-container/20 border border-error/30 rounded text-xs text-error font-medium">
+                {errorMessage}
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={isLoading}
@@ -191,7 +213,7 @@ export const ResetPasswordPage: React.FC = () => {
       </div>
 
       <p className="font-data-tabular text-[11px] text-secondary mt-6">
-        NEXUS INSTITUTE SECURITY &amp; ACCESS CONTROL • LAGOS, NIGERIA
+        CODELAB EDUCARE LTD SECURITY &amp; ACCESS CONTROL • LAGOS, NIGERIA
       </p>
     </div>
   );

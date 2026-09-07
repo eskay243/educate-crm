@@ -2,7 +2,7 @@ export interface EmailTemplatePayload {
   to: string;
   recipientName: string;
   subject: string;
-  type: 'staff_welcome' | 'password_reset' | 'payment_reminder' | 'invoice_receipt' | 'session_confirmation';
+  type: 'student_welcome' | 'staff_welcome' | 'password_reset' | 'payment_reminder' | 'invoice_receipt' | 'session_confirmation';
   data: Record<string, any>;
 }
 
@@ -31,32 +31,103 @@ export class EmailService {
     });
 
     const header = `
-      <div style="background-color: ${primaryColor}; padding: 24px; text-align: center; border-radius: 8px 8px 0 0;">
-        <h1 style="color: #ffffff; margin: 0; font-family: 'Inter', sans-serif; font-size: 20px; font-weight: 700; letter-spacing: -0.5px;">
-          NEXUS INSTITUTE OF TECHNOLOGY
+      <div style="background-color: ${primaryColor}; padding: 26px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <div style="display: inline-block; background-color: rgba(255,255,255,0.15); padding: 8px 16px; border-radius: 20px; margin-bottom: 8px;">
+          <span style="color: #ffffff; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">
+            CODELAB EDUCARE LTD
+          </span>
+        </div>
+        <h1 style="color: #ffffff; margin: 4px 0 0 0; font-family: 'Inter', sans-serif; font-size: 20px; font-weight: 700; letter-spacing: -0.5px;">
+          Admissions &amp; Academic Enterprise Portal
         </h1>
         <p style="color: #93c5fd; margin: 4px 0 0 0; font-size: 12px; font-family: sans-serif;">
-          Edu-Business Operations &amp; Academic Management Portal
+          Victoria Island Financial District &amp; Yaba Innovation Campus, Lagos
         </p>
       </div>
     `;
 
     const footer = `
       <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0; font-family: sans-serif; font-size: 11px; color: #64748b;">
-        <p style="margin: 0 0 4px 0;"><strong>Nexus Institute of Technology &amp; Management</strong></p>
-        <p style="margin: 0 0 4px 0;">Plot 12, Victoria Island Innovation Hub, Lagos, Nigeria • RC-1849201 • TIN-29481029-0001</p>
-        <p style="margin: 0;">This is an automated operational notification. For inquiries, contact <a href="mailto:support@nexus-institute.ng" style="color: ${primaryColor};">support@nexus-institute.ng</a>.</p>
+        <p style="margin: 0 0 4px 0;"><strong>CODELAB EDUCARE LTD</strong></p>
+        <p style="margin: 0 0 4px 0;">Plot 14, Victoria Island Financial District, Lagos, Nigeria • RC-1849201 • TIN-29481029-0001</p>
+        <p style="margin: 0;">For inquiries, contact the Admissions Directorate at <a href="mailto:admin@codelab.institute" style="color: ${primaryColor};">admin@codelab.institute</a>.</p>
       </div>
     `;
 
     let bodyContent = '';
 
     switch (payload.type) {
+      case 'student_welcome':
+        bodyContent = `
+          <div style="padding: 32px 24px; font-family: 'Inter', sans-serif; color: #1e293b; line-height: 1.6;">
+            <div style="text-align: center; margin-bottom: 24px;">
+              <span style="background-color: #ecfdf5; color: #047857; font-weight: 700; font-size: 11px; padding: 6px 14px; border-radius: 20px; border: 1px solid #a7f3d0; text-transform: uppercase; letter-spacing: 0.5px;">
+                ✓ Official Admission Confirmed
+              </span>
+              <h2 style="color: ${primaryColor}; margin: 12px 0 6px 0; font-size: 20px; font-weight: 800;">
+                Congratulations &amp; Welcome, ${payload.recipientName}!
+              </h2>
+              <p style="margin: 0; color: #64748b; font-size: 14px;">
+                We are excited to welcome you to <strong>CODELAB EDUCARE LTD</strong>. Your student profile is officially enrolled and active.
+              </p>
+            </div>
+
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+              <h3 style="margin: 0 0 14px 0; font-size: 13px; color: ${primaryColor}; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+                Academic &amp; Enrollment Summary
+              </h3>
+              <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; width: 40%;">Student Matric ID:</td>
+                  <td style="padding: 6px 0; font-family: monospace; font-weight: bold; color: ${primaryColor}; font-size: 14px;">${payload.data.studentCode || 'STU-PROD'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b;">Academic Track:</td>
+                  <td style="padding: 6px 0; font-weight: 600; color: #1e293b;">${payload.data.program || 'Technology Track'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b;">Cohort / Schedule:</td>
+                  <td style="padding: 6px 0; color: #1e293b;">${payload.data.cohort || 'Executive Cohort'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b;">Assigned Faculty Mentor:</td>
+                  <td style="padding: 6px 0; color: #1e293b;"><strong>${payload.data.mentorName || 'Academic Mentor Pool'}</strong></td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b;">Tuition Billing Status:</td>
+                  <td style="padding: 6px 0; color: #166534; font-weight: 600;">
+                    ${payload.data.paymentStatus || 'Verified / Active'}
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+            <h3 style="color: ${primaryColor}; font-size: 15px; margin: 24px 0 10px 0;">Onboarding Next Steps:</h3>
+            <ol style="padding-left: 20px; margin: 0 0 24px 0; font-size: 13px; color: #334155;">
+              <li style="margin-bottom: 8px;"><strong>Student Portal Access:</strong> Log in using your registered email address (<code>${payload.to}</code>) to review course syllabus and project assignments.</li>
+              <li style="margin-bottom: 8px;"><strong>Faculty Orientation:</strong> Your mentor will contact you for your initial 1-on-1 cohort kickoff and environment configuration.</li>
+              <li style="margin-bottom: 8px;"><strong>Learning Lab Access:</strong> If enrolled for hybrid on-site access, bring your Student ID (<strong>${payload.data.studentCode || 'STU-PROD'}</strong>) to the campus security desk.</li>
+            </ol>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${payload.data.portalUrl || 'http://72.61.106.87/login'}" 
+                 style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 28px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block; box-shadow: 0 2px 4px rgba(0,35,111,0.2);">
+                Launch Student Portal →
+              </a>
+            </div>
+
+            <p style="font-size: 12px; color: #64748b; margin-top: 24px; border-top: 1px solid #f1f5f9; padding-top: 12px;">
+              If you have any questions or need assistance setting up your environment, reply directly to this email or reach the Admissions Office at <a href="mailto:admin@codelab.institute" style="color: ${primaryColor};">admin@codelab.institute</a>.
+            </p>
+          </div>
+        `;
+        break;
+
       case 'staff_welcome':
         bodyContent = `
           <div style="padding: 32px 24px; font-family: 'Inter', sans-serif; color: #1e293b; line-height: 1.6;">
             <h2 style="color: ${primaryColor}; margin-top: 0; font-size: 18px;">Welcome to the Faculty &amp; Staff Team, ${payload.recipientName}!</h2>
-            <p>${payload.data.customWelcomeNote || 'Your institutional staff account has been provisioned on the Nexus CRM Portal.'}</p>
+            <p>${payload.data.customWelcomeNote || 'Your institutional staff account has been provisioned on the CODELAB EDUCARE LTD CRM Portal.'}</p>
             
             <div style="background-color: #f1f5f9; border-left: 4px solid ${accentColor}; padding: 16px; margin: 20px 0; border-radius: 4px;">
               <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>Institutional Role:</strong> ${payload.data.roleTitle || 'Staff Member'}</p>
@@ -85,7 +156,7 @@ export class EmailService {
           <div style="padding: 32px 24px; font-family: 'Inter', sans-serif; color: #1e293b; line-height: 1.6;">
             <h2 style="color: ${primaryColor}; margin-top: 0; font-size: 18px;">Password Reset Request</h2>
             <p>Hello ${payload.recipientName},</p>
-            <p>${payload.data.securityNotice || `We received a request to reset the password for your Nexus CRM account (${payload.to}).`}</p>
+            <p>${payload.data.securityNotice || `We received a request to reset the password for your CODELAB EDUCARE LTD account (${payload.to}).`}</p>
             
             <div style="text-align: center; margin: 30px 0;">
               <a href="${payload.data.resetUrl || 'http://72.61.106.87/reset-password?email=' + encodeURIComponent(payload.to)}" 
@@ -131,7 +202,7 @@ export class EmailService {
             <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px; font-size: 13px;">
               <p style="margin: 0 0 6px 0;"><strong>Bank Name:</strong> ${payload.data.bankName || 'Access Bank Nigeria PLC'}</p>
               <p style="margin: 0 0 6px 0;"><strong>Account Number (NUBAN):</strong> <span style="font-family: monospace; font-weight: bold; color: ${primaryColor}; font-size: 14px;">${payload.data.accountNumber || '0812948192'}</span></p>
-              <p style="margin: 0;"><strong>Account Name:</strong> ${payload.data.accountName || 'Nexus Institute of Technology Ltd'}</p>
+              <p style="margin: 0;"><strong>Account Name:</strong> ${payload.data.accountName || 'CODELAB EDUCARE LTD'}</p>
             </div>
 
             <p style="font-size: 12px; color: #64748b; margin-top: 20px;">
@@ -239,12 +310,19 @@ export class EmailService {
 
     this.logs.unshift(logEntry);
 
-    // Also send to backend API logger
+    // Also send to backend API for live SMTP delivery
     try {
       await fetch('/api/email/send-test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(logEntry),
+        body: JSON.stringify({
+          to: payload.to,
+          subject: payload.subject,
+          html,
+          recipientName: payload.recipientName,
+          type: payload.type,
+          logEntry,
+        }),
       });
     } catch (e) {
       console.warn('Backend email test endpoint offline, using local dispatch simulator.');

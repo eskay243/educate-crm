@@ -10,7 +10,8 @@ import {
   OrganizationSettings, 
   NotificationItem,
   AuthUser,
-  ExpenseStatus
+  ExpenseStatus,
+  AttendanceRecord
 } from '../types/crm';
 
 const API_BASE_URL = '/api';
@@ -52,6 +53,7 @@ class ApiService {
       settings: OrganizationSettings;
       notifications: NotificationItem[];
       staffUsers: AuthUser[];
+      attendance?: AttendanceRecord[];
     }>('/bootstrap');
   }
 
@@ -309,6 +311,25 @@ class ApiService {
     return this.request('/auth/reset-password', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
+    });
+  }
+
+  // Attendance & Hours Tracking
+  async getAttendance(): Promise<AttendanceRecord[] | null> {
+    return this.request<AttendanceRecord[]>('/attendance');
+  }
+
+  async clockIn(data: Omit<AttendanceRecord, 'id'>): Promise<AttendanceRecord | null> {
+    return this.request<AttendanceRecord>('/attendance/clock-in', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async clockOut(id: string, data: { clockOutTime: string; clockOutTimestamp: number; totalHoursWorked: number; workSummary: string }): Promise<AttendanceRecord | null> {
+    return this.request<AttendanceRecord>(`/attendance/clock-out/${id}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
   }
 }

@@ -3,6 +3,8 @@ import { useCRM } from '../context/CRMContext';
 import { UserRole } from '../types/crm';
 import { emailService, EmailTemplatePayload, EmailDispatchLog } from '../services/emailService';
 import { apiService } from '../services/api';
+import { NIGERIAN_BANKS } from '../data/nigerianBanks';
+import { BrandLogo } from '../components/common/BrandLogo';
 
 export const SettingsPage: React.FC = () => {
   const { 
@@ -34,6 +36,7 @@ export const SettingsPage: React.FC = () => {
   const [bankName, setBankName] = useState(settings.defaultNIBSSBank.bankName);
   const [accountNumber, setAccountNumber] = useState(settings.defaultNIBSSBank.accountNumber);
   const [accountName, setAccountName] = useState(settings.defaultNIBSSBank.accountName);
+  const [logoUrl, setLogoUrl] = useState(settings.logoUrl || '');
   const [emailAlertsEnabled, setEmailAlertsEnabled] = useState(settings.emailAlertsEnabled);
   const [autoInvoiceGeneration, setAutoInvoiceGeneration] = useState(settings.autoInvoiceGeneration);
   const [showBudgetToStaff, setShowBudgetToStaff] = useState(settings.showBudgetToStaff !== false);
@@ -48,21 +51,21 @@ export const SettingsPage: React.FC = () => {
   const [newStaffDept, setNewStaffDept] = useState('Admissions');
   const [newStaffMentorId, setNewStaffMentorId] = useState('');
 
-  // SMTP Settings State
-  const [smtpHost, setSmtpHost] = useState(settings.smtp?.host || 'smtp.hostinger.com');
+  // SMTP Settings State - configured for Zoho Mail
+  const [smtpHost, setSmtpHost] = useState(settings.smtp?.host === 'smtppro.zoho.com' || settings.smtp?.host === 'smtp.hostinger.com' ? 'smtp.zoho.com' : (settings.smtp?.host || 'smtp.zoho.com'));
   const [smtpPort, setSmtpPort] = useState(settings.smtp?.port || 465);
-  const [smtpUser, setSmtpUser] = useState(settings.smtp?.user || '');
-  const [smtpPass, setSmtpPass] = useState(settings.smtp?.pass || '');
-  const [smtpFrom, setSmtpFrom] = useState(settings.smtp?.from || `"Nexus Institute" <support@growpot.cloud>`);
+  const [smtpUser, setSmtpUser] = useState(settings.smtp?.user || 'admin@codelab.institute');
+  const [smtpPass, setSmtpPass] = useState(settings.smtp?.pass || '9)8JAr$m');
+  const [smtpFrom, setSmtpFrom] = useState(settings.smtp?.from || `"CODELAB EDUCARE LTD" <admin@codelab.institute>`);
   const [smtpSecure, setSmtpSecure] = useState(settings.smtp?.secure ?? true);
   const [smtpTesting, setSmtpTesting] = useState(false);
   const [smtpStatusMessage, setSmtpStatusMessage] = useState<{ text: string; success: boolean } | null>(null);
 
   // Email test center state & Customizable Template Values
-  const [selectedEmailTemplate, setSelectedEmailTemplate] = useState<EmailTemplatePayload['type']>('staff_welcome');
+  const [selectedEmailTemplate, setSelectedEmailTemplate] = useState<EmailTemplatePayload['type']>('student_welcome');
   const [testRecipientEmail, setTestRecipientEmail] = useState('abiolaadefowope@gmail.com');
   const [testRecipientName, setTestRecipientName] = useState('Abiola Adefowope');
-  const [emailSubject, setEmailSubject] = useState('Welcome to Nexus Institute — Set Your Password');
+  const [emailSubject, setEmailSubject] = useState('🎓 Welcome to CODELAB EDUCARE LTD — Admission Confirmation');
   const [emailLogs, setEmailLogs] = useState<EmailDispatchLog[]>([]);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
@@ -106,7 +109,8 @@ export const SettingsPage: React.FC = () => {
   const handleSelectTemplate = (template: EmailTemplatePayload['type']) => {
     setSelectedEmailTemplate(template);
     const defaultSubjects: Record<EmailTemplatePayload['type'], string> = {
-      staff_welcome: 'Welcome to Nexus Institute — Set Your Password',
+      student_welcome: '🎓 Welcome to CODELAB EDUCARE LTD — Admission Confirmation',
+      staff_welcome: 'Welcome to CODELAB EDUCARE LTD — Set Your Password',
       password_reset: 'Security Notice: Password Reset Request',
       payment_reminder: `Payment Reminder: Outstanding Tuition Balance (${reminderProgram})`,
       invoice_receipt: `Official Tuition Invoice & Receipt #${invoiceNum}`,
@@ -118,6 +122,15 @@ export const SettingsPage: React.FC = () => {
   // Build current template payload dynamically
   const getCurrentTemplateData = () => {
     switch (selectedEmailTemplate) {
+      case 'student_welcome':
+        return {
+          studentCode: reminderStudentCode,
+          program: reminderProgram,
+          cohort: 'Executive Cohort 2026',
+          mentorName: sessionMentorName,
+          paymentStatus: 'Cleared & Active (Full Tuition Paid)',
+          portalUrl: 'http://72.61.106.87/login',
+        };
       case 'staff_welcome':
         return {
           roleTitle: welcomeRoleTitle,
@@ -183,6 +196,7 @@ export const SettingsPage: React.FC = () => {
       phone,
       tinNumber,
       cacNumber,
+      logoUrl,
       defaultNIBSSBank: {
         bankName,
         accountNumber,
@@ -426,6 +440,46 @@ export const SettingsPage: React.FC = () => {
       {/* ========================================================================= */}
       {activeTab === 'general' && (
         <form onSubmit={handleSaveSettings} className="space-y-stack-md animate-in fade-in duration-200">
+          {/* Brand Identity & Logo Card */}
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-4">
+            <h3 className="font-headline-sm text-base font-bold text-on-surface border-b border-outline-variant pb-2 flex items-center justify-between">
+              <span>Brand Identity &amp; Logo Insignia</span>
+              <span className="text-[11px] font-normal text-secondary">Official institutional emblem used across portal, invoices &amp; emails</span>
+            </h3>
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pt-2">
+              <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant flex items-center justify-center shrink-0">
+                <BrandLogo size="lg" logoUrl={logoUrl} />
+              </div>
+              <div className="flex-1 space-y-2 w-full">
+                <label className="block font-label-md text-xs font-semibold text-on-surface">
+                  Custom Brand Logo URL (Optional)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={logoUrl}
+                    onChange={(e) => setLogoUrl(e.target.value)}
+                    placeholder="https://example.com/logo.png (leave empty for institutional vector emblem)"
+                    className="flex-1 h-10 px-3 rounded bg-surface border border-outline-variant text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                  />
+                  {logoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setLogoUrl('')}
+                      className="px-3 h-10 border border-outline-variant rounded text-xs text-secondary hover:bg-surface-container transition-colors"
+                    >
+                      Clear Logo
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-secondary">
+                  If left blank, the system automatically uses the official <strong>CODELAB EDUCARE LTD</strong> geometric vector emblem.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-4">
             <h3 className="font-headline-sm text-base font-bold text-on-surface border-b border-outline-variant pb-2">
               Institute Identification &amp; Regulatory Compliance
@@ -473,21 +527,21 @@ export const SettingsPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-label-md text-xs font-semibold text-on-surface mb-1">CAC Corporate Registration Number</label>
-                <input
-                  type="text"
-                  value={cacNumber}
-                  onChange={(e) => setCacNumber(e.target.value)}
-                  className="w-full h-10 px-3 rounded bg-surface border border-outline-variant text-sm font-data-tabular focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                />
-              </div>
-
-              <div>
                 <label className="block font-label-md text-xs font-semibold text-on-surface mb-1">Tax Identification Number (TIN)</label>
                 <input
                   type="text"
                   value={tinNumber}
                   onChange={(e) => setTinNumber(e.target.value)}
+                  className="w-full h-10 px-3 rounded bg-surface border border-outline-variant text-sm font-data-tabular focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-label-md text-xs font-semibold text-on-surface mb-1">CAC Registration Number (RC)</label>
+                <input
+                  type="text"
+                  value={cacNumber}
+                  onChange={(e) => setCacNumber(e.target.value)}
                   className="w-full h-10 px-3 rounded bg-surface border border-outline-variant text-sm font-data-tabular focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                 />
               </div>
@@ -501,13 +555,35 @@ export const SettingsPage: React.FC = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block font-label-md text-xs font-semibold text-on-surface mb-1">Settlement Bank</label>
-                <input
-                  type="text"
+                <label className="block font-label-md text-xs font-semibold text-on-surface mb-1">
+                  Settlement Bank ({NIGERIAN_BANKS.length} Banks)
+                </label>
+                <select
                   value={bankName}
                   onChange={(e) => setBankName(e.target.value)}
-                  className="w-full h-10 px-3 rounded bg-surface border border-outline-variant text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                />
+                  className="w-full h-10 px-3 rounded bg-surface border border-outline-variant text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none cursor-pointer"
+                >
+                  <optgroup label="Commercial Banks">
+                    {NIGERIAN_BANKS.filter(b => b.category === 'Commercial').map(b => (
+                      <option key={b.code} value={b.name}>{b.name}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="FinTechs &amp; Neobanks (MFBs)">
+                    {NIGERIAN_BANKS.filter(b => b.category === 'FinTech / Neobank').map(b => (
+                      <option key={b.code} value={b.name}>{b.name}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Non-Interest / Islamic Banks">
+                    {NIGERIAN_BANKS.filter(b => b.category === 'Non-Interest').map(b => (
+                      <option key={b.code} value={b.name}>{b.name}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Merchant Banks">
+                    {NIGERIAN_BANKS.filter(b => b.category === 'Merchant').map(b => (
+                      <option key={b.code} value={b.name}>{b.name}</option>
+                    ))}
+                  </optgroup>
+                </select>
               </div>
 
               <div>
@@ -925,13 +1001,14 @@ export const SettingsPage: React.FC = () => {
             </div>
 
             {/* Template Selector Pills */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
               {[
-                { type: 'staff_welcome', label: '1. Staff Welcome', icon: 'badge' },
-                { type: 'payment_reminder', label: '2. Payment Notice', icon: 'payments' },
-                { type: 'invoice_receipt', label: '3. Tuition Invoice', icon: 'receipt_long' },
-                { type: 'session_confirmation', label: '4. Mentorship Session', icon: 'school' },
-                { type: 'password_reset', label: '5. Password Reset', icon: 'lock_reset' },
+                { type: 'student_welcome', label: '1. Student Welcome', icon: 'school' },
+                { type: 'staff_welcome', label: '2. Staff Welcome', icon: 'badge' },
+                { type: 'payment_reminder', label: '3. Payment Notice', icon: 'payments' },
+                { type: 'invoice_receipt', label: '4. Tuition Invoice', icon: 'receipt_long' },
+                { type: 'session_confirmation', label: '5. Mentorship', icon: 'groups' },
+                { type: 'password_reset', label: '6. Password Reset', icon: 'lock_reset' },
               ].map((t) => (
                 <button
                   key={t.type}
@@ -999,7 +1076,46 @@ export const SettingsPage: React.FC = () => {
                     <span>2. Template Content Customizer</span>
                   </h4>
 
-                  {/* 1. Staff Welcome Fields */}
+                  {/* 1. Student Welcome Fields */}
+                  {selectedEmailTemplate === 'student_welcome' && (
+                    <div className="space-y-3 animate-in fade-in">
+                      <div className="p-3 bg-primary/5 rounded-lg border border-primary/20 text-xs text-primary font-medium flex items-center gap-2">
+                        <span className="material-symbols-outlined text-sm">info</span>
+                        <span>Dispatched automatically to students upon enrollment &amp; lead conversion.</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-semibold text-on-surface mb-1">Student Matric ID</label>
+                          <input
+                            type="text"
+                            value={reminderStudentCode}
+                            onChange={(e) => setReminderStudentCode(e.target.value)}
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary font-data-tabular"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-on-surface mb-1">Admitted Track</label>
+                          <input
+                            type="text"
+                            value={reminderProgram}
+                            onChange={(e) => setReminderProgram(e.target.value)}
+                            className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-on-surface mb-1">Assigned Faculty Mentor</label>
+                        <input
+                          type="text"
+                          value={sessionMentorName}
+                          onChange={(e) => setSessionMentorName(e.target.value)}
+                          className="w-full h-8 px-2.5 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 2. Staff Welcome Fields */}
                   {selectedEmailTemplate === 'staff_welcome' && (
                     <div className="space-y-3 animate-in fade-in">
                       <div>

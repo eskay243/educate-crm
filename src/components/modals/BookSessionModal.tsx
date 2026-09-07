@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useCRM, formatNaira } from '../../context/CRMContext';
+import { useCRM } from '../../context/CRMContext';
 
 export interface BookSessionModalProps {
   isOpen: boolean;
@@ -27,8 +27,6 @@ export const BookSessionModal: React.FC<BookSessionModalProps> = ({ isOpen, onCl
   const currentMentor = mentors.find(m => m.id === (mentorId || defaultMentorId)) || mentors[0];
   const currentStudent = students.find(s => s.id === (studentId || students[0]?.id)) || students[0];
 
-  const estimatedCompensation = (currentMentor?.hourlyRate || 35000) * durationHours;
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentMentor || !currentStudent || !topic) return;
@@ -44,7 +42,7 @@ export const BookSessionModal: React.FC<BookSessionModalProps> = ({ isOpen, onCl
       topic,
       notes,
       status: 'Completed',
-      compensationAmount: estimatedCompensation,
+      compensationAmount: 0,
     });
 
     onClose();
@@ -64,7 +62,7 @@ export const BookSessionModal: React.FC<BookSessionModalProps> = ({ isOpen, onCl
             <span className="material-symbols-outlined text-primary text-[22px]">calendar_add_on</span>
             <div>
               <h2 className="font-headline-lg text-lg font-bold text-on-surface">Log 1-on-1 Mentorship Session</h2>
-              <p className="font-body-sm text-xs text-secondary">Record completed student coaching hours for faculty honorarium settlement in ₦.</p>
+              <p className="font-body-sm text-xs text-secondary">Record completed student coaching hours and milestone review progress.</p>
             </div>
           </div>
           <button
@@ -131,7 +129,7 @@ export const BookSessionModal: React.FC<BookSessionModalProps> = ({ isOpen, onCl
                   >
                     {mentors.map(m => (
                       <option key={m.id} value={m.id}>
-                        {m.name} ({m.department} - {formatNaira(m.hourlyRate)}/h)
+                        {m.name} ({m.department} • {m.commissionRate ?? 37}% Commission)
                       </option>
                     ))}
                   </select>
@@ -189,9 +187,10 @@ export const BookSessionModal: React.FC<BookSessionModalProps> = ({ isOpen, onCl
               </div>
 
               <div className="space-y-1">
-                <label className="font-label-md text-xs text-secondary font-semibold">Calculated Honorarium Payout (₦)</label>
-                <div className="w-full h-10 px-3 bg-secondary-container/40 border border-primary/20 rounded flex items-center font-bold text-sm text-primary font-data-tabular">
-                  {formatNaira(estimatedCompensation)}
+                <label className="font-label-md text-xs text-secondary font-semibold">Compensation Model</label>
+                <div className="w-full h-10 px-3 bg-secondary-container/40 border border-primary/20 rounded flex items-center justify-between text-xs font-medium text-primary">
+                  <span>37% Enrollment Commission</span>
+                  <span className="text-[10px] font-bold text-[#166534] bg-[#dcfce7] px-1.5 py-0.5 rounded">Covered</span>
                 </div>
               </div>
             </div>
@@ -233,7 +232,7 @@ export const BookSessionModal: React.FC<BookSessionModalProps> = ({ isOpen, onCl
                 className="px-6 h-10 rounded bg-primary text-on-primary font-label-md text-xs font-bold hover:bg-primary-container transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                <span>Record Session &amp; Credit Honorarium</span>
+                <span>Record Coaching Session</span>
               </button>
             </div>
           </form>

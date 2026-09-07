@@ -4,7 +4,8 @@
       "command": "node",
       "args": [
         "/Users/abiolaadefowope/.gemini/mcp/hostinger/node_modules/hostinger-api-mcp/src/servers/all.js"
-      ]
+      ],
+      "env": {}
     }
   }
 }

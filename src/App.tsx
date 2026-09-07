@@ -11,6 +11,7 @@ import { StudentEnrollmentPage } from './pages/StudentEnrollmentPage';
 import { MentorManagementPage } from './pages/MentorManagementPage';
 import { BusinessExpensesPage } from './pages/BusinessExpensesPage';
 import { CoursesCohortsPage } from './pages/CoursesCohortsPage';
+import { StaffAttendancePage } from './pages/StaffAttendancePage';
 import { SettingsPage } from './pages/SettingsPage';
 
 import { ToastContainer } from './components/notifications/ToastContainer';
@@ -67,6 +68,15 @@ export const App: React.FC = () => {
               element={
                 <ProtectedRoute allowedRoles={['super_admin', 'mentor']}>
                   <MentorManagementPage />
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="attendance"
+              element={
+                <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'mentor', 'finance']}>
+                  <StaffAttendancePage />
                 </ProtectedRoute>
               }
             />

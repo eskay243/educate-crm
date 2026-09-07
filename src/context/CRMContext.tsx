@@ -18,7 +18,11 @@ import {
   StudentStatus, 
   ExpenseStatus,
   UserRole,
-  AuthUser
+  AuthUser,
+  AttendanceRecord,
+  WorkMode,
+  GeoVerificationStatus,
+  PunctualityStatus
 } from '../types/crm';
 import { 
   initialLeads, 
@@ -29,6 +33,7 @@ import {
   initialCohorts, 
   initialInvoices, 
   initialSessions, 
+  initialAttendance,
   initialSettings, 
   initialActivityLogs,
   initialNotifications,
@@ -36,6 +41,8 @@ import {
   defaultAuthUser
 } from '../data/mockData';
 import { apiService } from '../services/api';
+import { emailService } from '../services/emailService';
+import { calculateDistanceMeters } from '../utils/geo';
 
 export const formatNaira = (amount: number, fractionDigits = 0): string => {
   return '₦' + new Intl.NumberFormat('en-NG', {
@@ -67,6 +74,8 @@ interface CRMContextType {
   cohorts: Cohort[];
   invoices: Invoice[];
   sessions: MentorshipSession[];
+  attendanceRecords: AttendanceRecord[];
+  activeAttendanceSession: AttendanceRecord | null;
   settings: OrganizationSettings;
   activityLogs: ActivityLogItem[];
   notifications: NotificationItem[];
@@ -130,11 +139,16 @@ interface CRMContextType {
 
   addCourse: (course: Omit<CourseProgram, 'id' | 'enrolledCount' | 'rating'>) => void;
   updateCourse: (id: string, updatedData: Partial<CourseProgram>) => void;
+  addCourseCategory: (category: string) => void;
   addCohort: (cohort: Omit<Cohort, 'id' | 'enrolledCount'>) => void;
   bookSession: (session: Omit<MentorshipSession, 'id' | 'sessionCode'>) => void;
   generateInvoice: (invoice: Omit<Invoice, 'id' | 'invoiceNumber'>) => void;
   updateSettings: (newSettings: Partial<OrganizationSettings>) => void;
   logActivity: (activity: Omit<ActivityLogItem, 'id' | 'timestamp'>) => void;
+
+  // Attendance & Time Tracking
+  clockIn: (options: { workMode: WorkMode; locationName?: string; dailyTasksFocus?: string; lat?: number; lng?: number }) => Promise<{ success: boolean; message: string; record?: AttendanceRecord }>;
+  clockOut: (options: { endOfDaySummary?: string }) => Promise<{ success: boolean; message: string; record?: AttendanceRecord }>;
 
   // Backups, Restore & Production Flush
   exportDatabaseBackup: () => void;
@@ -159,6 +173,7 @@ const STORAGE_KEYS = {
   COHORTS: 'nexus_clean_prod_cohorts_v1',
   INVOICES: 'nexus_clean_prod_invoices_v1',
   SESSIONS: 'nexus_clean_prod_sessions_v1',
+  ATTENDANCE: 'nexus_clean_prod_attendance_v1',
   SETTINGS: 'nexus_clean_prod_settings_v1',
   LOGS: 'nexus_clean_prod_logs_v1',
   NOTIFICATIONS: 'nexus_clean_prod_notifications_v1',
@@ -215,9 +230,39 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : initialSessions;
   });
 
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.ATTENDANCE);
+    return saved ? JSON.parse(saved) : initialAttendance;
+  });
+
   const [settings, setSettings] = useState<OrganizationSettings>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.SETTINGS);
-    return saved ? JSON.parse(saved) : initialSettings;
+    if (!saved) return initialSettings;
+    try {
+      const parsed = JSON.parse(saved);
+      return {
+        ...initialSettings,
+        ...parsed,
+        instituteName: (!parsed.instituteName || parsed.instituteName === 'Nexus Institute of Technology & Management') ? 'CODELAB EDUCARE LTD' : parsed.instituteName,
+        portalTitle: (!parsed.portalTitle || parsed.portalTitle === 'Edu-Business Operations Enterprise Portal') ? 'CODELAB EDUCARE Enterprise Portal' : parsed.portalTitle,
+        courseCategories: (parsed.courseCategories && parsed.courseCategories.length > 0) ? parsed.courseCategories : initialSettings.courseCategories,
+        defaultNIBSSBank: {
+          ...initialSettings.defaultNIBSSBank,
+          ...(parsed.defaultNIBSSBank || {}),
+          accountName: 'CODELAB EDUCARE LTD',
+        },
+        smtp: {
+          ...initialSettings.smtp,
+          ...(parsed.smtp || {}),
+          user: parsed.smtp?.user || initialSettings.smtp?.user,
+          pass: parsed.smtp?.pass || initialSettings.smtp?.pass,
+          host: (parsed.smtp?.host === 'smtppro.zoho.com' || parsed.smtp?.host === 'smtp.hostinger.com') ? 'smtp.zoho.com' : (parsed.smtp?.host || initialSettings.smtp?.host),
+          from: (parsed.smtp?.from && !parsed.smtp.from.includes('Nexus')) ? parsed.smtp.from : initialSettings.smtp?.from,
+        }
+      };
+    } catch {
+      return initialSettings;
+    }
   });
 
   const [activityLogs, setActivityLogs] = useState<ActivityLogItem[]>(() => {
@@ -257,6 +302,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (data.cohorts) setCohorts(data.cohorts);
         if (data.invoices) setInvoices(data.invoices);
         if (data.sessions) setSessions(data.sessions);
+        if (data.attendance) setAttendanceRecords(data.attendance);
         if (data.settings) setSettings(data.settings);
         if (data.notifications) setNotifications(data.notifications);
         if (data.staffUsers) setStaffUsers(data.staffUsers);
@@ -287,9 +333,20 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.COHORTS, JSON.stringify(cohorts)); }, [cohorts]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.INVOICES, JSON.stringify(invoices)); }, [invoices]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(sessions)); }, [sessions]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(attendanceRecords)); }, [attendanceRecords]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings)); }, [settings]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(activityLogs)); }, [activityLogs]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications)); }, [notifications]);
+
+  // Current active clock-in session for currentUser
+  const activeAttendanceSession = useMemo(() => {
+    if (!currentUser) return null;
+    return attendanceRecords.find(r => 
+      ((r.staffId || r.userId) === currentUser.id || 
+       (r.staffEmail || r.userEmail)?.toLowerCase() === currentUser.email?.toLowerCase()) && 
+      !r.clockOutTime
+    ) || null;
+  }, [attendanceRecords, currentUser]);
 
   // Notifications & Toasts
   const addNotification = (notif: Omit<NotificationItem, 'id' | 'timestamp' | 'read'>) => {
@@ -337,7 +394,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Auth actions
   const login = (role: UserRole, email?: string) => {
-    const defaultEmail = role === 'super_admin' ? 'abiola.adefowope@codelab.institute' : `${role}@nexus-institute.ng`;
+    const defaultEmail = role === 'super_admin' ? 'abiola.adefowope@codelab.institute' : `${role}@codelab.institute`;
     const matched = staffUsers.find(u => (email && u.email.toLowerCase() === email.toLowerCase()) || u.role === role) || demoUsers.find(u => u.role === role) || {
       id: `user-${role}`,
       name: role === 'super_admin' ? 'Abiola Adefowope' : role === 'admissions' ? 'Folake Solanke' : role === 'mentor' ? 'Dr. Arthur Pendelton' : 'Adeyemi Daniels',
@@ -580,22 +637,41 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     apiService.convertLead(leadId, effectiveProgram, effectiveMentorName);
 
+    // Dispatch automated student onboarding welcome email via Zoho SMTP
+    if (lead.email) {
+      emailService.sendEmail({
+        to: lead.email,
+        recipientName: lead.name,
+        subject: `🎓 Welcome to CODELAB EDUCARE LTD — Admission Confirmation (${newStudent.studentCode})`,
+        type: 'student_welcome',
+        data: {
+          studentCode: newStudent.studentCode,
+          program: newStudent.program,
+          cohort: newStudent.cohort || 'Executive Cohort',
+          mentorName: newStudent.mentorName,
+          paidAmount: feeAmount,
+          balance: 0,
+          portalUrl: 'http://72.61.106.87/login',
+        }
+      }).catch(err => console.error('Error sending student welcome email:', err));
+    }
+
     showToast(
-      '🎉 Student Admitted!',
-      `${lead.name} admitted to ${newStudent.program}. Invoice #${newInv.invoiceNumber} generated.`,
+      '🎉 Student Admitted & Welcome Email Sent!',
+      `${lead.name} admitted to ${newStudent.program}. Welcome onboarding email sent to ${lead.email}.`,
       'success'
     );
 
     addNotification({
-      title: 'Lead Converted to Active Student',
-      message: `${lead.name} enrolled in ${newStudent.program}. Invoice #${newInv.invoiceNumber} (${formatNaira(feeAmount)}) generated.`,
+      title: 'Lead Converted & Welcome Email Sent',
+      message: `${lead.name} enrolled in ${newStudent.program}. Welcome email dispatched to ${lead.email}.`,
       type: 'admissions',
       link: '/students',
     });
 
     logActivity({
       title: 'Lead Converted to Student',
-      description: `${lead.name} officially enrolled in ${newStudent.program}.`,
+      description: `${lead.name} officially enrolled in ${newStudent.program} and sent onboarding pack.`,
       type: 'student',
       user: 'Admissions Office',
     });
@@ -611,10 +687,54 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setStudents(prev => [newStudent, ...prev]);
     apiService.createStudent(studentData);
-    showToast('Student Enrolled', `${newStudent.name} admitted (#${newStudent.studentCode}).`, 'success');
+
+    // Dispatch automated student onboarding welcome email via Zoho SMTP
+    if (newStudent.email) {
+      emailService.sendEmail({
+        to: newStudent.email,
+        recipientName: newStudent.name,
+        subject: `🎓 Welcome to CODELAB EDUCARE LTD — Admission Confirmation (${newStudent.studentCode})`,
+        type: 'student_welcome',
+        data: {
+          studentCode: newStudent.studentCode,
+          program: newStudent.program,
+          cohort: newStudent.cohort || 'Executive Cohort',
+          mentorName: newStudent.mentorName,
+          paidAmount: (newStudent.totalFees || 0) - (newStudent.outstandingBalance || 0),
+          balance: newStudent.outstandingBalance || 0,
+          portalUrl: 'http://72.61.106.87/login',
+        }
+      }).catch(err => console.error('Error sending student welcome email:', err));
+    }
+
+    // If student has an assigned mentor, calculate 37% enrollment commission share for mentor
+    if (newStudent.mentorName || (studentData as any).mentorId) {
+      const assignedMentor = mentors.find(m => 
+        (studentData as any).mentorId ? m.id === (studentData as any).mentorId : m.name === newStudent.mentorName
+      );
+      if (assignedMentor) {
+        const rate = assignedMentor.commissionRate ?? 37;
+        const commissionAmount = Math.round(((newStudent.totalFees || 0) * rate) / 100);
+        setMentors(prev => prev.map(m => m.id === assignedMentor.id ? {
+          ...m,
+          activeMentees: (m.activeMentees || 0) + 1,
+          assignedEnrollmentsCount: (m.assignedEnrollmentsCount || 0) + 1,
+          pendingPayout: (m.pendingPayout || 0) + commissionAmount,
+          totalEarned: (m.totalEarned || 0) + commissionAmount,
+        } : m));
+        apiService.updateMentor(assignedMentor.id, {
+          activeMentees: (assignedMentor.activeMentees || 0) + 1,
+          assignedEnrollmentsCount: (assignedMentor.assignedEnrollmentsCount || 0) + 1,
+          pendingPayout: (assignedMentor.pendingPayout || 0) + commissionAmount,
+          totalEarned: (assignedMentor.totalEarned || 0) + commissionAmount,
+        });
+      }
+    }
+
+    showToast('Student Enrolled & Welcome Sent', `${newStudent.name} admitted (#${newStudent.studentCode}). Welcome email sent.`, 'success');
     addNotification({
-      title: 'New Student Enrolled',
-      message: `${newStudent.name} admitted to ${newStudent.program} (#${newStudent.studentCode}).`,
+      title: 'New Student Enrolled & Onboarded',
+      message: `${newStudent.name} admitted to ${newStudent.program} (#${newStudent.studentCode}). Welcome email dispatched.`,
       type: 'admissions',
       link: '/students',
     });
@@ -636,9 +756,11 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!mentor) return;
 
     let studentName = 'Student';
+    let studentFees = 0;
     setStudents(prev => prev.map(s => {
       if (s.id === studentId) {
         studentName = s.name;
+        studentFees = s.totalFees || 0;
         return {
           ...s,
           mentorName: mentor.name,
@@ -648,30 +770,42 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return s;
     }));
 
+    // Credit 37% enrollment commission to mentor
+    const rate = mentor.commissionRate ?? 37;
+    const commissionAmount = Math.round((studentFees * rate) / 100);
+
     setMentors(prev => prev.map(m => {
       if (m.id === mentorId) {
         return {
           ...m,
           activeMentees: (m.activeMentees || 0) + 1,
+          assignedEnrollmentsCount: (m.assignedEnrollmentsCount || 0) + 1,
+          pendingPayout: (m.pendingPayout || 0) + commissionAmount,
+          totalEarned: (m.totalEarned || 0) + commissionAmount,
         };
       }
       return m;
     }));
 
     apiService.updateStudent(studentId, { mentorName: mentor.name, mentorId: mentor.id });
-    apiService.updateMentor(mentorId, { activeMentees: (mentor.activeMentees || 0) + 1 });
+    apiService.updateMentor(mentorId, { 
+      activeMentees: (mentor.activeMentees || 0) + 1,
+      assignedEnrollmentsCount: (mentor.assignedEnrollmentsCount || 0) + 1,
+      pendingPayout: (mentor.pendingPayout || 0) + commissionAmount,
+      totalEarned: (mentor.totalEarned || 0) + commissionAmount,
+    });
 
-    showToast('Mentor Assigned', `${mentor.name} paired with ${studentName}.`, 'success');
+    showToast('Mentor Assigned', `${mentor.name} paired with ${studentName} (${rate}% commission credited: ${formatNaira(commissionAmount)}).`, 'success');
     addNotification({
       title: 'Lead Faculty Mentor Paired',
-      message: `${mentor.name} assigned to coach ${studentName}.`,
+      message: `${mentor.name} assigned to coach ${studentName}. 37% tuition share (${formatNaira(commissionAmount)}) credited.`,
       type: 'mentor',
       link: '/students',
     });
 
     logActivity({
       title: 'Faculty Mentor Assigned',
-      description: `${studentName} assigned to ${mentor.name} (${mentor.department}).`,
+      description: `${studentName} assigned to ${mentor.name} (${mentor.department}) with 37% tuition share credited.`,
       type: 'mentor',
       user: 'Super Admin',
     });
@@ -919,6 +1053,22 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const addCourseCategory = (category: string) => {
+    const trimmed = category.trim();
+    if (!trimmed) return;
+    setSettings(prev => {
+      const existing = prev.courseCategories || initialSettings.courseCategories || [];
+      if (existing.some(c => c.toLowerCase() === trimmed.toLowerCase())) return prev;
+      const updated = {
+        ...prev,
+        courseCategories: [...existing, trimmed],
+      };
+      apiService.updateSettings(updated);
+      return updated;
+    });
+    showToast('Category Added', `Course track category "${trimmed}" saved.`, 'success');
+  };
+
   const addCohort = (cohortData: Omit<Cohort, 'id' | 'enrolledCount'>) => {
     const newCohort: Cohort = {
       ...cohortData,
@@ -945,13 +1095,12 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setSessions(prev => [newSession, ...prev]);
 
-    // Update mentor sessions count and pending payout
+    // Update mentor sessions count (covered under 37% enrollment commission agreement)
     setMentors(prev => prev.map(m => {
       if (m.id === newSession.mentorId) {
         return {
           ...m,
           sessionsCount: m.sessionsCount + 1,
-          pendingPayout: m.pendingPayout + newSession.compensationAmount,
         };
       }
       return m;
@@ -960,24 +1109,183 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     apiService.createSession(sessionData);
 
     showToast(
-      'Session Credited',
-      `1-on-1 session logged. ${formatNaira(newSession.compensationAmount)} credited to ${newSession.mentorName}.`,
+      'Session Logged',
+      `1-on-1 coaching session logged for ${newSession.studentName} with ${newSession.mentorName}.`,
       'success'
     );
 
     addNotification({
-      title: '1-on-1 Mentorship Honorarium Credited',
-      message: `${newSession.mentorName} completed ${newSession.durationHours}h with ${newSession.studentName}. ${formatNaira(newSession.compensationAmount)} credited.`,
+      title: '1-on-1 Mentorship Session Completed',
+      message: `${newSession.mentorName} completed ${newSession.durationHours}h coaching with ${newSession.studentName}.`,
       type: 'mentor',
       link: '/mentors',
     });
 
     logActivity({
       title: 'Mentorship Session Logged',
-      description: `${newSession.mentorName} scheduled ${newSession.durationHours}h with ${newSession.studentName}.`,
+      description: `${newSession.mentorName} completed ${newSession.durationHours}h coaching with ${newSession.studentName}.`,
       type: 'mentor',
       user: newSession.mentorName,
     });
+  };
+
+  // Staff Attendance & Hybrid Time Tracking
+  const clockIn = async (options: {
+    workMode: WorkMode;
+    locationName?: string;
+    dailyTasksFocus?: string;
+    lat?: number;
+    lng?: number;
+  }): Promise<{ success: boolean; message: string; record?: AttendanceRecord }> => {
+    if (!currentUser) {
+      showToast('Clock-In Failed', 'No active user session detected.', 'error');
+      return { success: false, message: 'No active user session.' };
+    }
+
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    const dateStr = now.toISOString().split('T')[0];
+
+    // Geo-verification calculation
+    let geoStatus: GeoVerificationStatus = 'GPS Unavailable';
+    let distanceMeters: number | undefined;
+
+    const office = settings.officeLocation || {
+      name: 'Lagos Headquarters Hub (Yaba, Lagos)',
+      latitude: 6.5181,
+      longitude: 3.3768,
+      radiusMeters: 400,
+    };
+
+    if (options.workMode === 'Remote') {
+      geoStatus = 'Remote Verified';
+    } else if (options.lat !== undefined && options.lng !== undefined) {
+      distanceMeters = calculateDistanceMeters(options.lat, options.lng, office.latitude, office.longitude);
+      if (distanceMeters <= office.radiusMeters) {
+        geoStatus = 'Verified On-Site';
+      } else {
+        geoStatus = 'Location Mismatch';
+      }
+    } else {
+      geoStatus = 'GPS Unavailable';
+    }
+
+    // Punctuality check against work hours policy
+    const [expHour, expMin] = (settings.workHoursPolicy?.expectedClockInTime || '09:00').split(':').map(Number);
+    const grace = settings.workHoursPolicy?.gracePeriodMinutes ?? 15;
+    const expectedMinutes = expHour * 60 + expMin + grace;
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const punctualityStatus: PunctualityStatus = currentMinutes <= expectedMinutes ? 'On-Time' : 'Late';
+
+    const newRecord: AttendanceRecord = {
+      id: `att-${Date.now()}`,
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userEmail: currentUser.email,
+      userRole: currentUser.role,
+      roleTitle: currentUser.roleTitle || currentUser.role,
+      department: currentUser.department || 'Operations',
+      staffId: currentUser.id,
+      staffName: currentUser.name,
+      staffEmail: currentUser.email,
+      date: dateStr,
+      clockInTime: timeStr,
+      clockInTimestamp: now.getTime(),
+      workMode: options.workMode,
+      locationName: options.locationName || (options.workMode === 'On-Site / Hub' ? office.name : 'Remote Workstation'),
+      latitude: options.lat,
+      longitude: options.lng,
+      distanceFromOfficeMeters: distanceMeters !== undefined ? Math.round(distanceMeters) : undefined,
+      geoStatus,
+      punctuality: punctualityStatus,
+      punctualityStatus,
+      shiftFocus: options.dailyTasksFocus || 'General office operations and scheduled daily chores.',
+      dailyTasksFocus: options.dailyTasksFocus || 'General office operations and scheduled daily chores.',
+      status: 'Clocked In',
+    };
+
+    setAttendanceRecords(prev => [newRecord, ...prev]);
+    apiService.clockIn(newRecord);
+
+    showToast(
+      'Clocked In Successfully',
+      `${currentUser.name} is now On-Duty (${options.workMode} • ${punctualityStatus}).`,
+      geoStatus === 'Location Mismatch' ? 'warning' : 'success'
+    );
+
+    addNotification({
+      title: 'Staff Clock-In Logged',
+      message: `${currentUser.name} clocked in at ${timeStr} (${options.workMode} • ${punctualityStatus} • ${geoStatus}).`,
+      type: 'system',
+      link: '/attendance',
+    });
+
+    logActivity({
+      title: 'Staff Member Clocked In',
+      description: `${currentUser.name} clocked in for ${options.workMode} duty. Focus: ${(newRecord.dailyTasksFocus || '').slice(0, 70)}`,
+      type: 'system',
+      user: currentUser.name,
+    });
+
+    return { success: true, message: 'Clocked in successfully', record: newRecord };
+  };
+
+  const clockOut = async (options: {
+    endOfDaySummary?: string;
+  }): Promise<{ success: boolean; message: string; record?: AttendanceRecord }> => {
+    if (!currentUser) {
+      showToast('Clock-Out Failed', 'No active user session.', 'error');
+      return { success: false, message: 'No active user session.' };
+    }
+
+    if (!activeAttendanceSession) {
+      showToast('Clock-Out Error', 'No active shift found to clock out of.', 'error');
+      return { success: false, message: 'No active shift found.' };
+    }
+
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    const durationMs = Math.max(0, now.getTime() - activeAttendanceSession.clockInTimestamp);
+    const totalHoursWorked = Number(Math.max(0.01, durationMs / (1000 * 60 * 60)).toFixed(2));
+
+    const updatedRecord: AttendanceRecord = {
+      ...activeAttendanceSession,
+      clockOutTime: timeStr,
+      clockOutTimestamp: now.getTime(),
+      totalHoursWorked,
+      workSummary: options.endOfDaySummary || 'Completed daily deliverables and office chores.',
+      status: 'Clocked Out',
+    };
+
+    setAttendanceRecords(prev => prev.map(r => r.id === activeAttendanceSession.id ? updatedRecord : r));
+    apiService.clockOut(activeAttendanceSession.id, {
+      clockOutTime: timeStr,
+      clockOutTimestamp: now.getTime(),
+      totalHoursWorked,
+      workSummary: updatedRecord.workSummary || '',
+    });
+
+    showToast(
+      'Clocked Out Successfully',
+      `Shift closed with ${totalHoursWorked} hrs logged. Deliverables recorded.`,
+      'success'
+    );
+
+    addNotification({
+      title: 'Staff Clock-Out Logged',
+      message: `${currentUser.name} completed duty (${totalHoursWorked}h logged).`,
+      type: 'system',
+      link: '/attendance',
+    });
+
+    logActivity({
+      title: 'Staff Member Clocked Out',
+      description: `${currentUser.name} completed duty (${totalHoursWorked}h). EOD Output: ${(updatedRecord.workSummary || '').slice(0, 70)}`,
+      type: 'system',
+      user: currentUser.name,
+    });
+
+    return { success: true, message: 'Clocked out successfully', record: updatedRecord };
   };
 
   const generateInvoice = (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber'>) => {
@@ -1018,6 +1326,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         cohorts,
         invoices,
         sessions,
+        attendance: attendanceRecords,
         settings,
         notifications,
         staffUsers,
@@ -1058,6 +1367,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (data.cohorts) setCohorts(data.cohorts);
       if (data.invoices) setInvoices(data.invoices);
       if (data.sessions) setSessions(data.sessions);
+      if (data.attendance) setAttendanceRecords(data.attendance);
       if (data.settings) setSettings(data.settings);
       if (data.notifications) setNotifications(data.notifications);
       if (data.staffUsers) setStaffUsers(data.staffUsers);
@@ -1148,6 +1458,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCohorts(initialCohorts);
     setInvoices(initialInvoices);
     setSessions(initialSessions);
+    setAttendanceRecords(initialAttendance);
     setSettings(initialSettings);
     setActivityLogs(initialActivityLogs);
     setNotifications(initialNotifications);
@@ -1214,6 +1525,8 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         cohorts,
         invoices,
         sessions,
+        attendanceRecords,
+        activeAttendanceSession,
         settings,
         activityLogs,
         activeModal,
@@ -1249,8 +1562,11 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         rejectExpense,
         addCourse,
         updateCourse,
+        addCourseCategory,
         addCohort,
         bookSession,
+        clockIn,
+        clockOut,
         generateInvoice,
         updateSettings,
         logActivity,

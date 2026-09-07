@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCRM } from '../../context/CRMContext';
 import { MentorStatus } from '../../types/crm';
+import { NIGERIAN_BANKS } from '../../data/nigerianBanks';
 
 export interface EditMentorModalProps {
   isOpen: boolean;
@@ -17,12 +18,14 @@ export const EditMentorModal: React.FC<EditMentorModalProps> = ({ isOpen, onClos
   const [department, setDepartment] = useState('Data & AI');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [hourlyRate, setHourlyRate] = useState(35000);
   const [commissionRate, setCommissionRate] = useState(37);
   const [maxCapacity, setMaxCapacity] = useState(30);
   const [status, setStatus] = useState<MentorStatus>('Active');
   const [expertiseString, setExpertiseString] = useState('');
   const [bio, setBio] = useState('');
+  const [bankName, setBankName] = useState(NIGERIAN_BANKS[0].name);
+  const [accountNumber, setAccountNumber] = useState('');
+  const [accountName, setAccountName] = useState('');
 
   useEffect(() => {
     if (currentMentor) {
@@ -31,12 +34,14 @@ export const EditMentorModal: React.FC<EditMentorModalProps> = ({ isOpen, onClos
       setDepartment(currentMentor.department || 'Data & AI');
       setEmail(currentMentor.email || '');
       setPhone(currentMentor.phone || '');
-      setHourlyRate(currentMentor.hourlyRate || 35000);
       setCommissionRate(currentMentor.commissionRate || 37);
       setMaxCapacity(currentMentor.maxCapacity || 30);
       setStatus(currentMentor.status || 'Active');
       setExpertiseString(currentMentor.expertise ? currentMentor.expertise.join(', ') : '');
       setBio(currentMentor.bio || '');
+      setBankName(currentMentor.bankName || NIGERIAN_BANKS[0].name);
+      setAccountNumber(currentMentor.accountNumber || '');
+      setAccountName(currentMentor.accountName || (currentMentor.name ? currentMentor.name.toUpperCase() : ''));
     }
   }, [currentMentor, isOpen]);
 
@@ -57,12 +62,14 @@ export const EditMentorModal: React.FC<EditMentorModalProps> = ({ isOpen, onClos
       department,
       email,
       phone,
-      hourlyRate: Number(hourlyRate),
       commissionRate: Number(commissionRate),
       maxCapacity: Number(maxCapacity),
       status,
       expertise: expertise.length > 0 ? expertise : currentMentor.expertise,
       bio,
+      bankName,
+      accountNumber,
+      accountName,
     });
 
     onClose();
@@ -166,20 +173,10 @@ export const EditMentorModal: React.FC<EditMentorModalProps> = ({ isOpen, onClos
             </div>
 
             <div className="space-y-1">
-              <label className="font-label-md text-xs text-secondary font-semibold">Honorarium Hourly Rate (₦/h)</label>
-              <input
-                type="number"
-                min="5000"
-                max="500000"
-                step="1000"
-                value={hourlyRate}
-                onChange={e => setHourlyRate(Number(e.target.value))}
-                className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-data-tabular text-sm text-on-surface focus:border-primary outline-none"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="font-label-md text-xs text-secondary font-semibold">Commission / Revenue Share (%)</label>
+              <div className="flex items-center justify-between">
+                <label className="font-label-md text-xs text-secondary font-semibold">Student Enrollment Commission (%)</label>
+                <span className="text-[10px] font-bold text-[#166534] bg-[#dcfce7] px-1.5 py-0.2 rounded">Standard 37%</span>
+              </div>
               <input
                 type="number"
                 min="0"
@@ -188,6 +185,7 @@ export const EditMentorModal: React.FC<EditMentorModalProps> = ({ isOpen, onClos
                 onChange={e => setCommissionRate(Number(e.target.value))}
                 className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-data-tabular text-sm text-on-surface focus:border-primary outline-none"
               />
+              <p className="text-[11px] text-secondary">37% share credited per assigned student enrollment</p>
             </div>
 
             <div className="space-y-1">
@@ -221,6 +219,62 @@ export const EditMentorModal: React.FC<EditMentorModalProps> = ({ isOpen, onClos
                 placeholder="e.g. Python, PyTorch, Cloud Architecture, LLMs"
                 className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none"
               />
+            </div>
+
+            <div className="sm:col-span-2 space-y-3 pt-2">
+              <h4 className="font-label-md text-xs text-on-surface font-semibold">Nigerian Bank Account Details for Payouts (₦)</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-surface-container-low/50 rounded-lg border border-outline-variant">
+                <div className="space-y-1">
+                  <label className="font-body-sm text-xs text-secondary">Bank Name ({NIGERIAN_BANKS.length} Banks &amp; Neobanks)</label>
+                  <select
+                    value={bankName}
+                    onChange={e => setBankName(e.target.value)}
+                    className="w-full h-9 px-2 bg-surface border border-outline-variant rounded text-xs text-on-surface outline-none cursor-pointer"
+                  >
+                    <optgroup label="Commercial Banks">
+                      {NIGERIAN_BANKS.filter(b => b.category === 'Commercial').map(b => (
+                        <option key={b.code} value={b.name}>{b.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="FinTechs &amp; Neobanks (MFBs)">
+                      {NIGERIAN_BANKS.filter(b => b.category === 'FinTech / Neobank').map(b => (
+                        <option key={b.code} value={b.name}>{b.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Non-Interest / Islamic Banks">
+                      {NIGERIAN_BANKS.filter(b => b.category === 'Non-Interest').map(b => (
+                        <option key={b.code} value={b.name}>{b.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Merchant Banks">
+                      {NIGERIAN_BANKS.filter(b => b.category === 'Merchant').map(b => (
+                        <option key={b.code} value={b.name}>{b.name}</option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="font-body-sm text-xs text-secondary">Account Number</label>
+                  <input
+                    type="text"
+                    maxLength={10}
+                    value={accountNumber}
+                    onChange={e => setAccountNumber(e.target.value)}
+                    placeholder="0123456789"
+                    className="w-full h-9 px-2 bg-surface border border-outline-variant rounded font-data-tabular text-xs text-on-surface outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-body-sm text-xs text-secondary">Account Name</label>
+                  <input
+                    type="text"
+                    value={accountName}
+                    onChange={e => setAccountName(e.target.value)}
+                    placeholder="e.g. ARTHUR PENDELTON"
+                    className="w-full h-9 px-2 bg-surface border border-outline-variant rounded font-body-md text-xs text-on-surface uppercase outline-none"
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="space-y-1 sm:col-span-2">

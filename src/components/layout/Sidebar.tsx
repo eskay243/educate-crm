@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useCRM } from '../../context/CRMContext';
 import { UserRole } from '../../types/crm';
+import { BrandLogo } from '../common/BrandLogo';
 
 export interface SidebarProps {
   onCloseMobile?: () => void;
@@ -16,7 +17,7 @@ interface NavItemConfig {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
-  const { openModal, resetAllData, currentUser, logout } = useCRM();
+  const { openModal, resetAllData, currentUser, logout, settings } = useCRM();
   const navigate = useNavigate();
 
   const allNavItems: NavItemConfig[] = [
@@ -25,6 +26,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     { to: '/leads', label: 'Leads Pipeline', icon: 'leaderboard', allowedRoles: ['super_admin', 'admissions'] },
     { to: '/students', label: 'Students & Billing', icon: 'school', allowedRoles: ['super_admin', 'admissions', 'mentor', 'finance'] },
     { to: '/mentors', label: 'Mentors & Sessions', icon: 'groups', allowedRoles: ['super_admin', 'mentor'] },
+    { to: '/attendance', label: 'Staff Attendance', icon: 'schedule', allowedRoles: ['super_admin', 'admissions', 'mentor', 'finance'] },
     { to: '/expenses', label: 'Expenses & Budget', icon: 'payments', allowedRoles: ['super_admin', 'admissions', 'finance'] },
     { to: '/settings', label: 'Settings', icon: 'settings', allowedRoles: ['super_admin'] },
   ];
@@ -47,15 +49,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
         <Link 
           to="/" 
           onClick={onCloseMobile}
-          className="flex items-center gap-stack-sm group hover:opacity-90 transition-opacity"
+          className="hover:opacity-90 transition-opacity"
         >
-          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary shrink-0 shadow-xs">
-            <span className="material-symbols-outlined text-white" style={{ fontSize: '20px' }}>domain</span>
-          </div>
-          <div className="min-w-0">
-            <h1 className="font-headline-md text-headline-md font-bold text-primary truncate leading-tight">Enterprise Portal</h1>
-            <p className="font-body-sm text-body-sm text-secondary truncate">Management Suite</p>
-          </div>
+          <BrandLogo size="md" logoUrl={settings.logoUrl} />
         </Link>
         {onCloseMobile && (
           <button 

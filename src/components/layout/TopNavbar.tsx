@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCRM } from '../../context/CRMContext';
 import { NotificationDrawer } from '../notifications/NotificationDrawer';
+import { BrandLogo } from '../common/BrandLogo';
 
 export interface TopNavbarProps {
   onOpenMobileSidebar: () => void;
@@ -15,12 +16,28 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
     currentUser, 
     login, 
     logout, 
-    unreadNotificationCount 
+    unreadNotificationCount,
+    activeAttendanceSession,
+    settings 
   } = useCRM();
   const navigate = useNavigate();
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [elapsedText, setElapsedText] = useState('00h 00m');
+
+  React.useEffect(() => {
+    if (!activeAttendanceSession) return;
+    const updateElapsed = () => {
+      const ms = Math.max(0, Date.now() - activeAttendanceSession.clockInTimestamp);
+      const h = Math.floor(ms / (1000 * 60 * 60));
+      const m = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+      setElapsedText(`${h.toString().padStart(2, '0')}h ${m.toString().padStart(2, '0')}m`);
+    };
+    updateElapsed();
+    const interval = setInterval(updateElapsed, 30000);
+    return () => clearInterval(interval);
+  }, [activeAttendanceSession]);
 
   return (
     <>
@@ -34,7 +51,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
           >
             <span className="material-symbols-outlined">menu</span>
           </button>
-          <span className="font-headline-md text-headline-md font-bold text-primary">Nexus CRM</span>
+          <BrandLogo size="sm" logoUrl={settings.logoUrl} />
         </div>
 
         {/* Global Search Bar */}
@@ -61,6 +78,33 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
 
         {/* Trailing Actions & Profile */}
         <div className="flex items-center gap-stack-sm relative">
+          {/* Quick Clock In / Clock Out Shift Tracker */}
+          {activeAttendanceSession ? (
+            <div className="flex items-center gap-1.5 bg-[#dcfce7] border border-[#86efac] text-[#166534] px-2.5 py-1 rounded-lg">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#16a34a] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#16a34a]"></span>
+              </span>
+              <span className="text-[11px] font-bold font-data-tabular">{elapsedText}</span>
+              <button
+                onClick={() => openModal('clock-out')}
+                className="ml-1 text-[10px] font-bold px-2 py-0.5 rounded bg-[#16a34a] text-white hover:bg-[#15803d] transition-colors cursor-pointer"
+                title="End shift and Clock Out"
+              >
+                Clock Out
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => openModal('clock-in')}
+              className="h-8 px-2.5 sm:px-3 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-primary/20"
+              title="Clock In for Shift"
+            >
+              <span className="material-symbols-outlined text-[16px]">timer</span>
+              <span className="hidden sm:inline">Clock In</span>
+            </button>
+          )}
+
           <button 
             onClick={() => openModal('export-report')}
             className="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors cursor-pointer relative"

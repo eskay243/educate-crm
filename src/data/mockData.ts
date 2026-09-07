@@ -10,7 +10,8 @@ import {
   MentorshipSession, 
   OrganizationSettings, 
   ActivityLogItem, 
-  NotificationItem 
+  NotificationItem,
+  AttendanceRecord 
 } from '../types/crm';
 
 export const initialLeads: Lead[] = [];
@@ -21,17 +22,18 @@ export const initialCourses: CourseProgram[] = [];
 export const initialCohorts: Cohort[] = [];
 export const initialInvoices: Invoice[] = [];
 export const initialSessions: MentorshipSession[] = [];
+export const initialAttendance: AttendanceRecord[] = [];
 
 export const initialSettings: OrganizationSettings = {
-  instituteName: 'Nexus Institute of Technology & Management',
-  portalTitle: 'Edu-Business Operations Enterprise Portal',
+  instituteName: 'CODELAB EDUCARE LTD',
+  portalTitle: 'CODELAB EDUCARE Enterprise Portal',
   address: 'Plot 14, Victoria Island Financial District, Lagos, Nigeria',
   campusLocations: [
     'Victoria Island Tech Hub, Lagos',
     'Yaba Innovation Campus, Lagos',
     'Maitama Innovation Center, Abuja'
   ],
-  email: 'operations@codelab.institute',
+  email: 'admin@codelab.institute',
   phone: '+234 1 800 63987',
   tinNumber: 'TIN-29481029-0001',
   cacNumber: 'RC-1849201',
@@ -39,20 +41,41 @@ export const initialSettings: OrganizationSettings = {
   defaultNIBSSBank: {
     bankName: 'Access Bank Nigeria PLC',
     accountNumber: '0812948192',
-    accountName: 'NEXUS TECH OPERATIONS LTD',
+    accountName: 'CODELAB EDUCARE LTD',
   },
   emailAlertsEnabled: true,
   autoInvoiceGeneration: true,
   operatingBudget: 1500000,
   showBudgetToStaff: true,
+  officeLocation: {
+    name: 'Lagos Headquarters Hub (Yaba, Lagos)',
+    latitude: 6.5181,
+    longitude: 3.3768,
+    radiusMeters: 400,
+  },
+  workHoursPolicy: {
+    expectedClockInTime: '09:00',
+    expectedClockOutTime: '17:00',
+    gracePeriodMinutes: 15,
+  },
   smtp: {
-    host: 'smtp.hostinger.com',
+    host: 'smtp.zoho.com',
     port: 465,
-    user: '',
-    pass: '',
-    from: '"Nexus Institute" <support@growpot.cloud>',
+    user: 'admin@codelab.institute',
+    pass: '9)8JAr$m',
+    from: '"CODELAB EDUCARE LTD" <admin@codelab.institute>',
     secure: true,
-  }
+  },
+  courseCategories: [
+    'Software Engineering',
+    'Data Science & Analytics',
+    'Product Design (UI/UX)',
+    'Cloud Engineering & DevOps',
+    'Cybersecurity & Information Security',
+    'Product Management',
+    'Artificial Intelligence & Machine Learning',
+    'Digital Marketing & Growth',
+  ]
 };
 
 export const demoUsers: AuthUser[] = [

@@ -7,11 +7,24 @@ export interface CreateCourseModalProps {
 }
 
 export const CreateCourseModal: React.FC<CreateCourseModalProps> = ({ isOpen, onClose }) => {
-  const { mentors, addCourse } = useCRM();
+  const { mentors, addCourse, settings, addCourseCategory } = useCRM();
+
+  const categoriesList = settings.courseCategories || [
+    'Software Engineering',
+    'Data Science & Analytics',
+    'Product Design (UI/UX)',
+    'Cloud Engineering & DevOps',
+    'Cybersecurity & Information Security',
+    'Product Management',
+    'Artificial Intelligence & Machine Learning',
+    'Digital Marketing & Growth',
+  ];
 
   const [title, setTitle] = useState('');
   const [code, setCode] = useState('');
-  const [category, setCategory] = useState('Software Engineering');
+  const [category, setCategory] = useState(categoriesList[0] || 'Software Engineering');
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCategoryInput, setNewCategoryInput] = useState('');
   const [description, setDescription] = useState('');
   const [durationWeeks, setDurationWeeks] = useState(12);
   const [tuitionFee, setTuitionFee] = useState(850000);
@@ -21,6 +34,16 @@ export const CreateCourseModal: React.FC<CreateCourseModalProps> = ({ isOpen, on
     'Applied Industry Capstone & System Design',
   ]);
   const [newModuleText, setNewModuleText] = useState('');
+
+  const handleSaveNewCategory = () => {
+    const trimmed = newCategoryInput.trim();
+    if (trimmed) {
+      addCourseCategory(trimmed);
+      setCategory(trimmed);
+      setNewCategoryInput('');
+      setIsAddingCategory(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -105,19 +128,73 @@ export const CreateCourseModal: React.FC<CreateCourseModalProps> = ({ isOpen, on
             </div>
 
             <div className="space-y-1">
-              <label className="font-label-md text-xs text-secondary font-semibold">Track Category</label>
-              <select
-                value={category}
-                onChange={e => setCategory(e.target.value)}
-                className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
-              >
-                <option value="Software Engineering">Software Engineering</option>
-                <option value="Data Science">Data Science</option>
-                <option value="Product Design">Product Design</option>
-                <option value="Cloud Engineering">Cloud Engineering</option>
-                <option value="Cybersecurity">Cybersecurity</option>
-                <option value="Product Management">Product Management</option>
-              </select>
+              <div className="flex items-center justify-between">
+                <label className="font-label-md text-xs text-secondary font-semibold">Track Category</label>
+                {!isAddingCategory && (
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingCategory(true)}
+                    className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-0.5 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">add</span>
+                    + Add New
+                  </button>
+                )}
+              </div>
+
+              {isAddingCategory ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    autoFocus
+                    value={newCategoryInput}
+                    onChange={e => setNewCategoryInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSaveNewCategory();
+                      } else if (e.key === 'Escape') {
+                        setIsAddingCategory(false);
+                      }
+                    }}
+                    placeholder="e.g. Artificial Intelligence, DevOps..."
+                    className="flex-1 h-10 px-3 bg-surface border border-primary rounded font-body-md text-sm text-on-surface outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveNewCategory}
+                    className="px-3 h-10 bg-primary text-white rounded font-label-md text-xs font-semibold hover:bg-primary/90 transition-colors"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setIsAddingCategory(false); setNewCategoryInput(''); }}
+                    className="px-2.5 h-10 border border-outline-variant rounded font-label-md text-xs text-secondary hover:bg-surface-container transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <select
+                  value={category}
+                  onChange={e => {
+                    if (e.target.value === '__add_new__') {
+                      setIsAddingCategory(true);
+                    } else {
+                      setCategory(e.target.value);
+                    }
+                  }}
+                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
+                >
+                  {categoriesList.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                  <option value="__add_new__" className="font-semibold text-primary">
+                    + Add New Category...
+                  </option>
+                </select>
+              )}
             </div>
 
             <div className="space-y-1">

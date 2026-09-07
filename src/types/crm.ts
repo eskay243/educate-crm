@@ -89,17 +89,65 @@ export interface Mentor {
   role: string;
   department: string;
   expertise: string[];
-  hourlyRate: number;
+  hourlyRate?: number; // Deprecated - replaced by 37% enrollment commission
   maxCapacity: number;
   activeMentees: number;
   rating: number;
   sessionsCount: number;
-  commissionRate: number; // e.g. 37 for 37%
+  commissionRate: number; // 37% of course tuition per enrolled student
+  assignedEnrollmentsCount?: number;
   pendingPayout: number;
+  totalEarned?: number;
   payoutStatus: PayoutStatus;
   status: MentorStatus;
   joinedDate: string;
   bio?: string;
+  bankName?: string;
+  accountNumber?: string;
+  accountName?: string;
+}
+
+// ----------------------------------------------------
+// Employee Hybrid Attendance & Hours Tracking
+// ----------------------------------------------------
+export type WorkMode = 'On-Site / Hub' | 'Remote' | 'Hybrid';
+export type PunctualityStatus = 'On-Time' | 'Late' | 'Overtime' | 'Standard';
+export type GeoVerificationStatus = 
+  | 'Verified On-Site' 
+  | 'Remote Verified' 
+  | 'Location Mismatch' 
+  | 'GPS Unavailable';
+
+export interface AttendanceRecord {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userRole: UserRole;
+  roleTitle?: string;
+  department?: string;
+  staffId?: string;
+  staffName?: string;
+  staffEmail?: string;
+  date: string; // YYYY-MM-DD
+  clockInTime: string; // e.g. "08:55 AM"
+  clockInTimestamp: number;
+  clockOutTime?: string; // e.g. "05:15 PM"
+  clockOutTimestamp?: number;
+  totalHoursWorked?: number; // e.g. 8.3
+  workMode: WorkMode;
+  locationName: string; // e.g. "Yaba Tech Hub", "Remote - Lekki"
+  latitude?: number;
+  longitude?: number;
+  distanceFromOfficeMeters?: number;
+  geoStatus: GeoVerificationStatus;
+  punctuality: PunctualityStatus;
+  punctualityStatus?: PunctualityStatus;
+  shiftFocus: string; // Office chores, tasks, and daily objectives
+  dailyTasksFocus?: string;
+  workSummary?: string; // End of day completed deliverables
+  status: 'Clocked In' | 'Clocked Out' | 'On-Duty' | 'Completed';
+  verifiedBy?: string;
 }
 
 export type ExpenseCategory = 
@@ -244,6 +292,17 @@ export interface OrganizationSettings {
   autoInvoiceGeneration: boolean;
   operatingBudget?: number;
   showBudgetToStaff?: boolean;
+  officeLocation?: {
+    name: string;
+    latitude: number;
+    longitude: number;
+    radiusMeters: number; // e.g. 250m geofence radius
+  };
+  workHoursPolicy?: {
+    expectedClockInTime: string; // e.g. "09:00"
+    expectedClockOutTime: string; // e.g. "17:00"
+    gracePeriodMinutes: number; // e.g. 15 mins
+  };
   smtp?: {
     host: string;
     port: number;
@@ -252,6 +311,8 @@ export interface OrganizationSettings {
     from: string;
     secure: boolean;
   };
+  courseCategories?: string[];
+  logoUrl?: string;
 }
 
 export interface ActivityLogItem {
@@ -296,6 +357,8 @@ export type ModalType =
   | 'assign-mentor' 
   | 'edit-mentor' 
   | 'change-password'
+  | 'clock-in'
+  | 'clock-out'
   | null;
 
 

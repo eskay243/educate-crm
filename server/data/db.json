@@ -8,8 +8,8 @@
   "invoices": [],
   "sessions": [],
   "settings": {
-    "instituteName": "Nexus Institute of Technology & Management",
-    "portalTitle": "Edu-Business Operations Enterprise Portal",
+    "instituteName": "CODELAB EDUCARE LTD",
+    "portalTitle": "CODELAB EDUCARE Enterprise Portal",
     "address": "Plot 14, Victoria Island Financial District, Lagos, Nigeria",
     "campusLocations": [
       "Victoria Island Tech Hub, Lagos",
@@ -28,14 +28,37 @@
     },
     "emailAlertsEnabled": true,
     "autoInvoiceGeneration": true,
+    "operatingBudget": 1500000,
+    "showBudgetToStaff": true,
+    "officeLocation": {
+      "name": "Lagos Headquarters Hub (Yaba, Lagos)",
+      "latitude": 6.5181,
+      "longitude": 3.3768,
+      "radiusMeters": 400
+    },
+    "workHoursPolicy": {
+      "expectedClockInTime": "09:00",
+      "expectedClockOutTime": "17:00",
+      "gracePeriodMinutes": 15
+    },
     "smtp": {
-      "host": "smtp.hostinger.com",
+      "host": "smtp.zoho.com",
       "port": 465,
-      "user": "",
-      "pass": "",
-      "from": "\"Nexus Institute\" <support@growpot.cloud>",
+      "user": "admin@codelab.institute",
+      "pass": "9)8JAr$m",
+      "from": "\"CODELAB EDUCARE LTD\" <admin@codelab.institute>",
       "secure": true
-    }
+    },
+    "courseCategories": [
+      "Software Engineering",
+      "Data Science & Analytics",
+      "Product Design (UI/UX)",
+      "Cloud Engineering & DevOps",
+      "Cybersecurity & Information Security",
+      "Product Management",
+      "Artificial Intelligence & Machine Learning",
+      "Digital Marketing & Growth"
+    ]
   },
   "activityLogs": [
     {

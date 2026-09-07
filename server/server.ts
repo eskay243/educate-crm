@@ -50,6 +50,7 @@ interface DatabaseSchema {
   activityLogs: any[];
   notifications: any[];
   staffUsers: any[];
+  attendance: any[];
 }
 
 const getInitialDatabase = (): DatabaseSchema => ({
@@ -65,6 +66,7 @@ const getInitialDatabase = (): DatabaseSchema => ({
   activityLogs: initialActivityLogs,
   notifications: initialNotifications,
   staffUsers: demoUsers,
+  attendance: [],
 });
 
 const loadDatabase = (): DatabaseSchema => {
@@ -92,7 +94,27 @@ const saveDatabase = (db: DatabaseSchema) => {
 
 let db = loadDatabase();
 
-// ----------------------------------------------------
+// Ensure CODELAB EDUCARE LTD branding and Zoho SMTP are synchronized
+if (!db.settings || db.settings.instituteName !== 'CODELAB EDUCARE LTD' || !db.settings.smtp?.user || db.settings.smtp?.host === 'smtppro.zoho.com' || db.settings.smtp?.host === 'smtp.hostinger.com') {
+  db.settings = {
+    ...initialSettings,
+    ...db.settings,
+    instituteName: 'CODELAB EDUCARE LTD',
+    portalTitle: 'CODELAB EDUCARE Enterprise Portal',
+    courseCategories: db.settings?.courseCategories || initialSettings.courseCategories,
+    smtp: {
+      ...initialSettings.smtp,
+      ...(db.settings?.smtp || {}),
+      host: 'smtp.zoho.com',
+      port: 465,
+      secure: true,
+      user: db.settings?.smtp?.user || initialSettings.smtp?.user,
+      pass: db.settings?.smtp?.pass || initialSettings.smtp?.pass,
+      from: db.settings?.smtp?.from || initialSettings.smtp?.from,
+    }
+  };
+  saveDatabase(db);
+}
 // Health & Bootstrap Endpoints
 // ----------------------------------------------------
 app.get('/api/health', (req: Request, res: Response) => {
@@ -209,12 +231,12 @@ app.post('/api/production/flush-demo-data', (req: Request, res: Response) => {
 // Real Email & SMTP Dispatch Engine (Nodemailer)
 // ----------------------------------------------------
 const getTransporter = async (customSmtp?: any) => {
-  const host = customSmtp?.host || db.settings?.smtp?.host || process.env.SMTP_HOST;
+  const host = customSmtp?.host || db.settings?.smtp?.host || process.env.SMTP_HOST || 'smtp.zoho.com';
   const port = Number(customSmtp?.port || db.settings?.smtp?.port || process.env.SMTP_PORT || 465);
-  const user = customSmtp?.user || db.settings?.smtp?.user || process.env.SMTP_USER;
-  const pass = customSmtp?.pass || db.settings?.smtp?.pass || process.env.SMTP_PASS;
+  const user = customSmtp?.user || db.settings?.smtp?.user || process.env.SMTP_USER || 'admin@codelab.institute';
+  const pass = customSmtp?.pass || db.settings?.smtp?.pass || process.env.SMTP_PASS || '9)8JAr$m';
   const secure = customSmtp?.secure !== undefined ? customSmtp.secure : (port === 465);
-  const fromAddress = customSmtp?.from || db.settings?.smtp?.from || process.env.SMTP_FROM || (user ? `"Nexus Institute" <${user}>` : '"Nexus Institute" <admissions@nexus-institute.ng>');
+  const fromAddress = customSmtp?.from || db.settings?.smtp?.from || process.env.SMTP_FROM || (user ? `"CODELAB EDUCARE LTD" <${user}>` : '"CODELAB EDUCARE LTD" <admin@codelab.institute>');
 
   if (host && user && pass) {
     return {
@@ -242,9 +264,53 @@ const getTransporter = async (customSmtp?: any) => {
         pass: testAccount.pass,
       },
     }),
-    from: '"Nexus Institute of Technology" <admissions@nexus-institute.ng>',
+    from: '"CODELAB EDUCARE LTD" <admin@codelab.institute>',
     isTestAccount: true,
   };
+};
+
+const sendStudentWelcomeEmail = async (student: any) => {
+  if (!student?.email) return;
+  try {
+    const { transporter, from, isTestAccount } = await getTransporter();
+    const portalUrl = 'http://72.61.106.87/login';
+    const html = `
+      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+        <div style="background-color: #00236f; padding: 26px 20px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: bold; letter-spacing: -0.5px;">CODELAB EDUCARE LTD</h1>
+          <p style="color: #93c5fd; margin: 4px 0 0 0; font-size: 12px;">Official Student Admission &amp; Onboarding Confirmation</p>
+        </div>
+        <div style="padding: 28px 24px; color: #1e293b; line-height: 1.6;">
+          <h2 style="color: #00236f; margin-top: 0; font-size: 18px;">Welcome to CODELAB EDUCARE LTD, ${student.name}!</h2>
+          <p>Your student admission has been approved and your academic profile is now officially active.</p>
+          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 16px; margin: 20px 0;">
+            <p style="margin: 0 0 6px 0;"><strong>Student ID:</strong> <span style="font-family: monospace; font-weight: bold; color: #00236f;">${student.studentCode || 'STU-PROD'}</span></p>
+            <p style="margin: 0 0 6px 0;"><strong>Course Track:</strong> ${student.program || 'Technology Track'}</p>
+            <p style="margin: 0 0 6px 0;"><strong>Cohort / Batch:</strong> ${student.cohort || 'Executive Cohort'}</p>
+            <p style="margin: 0 0 6px 0;"><strong>Assigned Mentor:</strong> ${student.mentorName || 'Academic Faculty Pool'}</p>
+            <p style="margin: 0;"><strong>Tuition Status:</strong> ${student.outstandingBalance > 0 ? `₦${Number(student.outstandingBalance).toLocaleString()} Outstanding` : 'Settled / In Good Standing'}</p>
+          </div>
+          <h3 style="color: #00236f; font-size: 14px; margin-bottom: 8px;">Onboarding Steps:</h3>
+          <p style="margin: 0 0 16px 0; font-size: 13px;">Please log in to your Student Operations Portal using your email (<strong>${student.email}</strong>) to access course materials, live lab schedules, and mentor assignments.</p>
+          <div style="text-align: center; margin: 24px 0;">
+            <a href="${portalUrl}" style="background-color: #00236f; color: #ffffff; padding: 12px 26px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">Access Student Portal →</a>
+          </div>
+          <p style="font-size: 12px; color: #64748b;">For assistance, reach our Admissions Directorate directly at <a href="mailto:admin@codelab.institute" style="color: #00236f;">admin@codelab.institute</a>.</p>
+        </div>
+      </div>
+    `;
+
+    const info = await transporter.sendMail({
+      from,
+      to: student.email,
+      subject: `🎓 Welcome to CODELAB EDUCARE LTD — Admission Confirmation (${student.studentCode || 'STU'})`,
+      html,
+    });
+
+    console.log(`✅ [STUDENT ONBOARDING EMAIL DISPATCHED] To: ${student.email} | MessageId: ${info?.messageId} | isTestAccount: ${isTestAccount}`);
+  } catch (err) {
+    console.error(`Error dispatching student welcome email to ${student?.email}:`, err);
+  }
 };
 
 app.post('/api/email/test-connection', async (req: Request, res: Response) => {
@@ -451,6 +517,7 @@ app.post('/api/leads/:id/convert', (req: Request, res: Response) => {
   db.notifications.unshift(newNotif);
 
   saveDatabase(db);
+  sendStudentWelcomeEmail(newStudent);
   res.status(201).json({ success: true, data: { student: newStudent, invoice: newInvoice, lead } });
 });
 
@@ -470,6 +537,7 @@ app.post('/api/students', (req: Request, res: Response) => {
   };
   db.students.unshift(newStudent);
   saveDatabase(db);
+  sendStudentWelcomeEmail(newStudent);
   res.status(201).json({ success: true, data: newStudent });
 });
 
@@ -707,6 +775,41 @@ app.delete('/api/notifications', (req: Request, res: Response) => {
   db.notifications = [];
   saveDatabase(db);
   res.json({ success: true, message: 'All notifications cleared' });
+});
+
+// ----------------------------------------------------
+// Employee Attendance & Hours Tracking Endpoints
+// ----------------------------------------------------
+app.get('/api/attendance', (req: Request, res: Response) => {
+  if (!db.attendance) db.attendance = [];
+  res.json({ success: true, data: db.attendance });
+});
+
+app.post('/api/attendance/clock-in', (req: Request, res: Response) => {
+  if (!db.attendance) db.attendance = [];
+  const newRecord = {
+    ...req.body,
+    id: `att-${Date.now()}`,
+    status: 'Clocked In',
+  };
+  db.attendance.unshift(newRecord);
+  saveDatabase(db);
+  res.status(201).json({ success: true, data: newRecord });
+});
+
+app.post('/api/attendance/clock-out/:id', (req: Request, res: Response) => {
+  if (!db.attendance) db.attendance = [];
+  const { id } = req.params;
+  const index = db.attendance.findIndex(a => a.id === id);
+  if (index === -1) return res.status(404).json({ success: false, message: 'Attendance record not found' });
+
+  db.attendance[index] = {
+    ...db.attendance[index],
+    ...req.body,
+    status: 'Clocked Out',
+  };
+  saveDatabase(db);
+  res.json({ success: true, data: db.attendance[index] });
 });
 
 app.listen(PORT, () => {

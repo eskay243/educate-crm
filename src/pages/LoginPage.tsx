@@ -3,17 +3,18 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
 import { demoUsers } from '../data/mockData';
 import { UserRole } from '../types/crm';
+import { BrandLogo } from '../components/common/BrandLogo';
 
 export const LoginPage: React.FC = () => {
   const { login, settings } = useCRM();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = (location.state as any)?.from?.pathname || '/';
-
-  const [email, setEmail] = useState('abiola.adefowope@codelab.institute');
-  const [password, setPassword] = useState('••••••••••••');
   const [selectedRole, setSelectedRole] = useState<UserRole>('super_admin');
+  const [email, setEmail] = useState('abiola.adefowope@codelab.institute');
+  const [password, setPassword] = useState('password123');
+
+  const from = (location.state as any)?.from?.pathname || '/';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,15 +31,13 @@ export const LoginPage: React.FC = () => {
     <div className="min-h-screen w-screen flex flex-col justify-center items-center bg-surface-container-low p-4 sm:p-margin-page">
       <div className="w-full max-w-lg space-y-6">
         {/* Institution Brand Header */}
-        <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl bg-primary text-on-primary flex items-center justify-center mx-auto shadow-md">
-            <span className="material-symbols-outlined text-[32px]">domain</span>
-          </div>
-          <h1 className="font-headline-lg text-2xl font-bold text-on-surface tracking-tight">
+        <div className="text-center space-y-2 flex flex-col items-center">
+          <BrandLogo size="lg" logoUrl={settings.logoUrl} className="justify-center" />
+          <h1 className="font-headline-lg text-xl font-bold text-on-surface tracking-tight mt-2">
             {settings.instituteName}
           </h1>
           <p className="font-body-md text-xs text-secondary">
-            Edu-Business Operations &amp; Academic Management Portal
+            Enterprise Operations &amp; Academic Management Portal
           </p>
         </div>
 
@@ -58,9 +57,9 @@ export const LoginPage: React.FC = () => {
                   const r = e.target.value as UserRole;
                   setSelectedRole(r);
                   if (r === 'super_admin') setEmail('abiola.adefowope@codelab.institute');
-                  else if (r === 'admissions') setEmail('folake@nexus-institute.ng');
-                  else if (r === 'mentor') setEmail('a.pendelton@nexus-institute.ng');
-                  else if (r === 'finance') setEmail('daniels@nexus-institute.ng');
+                  else if (r === 'admissions') setEmail('folake@codelab.institute');
+                  else if (r === 'mentor') setEmail('a.pendelton@codelab.institute');
+                  else if (r === 'finance') setEmail('daniels@codelab.institute');
                 }}
                 className="w-full h-11 px-3 rounded bg-surface border border-outline-variant text-sm font-body-md focus:border-primary outline-none cursor-pointer"
               >
@@ -156,7 +155,7 @@ export const LoginPage: React.FC = () => {
 
         {/* Footer info */}
         <p className="text-center text-[11px] text-secondary">
-          Nexus Institute • Victoria Island &amp; Abuja Campus Operations • RC-1849201
+          CODELAB EDUCARE LTD • Victoria Island Financial District &amp; Yaba Innovation Campus • RC-1849201
         </p>
       </div>
     </div>

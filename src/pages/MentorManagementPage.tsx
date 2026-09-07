@@ -89,7 +89,7 @@ export const MentorManagementPage: React.FC = () => {
     ? accessibleSessions.reduce((acc, s) => acc + s.durationHours, 0)
     : sessions.reduce((acc, s) => acc + s.durationHours, 0);
 
-  const pendingHonorariumTotal = isMentor 
+  const pendingTuitionShareTotal = isMentor 
     ? (myMentorProfile?.pendingPayout || 0)
     : mentors.reduce((acc, m) => acc + m.pendingPayout, 0);
 
@@ -101,7 +101,7 @@ export const MentorManagementPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-[20px]">security</span>
             <span className="text-on-surface font-semibold">
-              Faculty Discretion Active: You can only view co-faculty in your academic department/shared tracks. Other mentors' rates &amp; earnings are confidential.
+              Faculty Discretion Active: You can only view co-faculty in your academic department/shared tracks. Other mentors&apos; rates &amp; earnings are confidential.
             </span>
           </div>
           <span className="font-data-tabular text-primary font-bold">
@@ -118,8 +118,8 @@ export const MentorManagementPage: React.FC = () => {
           </h2>
           <p className="font-body-md text-body-md text-secondary">
             {isMentor 
-              ? 'Log 1-on-1 student coaching hours, view shared faculty curriculum, and track personal honorarium in ₦.'
-              : 'Manage instructor capacity, 1-on-1 student coaching hours, and Nigerian honorarium payouts.'}
+              ? 'Log 1-on-1 student coaching hours, view assigned student mentees, and track 37% enrollment commission payouts in ₦.'
+              : 'Manage faculty assignments, 37% student enrollment commissions, and tuition share payouts.'}
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -182,13 +182,13 @@ export const MentorManagementPage: React.FC = () => {
             <div className="w-10 h-10 rounded bg-surface-container flex items-center justify-center text-on-surface">
               <span className="material-symbols-outlined">account_balance_wallet</span>
             </div>
-            <span className="text-xs font-bold text-secondary bg-surface-container-high px-2 py-1 rounded">Settlement (₦)</span>
+            <span className="text-xs font-bold text-secondary bg-surface-container-high px-2 py-1 rounded">37% Share (₦)</span>
           </div>
           <p className="font-body-sm text-body-sm text-secondary mb-unit">
-            {isMentor ? 'My Pending Honorarium' : 'Pending Faculty Honorariums'}
+            {isMentor ? 'My Pending Tuition Share' : 'Pending Tuition Share (37%)'}
           </p>
           <h3 className="font-display text-display font-bold text-on-surface">
-            {formatNaira(pendingHonorariumTotal)}
+            {formatNaira(pendingTuitionShareTotal)}
           </h3>
         </div>
       </div>
@@ -283,8 +283,8 @@ export const MentorManagementPage: React.FC = () => {
                       <th className="px-stack-md py-3 font-semibold">Faculty Mentor</th>
                       <th className="px-stack-md py-3 font-semibold">Department</th>
                       <th className="px-stack-md py-3 font-semibold">Mentees / Cap</th>
-                      <th className="px-stack-md py-3 font-semibold">Honorarium Rate (₦)</th>
-                      <th className="px-stack-md py-3 font-semibold">Pending Honorarium (₦)</th>
+                      <th className="px-stack-md py-3 font-semibold">Commission Agreement</th>
+                      <th className="px-stack-md py-3 font-semibold">Pending Share (₦)</th>
                       <th className="px-stack-md py-3 font-semibold">Status</th>
                       <th className="px-stack-md py-3 text-right font-semibold">Actions</th>
                     </tr>
@@ -323,7 +323,13 @@ export const MentorManagementPage: React.FC = () => {
                           </td>
 
                           <td className="px-stack-md py-3 font-bold font-data-tabular text-primary">
-                            {canViewFinancials ? `${formatNaira(mentor.hourlyRate)}/hr` : 'Confidential'}
+                            {canViewFinancials ? (
+                              <span className="inline-flex items-center gap-1">
+                                <span className="text-xs font-bold text-[#166534] bg-[#dcfce7] px-2 py-0.5 rounded">
+                                  {mentor.commissionRate ?? 37}% per student
+                                </span>
+                              </span>
+                            ) : 'Confidential'}
                           </td>
 
                           <td className="px-stack-md py-3 font-bold font-data-tabular text-on-surface">
@@ -412,7 +418,7 @@ export const MentorManagementPage: React.FC = () => {
                 <div className="max-w-sm space-y-1">
                   <h3 className="font-bold text-sm text-on-surface">No Coaching Sessions Logged</h3>
                   <p className="text-xs text-secondary">
-                    Log completed 1-on-1 student technical mentoring hours to automatically calculate honorariums.
+                    Log completed 1-on-1 student technical coaching hours and milestone progress.
                   </p>
                 </div>
                 <button
@@ -433,7 +439,7 @@ export const MentorManagementPage: React.FC = () => {
                     <th className="px-stack-md py-3 font-semibold">Student Mentee</th>
                     <th className="px-stack-md py-3 font-semibold">Topic &amp; Review Focus</th>
                     <th className="px-stack-md py-3 font-semibold">Duration</th>
-                    <th className="px-stack-md py-3 font-semibold">Honorarium (₦)</th>
+                    <th className="px-stack-md py-3 font-semibold">Compensation Model</th>
                     <th className="px-stack-md py-3 font-semibold">Status</th>
                   </tr>
                 </thead>
@@ -463,8 +469,10 @@ export const MentorManagementPage: React.FC = () => {
                       <td className="px-stack-md py-3 font-data-tabular text-xs font-semibold text-primary">
                         {s.durationHours}h
                       </td>
-                      <td className="px-stack-md py-3 font-bold text-xs text-on-surface font-data-tabular">
-                        {formatNaira(s.compensationAmount)}
+                      <td className="px-stack-md py-3 text-xs text-secondary font-medium">
+                        <span className="text-[11px] font-bold text-[#166534] bg-[#dcfce7] px-2 py-0.5 rounded">
+                          Covered (37% Share)
+                        </span>
                       </td>
                       <td className="px-stack-md py-3">
                         <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-[#dcfce7] text-[#166534] uppercase tracking-wider">
