@@ -19,6 +19,11 @@ import { EditMentorModal } from '../modals/EditMentorModal';
 import { ChangePasswordModal } from '../modals/ChangePasswordModal';
 import { ClockInModal } from '../modals/ClockInModal';
 import { ClockOutModal } from '../modals/ClockOutModal';
+import { CertificateModal } from '../modals/CertificateModal';
+import { SubmitPerformanceReportModal } from '../modals/SubmitPerformanceReportModal';
+import { MobileBottomNav } from './MobileBottomNav';
+import { PWAInstallPrompt } from '../common/PWAInstallPrompt';
+import { OfflineIndicator } from '../common/OfflineIndicator';
 
 export const AppLayout: React.FC = () => {
   const { activeModal, closeModal } = useCRM();
@@ -49,11 +54,18 @@ export const AppLayout: React.FC = () => {
         <TopNavbar onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)} />
         
         <main className="flex-1 overflow-y-auto bg-background">
-          <div className="max-w-container-max mx-auto p-4 sm:p-gutter md:p-margin-page pb-16">
+          <div className="max-w-container-max mx-auto p-4 sm:p-gutter md:p-margin-page pb-24 md:pb-16">
             <Outlet />
           </div>
         </main>
+
+        {/* Mobile Bottom Navigation Bar */}
+        <MobileBottomNav onOpenMenu={() => setIsMobileSidebarOpen(true)} />
       </div>
+
+      {/* PWA Floating Install Prompt & Offline Connectivity Indicator */}
+      <PWAInstallPrompt />
+      <OfflineIndicator />
 
       {/* Global Modals */}
       <CreateRecordHubModal 
@@ -114,6 +126,14 @@ export const AppLayout: React.FC = () => {
       />
       <ClockOutModal
         isOpen={activeModal === 'clock-out'}
+        onClose={closeModal}
+      />
+      <CertificateModal
+        isOpen={activeModal === 'view-certificate'}
+        onClose={closeModal}
+      />
+      <SubmitPerformanceReportModal
+        isOpen={activeModal === 'submit-performance-report'}
         onClose={closeModal}
       />
       <ChangePasswordModal />

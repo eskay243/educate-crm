@@ -22,7 +22,11 @@ import {
   AttendanceRecord,
   WorkMode,
   GeoVerificationStatus,
-  PunctualityStatus
+  PunctualityStatus,
+  LMSModule,
+  StudentAssignmentSubmission,
+  EnabledModules,
+  StudentPerformanceReport
 } from '../types/crm';
 import { 
   initialLeads, 
@@ -35,14 +39,18 @@ import {
   initialSessions, 
   initialAttendance,
   initialSettings, 
-  initialActivityLogs,
+  initialActivityLogs, 
   initialNotifications,
   demoUsers,
-  defaultAuthUser
+  defaultAuthUser,
+  initialLMSModules,
+  initialAssignments,
+  initialStudentPerformanceReports
 } from '../data/mockData';
 import { apiService } from '../services/api';
 import { emailService } from '../services/emailService';
 import { calculateDistanceMeters } from '../utils/geo';
+import { launchPaystackPayment } from '../services/paystackService';
 
 export const formatNaira = (amount: number, fractionDigits = 0): string => {
   return '₦' + new Intl.NumberFormat('en-NG', {
@@ -91,6 +99,27 @@ interface CRMContextType {
   selectedCourseForEditId: string | null;
   selectedMentorForEditId: string | null;
   kpis: ExecutiveKPIs;
+
+  // LMS & Student state
+  lmsModules: LMSModule[];
+  assignments: StudentAssignmentSubmission[];
+  currentStudentProfile: Student | null;
+  studentPerformanceReports: StudentPerformanceReport[];
+
+  // Student Actions & Paystack
+  completeLesson: (lessonId: string) => Promise<void>;
+  submitAssignment: (payload: { taskTitle: string; courseTitle?: string; moduleTitle?: string; githubUrl?: string; liveUrl?: string; notes?: string }) => Promise<void>;
+  gradeAssignment: (id: string, grade: number, mentorFeedback: string, status?: 'Passed' | 'Needs Revision' | 'Exceptional') => Promise<void>;
+  payTuitionWithPaystack: (options: { amountNaira: number; invoiceId?: string }) => Promise<void>;
+  submitProofOfPayment: (payload: { amount: number; bankName: string; referenceNumber: string; receiptProofUrl?: string; notes?: string }) => Promise<void>;
+  disburseMentorPayout: (mentorId: string, amount: number, reason?: string) => Promise<void>;
+  
+  // Attendance, Reports & Graduation Gatekeeping
+  markSessionAttendance: (sessionId: string, status: 'Attended' | 'Absent', hoursCredited?: number) => Promise<void>;
+  submitStudentPerformanceReport: (report: Omit<StudentPerformanceReport, 'id' | 'reportCode' | 'submittedAt'>) => Promise<void>;
+  updateReportFollowUpStatus: (reportId: string, status: 'Pending Review' | 'In Progress' | 'Resolved', notes?: string) => Promise<void>;
+  issueCertificate: (studentId: string) => Promise<{ success: boolean; certificateNumber?: string; message?: string }>;
+  calculatePerformanceTier: (score: number) => 'Exceeding' | 'On Track' | 'Needs Support' | 'At Risk';
   
   // Auth actions
   login: (role: UserRole, email?: string) => void;
@@ -155,6 +184,9 @@ interface CRMContextType {
   restoreDatabaseBackup: (backupData: any) => Promise<boolean>;
   flushProductionData: () => Promise<void>;
   sendStaffWelcomeEmail: (staffId: string) => Promise<void>;
+
+  // Module feature flag check
+  isModuleEnabled: (module: keyof EnabledModules) => boolean;
 
   // Reset to seed data
   resetAllData: () => void;
@@ -275,6 +307,21 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : initialNotifications;
   });
 
+  const [lmsModules, setLmsModules] = useState<LMSModule[]>(() => {
+    const saved = localStorage.getItem('nexus_clean_prod_lms_modules_v1');
+    return saved ? JSON.parse(saved) : initialLMSModules;
+  });
+
+  const [assignments, setAssignments] = useState<StudentAssignmentSubmission[]>(() => {
+    const saved = localStorage.getItem('nexus_clean_prod_assignments_v1');
+    return saved ? JSON.parse(saved) : initialAssignments;
+  });
+
+  const [studentPerformanceReports, setStudentPerformanceReports] = useState<StudentPerformanceReport[]>(() => {
+    const saved = localStorage.getItem('nexus_clean_prod_student_reports_v1');
+    return saved ? JSON.parse(saved) : initialStudentPerformanceReports;
+  });
+
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isBackendConnected, setIsBackendConnected] = useState<boolean>(false);
 
@@ -306,6 +353,9 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (data.settings) setSettings(data.settings);
         if (data.notifications) setNotifications(data.notifications);
         if (data.staffUsers) setStaffUsers(data.staffUsers);
+        if (data.lmsModules) setLmsModules(data.lmsModules);
+        if (data.assignments) setAssignments(data.assignments);
+        if ((data as any).studentPerformanceReports) setStudentPerformanceReports((data as any).studentPerformanceReports);
         console.log('🚀 Synchronized live data with Express REST backend.');
       } else if (isMounted) {
         setIsBackendConnected(false);
@@ -337,6 +387,24 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings)); }, [settings]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(activityLogs)); }, [activityLogs]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications)); }, [notifications]);
+  useEffect(() => { localStorage.setItem('nexus_clean_prod_lms_modules_v1', JSON.stringify(lmsModules)); }, [lmsModules]);
+  useEffect(() => { localStorage.setItem('nexus_clean_prod_assignments_v1', JSON.stringify(assignments)); }, [assignments]);
+  useEffect(() => { localStorage.setItem('nexus_clean_prod_student_reports_v1', JSON.stringify(studentPerformanceReports)); }, [studentPerformanceReports]);
+
+  // Current active student profile when logged in as a student
+  const currentStudentProfile = useMemo(() => {
+    if (!currentUser) return null;
+    if (currentUser.role === 'student') {
+      const match = students.find(s => 
+        s.id === currentUser.studentId || 
+        s.studentCode === currentUser.studentId || 
+        s.email?.toLowerCase() === currentUser.email?.toLowerCase()
+      );
+      if (match) return match;
+      return students.length > 0 ? students[0] : null;
+    }
+    return null;
+  }, [currentUser, students]);
 
   // Current active clock-in session for currentUser
   const activeAttendanceSession = useMemo(() => {
@@ -394,20 +462,67 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Auth actions
   const login = (role: UserRole, email?: string) => {
-    const defaultEmail = role === 'super_admin' ? 'abiola.adefowope@codelab.institute' : `${role}@codelab.institute`;
-    const matched = staffUsers.find(u => (email && u.email.toLowerCase() === email.toLowerCase()) || u.role === role) || demoUsers.find(u => u.role === role) || {
-      id: `user-${role}`,
-      name: role === 'super_admin' ? 'Abiola Adefowope' : role === 'admissions' ? 'Folake Solanke' : role === 'mentor' ? 'Dr. Arthur Pendelton' : 'Adeyemi Daniels',
-      email: email || defaultEmail,
-      role,
-      roleTitle: role === 'super_admin' ? 'Managing Director & Super Admin' : role === 'admissions' ? 'Head of Admissions' : role === 'mentor' ? 'Principal Faculty Mentor' : 'Chief Financial Officer',
-      mentorId: role === 'mentor' ? 'men-1' : undefined,
-    };
+    let matched: AuthUser | undefined;
+
+    if (email && email.trim()) {
+      const normalized = email.trim().toLowerCase();
+      // 1. Check staffUsers by email
+      matched = staffUsers.find(u => u.email.toLowerCase() === normalized);
+
+      // 2. Check mentors by email
+      if (!matched) {
+        const mentor = mentors.find(m => m.email.toLowerCase() === normalized);
+        if (mentor) {
+          matched = {
+            id: mentor.id,
+            name: mentor.name,
+            email: mentor.email,
+            role: 'mentor',
+            roleTitle: mentor.role || 'Faculty Mentor',
+            mentorId: mentor.id,
+            department: mentor.department,
+          };
+        }
+      }
+
+      // 3. Check students by email
+      if (!matched) {
+        const student = students.find(s => s.email.toLowerCase() === normalized);
+        if (student) {
+          matched = {
+            id: student.id,
+            name: student.name,
+            email: student.email,
+            role: 'student',
+            roleTitle: 'Enrolled Scholar / Student',
+            studentId: student.id,
+          };
+        }
+      }
+
+      // 4. Check demoUsers by email
+      if (!matched) {
+        matched = demoUsers.find(u => u.email.toLowerCase() === normalized);
+      }
+    }
+
+    // If still not matched by email, match by specified role
+    if (!matched) {
+      matched = staffUsers.find(u => u.role === role) || demoUsers.find(u => u.role === role) || {
+        id: `user-${role}`,
+        name: role === 'super_admin' ? 'Abiola Adefowope' : role === 'student' ? 'Enrolled Student' : role === 'admissions' ? 'Admissions Officer' : role === 'mentor' ? 'Faculty Mentor' : 'Finance Officer',
+        email: email || (role === 'super_admin' ? 'abiola.adefowope@codelab.institute' : `${role}@codelab.institute`),
+        role,
+        roleTitle: role === 'super_admin' ? 'Managing Director & Super Admin' : role === 'student' ? 'Enrolled Scholar / Student' : role === 'admissions' ? 'Head of Admissions' : role === 'mentor' ? 'Principal Faculty Mentor' : 'Chief Financial Officer',
+        mentorId: role === 'mentor' ? 'men-1' : undefined,
+      };
+    }
+
     setCurrentUser(matched);
-    showToast('Role Switched', `Logged in as ${matched.name} (${matched.roleTitle}).`, 'info');
+    showToast('Signed In', `Welcome, ${matched.name} (${matched.roleTitle}).`, 'info');
     logActivity({
       title: 'User Authenticated',
-      description: `${matched.name} switched active role to ${matched.roleTitle}.`,
+      description: `${matched.name} signed in as ${matched.roleTitle}.`,
       type: 'system',
       user: matched.name,
     });
@@ -459,6 +574,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       admissions: 'Admissions Officer',
       mentor: 'Faculty Mentor',
       finance: 'Chief Financial Officer / Controller',
+      student: 'Enrolled Scholar / Student',
     };
 
     setStaffUsers(prev => prev.map(u => {
@@ -651,7 +767,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           mentorName: newStudent.mentorName,
           paidAmount: feeAmount,
           balance: 0,
-          portalUrl: 'http://72.61.106.87/login',
+          portalUrl: `http://72.61.106.87/login?role=student&email=${encodeURIComponent(lead.email || '')}`,
         }
       }).catch(err => console.error('Error sending student welcome email:', err));
     }
@@ -702,7 +818,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           mentorName: newStudent.mentorName,
           paidAmount: (newStudent.totalFees || 0) - (newStudent.outstandingBalance || 0),
           balance: newStudent.outstandingBalance || 0,
-          portalUrl: 'http://72.61.106.87/login',
+          portalUrl: `http://72.61.106.87/login?role=student&email=${encodeURIComponent(newStudent.email || '')}`,
         }
       }).catch(err => console.error('Error sending student welcome email:', err));
     }
@@ -863,7 +979,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           courses: Array.isArray(newMentor.courses) ? newMentor.courses.join(', ') : (newMentor.expertise?.join(', ') || 'Academic Track'),
           commissionRate: `${newMentor.commissionRate || 37}% per student enrollment`,
           bankDetails: `${newMentor.bankName || ''} - ${newMentor.accountNumber || ''} (${newMentor.accountName || newMentor.name})`,
-          portalUrl: 'http://72.61.106.87/login',
+          portalUrl: `http://72.61.106.87/login?role=mentor&email=${encodeURIComponent(newMentor.email || '')}`,
         }
       }).catch(err => console.error('Error sending mentor welcome email:', err));
     }
@@ -929,6 +1045,28 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       type: 'finance',
       user: newExpense.requestedBy || currentUser?.name || 'Staff Requester',
     });
+
+    // Automated dispatch to Approver (Super Admin / Finance)
+    emailService.sendEmail({
+      to: settings.email || 'admin@codelab.institute',
+      recipientName: 'Super Admin & Finance Controller',
+      subject: `🔔 OpEx Approval Required: ${newExpense.title} (${formatNaira(newExpense.amount)}) - ${newExpense.department}`,
+      type: 'expense_approval_request',
+      data: {
+        expenseCode: newExpense.expenseCode,
+        title: newExpense.title,
+        amount: newExpense.amount,
+        category: newExpense.category,
+        department: newExpense.department,
+        requestedBy: newExpense.requestedBy,
+        requesterEmail: newExpense.requesterEmail,
+        vendor: newExpense.vendor,
+        urgency: newExpense.urgency,
+        receiptName: newExpense.receiptName,
+        description: newExpense.description,
+        actionUrl: 'http://72.61.106.87/expenses',
+      }
+    }).catch(err => console.error('Error sending expense approval request email:', err));
   };
 
   const updateExpenseStatus = (
@@ -988,6 +1126,23 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       type: 'finance',
       user: reviewer,
     });
+
+    // Dispatch approval confirmation to requester
+    const targetEmail = expense.requesterEmail || currentUser?.email || settings.email || 'admin@codelab.institute';
+    emailService.sendEmail({
+      to: targetEmail,
+      recipientName: expense.requestedBy || 'Staff Requester',
+      subject: `✅ OpEx Request Approved: ${expense.title} (${formatNaira(expense.amount)})`,
+      type: 'expense_approved',
+      data: {
+        expenseCode: expense.expenseCode,
+        title: expense.title,
+        amount: expense.amount,
+        reviewedBy: reviewer,
+        reviewedAt: timestamp,
+        actionUrl: 'http://72.61.106.87/expenses',
+      }
+    }).catch(err => console.error('Error sending expense approved email:', err));
   };
 
   const rejectExpense = (id: string, reason: string) => {
@@ -1024,6 +1179,24 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       type: 'finance',
       user: reviewer,
     });
+
+    // Dispatch decline notification to requester with reason
+    const targetEmail = expense.requesterEmail || currentUser?.email || settings.email || 'admin@codelab.institute';
+    emailService.sendEmail({
+      to: targetEmail,
+      recipientName: expense.requestedBy || 'Staff Requester',
+      subject: `❌ OpEx Request Declined: ${expense.title} (${expense.expenseCode})`,
+      type: 'expense_rejected',
+      data: {
+        expenseCode: expense.expenseCode,
+        title: expense.title,
+        amount: expense.amount,
+        reviewedBy: reviewer,
+        reviewedAt: timestamp,
+        rejectionReason: reason,
+        actionUrl: 'http://72.61.106.87/expenses',
+      }
+    }).catch(err => console.error('Error sending expense rejected email:', err));
   };
 
   // Courses & Cohorts
@@ -1146,6 +1319,44 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       type: 'mentor',
       user: newSession.mentorName,
     });
+
+    // Dispatch calendar confirmations to Mentor and Student
+    const assignedMentor = mentors.find(m => m.id === newSession.mentorId || m.name === newSession.mentorName);
+    const targetStudent = students.find(s => s.id === newSession.studentId || s.name === newSession.studentName);
+
+    if (assignedMentor?.email) {
+      emailService.sendEmail({
+        to: assignedMentor.email,
+        recipientName: assignedMentor.name,
+        subject: `📅 1-on-1 Coaching Session Confirmed with ${newSession.studentName} (${newSession.topic})`,
+        type: 'session_confirmation',
+        data: {
+          mentorName: newSession.mentorName,
+          studentName: newSession.studentName,
+          topic: newSession.topic,
+          durationHours: newSession.durationHours,
+          sessionLocation: 'Google Meet / Lagos Innovation Lab 3',
+          compensationAmount: newSession.compensationAmount,
+        }
+      }).catch(err => console.error('Error sending session confirmation to mentor:', err));
+    }
+
+    if (targetStudent?.email) {
+      emailService.sendEmail({
+        to: targetStudent.email,
+        recipientName: targetStudent.name,
+        subject: `📅 1-on-1 Coaching Session Confirmed with ${newSession.mentorName} (${newSession.topic})`,
+        type: 'session_confirmation',
+        data: {
+          mentorName: newSession.mentorName,
+          studentName: newSession.studentName,
+          topic: newSession.topic,
+          durationHours: newSession.durationHours,
+          sessionLocation: 'Google Meet / Lagos Innovation Lab 3',
+          compensationAmount: newSession.compensationAmount,
+        }
+      }).catch(err => console.error('Error sending session confirmation to student:', err));
+    }
   };
 
   // Staff Attendance & Hybrid Time Tracking
@@ -1330,6 +1541,11 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const isModuleEnabled = (moduleKey: keyof EnabledModules): boolean => {
+    if (!settings.enabledModules) return true;
+    return settings.enabledModules[moduleKey] !== false;
+  };
+
   const exportDatabaseBackup = () => {
     const backupData = {
       version: '3.2',
@@ -1458,7 +1674,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const staff = staffUsers.find(u => u.id === staffId);
     if (!staff) return;
 
-    await apiService.sendStaffWelcome(staff.email, staff.name, staff.roleTitle);
+    await apiService.sendStaffWelcome(staff.email, staff.name, staff.roleTitle, staff.role);
 
     showToast(
       'Welcome Email Sent',
@@ -1485,6 +1701,573 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(defaultAuthUser);
     apiService.resetDatabase();
     showToast('System Reset', 'All records restored to Nigerian demo seed data.', 'warning');
+  };
+
+  // Student & LMS Actions
+  const completeLesson = async (lessonId: string) => {
+    if (!currentStudentProfile) return;
+    const studentId = currentStudentProfile.id;
+
+    setStudents(prev => prev.map(s => {
+      if (s.id !== studentId) return s;
+      const completed = s.completedLessonIds ? [...s.completedLessonIds] : [];
+      if (!completed.includes(lessonId)) completed.push(lessonId);
+      const totalLessons = lmsModules.reduce((acc, m) => acc + (m.lessons?.length || 0), 0) || 1;
+      const progress = Math.min(100, Math.round((completed.length / totalLessons) * 100));
+      return { ...s, completedLessonIds: completed, progressPercent: progress };
+    }));
+
+    showToast('Lesson Completed', 'Great job! Your academic progress has been updated.', 'success');
+
+    if (isBackendConnected) {
+      try {
+        await apiService.completeLesson(lessonId, studentId);
+      } catch (e) {
+        console.warn('Backend complete lesson error:', e);
+      }
+    }
+  };
+
+  const submitAssignment = async (payload: { taskTitle: string; courseTitle?: string; moduleTitle?: string; githubUrl?: string; liveUrl?: string; notes?: string }) => {
+    if (!currentStudentProfile) return;
+
+    const newSub: StudentAssignmentSubmission = {
+      id: `sub-${Date.now()}`,
+      studentId: currentStudentProfile.id,
+      studentName: currentStudentProfile.name,
+      courseTitle: payload.courseTitle || currentStudentProfile.program || 'Full-Stack Software Engineering',
+      moduleTitle: payload.moduleTitle || 'Curriculum Project',
+      taskTitle: payload.taskTitle,
+      githubUrl: payload.githubUrl,
+      liveUrl: payload.liveUrl,
+      notes: payload.notes,
+      submittedAt: new Date().toISOString(),
+      status: 'Pending',
+    };
+
+    setAssignments(prev => [newSub, ...prev]);
+
+    setStudents(prev => prev.map(s => {
+      if (s.id !== currentStudentProfile.id) return s;
+      return {
+        ...s,
+        assignmentSubmissions: [newSub, ...(s.assignmentSubmissions || [])]
+      };
+    }));
+
+    showToast('Assignment Submitted', 'Your lab assignment has been submitted to your assigned mentor for evaluation.', 'success');
+
+    logActivity({
+      title: 'Assignment Submitted',
+      description: `${currentStudentProfile.name} submitted ${payload.taskTitle}`,
+      type: 'student',
+      user: currentStudentProfile.name
+    });
+
+    // Notify assigned mentor via email
+    const assignedMentor = mentors.find(m => m.id === currentStudentProfile.mentorId || m.name === currentStudentProfile.mentorName);
+    if (assignedMentor?.email) {
+      emailService.sendEmail({
+        to: assignedMentor.email,
+        recipientName: assignedMentor.name,
+        subject: `📝 Lab Assignment Submitted: ${currentStudentProfile.name} — ${newSub.taskTitle}`,
+        type: 'lab_assignment_submitted',
+        data: {
+          studentName: currentStudentProfile.name,
+          courseTitle: newSub.courseTitle,
+          moduleTitle: newSub.moduleTitle,
+          taskTitle: newSub.taskTitle,
+          githubUrl: newSub.githubUrl,
+          liveUrl: newSub.liveUrl,
+          notes: newSub.notes,
+          reviewUrl: 'http://72.61.106.87/courses',
+        }
+      }).catch(err => console.error('Error sending assignment submitted email:', err));
+    }
+
+    if (isBackendConnected) {
+      try {
+        await apiService.submitAssignment(newSub);
+      } catch (e) {
+        console.warn('Backend submit assignment error:', e);
+      }
+    }
+  };
+
+  const gradeAssignment = async (id: string, grade: number, mentorFeedback: string, status: 'Passed' | 'Needs Revision' | 'Exceptional' = 'Passed') => {
+    setAssignments(prev => prev.map(a => {
+      if (a.id !== id) return a;
+      return {
+        ...a,
+        grade,
+        mentorFeedback,
+        status,
+        reviewedBy: currentUser?.name || 'Faculty Mentor',
+        reviewedAt: new Date().toISOString(),
+      };
+    }));
+
+    setStudents(prev => prev.map(s => {
+      if (!s.assignmentSubmissions) return s;
+      return {
+        ...s,
+        assignmentSubmissions: s.assignmentSubmissions.map(a => {
+          if (a.id !== id) return a;
+          return {
+            ...a,
+            grade,
+            mentorFeedback,
+            status,
+            reviewedBy: currentUser?.name || 'Faculty Mentor',
+            reviewedAt: new Date().toISOString(),
+          };
+        })
+      };
+    }));
+
+    showToast('Evaluation Recorded', `Assignment marked as ${status} with grade ${grade}%.`, 'success');
+
+    // Notify student via email
+    const targetSub = assignments.find(a => a.id === id);
+    const targetStudent = students.find(s => s.id === targetSub?.studentId);
+    if (targetStudent?.email) {
+      emailService.sendEmail({
+        to: targetStudent.email,
+        recipientName: targetStudent.name,
+        subject: `🎯 Lab Assignment Evaluated: ${targetSub?.taskTitle || 'Lab Assignment'} — Grade: ${grade}% (${status})`,
+        type: 'lab_assignment_graded',
+        data: {
+          taskTitle: targetSub?.taskTitle || 'Lab Assignment',
+          grade,
+          status,
+          reviewedBy: currentUser?.name || 'Faculty Mentor',
+          mentorFeedback,
+          portalUrl: 'http://72.61.106.87/student/courses',
+        }
+      }).catch(err => console.error('Error sending assignment graded email:', err));
+    }
+
+    if (isBackendConnected) {
+      try {
+        await apiService.gradeAssignment(id, {
+          grade,
+          mentorFeedback,
+          status,
+          reviewedBy: currentUser?.name || 'Faculty Mentor',
+        });
+      } catch (e) {
+        console.warn('Backend grade assignment error:', e);
+      }
+    }
+  };
+
+  const payTuitionWithPaystack = async (options: { amountNaira: number; invoiceId?: string }) => {
+    if (!currentStudentProfile) {
+      showToast('Payment Error', 'No active student profile found.', 'error');
+      return;
+    }
+
+    const student = currentStudentProfile;
+    const publicKey = settings.paystackPublicKey || 'pk_test_sample_codelab_educare_key_2026';
+
+    await launchPaystackPayment({
+      publicKey,
+      email: student.email,
+      amountNaira: options.amountNaira,
+      studentId: student.id,
+      invoiceId: options.invoiceId,
+      onSuccess: async (res) => {
+        setStudents(prev => prev.map(s => {
+          if (s.id !== student.id) return s;
+          const newPaid = (s.paidAmount || 0) + res.amountNaira;
+          const newBal = Math.max(0, (s.tuitionAmount || 0) - newPaid);
+          return {
+            ...s,
+            paidAmount: newPaid,
+            outstandingBalance: newBal,
+            tuitionStatus: newBal === 0 ? 'Paid' : 'Partial',
+          };
+        }));
+
+        if (options.invoiceId) {
+          setInvoices(prev => prev.map(inv => {
+            if (inv.id !== options.invoiceId && inv.invoiceNumber !== options.invoiceId) return inv;
+            return { ...inv, status: 'Paid', paidDate: new Date().toISOString() };
+          }));
+        }
+
+        const commission = Math.round(res.amountNaira * 0.37);
+        if (student.mentorId || student.mentorName) {
+          setMentors(prev => prev.map(m => {
+            if (m.id !== student.mentorId && m.name !== student.mentorName) return m;
+            return {
+              ...m,
+              pendingPayout: (m.pendingPayout || 0) + commission,
+              totalEarned: (m.totalEarned || 0) + commission,
+            };
+          }));
+        }
+
+        showToast(
+          'Payment Verified & Recorded!',
+          `₦${res.amountNaira.toLocaleString()} paid via Paystack (Ref: ${res.reference}). 37% mentor commission accrued.`,
+          'success'
+        );
+
+        logActivity({
+          title: `Tuition Payment (₦${res.amountNaira.toLocaleString()})`,
+          description: `Paystack payment verified for ${student.name}. Reference: ${res.reference}`,
+          type: 'finance',
+          user: student.name,
+        });
+
+        // 1. Send Electronic Receipt to Student
+        if (student.email) {
+          emailService.sendEmail({
+            to: student.email,
+            recipientName: student.name,
+            subject: `💳 Payment Receipt & Confirmation: ${student.program || 'Tuition'} (₦${res.amountNaira.toLocaleString()})`,
+            type: 'invoice_receipt',
+            data: {
+              invoiceNumber: options.invoiceId || `INV-PAY-${Date.now().toString().slice(-4)}`,
+              program: student.program,
+              amount: res.amountNaira,
+              status: 'Paid',
+              paymentRef: res.reference,
+              invoiceNote: 'Verified electronic tuition settlement via Paystack payment gateway.',
+            }
+          }).catch(err => console.error('Error sending student tuition receipt email:', err));
+        }
+
+        // 2. Send 37% Commission Accrual Alert to Assigned Mentor
+        const assignedMentor = mentors.find(m => m.id === student.mentorId || m.name === student.mentorName);
+        if (assignedMentor?.email && commission > 0) {
+          emailService.sendEmail({
+            to: assignedMentor.email,
+            recipientName: assignedMentor.name,
+            subject: `🎉 New Commission Credited: 37% Enrollment Revenue Share (₦${commission.toLocaleString()})`,
+            type: 'mentor_commission_earned',
+            data: {
+              studentName: student.name,
+              program: student.program,
+              tuitionPaid: res.amountNaira,
+              commissionAmount: commission,
+              newPendingPayout: (assignedMentor.pendingPayout || 0) + commission,
+              portalUrl: 'http://72.61.106.87/mentors',
+            }
+          }).catch(err => console.error('Error sending mentor commission alert email:', err));
+        }
+
+        // 3. Send Transaction Audit to Finance
+        emailService.sendEmail({
+          to: settings.email || 'admin@codelab.institute',
+          recipientName: 'Bursary & Finance Controller',
+          subject: `💰 Inbound Tuition Settlement: ${student.name} (₦${res.amountNaira.toLocaleString()})`,
+          type: 'tuition_payment_alert',
+          data: {
+            studentName: student.name,
+            studentCode: student.studentCode,
+            program: student.program,
+            amount: res.amountNaira,
+            gateway: 'Paystack Direct Settlement',
+            reference: res.reference,
+            actionUrl: 'http://72.61.106.87/invoices',
+          }
+        }).catch(err => console.error('Error sending finance tuition alert email:', err));
+
+        if (isBackendConnected) {
+          try {
+            await apiService.verifyPaystackPayment(res.reference, student.id, options.invoiceId, res.amountNaira);
+          } catch (e) {
+            console.warn('Backend Paystack verification error:', e);
+          }
+        }
+      },
+      onCancel: () => {
+        showToast('Payment Cancelled', 'Paystack transaction was cancelled.', 'info');
+      }
+    });
+  };
+
+  const submitProofOfPayment = async (payload: { amount: number; bankName: string; referenceNumber: string; receiptProofUrl?: string; notes?: string }) => {
+    if (!currentStudentProfile) return;
+
+    showToast('Proof of Payment Uploaded', 'Your receipt has been submitted to the Bursary for verification.', 'success');
+
+    logActivity({
+      title: 'Manual Payment Proof Uploaded',
+      description: `${currentStudentProfile.name} uploaded proof for ₦${payload.amount.toLocaleString()} via ${payload.bankName}.`,
+      type: 'finance',
+      user: currentStudentProfile.name,
+    });
+
+    // Notify Bursary & Super Admin of offline transfer verification request
+    emailService.sendEmail({
+      to: settings.email || 'admin@codelab.institute',
+      recipientName: 'Bursary & Super Admin',
+      subject: `📋 Bank Transfer POP Verification Required: ${currentStudentProfile.name} (₦${payload.amount.toLocaleString()})`,
+      type: 'proof_of_payment_alert',
+      data: {
+        studentName: currentStudentProfile.name,
+        studentCode: currentStudentProfile.studentCode,
+        amount: payload.amount,
+        bankRef: payload.referenceNumber,
+        fileName: payload.receiptProofUrl || 'bank_transfer_slip.jpg',
+        actionUrl: 'http://72.61.106.87/invoices',
+      }
+    }).catch(err => console.error('Error sending POP alert email:', err));
+
+    if (isBackendConnected) {
+      try {
+        await apiService.submitProofOfPayment(currentStudentProfile.id, payload);
+      } catch (e) {
+        console.warn('Backend proof error:', e);
+      }
+    }
+  };
+
+  const disburseMentorPayout = async (mentorId: string, amount: number, reason?: string) => {
+    const mentor = mentors.find(m => m.id === mentorId);
+    if (!mentor) return;
+
+    setMentors(prev => prev.map(m => {
+      if (m.id !== mentorId) return m;
+      return {
+        ...m,
+        pendingPayout: Math.max(0, (m.pendingPayout || 0) - amount),
+        paidPayout: (m.paidPayout || 0) + amount,
+      };
+    }));
+
+    showToast('Disbursement Processed', `₦${amount.toLocaleString()} sent to ${mentor.name}'s verified ${mentor.bankName} account via Paystack!`, 'success');
+
+    logActivity({
+      title: `Mentor Disbursement Processed`,
+      description: `₦${amount.toLocaleString()} disbursed to ${mentor.name} (${mentor.bankName} - ${mentor.accountNumber}) via Paystack.`,
+      type: 'mentor',
+      user: currentUser?.name || 'Bursary',
+    });
+
+    // Dispatch Credit Advice Email to Mentor
+    if (mentor.email) {
+      emailService.sendEmail({
+        to: mentor.email,
+        recipientName: mentor.name,
+        subject: `💸 Faculty Honorarium Disbursed: ₦${amount.toLocaleString()} [${mentor.bankName || 'NIBSS Settlement'}]`,
+        type: 'mentor_payout_disbursed',
+        data: {
+          amount,
+          bankName: mentor.bankName,
+          accountNumber: mentor.accountNumber,
+          transferRef: `TRF-NIBSS-${Date.now().toString().slice(-6)}`,
+          portalUrl: 'http://72.61.106.87/mentors',
+        }
+      }).catch(err => console.error('Error sending mentor payout credit advice email:', err));
+    }
+
+    if (isBackendConnected) {
+      try {
+        await apiService.disburseMentorPayout(mentorId, amount, reason);
+      } catch (e) {
+        console.warn('Backend disburse error:', e);
+      }
+    }
+  };
+
+  const calculatePerformanceTier = (score: number): 'Exceeding' | 'On Track' | 'Needs Support' | 'At Risk' => {
+    if (score >= 90) return 'Exceeding';
+    if (score >= 75) return 'On Track';
+    if (score >= 60) return 'Needs Support';
+    return 'At Risk';
+  };
+
+  const markSessionAttendance = async (sessionId: string, status: 'Attended' | 'Absent', hoursCredited?: number) => {
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    const hours = Number(hoursCredited ?? session.durationHours ?? 2);
+    const prevStatus = session.studentAttendance;
+
+    setSessions(prev => prev.map(s => {
+      if (s.id !== sessionId) return s;
+      return {
+        ...s,
+        studentAttendance: status,
+        attendanceMarkedAt: new Date().toISOString(),
+        attendanceMarkedBy: currentUser?.name || 'Faculty Mentor',
+        hoursCredited: hours
+      };
+    }));
+
+    // Update student hours
+    setStudents(prev => prev.map(st => {
+      if (st.id === session.studentId || st.name === session.studentName) {
+        let currentHours = st.attendedLearningHours || 0;
+        if (status === 'Attended' && prevStatus !== 'Attended') {
+          currentHours += hours;
+        } else if (status === 'Absent' && prevStatus === 'Attended') {
+          currentHours = Math.max(0, currentHours - hours);
+        }
+        return {
+          ...st,
+          attendedLearningHours: currentHours
+        };
+      }
+      return st;
+    }));
+
+    showToast(
+      'Attendance Marked',
+      `Marked ${session.studentName} as ${status} (${hours} learning hours credited).`,
+      status === 'Attended' ? 'success' : 'info'
+    );
+
+    logActivity({
+      title: `Session Attendance: ${status}`,
+      description: `${currentUser?.name || 'Mentor'} marked ${session.studentName} as ${status} for "${session.topic}".`,
+      type: 'mentor',
+      user: currentUser?.name || 'Mentor'
+    });
+
+    if (isBackendConnected) {
+      try {
+        await apiService.markSessionAttendance(sessionId, {
+          status,
+          hoursCredited: hours,
+          markedBy: currentUser?.name || 'Faculty Mentor'
+        });
+      } catch (e) {
+        console.warn('Backend attendance error:', e);
+      }
+    }
+  };
+
+  const submitStudentPerformanceReport = async (reportData: Omit<StudentPerformanceReport, 'id' | 'reportCode' | 'submittedAt'>) => {
+    const newReport: StudentPerformanceReport = {
+      ...reportData,
+      id: `rep-${Date.now()}`,
+      reportCode: `REP-CDL-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      submittedAt: new Date().toISOString(),
+      managementFollowUpStatus: reportData.managementFollowUpStatus || 'Pending Review'
+    };
+
+    setStudentPerformanceReports(prev => [newReport, ...prev]);
+
+    // Update student score, tier and welfare notes
+    setStudents(prev => prev.map(s => {
+      if (s.id === newReport.studentId || s.name === newReport.studentName) {
+        return {
+          ...s,
+          performanceScore: newReport.performanceScore,
+          performanceTier: newReport.performanceTier,
+          welfareNotes: newReport.welfareObservations
+        };
+      }
+      return s;
+    }));
+
+    showToast(
+      'Performance Evaluation Filed',
+      `Submitted evaluation for ${newReport.studentName} (${newReport.performanceScore}% - ${newReport.performanceTier}). Dispatched to Admissions & Leadership.`,
+      'success'
+    );
+
+    logActivity({
+      title: `Mentor Evaluation: ${newReport.studentName}`,
+      description: `${newReport.mentorName} filed performance report for ${newReport.studentName} (Tier: ${newReport.performanceTier}).`,
+      type: 'mentor',
+      user: newReport.mentorName
+    });
+
+    if (isBackendConnected) {
+      try {
+        await apiService.submitStudentPerformanceReport(newReport);
+      } catch (e) {
+        console.warn('Backend submit report error:', e);
+      }
+    }
+  };
+
+  const updateReportFollowUpStatus = async (reportId: string, status: 'Pending Review' | 'In Progress' | 'Resolved', notes?: string) => {
+    setStudentPerformanceReports(prev => prev.map(r => {
+      if (r.id !== reportId) return r;
+      return {
+        ...r,
+        managementFollowUpStatus: status,
+        managementNotes: notes !== undefined ? notes : r.managementNotes,
+        reviewedBy: currentUser?.name || 'Management',
+        reviewedAt: new Date().toISOString()
+      };
+    }));
+
+    showToast('Report Status Updated', `Evaluation follow-up status updated to "${status}".`, 'info');
+
+    if (isBackendConnected) {
+      try {
+        await apiService.updateReportFollowUpStatus(reportId, {
+          status,
+          managementNotes: notes,
+          reviewedBy: currentUser?.name || 'Management'
+        });
+      } catch (e) {
+        console.warn('Backend update report status error:', e);
+      }
+    }
+  };
+
+  const issueCertificate = async (studentId: string): Promise<{ success: boolean; certificateNumber?: string; message?: string }> => {
+    const student = students.find(s => s.id === studentId || s.studentCode === studentId);
+    if (!student) {
+      showToast('Error', 'Student record not found.', 'error');
+      return { success: false, message: 'Student record not found.' };
+    }
+
+    const minHours = student.minimumRequiredHours || settings.defaultMinimumLearningHours || 40;
+    const attendedHours = student.attendedLearningHours || 0;
+
+    if (attendedHours < minHours) {
+      const remaining = minHours - attendedHours;
+      const msg = `Student has completed ${attendedHours}/${minHours} required learning hours. ${remaining} more session hour(s) required prior to graduation certificate issuance.`;
+      showToast('Graduation Requirement Unmet', msg, 'error');
+      return { success: false, message: msg };
+    }
+
+    if ((student.progressPercent || 0) < 100) {
+      const msg = `Student has only completed ${student.progressPercent || 0}% of curriculum modules. 100% completion required for graduation certificate.`;
+      showToast('Curriculum Incomplete', msg, 'error');
+      return { success: false, message: msg };
+    }
+
+    const certNumber = `CERT-CDL-${new Date().getFullYear()}-${student.studentCode?.replace(/\D/g, '') || Math.floor(1000 + Math.random() * 9000)}`;
+
+    setStudents(prev => prev.map(s => {
+      if (s.id !== student.id) return s;
+      return {
+        ...s,
+        certificateIssued: true,
+        certificateNumber: certNumber,
+        certificateIssuedAt: new Date().toISOString()
+      };
+    }));
+
+    showToast('Certificate Issued!', `Official Certificate #${certNumber} generated for ${student.name}.`, 'success');
+
+    logActivity({
+      title: 'Certificate Issued',
+      description: `Official Certificate #${certNumber} issued to ${student.name} (${student.program}).`,
+      type: 'student',
+      user: currentUser?.name || 'Academic Board'
+    });
+
+    if (isBackendConnected) {
+      try {
+        await apiService.issueStudentCertificate(student.id);
+      } catch (e) {
+        console.warn('Backend issue certificate error:', e);
+      }
+    }
+
+    return { success: true, certificateNumber: certNumber };
   };
 
   // KPIs
@@ -1557,6 +2340,21 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         selectedCourseForEditId,
         selectedMentorForEditId,
         kpis,
+        lmsModules,
+        assignments,
+        currentStudentProfile,
+        studentPerformanceReports,
+        completeLesson,
+        submitAssignment,
+        gradeAssignment,
+        payTuitionWithPaystack,
+        submitProofOfPayment,
+        disburseMentorPayout,
+        markSessionAttendance,
+        submitStudentPerformanceReport,
+        updateReportFollowUpStatus,
+        issueCertificate,
+        calculatePerformanceTier,
         openModal,
         closeModal,
         setGlobalSearch,
@@ -1593,6 +2391,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         restoreDatabaseBackup,
         flushProductionData,
         sendStaffWelcomeEmail,
+        isModuleEnabled,
         resetAllData,
       }}
     >

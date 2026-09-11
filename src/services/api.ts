@@ -11,7 +11,10 @@ import {
   NotificationItem,
   AuthUser,
   ExpenseStatus,
-  AttendanceRecord
+  AttendanceRecord,
+  LMSModule,
+  StudentAssignmentSubmission,
+  StudentPerformanceReport
 } from '../types/crm';
 
 const API_BASE_URL = '/api';
@@ -54,6 +57,8 @@ class ApiService {
       notifications: NotificationItem[];
       staffUsers: AuthUser[];
       attendance?: AttendanceRecord[];
+      lmsModules?: LMSModule[];
+      assignments?: StudentAssignmentSubmission[];
     }>('/bootstrap');
   }
 
@@ -300,10 +305,10 @@ class ApiService {
   }
 
   // Staff Welcome Email & Password Setup
-  async sendStaffWelcome(email: string, name: string, roleTitle: string, html?: string) {
+  async sendStaffWelcome(email: string, name: string, roleTitle: string, role?: string, html?: string) {
     return this.request<{ setupUrl: string; previewUrl?: string; isTestAccount: boolean; message: string }>('/auth/send-welcome', {
       method: 'POST',
-      body: JSON.stringify({ email, name, roleTitle, html }),
+      body: JSON.stringify({ email, name, roleTitle, role, html }),
     });
   }
 
@@ -346,6 +351,129 @@ class ApiService {
     }>('/banks/verify-account', {
       method: 'POST',
       body: JSON.stringify(payload),
+    });
+  }
+
+  // LMS Curriculum & Progress
+  async getLMSModules(): Promise<LMSModule[] | null> {
+    return this.request<LMSModule[]>('/lms/modules');
+  }
+
+  async createLMSModule(module: Partial<LMSModule>): Promise<LMSModule | null> {
+    return this.request<LMSModule>('/lms/modules', {
+      method: 'POST',
+      body: JSON.stringify(module),
+    });
+  }
+
+  async completeLesson(lessonId: string, studentId: string) {
+    return this.request<{
+      student: Student;
+      completedLessonIds: string[];
+      progressPercent: number;
+    }>(`/lms/lessons/${lessonId}/complete`, {
+      method: 'POST',
+      body: JSON.stringify({ studentId }),
+    });
+  }
+
+  // LMS Assignments
+  async getAssignments(): Promise<StudentAssignmentSubmission[] | null> {
+    return this.request<StudentAssignmentSubmission[]>('/lms/assignments');
+  }
+
+  async submitAssignment(payload: Partial<StudentAssignmentSubmission>): Promise<StudentAssignmentSubmission | null> {
+    return this.request<StudentAssignmentSubmission>('/lms/assignments/submit', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async gradeAssignment(id: string, payload: { status: string; grade?: number; mentorFeedback?: string; reviewedBy?: string }) {
+    return this.request<StudentAssignmentSubmission>(`/lms/assignments/${id}/grade`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // Student Payment Proof
+  async submitProofOfPayment(studentId: string, payload: { amount: number; bankName: string; referenceNumber: string; receiptProofUrl?: string; notes?: string }) {
+    return this.request(`/students/${studentId}/proof-of-payment`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // Paystack Payment Gateway
+  async initializePaystackPayment(payload: { email: string; amount: number; studentId?: string; invoiceId?: string; callbackUrl?: string; metadata?: any }) {
+    return this.request<{
+      authorization_url?: string;
+      access_code?: string;
+      reference: string;
+    }>('/paystack/initialize', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async verifyPaystackPayment(reference: string, studentId?: string, invoiceId?: string, amount?: number) {
+    const query = new URLSearchParams();
+    if (studentId) query.append('studentId', studentId);
+    if (invoiceId) query.append('invoiceId', invoiceId);
+    if (amount) query.append('amount', amount.toString());
+    const qStr = query.toString() ? `?${query.toString()}` : '';
+
+    return this.request<{
+      reference: string;
+      amountPaidNaira: number;
+      student: Student;
+      invoice: Invoice;
+      commission?: any;
+    }>(`/paystack/verify/${reference}${qStr}`);
+  }
+
+  async disburseMentorPayout(mentorId: string, amount: number, reason?: string) {
+    return this.request<{
+      mentor: Mentor;
+      transferRef: string;
+      disburseAmount: number;
+    }>('/paystack/disburse-mentor', {
+      method: 'POST',
+      body: JSON.stringify({ mentorId, amount, reason }),
+    });
+  }
+
+  // Mentor Session Attendance
+  async markSessionAttendance(sessionId: string, payload: { status: 'Attended' | 'Absent'; hoursCredited?: number; markedBy?: string }) {
+    return this.request<{ session: MentorshipSession; student?: Student }>(`/sessions/${sessionId}/attendance`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // Student Performance & Welfare Reports
+  async getStudentPerformanceReports(): Promise<StudentPerformanceReport[] | null> {
+    return this.request<StudentPerformanceReport[]>('/reports/mentor-student');
+  }
+
+  async submitStudentPerformanceReport(reportData: Partial<StudentPerformanceReport>): Promise<StudentPerformanceReport | null> {
+    return this.request<StudentPerformanceReport>('/reports/mentor-student', {
+      method: 'POST',
+      body: JSON.stringify(reportData),
+    });
+  }
+
+  async updateReportFollowUpStatus(reportId: string, payload: { status: string; managementNotes?: string; reviewedBy?: string }) {
+    return this.request<StudentPerformanceReport>(`/reports/mentor-student/${reportId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // Certificate Issuance
+  async issueStudentCertificate(studentId: string) {
+    return this.request<{ student: Student; certificateNumber: string }>(`/students/${studentId}/issue-certificate`, {
+      method: 'POST',
     });
   }
 }

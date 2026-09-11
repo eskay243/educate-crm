@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { CRMProvider } from './context/CRMContext';
+import { PWAProvider } from './context/PWAContext';
 import { AppLayout } from './components/layout/AppLayout';
 import { LoginPage } from './pages/LoginPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
@@ -13,13 +14,27 @@ import { BusinessExpensesPage } from './pages/BusinessExpensesPage';
 import { CoursesCohortsPage } from './pages/CoursesCohortsPage';
 import { StaffAttendancePage } from './pages/StaffAttendancePage';
 import { SettingsPage } from './pages/SettingsPage';
+import { StudentDashboardPage } from './pages/student/StudentDashboardPage';
+import { StudentCoursesPage } from './pages/student/StudentCoursesPage';
+import { StudentMentorPage } from './pages/student/StudentMentorPage';
+import { StudentBillingPage } from './pages/student/StudentBillingPage';
+import { useCRM } from './context/CRMContext';
 
 import { ToastContainer } from './components/notifications/ToastContainer';
 
+const HomeRoute: React.FC = () => {
+  const { currentUser } = useCRM();
+  if (currentUser?.role === 'student') {
+    return <Navigate to="/student/dashboard" replace />;
+  }
+  return <ExecutiveReportPage />;
+};
+
 export const App: React.FC = () => {
   return (
-    <CRMProvider>
-      <BrowserRouter>
+    <PWAProvider>
+      <CRMProvider>
+        <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -33,13 +48,13 @@ export const App: React.FC = () => {
               </ProtectedRoute>
             }
           >
-            <Route index element={<ExecutiveReportPage />} />
-            <Route path="reports" element={<ExecutiveReportPage />} />
+            <Route index element={<HomeRoute />} />
+            <Route path="reports" element={<HomeRoute />} />
             
             <Route
               path="courses"
               element={
-                <ProtectedRoute allowedRoles={['super_admin', 'admissions']}>
+                <ProtectedRoute allowedRoles={['super_admin', 'admissions']} requiredModule="courses">
                   <CoursesCohortsPage />
                 </ProtectedRoute>
               }
@@ -48,7 +63,7 @@ export const App: React.FC = () => {
             <Route
               path="leads"
               element={
-                <ProtectedRoute allowedRoles={['super_admin', 'admissions']}>
+                <ProtectedRoute allowedRoles={['super_admin', 'admissions']} requiredModule="leads">
                   <LeadManagementPage />
                 </ProtectedRoute>
               }
@@ -57,7 +72,7 @@ export const App: React.FC = () => {
             <Route
               path="students"
               element={
-                <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'mentor', 'finance']}>
+                <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'mentor', 'finance']} requiredModule="students">
                   <StudentEnrollmentPage />
                 </ProtectedRoute>
               }
@@ -66,7 +81,7 @@ export const App: React.FC = () => {
             <Route
               path="mentors"
               element={
-                <ProtectedRoute allowedRoles={['super_admin', 'mentor']}>
+                <ProtectedRoute allowedRoles={['super_admin', 'mentor']} requiredModule="mentors">
                   <MentorManagementPage />
                 </ProtectedRoute>
               }
@@ -75,7 +90,7 @@ export const App: React.FC = () => {
             <Route
               path="attendance"
               element={
-                <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'mentor', 'finance']}>
+                <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'mentor', 'finance']} requiredModule="attendance">
                   <StaffAttendancePage />
                 </ProtectedRoute>
               }
@@ -84,7 +99,7 @@ export const App: React.FC = () => {
             <Route
               path="expenses"
               element={
-                <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'finance']}>
+                <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'finance']} requiredModule="expenses">
                   <BusinessExpensesPage />
                 </ProtectedRoute>
               }
@@ -98,6 +113,40 @@ export const App: React.FC = () => {
                 </ProtectedRoute>
               }
             />
+
+            {/* Student Portal Routes */}
+            <Route
+              path="student/dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['student', 'super_admin']}>
+                  <StudentDashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="student/courses"
+              element={
+                <ProtectedRoute allowedRoles={['student', 'super_admin']} requiredModule="lms">
+                  <StudentCoursesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="student/mentor"
+              element={
+                <ProtectedRoute allowedRoles={['student', 'super_admin']} requiredModule="mentors">
+                  <StudentMentorPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="student/billing"
+              element={
+                <ProtectedRoute allowedRoles={['student', 'super_admin']}>
+                  <StudentBillingPage />
+                </ProtectedRoute>
+              }
+            />
             
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
@@ -105,6 +154,7 @@ export const App: React.FC = () => {
       </BrowserRouter>
       <ToastContainer />
     </CRMProvider>
+    </PWAProvider>
   );
 };
 

@@ -14,7 +14,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   showText = true,
   textColor = 'text-primary',
   subtextColor = 'text-secondary',
-  logoUrl,
+  logoUrl = '/logo.png',
   className = '',
 }) => {
   const [imgError, setImgError] = React.useState(false);

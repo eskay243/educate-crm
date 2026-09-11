@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useCRM, formatNaira } from '../context/CRMContext';
 import { MentorStatus } from '../types/crm';
+import { PerformanceMeter } from '../components/common/PerformanceMeter';
 
 export const MentorManagementPage: React.FC = () => {
   const { 
@@ -8,6 +9,9 @@ export const MentorManagementPage: React.FC = () => {
     sessions, 
     students,
     courses,
+    studentPerformanceReports,
+    markSessionAttendance,
+    updateReportFollowUpStatus,
     updateMentorStatus, 
     openModal, 
     globalSearch, 
@@ -17,7 +21,7 @@ export const MentorManagementPage: React.FC = () => {
     showToast
   } = useCRM();
 
-  const [activeTab, setActiveTab] = useState<'roster' | 'sessions'>('roster');
+  const [activeTab, setActiveTab] = useState<'roster' | 'sessions' | 'reports'>('roster');
   const [tableSearch, setTableSearch] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<string>('All');
 
@@ -81,6 +85,26 @@ export const MentorManagementPage: React.FC = () => {
     });
   }, [accessibleSessions, effectiveSearch]);
 
+  const accessibleReports = useMemo(() => {
+    if (!isMentor) return studentPerformanceReports || [];
+    return (studentPerformanceReports || []).filter(
+      r => r.mentorId === myMentorProfile?.id || r.mentorName === myMentorProfile?.name
+    );
+  }, [studentPerformanceReports, isMentor, myMentorProfile]);
+
+  const filteredReports = useMemo(() => {
+    return accessibleReports.filter((r) => {
+      return (
+        r.reportCode.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
+        r.studentName.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
+        r.mentorName.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
+        r.program.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
+        r.performanceTier.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
+        r.managementFollowUpStatus.toLowerCase().includes(effectiveSearch.toLowerCase())
+      );
+    });
+  }, [accessibleReports, effectiveSearch]);
+
   const departments = ['All', 'Software Engineering', 'Data & AI', 'Design Systems', 'Backend & Cloud', 'Frontend', 'Product'];
 
   // Metrics
@@ -132,6 +156,13 @@ export const MentorManagementPage: React.FC = () => {
           >
             <span className="material-symbols-outlined text-[18px]">calendar_month</span>
             <span>+ Log 1-on-1 Session</span>
+          </button>
+          <button
+            onClick={() => openModal('submit-performance-report')}
+            className="h-10 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-label-md text-label-md font-bold transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[18px]">assessment</span>
+            <span>+ File Evaluation Report</span>
           </button>
           {isSuperAdmin && (
             <button
@@ -218,7 +249,18 @@ export const MentorManagementPage: React.FC = () => {
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">calendar_month</span>
-              <span>{isMentor ? 'My 1-on-1 Sessions Log' : '1-on-1 Mentorship Sessions Log'} ({filteredSessions.length})</span>
+              <span>{isMentor ? 'My 1-on-1 Sessions' : 'Sessions Log'} ({filteredSessions.length})</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('reports')}
+              className={`px-4 py-1.5 rounded text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'reports'
+                  ? 'bg-primary text-on-primary shadow-xs'
+                  : 'text-secondary hover:text-on-surface'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">assessment</span>
+              <span>Student Evaluations &amp; Welfare ({filteredReports.length})</span>
             </button>
           </div>
 
@@ -450,7 +492,7 @@ export const MentorManagementPage: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <table className="w-full text-left border-collapse min-w-[750px] text-xs">
+              <table className="w-full text-left border-collapse min-w-[850px] text-xs">
                 <thead>
                   <tr className="border-b border-outline-variant bg-surface-container-low text-secondary font-label-md">
                     <th className="px-stack-md py-3 font-semibold">Session Code</th>
@@ -459,6 +501,7 @@ export const MentorManagementPage: React.FC = () => {
                     <th className="px-stack-md py-3 font-semibold">Student Mentee</th>
                     <th className="px-stack-md py-3 font-semibold">Topic &amp; Review Focus</th>
                     <th className="px-stack-md py-3 font-semibold">Duration</th>
+                    <th className="px-stack-md py-3 font-semibold">Attendance &amp; Hours</th>
                     <th className="px-stack-md py-3 font-semibold">Compensation Model</th>
                     <th className="px-stack-md py-3 font-semibold">Status</th>
                   </tr>
@@ -489,6 +532,48 @@ export const MentorManagementPage: React.FC = () => {
                       <td className="px-stack-md py-3 font-data-tabular text-xs font-semibold text-primary">
                         {s.durationHours}h
                       </td>
+                      <td className="px-stack-md py-3">
+                        <div className="flex items-center gap-2">
+                          {s.studentAttendance === 'Attended' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                              <span className="material-symbols-outlined text-[13px]">check_circle</span>
+                              <span>Attended (+{s.hoursCredited || s.durationHours}h)</span>
+                            </span>
+                          ) : s.studentAttendance === 'Absent' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/30">
+                              <span className="material-symbols-outlined text-[13px]">cancel</span>
+                              <span>Absent</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                              <span className="material-symbols-outlined text-[13px]">schedule</span>
+                              <span>Pending</span>
+                            </span>
+                          )}
+
+                          {/* Quick Attendance Check/Absent buttons */}
+                          <div className="flex items-center gap-1">
+                            {s.studentAttendance !== 'Attended' && (
+                              <button
+                                onClick={() => markSessionAttendance(s.id, 'Attended', s.durationHours)}
+                                title="Mark Attended & Credit Hours"
+                                className="p-1 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 transition-colors cursor-pointer"
+                              >
+                                <span className="material-symbols-outlined text-[14px]">done</span>
+                              </button>
+                            )}
+                            {s.studentAttendance !== 'Absent' && (
+                              <button
+                                onClick={() => markSessionAttendance(s.id, 'Absent', 0)}
+                                title="Mark Absent"
+                                className="p-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 transition-colors cursor-pointer"
+                              >
+                                <span className="material-symbols-outlined text-[14px]">close</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </td>
                       <td className="px-stack-md py-3 text-xs text-secondary font-medium">
                         <span className="text-[11px] font-bold text-[#166534] bg-[#dcfce7] px-2 py-0.5 rounded">
                           Covered (37% Share)
@@ -498,6 +583,124 @@ export const MentorManagementPage: React.FC = () => {
                         <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-[#dcfce7] text-[#166534] uppercase tracking-wider">
                           {s.status}
                         </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {/* Tab 3: Student Performance & Welfare Reports Ledger */}
+        {activeTab === 'reports' && (
+          <div className="overflow-x-auto">
+            {filteredReports.length === 0 ? (
+              <div className="p-12 text-center flex flex-col items-center justify-center space-y-3">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[28px]">assessment</span>
+                </div>
+                <div className="max-w-sm space-y-1">
+                  <h3 className="font-bold text-sm text-on-surface">No Student Evaluations Filed</h3>
+                  <p className="text-xs text-secondary">
+                    Faculty mentors submit formal student performance evaluations and welfare observations directly to Admissions and Executive Leadership.
+                  </p>
+                </div>
+                <button
+                  onClick={() => openModal('submit-performance-report')}
+                  className="px-4 h-9 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <span className="material-symbols-outlined text-[16px]">add_circle</span>
+                  <span>+ File Student Evaluation</span>
+                </button>
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse min-w-[950px] text-xs">
+                <thead>
+                  <tr className="border-b border-outline-variant bg-surface-container-low text-secondary font-label-md">
+                    <th className="px-stack-md py-3 font-semibold">Report Code</th>
+                    <th className="px-stack-md py-3 font-semibold">Student &amp; Program</th>
+                    <th className="px-stack-md py-3 font-semibold">Faculty Evaluator</th>
+                    <th className="px-stack-md py-3 font-semibold">Performance Meter</th>
+                    <th className="px-stack-md py-3 font-semibold">Attendance &amp; Engagement</th>
+                    <th className="px-stack-md py-3 font-semibold">Welfare Observations</th>
+                    <th className="px-stack-md py-3 font-semibold">Recommendations</th>
+                    <th className="px-stack-md py-3 font-semibold">Management Follow-Up</th>
+                  </tr>
+                </thead>
+                <tbody className="font-data-tabular text-on-surface divide-y divide-outline-variant/60">
+                  {filteredReports.map((r, index) => (
+                    <tr
+                      key={r.id}
+                      className={`hover:bg-surface-bright transition-colors ${index % 2 === 1 ? 'bg-surface-container-low/20' : ''}`}
+                    >
+                      <td className="px-stack-md py-3 font-mono font-bold text-xs text-primary">
+                        <p>{r.reportCode}</p>
+                        <p className="text-[10px] text-secondary font-sans">
+                          {new Date(r.submittedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
+                      </td>
+                      <td className="px-stack-md py-3 text-xs">
+                        <p className="font-bold text-on-surface">{r.studentName}</p>
+                        <p className="text-secondary text-[11px]">{r.program}</p>
+                      </td>
+                      <td className="px-stack-md py-3 text-xs font-semibold text-on-surface">
+                        {r.mentorName}
+                      </td>
+                      <td className="px-stack-md py-3 min-w-[140px]">
+                        <PerformanceMeter score={r.performanceScore} tier={r.performanceTier} size="sm" showBar={true} />
+                      </td>
+                      <td className="px-stack-md py-3 text-xs">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+                          r.attendanceRating === 'Consistent'
+                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                            : r.attendanceRating === 'Irregular'
+                            ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                            : 'bg-rose-500/10 text-rose-700 dark:text-rose-300'
+                        }`}>
+                          {r.attendanceRating}
+                        </span>
+                        <p className="text-secondary text-[11px] mt-0.5 truncate max-w-[120px]" title={r.technicalMasteryNotes}>
+                          {r.technicalMasteryNotes}
+                        </p>
+                      </td>
+                      <td className="px-stack-md py-3 text-xs max-w-xs">
+                        <p className="text-secondary line-clamp-2" title={r.welfareObservations}>
+                          {r.welfareObservations}
+                        </p>
+                      </td>
+                      <td className="px-stack-md py-3 text-xs max-w-xs">
+                        <p className="text-secondary line-clamp-2" title={r.recommendations}>
+                          {r.recommendations}
+                        </p>
+                      </td>
+                      <td className="px-stack-md py-3">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                              r.managementFollowUpStatus === 'Resolved'
+                                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                                : r.managementFollowUpStatus === 'In Progress'
+                                ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/30'
+                                : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                            }`}
+                          >
+                            {r.managementFollowUpStatus}
+                          </span>
+
+                          {(isSuperAdmin || !isMentor) && (
+                            <select
+                              value={r.managementFollowUpStatus}
+                              onChange={(e) => updateReportFollowUpStatus(r.id, e.target.value as any)}
+                              className="text-[11px] h-6 px-1.5 rounded border border-outline-variant bg-surface text-on-surface outline-none cursor-pointer"
+                              title="Update leadership follow-up status"
+                            >
+                              <option value="Pending Review">Pending</option>
+                              <option value="In Progress">In Progress</option>
+                              <option value="Resolved">Resolved</option>
+                            </select>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

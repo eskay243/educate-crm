@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useCRM, formatNaira } from '../context/CRMContext';
+import { PerformanceMeter } from '../components/common/PerformanceMeter';
 
 export interface StudentEnrollmentPageProps {}
 
@@ -11,6 +12,8 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
     setSelectedInvoiceId, 
     setSelectedStudentForAssignmentId, 
     setSelectedMentorForBookingId,
+    studentPerformanceReports,
+    settings,
     openModal,
     currentUser,
     sendPaymentReminder,
@@ -31,6 +34,10 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
     : students;
 
   const currentStudent = displayedStudents.find(s => s.id === selectedStudentId) || displayedStudents[0];
+
+  const studentReports = (studentPerformanceReports || []).filter(
+    r => r.studentId === currentStudent?.id || r.studentName === currentStudent?.name
+  );
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -169,7 +176,42 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
         </div>
 
         {/* Action Buttons: Different for Mentors vs Finance/Admin */}
-        <div className="flex gap-stack-sm flex-wrap">
+        <div className="flex gap-stack-sm flex-wrap items-center">
+          {/* Universal Academic Credentials & Evaluation Actions */}
+          <button
+            onClick={() => {
+              setSelectedStudentId(currentStudent.id);
+              openModal('view-certificate');
+            }}
+            className={`h-10 px-stack-md rounded font-label-md text-label-md font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer ${
+              currentStudent.certificateIssued
+                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                : (currentStudent.attendedLearningHours || 0) >= (currentStudent.minimumRequiredHours || settings.defaultMinimumLearningHours || 40) && (currentStudent.progressPercent || 0) >= 100
+                ? 'bg-primary text-on-primary hover:bg-primary/90'
+                : 'bg-surface-container border border-outline-variant text-secondary hover:text-on-surface'
+            }`}
+            title="View Certificate of Completion & Graduation Gate"
+          >
+            <span className="material-symbols-outlined text-[18px]">
+              {currentStudent.certificateIssued ? 'workspace_premium' : 'verified'}
+            </span>
+            <span>
+              {currentStudent.certificateIssued ? 'View Certificate' : 'Graduation & Certificate'}
+            </span>
+          </button>
+
+          <button
+            onClick={() => {
+              setSelectedStudentId(currentStudent.id);
+              openModal('submit-performance-report');
+            }}
+            className="h-10 px-stack-md bg-secondary-container text-primary rounded font-label-md text-label-md font-bold hover:bg-surface-container-high transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+            title="File Student Performance & Welfare Evaluation"
+          >
+            <span className="material-symbols-outlined text-[18px]">assessment</span>
+            <span>Evaluate Student</span>
+          </button>
+
           {/* Mentor Actions */}
           {isMentor ? (
             <button 
@@ -251,65 +293,101 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
         {/* Left Column: 8 cols */}
         <div className="lg:col-span-8 flex flex-col gap-gutter">
-          {/* Quick Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-stack-md">
-            <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md shadow-xs">
+          {/* Quick Stats Cards (Grid of 4) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-stack-md">
+            <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md shadow-xs flex flex-col justify-between">
               <div className="text-secondary font-body-sm text-body-sm mb-1 flex items-center gap-unit">
                 <span className="material-symbols-outlined text-[16px]">school</span>
                 <span>Enrolled Track</span>
               </div>
-              <div className="font-headline-md text-base font-bold text-on-surface truncate">
-                {currentStudent.program || 'Software Engineering'}
+              <div>
+                <div className="font-headline-md text-sm font-bold text-on-surface truncate">
+                  {currentStudent.program || 'Software Engineering'}
+                </div>
+                <p className="text-[11px] text-secondary mt-0.5">
+                  Curriculum: <strong className="text-primary">{currentStudent.progressPercent || 0}% Completed</strong>
+                </p>
               </div>
             </div>
 
-            {/* Financial Stats Hidden for Mentors */}
+            {/* Performance Meter Card */}
+            <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md shadow-xs flex flex-col justify-between">
+              <div className="text-secondary font-body-sm text-body-sm mb-1 flex items-center justify-between">
+                <span className="flex items-center gap-unit">
+                  <span className="material-symbols-outlined text-[16px]">speed</span>
+                  <span>Performance Meter</span>
+                </span>
+                <span className="text-[10px] text-secondary font-mono">0–100%</span>
+              </div>
+              <PerformanceMeter
+                score={currentStudent.performanceScore ?? 85}
+                tier={currentStudent.performanceTier ?? 'On Track'}
+                size="md"
+                showBar={true}
+              />
+            </div>
+
+            {/* Attended Learning Hours Card */}
+            <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md shadow-xs flex flex-col justify-between">
+              <div className="text-secondary font-body-sm text-body-sm mb-1 flex items-center justify-between">
+                <span className="flex items-center gap-unit">
+                  <span className="material-symbols-outlined text-[16px]">timer</span>
+                  <span>Learning Hours</span>
+                </span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                  (currentStudent.attendedLearningHours || 0) >= (currentStudent.minimumRequiredHours || settings.defaultMinimumLearningHours || 40)
+                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                }`}>
+                  {(currentStudent.attendedLearningHours || 0) >= (currentStudent.minimumRequiredHours || settings.defaultMinimumLearningHours || 40) ? 'Eligible' : 'Hours Needed'}
+                </span>
+              </div>
+              <div>
+                <div className="font-display text-display font-bold text-on-surface">
+                  {currentStudent.attendedLearningHours || 0} <span className="text-xs text-secondary font-normal font-sans">/ {currentStudent.minimumRequiredHours || settings.defaultMinimumLearningHours || 40}h</span>
+                </div>
+                <div className="w-full bg-surface-container-high rounded-full h-1.5 mt-1.5 overflow-hidden">
+                  <div
+                    className="bg-primary h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${Math.min(100, Math.round(((currentStudent.attendedLearningHours || 0) / (currentStudent.minimumRequiredHours || settings.defaultMinimumLearningHours || 40)) * 100))}%`
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Financial Stats or Mentorship Status */}
             {!isMentor ? (
-              <>
-                <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md shadow-xs">
-                  <div className="text-secondary font-body-sm text-body-sm mb-1 flex items-center gap-unit">
-                    <span className="material-symbols-outlined text-[16px]">account_balance_wallet</span>
-                    <span>Total Fees (₦)</span>
-                  </div>
+              <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md relative overflow-hidden shadow-xs flex flex-col justify-between">
+                <div className="text-secondary font-body-sm text-body-sm mb-1 flex items-center gap-unit">
+                  <span className="material-symbols-outlined text-[16px]">account_balance_wallet</span>
+                  <span>Tuition Settlement</span>
+                </div>
+                <div>
                   <div className="font-display text-display font-bold text-on-surface">
                     {formatNaira(currentStudent.totalFees || 0)}
                   </div>
+                  <p className={`text-[11px] font-bold mt-0.5 ${currentStudent.outstandingBalance ? 'text-error' : 'text-emerald-600'}`}>
+                    {currentStudent.outstandingBalance ? `₦${Number(currentStudent.outstandingBalance).toLocaleString()} Due` : 'Fully Settled'}
+                  </p>
                 </div>
-
-                <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md relative overflow-hidden shadow-xs">
-                  <div className="absolute right-0 top-0 w-16 h-16 bg-error-container rounded-bl-full opacity-50"></div>
-                  <div className="text-secondary font-body-sm text-body-sm mb-1 flex items-center gap-unit">
-                    <span className="material-symbols-outlined text-[16px]">warning</span>
-                    <span>Outstanding Balance (₦)</span>
-                  </div>
-                  <div className="font-display text-display font-bold text-error">
-                    {formatNaira(currentStudent.outstandingBalance || 0)}
-                  </div>
-                </div>
-              </>
+              </div>
             ) : (
-              <>
-                {/* Academic Progression Stats for Mentors */}
-                <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md shadow-xs">
-                  <div className="text-secondary font-body-sm text-body-sm mb-1 flex items-center gap-unit">
-                    <span className="material-symbols-outlined text-[16px]">trending_up</span>
-                    <span>Curriculum Progress</span>
-                  </div>
-                  <div className="font-display text-display font-bold text-primary">
-                    78% Completed
-                  </div>
+              <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md shadow-xs flex flex-col justify-between">
+                <div className="text-secondary font-body-sm text-body-sm mb-1 flex items-center gap-unit">
+                  <span className="material-symbols-outlined text-[16px]">workspace_premium</span>
+                  <span>Graduation Status</span>
                 </div>
-
-                <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md shadow-xs">
-                  <div className="text-secondary font-body-sm text-body-sm mb-1 flex items-center gap-unit">
-                    <span className="material-symbols-outlined text-[16px]">event_available</span>
-                    <span>Coaching Hours</span>
+                <div>
+                  <div className={`font-bold text-sm ${currentStudent.certificateIssued ? 'text-emerald-600' : 'text-primary'}`}>
+                    {currentStudent.certificateIssued ? 'Certificate Conferred' : (currentStudent.attendedLearningHours || 0) >= 40 && (currentStudent.progressPercent || 0) >= 100 ? 'Eligible to Graduate' : 'Curriculum in Progress'}
                   </div>
-                  <div className="font-display text-display font-bold text-on-surface">
-                    6.5 hrs Logged
-                  </div>
+                  <p className="text-[11px] text-secondary mt-0.5">
+                    {currentStudent.certificateNumber || 'Awaiting Gate Clearance'}
+                  </p>
                 </div>
-              </>
+              </div>
             )}
           </div>
 
@@ -455,6 +533,53 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                 <p className="text-on-surface font-semibold">{currentStudent.cohort || 'Cohort In Progress'}</p>
               </div>
             </div>
+          </div>
+
+          {/* Student Welfare & Mentor Evaluations */}
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md shadow-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-headline-md text-sm font-bold text-on-surface flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-primary text-[18px]">psychology</span>
+                <span>Faculty Welfare &amp; Evaluations</span>
+              </h3>
+              <button
+                onClick={() => {
+                  setSelectedStudentId(currentStudent.id);
+                  openModal('submit-performance-report');
+                }}
+                className="text-primary hover:underline text-xs font-bold cursor-pointer"
+              >
+                + Evaluate
+              </button>
+            </div>
+
+            {studentReports.length === 0 ? (
+              <div className="p-3.5 rounded-lg bg-surface border border-outline-variant text-center text-xs text-secondary">
+                No mentor evaluations filed yet.
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {studentReports.map(rep => (
+                  <div key={rep.id} className="p-3 rounded-lg bg-surface border border-outline-variant space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-on-surface">{rep.mentorName}</span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                        rep.managementFollowUpStatus === 'Resolved' ? 'bg-emerald-500/10 text-emerald-700' : 'bg-amber-500/10 text-amber-700'
+                      }`}>
+                        {rep.managementFollowUpStatus}
+                      </span>
+                    </div>
+                    <PerformanceMeter score={rep.performanceScore} tier={rep.performanceTier} size="sm" showBar={false} />
+                    <p className="text-secondary line-clamp-2">
+                      <strong className="text-on-surface">Welfare:</strong> {rep.welfareObservations}
+                    </p>
+                    <p className="text-secondary line-clamp-2">
+                      <strong className="text-on-surface">Recommendation:</strong> {rep.recommendations}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Payment Proof Upload (Hidden for Mentors) */}

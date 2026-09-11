@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useCRM } from '../../context/CRMContext';
-import { WorkMode, GeoVerificationStatus } from '../../types/crm';
+import { WorkMode, GeoVerificationStatus, CampusLocation } from '../../types/crm';
 import { getDeviceCoordinates, calculateDistanceMeters } from '../../utils/geo';
+import { initialCampuses } from '../../data/mockData';
 
 export interface ClockInModalProps {
   isOpen: boolean;
@@ -19,7 +20,16 @@ const COMMON_CHORES = [
 export const ClockInModal: React.FC<ClockInModalProps> = ({ isOpen, onClose }) => {
   const { currentUser, clockIn, settings } = useCRM();
 
+  const activeCampuses: CampusLocation[] = (
+    settings.campusLocationsList && settings.campusLocationsList.length > 0
+      ? settings.campusLocationsList.filter(c => c.isActive)
+      : initialCampuses.filter(c => c.isActive)
+  );
+
   const [workMode, setWorkMode] = useState<WorkMode>('On-Site / Hub');
+  const [selectedCampusId, setSelectedCampusId] = useState<string>(
+    activeCampuses[0]?.id || 'campus-vi'
+  );
   const [locationName, setLocationName] = useState('');
   const [dailyTasksFocus, setDailyTasksFocus] = useState('');
   const [isLocating, setIsLocating] = useState(false);
@@ -29,17 +39,74 @@ export const ClockInModal: React.FC<ClockInModalProps> = ({ isOpen, onClose }) =
   const [geoMessage, setGeoMessage] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const office = settings.officeLocation || {
-    name: 'Lagos Headquarters Hub (Yaba, Lagos)',
-    latitude: 6.5181,
-    longitude: 3.3768,
-    radiusMeters: 400,
-  };
-
   const policy = settings.workHoursPolicy || {
     expectedClockInTime: '09:00',
     expectedClockOutTime: '17:00',
     gracePeriodMinutes: 15,
+  };
+
+  const evaluateCampusDistances = (lat: number, lng: number, forcedCampusId?: string) => {
+    if (activeCampuses.length === 0) {
+      setGeoStatus('GPS Unavailable');
+      setGeoMessage('No active institutional campuses configured.');
+      return;
+    }
+
+    const distances = activeCampuses.map(campus => {
+      const dist = calculateDistanceMeters(lat, lng, campus.latitude, campus.longitude);
+      return { campus, dist: Math.round(dist) };
+    });
+
+    if (forcedCampusId) {
+      const target = distances.find(d => d.campus.id === forcedCampusId) || distances[0];
+      const { campus, dist } = target;
+      setSelectedCampusId(campus.id);
+      setLocationName(campus.name);
+      setDistanceMeters(dist);
+      if (dist <= campus.radiusMeters) {
+        setGeoStatus('Verified On-Site');
+        setGeoMessage(`GPS Match Verified: You are ${dist}m from ${campus.name} (within ${campus.radiusMeters}m perimeter).`);
+      } else {
+        setGeoStatus('Location Mismatch');
+        const distKm = (dist / 1000).toFixed(1);
+        setGeoMessage(`Location Warning: Device is ${distKm}km from ${campus.name} (exceeds ${campus.radiusMeters}m perimeter). Shift will be flagged.`);
+      }
+      return;
+    }
+
+    // Auto-detect: check if within perimeter of ANY campus
+    const withinPerimeter = distances.find(d => d.dist <= d.campus.radiusMeters);
+    if (withinPerimeter) {
+      const { campus, dist } = withinPerimeter;
+      setSelectedCampusId(campus.id);
+      setLocationName(campus.name);
+      setDistanceMeters(dist);
+      setGeoStatus('Verified On-Site');
+      setGeoMessage(`GPS Match Verified: You are ${dist}m from ${campus.name} (within ${campus.radiusMeters}m perimeter).`);
+    } else {
+      // Pick closest campus
+      distances.sort((a, b) => a.dist - b.dist);
+      const closest = distances[0];
+      if (closest) {
+        setSelectedCampusId(closest.campus.id);
+        setLocationName(closest.campus.name);
+        setDistanceMeters(closest.dist);
+        setGeoStatus('Location Mismatch');
+        const distKm = (closest.dist / 1000).toFixed(1);
+        setGeoMessage(`Location Warning: Device is ${distKm}km from closest hub (${closest.campus.name}). Exceeds ${closest.campus.radiusMeters}m perimeter. Shift will be flagged.`);
+      }
+    }
+  };
+
+  const handleSelectCampus = (campusId: string) => {
+    setSelectedCampusId(campusId);
+    const chosen = activeCampuses.find(c => c.id === campusId);
+    if (chosen) {
+      setLocationName(chosen.name);
+      if (coords.lat !== undefined && coords.lng !== undefined) {
+        evaluateCampusDistances(coords.lat, coords.lng, campusId);
+      }
+    }
   };
 
   // Initialize or fetch GPS when modal opens or workMode switches
@@ -54,7 +121,10 @@ export const ClockInModal: React.FC<ClockInModalProps> = ({ isOpen, onClose }) =
       return;
     }
 
-    setLocationName(office.name);
+    const defaultCampus = activeCampuses.find(c => c.id === selectedCampusId) || activeCampuses[0];
+    if (defaultCampus) {
+      setLocationName(defaultCampus.name);
+    }
 
     const checkLocation = async () => {
       setIsLocating(true);
@@ -62,24 +132,7 @@ export const ClockInModal: React.FC<ClockInModalProps> = ({ isOpen, onClose }) =
       try {
         const deviceCoords = await getDeviceCoordinates();
         setCoords({ lat: deviceCoords.latitude, lng: deviceCoords.longitude });
-
-        const dist = calculateDistanceMeters(
-          deviceCoords.latitude,
-          deviceCoords.longitude,
-          office.latitude,
-          office.longitude
-        );
-        const roundedDist = Math.round(dist);
-        setDistanceMeters(roundedDist);
-
-        if (roundedDist <= office.radiusMeters) {
-          setGeoStatus('Verified On-Site');
-          setGeoMessage(`GPS Match Verified: You are ${roundedDist}m from ${office.name} (within ${office.radiusMeters}m perimeter).`);
-        } else {
-          setGeoStatus('Location Mismatch');
-          const distKm = (roundedDist / 1000).toFixed(1);
-          setGeoMessage(`Location Warning: Device is ${distKm}km away from ${office.name} (exceeds ${office.radiusMeters}m perimeter). Shift will be flagged.`);
-        }
+        evaluateCampusDistances(deviceCoords.latitude, deviceCoords.longitude);
       } catch {
         setGeoStatus('GPS Unavailable');
         setGeoMessage('Unable to access device GPS (permission denied or network restricted). Hub location recorded as reported.');
@@ -89,7 +142,7 @@ export const ClockInModal: React.FC<ClockInModalProps> = ({ isOpen, onClose }) =
     };
 
     checkLocation();
-  }, [isOpen, workMode, office]);
+  }, [isOpen, workMode]);
 
   if (!isOpen) return null;
 
@@ -229,44 +282,91 @@ export const ClockInModal: React.FC<ClockInModalProps> = ({ isOpen, onClose }) =
           </div>
 
           {/* Location & GPS Status Banner */}
-          <div className="p-3.5 rounded-lg border border-outline-variant bg-surface-container-lowest space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-secondary flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[16px]">pin_drop</span>
-                Station Location:
-              </span>
-              <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${
-                geoStatus === 'Verified On-Site' || geoStatus === 'Remote Verified'
-                  ? 'bg-[#dcfce7] text-[#166534]'
-                  : geoStatus === 'Location Mismatch'
-                  ? 'bg-[#fef3c7] text-[#92400e]'
-                  : 'bg-surface-container text-secondary'
-              }`}>
-                {isLocating ? 'Acquiring GPS...' : geoStatus}
-              </span>
-            </div>
+          {(() => {
+            const currentCampus = activeCampuses.find(c => c.id === selectedCampusId) || activeCampuses[0];
+            return (
+              <div className="p-3.5 rounded-lg border border-outline-variant bg-surface-container-lowest space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-secondary flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px]">pin_drop</span>
+                    {workMode === 'On-Site / Hub' ? 'Assigned Campus Hub & Workstation:' : 'Remote Workstation:'}
+                  </span>
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${
+                    geoStatus === 'Verified On-Site' || geoStatus === 'Remote Verified'
+                      ? 'bg-[#dcfce7] text-[#166534]'
+                      : geoStatus === 'Location Mismatch'
+                      ? 'bg-[#fef3c7] text-[#92400e]'
+                      : 'bg-surface-container text-secondary'
+                  }`}>
+                    {isLocating ? 'Acquiring GPS...' : geoStatus}
+                  </span>
+                </div>
 
-            <input
-              type="text"
-              value={locationName}
-              onChange={e => setLocationName(e.target.value)}
-              placeholder="e.g. Lagos Hub - 3rd Floor"
-              className="w-full h-9 px-3 bg-surface border border-outline-variant rounded font-body-md text-xs text-on-surface focus:border-primary outline-none"
-            />
+                {workMode === 'On-Site / Hub' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-secondary mb-1">
+                        Campus Facility Hub
+                      </label>
+                      <select
+                        value={selectedCampusId}
+                        onChange={e => handleSelectCampus(e.target.value)}
+                        className="w-full h-9 px-2.5 bg-surface border border-outline-variant rounded font-body-md text-xs font-semibold text-on-surface focus:border-primary outline-none cursor-pointer"
+                      >
+                        {activeCampuses.map(c => (
+                          <option key={c.id} value={c.id}>
+                            {c.name} ({c.city} - {c.code})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-secondary mb-1">
+                        Desk / Office / Lab Specification
+                      </label>
+                      <input
+                        type="text"
+                        value={locationName}
+                        onChange={e => setLocationName(e.target.value)}
+                        placeholder="e.g. 2nd Floor Executive Suite"
+                        className="w-full h-9 px-3 bg-surface border border-outline-variant rounded font-body-md text-xs text-on-surface focus:border-primary outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
 
-            <p className="text-[11px] text-secondary flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[14px]">
-                {geoStatus === 'Verified On-Site' ? 'check_circle' : geoStatus === 'Location Mismatch' ? 'warning' : 'info'}
-              </span>
-              <span>{geoMessage}</span>
-            </p>
+                {workMode === 'Remote' && (
+                  <input
+                    type="text"
+                    value={locationName}
+                    onChange={e => setLocationName(e.target.value)}
+                    placeholder="e.g. Home Office / Remote Workstation"
+                    className="w-full h-9 px-3 bg-surface border border-outline-variant rounded font-body-md text-xs text-on-surface focus:border-primary outline-none"
+                  />
+                )}
 
-            {distanceMeters !== null && (
-              <p className="text-[10px] text-secondary font-data-tabular">
-                Registered Hub: {office.name} ({office.latitude.toFixed(4)}, {office.longitude.toFixed(4)}) • Perimeter: {office.radiusMeters}m
-              </p>
-            )}
-          </div>
+                <p className="text-[11px] text-secondary flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[14px]">
+                    {geoStatus === 'Verified On-Site' ? 'check_circle' : geoStatus === 'Location Mismatch' ? 'warning' : 'info'}
+                  </span>
+                  <span>{geoMessage}</span>
+                </p>
+
+                {workMode === 'On-Site / Hub' && currentCampus && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-outline-variant/60 text-[10px] text-secondary font-data-tabular">
+                    <span>
+                      Hub: <strong>{currentCampus.name}</strong> ({currentCampus.code}) • Perimeter: <strong>{currentCampus.radiusMeters}m</strong>
+                    </span>
+                    {distanceMeters !== null && (
+                      <span className={distanceMeters <= currentCampus.radiusMeters ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'}>
+                        Live Distance: {distanceMeters}m {distanceMeters <= currentCampus.radiusMeters ? '(Inside Perimeter ✓)' : '(Outside Perimeter ⚠️)'}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Daily Office Chores & Focus */}
           <div className="space-y-2">

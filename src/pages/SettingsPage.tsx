@@ -1,10 +1,13 @@
 import React, { useState, useRef } from 'react';
 import { useCRM } from '../context/CRMContext';
-import { UserRole } from '../types/crm';
+import { UserRole, EnabledModules, CampusLocation } from '../types/crm';
 import { emailService, EmailTemplatePayload, EmailDispatchLog } from '../services/emailService';
 import { apiService } from '../services/api';
 import { NIGERIAN_BANKS } from '../data/nigerianBanks';
 import { BrandLogo } from '../components/common/BrandLogo';
+import { initialCampuses } from '../data/mockData';
+import { getDeviceCoordinates } from '../utils/geo';
+import { usePWA } from '../context/PWAContext';
 
 export const SettingsPage: React.FC = () => {
   const { 
@@ -24,7 +27,18 @@ export const SettingsPage: React.FC = () => {
     showToast
   } = useCRM();
 
-  const [activeTab, setActiveTab] = useState<'general' | 'staff' | 'emailing' | 'backups'>('general');
+  const {
+    isStandalone,
+    isInstallable,
+    isIOS,
+    isAndroid,
+    isOnline,
+    promptInstall,
+    setShowIOSInstallGuide,
+    clearCacheAndReload,
+  } = usePWA();
+
+  const [activeTab, setActiveTab] = useState<'general' | 'modules' | 'staff' | 'emailing' | 'backups'>('general');
 
   // Form states for institutional profile
   const [instituteName, setInstituteName] = useState(settings.instituteName);
@@ -36,6 +50,37 @@ export const SettingsPage: React.FC = () => {
   const [bankName, setBankName] = useState(settings.defaultNIBSSBank.bankName);
   const [accountNumber, setAccountNumber] = useState(settings.defaultNIBSSBank.accountNumber);
   const [accountName, setAccountName] = useState(settings.defaultNIBSSBank.accountName);
+  const [paystackPublicKey, setPaystackPublicKey] = useState(settings.paystackPublicKey || 'pk_test_cd572a18dd78ed5493d15433b0e1f3c2057fce2a');
+  const [paystackSecretKey, setPaystackSecretKey] = useState(settings.paystackSecretKey || 'sk_test_5a3331f29eadb22de95a766cdd1dc432e186ab7f');
+  const [paystackLiveMode, setPaystackLiveMode] = useState(settings.paystackLiveMode || false);
+  const [showPaystackSecret, setShowPaystackSecret] = useState(false);
+  const [testingPaystack, setTestingPaystack] = useState(false);
+  const [paystackTestResult, setPaystackTestResult] = useState<{ success: boolean; message: string; banksCount?: number; isLive?: boolean } | null>(null);
+
+  // Academic Gatekeeping & Multi-Campus Geofencing State
+  const [defaultMinimumLearningHours, setDefaultMinimumLearningHours] = useState<number>(
+    settings.defaultMinimumLearningHours || 40
+  );
+  const [campusLocationsList, setCampusLocationsList] = useState<CampusLocation[]>(
+    settings.campusLocationsList && settings.campusLocationsList.length > 0
+      ? settings.campusLocationsList
+      : initialCampuses
+  );
+  const [capturingGpsForCampus, setCapturingGpsForCampus] = useState<string | null>(null);
+
+  // Module enablement feature flags
+  const [enabledModules, setEnabledModules] = useState<EnabledModules>(
+    settings.enabledModules || {
+      lms: true,
+      leads: true,
+      courses: true,
+      students: true,
+      mentors: true,
+      attendance: true,
+      expenses: true,
+    }
+  );
+
   const [logoUrl, setLogoUrl] = useState(settings.logoUrl || '');
   const logoFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -149,6 +194,18 @@ export const SettingsPage: React.FC = () => {
       payment_reminder: `Payment Reminder: Outstanding Tuition Balance (${reminderProgram})`,
       invoice_receipt: `Official Tuition Invoice & Receipt #${invoiceNum}`,
       session_confirmation: `1-on-1 Mentorship Coaching Session Confirmed (${sessionMentorName})`,
+      expense_approval_request: '🔔 OpEx Approval Required: Office Equipment Requisition (₦185,000) - Operations',
+      expense_approved: '✅ OpEx Request Approved: Office Equipment Requisition (₦185,000)',
+      expense_rejected: '❌ OpEx Request Declined: Office Equipment Requisition (EXP-9021)',
+      mentor_commission_earned: '🎉 New Commission Credited: 37% Enrollment Revenue Share (₦314,500)',
+      mentor_payout_disbursed: '💸 Faculty Honorarium Disbursed: ₦314,500 [Access Bank Nigeria]',
+      lab_assignment_submitted: '📝 Lab Assignment Submitted: Chidi Okeke — Full-Stack Portfolio',
+      lab_assignment_graded: '🎯 Lab Assignment Evaluated: Full-Stack Portfolio — Grade: 96% (Passed)',
+      new_mentee_assigned: '👥 New Mentee Assigned: Chidi Okeke — Full-Stack Software Engineering',
+      proof_of_payment_alert: '📋 Bank Transfer POP Verification Required: Chidi Okeke (₦850,000)',
+      tuition_payment_alert: '💰 Inbound Tuition Settlement: Chidi Okeke (₦850,000)',
+      mentor_student_performance_report: '📊 Student Performance & Welfare Evaluation: Chidi Okeke (92% - Exceeding)',
+      student_certificate_issued: '🎓 Certificate of Completion Awarded: Chidi Okeke — Full-Stack Software Engineering',
     };
     setEmailSubject(defaultSubjects[template]);
   };
@@ -163,7 +220,7 @@ export const SettingsPage: React.FC = () => {
           cohort: 'Executive Cohort 2026',
           mentorName: sessionMentorName,
           paymentStatus: 'Cleared & Active (Full Tuition Paid)',
-          portalUrl: 'http://72.61.106.87/login',
+          portalUrl: `http://72.61.106.87/login?role=student&email=${encodeURIComponent(testRecipientEmail || 'student@codelab.institute')}`,
         };
       case 'mentor_welcome':
         return {
@@ -172,13 +229,13 @@ export const SettingsPage: React.FC = () => {
           courses: mentorCourses,
           commissionRate: mentorCommissionRate,
           bankDetails: mentorBankDetails,
-          portalUrl: 'http://72.61.106.87/login',
+          portalUrl: `http://72.61.106.87/login?role=mentor&email=${encodeURIComponent(testRecipientEmail || 'mentor@codelab.institute')}`,
         };
       case 'staff_welcome':
         return {
           roleTitle: welcomeRoleTitle,
           department: welcomeDept,
-          setupUrl: welcomeSetupUrl.includes('?') ? welcomeSetupUrl : `${welcomeSetupUrl}?email=${encodeURIComponent(testRecipientEmail)}&token=welcome-${Date.now()}`,
+          setupUrl: welcomeSetupUrl.includes('?') ? welcomeSetupUrl : `${welcomeSetupUrl}?role=admissions&email=${encodeURIComponent(testRecipientEmail)}&token=welcome-${Date.now()}`,
           customWelcomeNote: welcomeNote,
         };
       case 'payment_reminder':
@@ -216,6 +273,131 @@ export const SettingsPage: React.FC = () => {
           resetExpiryHours: resetExpiry,
           securityNotice: resetSecurityNote,
         };
+      case 'expense_approval_request':
+        return {
+          expenseCode: 'EXP-9021',
+          title: 'Dell Server Rack & Cisco Router',
+          amount: 185000,
+          category: 'Office & Ops',
+          department: 'Engineering & IT',
+          requestedBy: testRecipientName || 'Chidi Okeke (Operations)',
+          requesterEmail: testRecipientEmail || 'chidi@codelab.institute',
+          vendor: 'Hub Network Systems NG',
+          urgency: 'Urgent',
+          receiptName: 'cisco_invoice_9021.pdf',
+          description: 'Critical network switch replacement for Victoria Island Lab 2 high-density lab.',
+          actionUrl: 'http://72.61.106.87/expenses',
+        };
+      case 'expense_approved':
+        return {
+          expenseCode: 'EXP-9021',
+          title: 'Dell Server Rack & Cisco Router',
+          amount: 185000,
+          reviewedBy: 'Abiola Adefowope (Super Admin)',
+          reviewedAt: new Date().toISOString().split('T')[0],
+          actionUrl: 'http://72.61.106.87/expenses',
+        };
+      case 'expense_rejected':
+        return {
+          expenseCode: 'EXP-9021',
+          title: 'Dell Server Rack & Cisco Router',
+          amount: 185000,
+          reviewedBy: 'Super Admin',
+          rejectionReason: 'Exceeds remaining departmental hardware budget for Q3. Please defer or source alternate vendor discount.',
+          actionUrl: 'http://72.61.106.87/expenses',
+        };
+      case 'mentor_commission_earned':
+        return {
+          studentName: 'Chidi Okeke',
+          program: 'Full-Stack Software Engineering',
+          tuitionPaid: 850000,
+          commissionAmount: 314500,
+          newPendingPayout: 314500,
+          portalUrl: 'http://72.61.106.87/mentors',
+        };
+      case 'mentor_payout_disbursed':
+        return {
+          amount: 314500,
+          bankName: 'Access Bank Nigeria PLC',
+          accountNumber: '0812948192',
+          transferRef: 'TRF-PAYSTACK-948102',
+          date: new Date().toISOString().split('T')[0],
+          portalUrl: 'http://72.61.106.87/mentors',
+        };
+      case 'lab_assignment_submitted':
+        return {
+          studentName: 'Chidi Okeke',
+          courseTitle: 'Full-Stack Software Engineering',
+          moduleTitle: 'Module 4: React & Node REST APIs',
+          taskTitle: 'Full-Stack Microservices Architecture Project',
+          githubUrl: 'https://github.com/codelab-student/fullstack-demo',
+          liveUrl: 'https://codelab-demo.vercel.app',
+          notes: 'Configured with PostgreSQL database and JWT authentication.',
+          reviewUrl: 'http://72.61.106.87/courses',
+        };
+      case 'lab_assignment_graded':
+        return {
+          taskTitle: 'Full-Stack Microservices Architecture Project',
+          grade: 96,
+          status: 'Passed',
+          reviewedBy: sessionMentorName || 'Arthur Pendelton',
+          mentorFeedback: 'Superb architecture and code modularity. Clean API error boundaries and database migrations.',
+          portalUrl: 'http://72.61.106.87/student/courses',
+        };
+      case 'new_mentee_assigned':
+        return {
+          studentName: 'Chidi Okeke',
+          studentCode: 'STU-9042',
+          program: 'Full-Stack Software Engineering',
+          cohort: 'Executive Cohort 2026',
+          studentEmail: 'chidi.okeke@codelab.institute',
+          portalUrl: 'http://72.61.106.87/mentors',
+        };
+      case 'proof_of_payment_alert':
+        return {
+          studentName: 'Chidi Okeke',
+          studentCode: 'STU-9042',
+          amount: 850000,
+          bankRef: 'NIBSS-TRF-091823901',
+          fileName: 'transfer_receipt_access.jpg',
+          actionUrl: 'http://72.61.106.87/invoices',
+        };
+      case 'tuition_payment_alert':
+        return {
+          studentName: 'Chidi Okeke',
+          studentCode: 'STU-9042',
+          program: 'Full-Stack Software Engineering',
+          amount: 850000,
+          gateway: 'Paystack Direct Settlement',
+          reference: 'PAY-REF-8910293',
+          actionUrl: 'http://72.61.106.87/invoices',
+        };
+      case 'mentor_student_performance_report':
+        return {
+          studentName: 'Chidi Okeke',
+          studentCode: 'STU-9042',
+          mentorName: sessionMentorName,
+          program: reminderProgram,
+          performanceScore: 92,
+          performanceTier: 'Exceeding',
+          attendanceRate: '95%',
+          technicalUnderstanding: 'Excellent mastery of distributed cloud architectures and Docker.',
+          engagementLevel: 'Highly active in daily standups and lab exercises.',
+          welfareObservations: 'High motivation, requires no immediate welfare intervention.',
+          recommendations: 'Recommended for advanced cloud engineering fellowship and leadership recognition.',
+          reportCode: 'REP-CDL-2026-9042',
+        };
+      case 'student_certificate_issued':
+        return {
+          studentName: 'Chidi Okeke',
+          studentCode: 'STU-9042',
+          program: reminderProgram,
+          certificateNumber: 'CERT-CDL-2026-9042',
+          issuedDate: '11 September 2026',
+          portalUrl: 'http://72.61.106.87/student/courses',
+        };
+      default:
+        return {};
     }
   };
 
@@ -261,8 +443,62 @@ export const SettingsPage: React.FC = () => {
   // Production Flush Confirmation Modal
   const [showFlushConfirm, setShowFlushConfirm] = useState(false);
 
+  // Campus Geofencing Handlers
+  const handleUpdateCampus = (id: string, field: keyof CampusLocation, value: any) => {
+    setCampusLocationsList(prev =>
+      prev.map(c => (c.id === id ? { ...c, [field]: value } : c))
+    );
+  };
+
+  const handleToggleCampus = (id: string) => {
+    setCampusLocationsList(prev =>
+      prev.map(c => (c.id === id ? { ...c, isActive: !c.isActive } : c))
+    );
+  };
+
+  const handleAddCampus = () => {
+    const newId = `campus-${Date.now()}`;
+    const newCampus: CampusLocation = {
+      id: newId,
+      code: `HUB-0${campusLocationsList.length + 1}`,
+      name: `New Academic Hub ${campusLocationsList.length + 1}`,
+      address: 'Plot Address, City Hub',
+      city: 'Lagos State',
+      latitude: 6.5244,
+      longitude: 3.3792,
+      radiusMeters: 300,
+      isActive: true,
+    };
+    setCampusLocationsList(prev => [...prev, newCampus]);
+    showToast('Campus Added', 'New campus location added. Configure coordinates and save changes.', 'info');
+  };
+
+  const handleDeleteCampus = (id: string) => {
+    if (campusLocationsList.length <= 1) {
+      showToast('Cannot Remove', 'At least one campus location is required for institutional geofencing.', 'error');
+      return;
+    }
+    setCampusLocationsList(prev => prev.filter(c => c.id !== id));
+    showToast('Campus Removed', 'Campus removed from list. Click Save Configuration Changes to apply.', 'info');
+  };
+
+  const handleCaptureCampusGps = async (campusId: string) => {
+    setCapturingGpsForCampus(campusId);
+    try {
+      const coords = await getDeviceCoordinates();
+      handleUpdateCampus(campusId, 'latitude', Number(coords.latitude.toFixed(4)));
+      handleUpdateCampus(campusId, 'longitude', Number(coords.longitude.toFixed(4)));
+      showToast('GPS Acquired', `Captured coordinates: ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`, 'success');
+    } catch {
+      showToast('GPS Error', 'Could not access device GPS. Please type latitude/longitude manually.', 'error');
+    } finally {
+      setCapturingGpsForCampus(null);
+    }
+  };
+
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
+    const primaryActiveCampus = campusLocationsList.find(c => c.isActive) || campusLocationsList[0];
     updateSettings({
       instituteName,
       address,
@@ -276,9 +512,21 @@ export const SettingsPage: React.FC = () => {
         accountNumber,
         accountName,
       },
+      paystackPublicKey,
+      paystackSecretKey,
+      paystackLiveMode,
+      enabledModules,
       emailAlertsEnabled,
       autoInvoiceGeneration,
       showBudgetToStaff,
+      defaultMinimumLearningHours: Number(defaultMinimumLearningHours),
+      campusLocationsList: campusLocationsList,
+      officeLocation: primaryActiveCampus ? {
+        name: primaryActiveCampus.name,
+        latitude: primaryActiveCampus.latitude,
+        longitude: primaryActiveCampus.longitude,
+        radiusMeters: primaryActiveCampus.radiusMeters,
+      } : settings.officeLocation,
       smtp: {
         host: smtpHost,
         port: Number(smtpPort),
@@ -291,6 +539,71 @@ export const SettingsPage: React.FC = () => {
 
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
+  };
+
+  const handleToggleModule = (moduleKey: keyof EnabledModules) => {
+    const updated: EnabledModules = {
+      ...enabledModules,
+      [moduleKey]: !enabledModules[moduleKey],
+    };
+    setEnabledModules(updated);
+    updateSettings({
+      ...settings,
+      enabledModules: updated,
+    });
+    showToast(
+      updated[moduleKey] ? 'Module Enabled' : 'Module Disabled',
+      `${moduleKey.toUpperCase()} module is now ${updated[moduleKey] ? 'active & accessible' : 'offline / scheduled for launch'}.`,
+      updated[moduleKey] ? 'success' : 'info'
+    );
+  };
+
+  const handleBulkModuleToggle = (enableAll: boolean) => {
+    const updated: EnabledModules = {
+      lms: enableAll,
+      leads: true,
+      courses: enableAll,
+      students: true,
+      mentors: enableAll,
+      attendance: enableAll,
+      expenses: enableAll,
+    };
+    setEnabledModules(updated);
+    updateSettings({
+      ...settings,
+      enabledModules: updated,
+    });
+    showToast(
+      enableAll ? 'All Modules Enabled' : 'Admissions Core Activated',
+      enableAll ? 'All institutional modules are now active.' : 'LMS, Mentors, Attendance & Expenses set to upcoming launch status.',
+      'success'
+    );
+  };
+
+  const handleTestPaystack = async () => {
+    setTestingPaystack(true);
+    setPaystackTestResult(null);
+    try {
+      updateSettings({
+        paystackPublicKey,
+        paystackSecretKey,
+        paystackLiveMode,
+      });
+
+      const res = await fetch('http://localhost:5001/api/paystack/test-connection');
+      const data = await res.json();
+      setPaystackTestResult(data);
+      if (data.success) {
+        showToast('Paystack Connected', data.message, 'success');
+      } else {
+        showToast('Connection Notice', data.message, 'warning');
+      }
+    } catch (err: any) {
+      setPaystackTestResult({ success: false, message: `Could not reach server test endpoint: ${err.message}` });
+      showToast('Test Error', err.message, 'error');
+    } finally {
+      setTestingPaystack(false);
+    }
   };
 
   const handleVerifySmtp = async () => {
@@ -338,6 +651,7 @@ export const SettingsPage: React.FC = () => {
       admissions: 'Admissions Officer',
       mentor: 'Faculty Mentor',
       finance: 'Chief Financial Officer / Controller',
+      student: 'Enrolled Scholar / Student',
     };
 
     addStaffUser({
@@ -456,10 +770,10 @@ export const SettingsPage: React.FC = () => {
       )}
 
       {/* Tabs Navigation */}
-      <div className="flex border-b border-outline-variant gap-2">
+      <div className="flex border-b border-outline-variant gap-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('general')}
-          className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
+          className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
             activeTab === 'general'
               ? 'border-b-2 border-primary text-primary'
               : 'text-secondary hover:text-on-surface'
@@ -467,6 +781,21 @@ export const SettingsPage: React.FC = () => {
         >
           <span className="material-symbols-outlined text-[18px]">domain</span>
           <span>General &amp; Banking</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('modules')}
+          className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+            activeTab === 'modules'
+              ? 'border-b-2 border-primary text-primary'
+              : 'text-secondary hover:text-on-surface'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[18px]">toggle_on</span>
+          <span>Modules &amp; Launch Controls</span>
+          <span className="px-1.5 py-0.5 rounded-full bg-surface-container text-secondary text-[11px] font-data-tabular">
+            {Object.values(enabledModules).filter(Boolean).length}/{Object.keys(enabledModules).length}
+          </span>
         </button>
 
         <button
@@ -731,6 +1060,444 @@ export const SettingsPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Paystack Payment Gateway Card */}
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-outline-variant pb-2">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-xl">payments</span>
+                <h3 className="font-headline-sm text-base font-bold text-on-surface">
+                  Paystack Payment Gateway Configuration
+                </h3>
+              </div>
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                paystackLiveMode ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/30' : 'bg-amber-500/10 text-amber-600 border border-amber-500/30'
+              }`}>
+                {paystackLiveMode ? '● Live Production Gateway' : '○ Sandbox Test Simulator'}
+              </span>
+            </div>
+
+            <p className="text-xs text-secondary">
+              Powers instant student tuition collections via Debit Cards (Mastercard, Visa, Verve), USSD, and Bank Transfers, and automated 37% commission disbursements to verified faculty mentors.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block font-label-md text-xs font-semibold text-on-surface mb-1">
+                  Paystack Public Key ({paystackLiveMode ? 'pk_live_...' : 'pk_test_...'})
+                </label>
+                <input
+                  type="text"
+                  placeholder="pk_test_..."
+                  value={paystackPublicKey}
+                  onChange={(e) => setPaystackPublicKey(e.target.value)}
+                  className="w-full h-10 px-3 rounded bg-surface border border-outline-variant text-sm font-mono focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-label-md text-xs font-semibold text-on-surface">
+                    Paystack Secret Key ({paystackLiveMode ? 'sk_live_...' : 'sk_test_...'})
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowPaystackSecret(!showPaystackSecret)}
+                    className="text-[11px] text-primary hover:underline font-semibold"
+                  >
+                    {showPaystackSecret ? 'Hide Key' : 'Reveal Key'}
+                  </button>
+                </div>
+                <input
+                  type={showPaystackSecret ? 'text' : 'password'}
+                  placeholder="sk_test_..."
+                  value={paystackSecretKey}
+                  onChange={(e) => setPaystackSecretKey(e.target.value)}
+                  className="w-full h-10 px-3 rounded bg-surface border border-outline-variant text-sm font-mono focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-outline-variant flex flex-wrap items-center justify-between gap-4">
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-on-surface">
+                <input
+                  type="checkbox"
+                  checked={paystackLiveMode}
+                  onChange={(e) => setPaystackLiveMode(e.target.checked)}
+                  className="rounded border-outline-variant text-primary focus:ring-primary cursor-pointer"
+                />
+                <span>Enable Live Mode (Uncheck for Sandbox Test Simulator)</span>
+              </label>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleTestPaystack}
+                  disabled={testingPaystack}
+                  className="px-3 py-1.5 rounded-lg bg-surface border border-outline-variant hover:bg-surface-container font-bold text-xs text-primary transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px] text-primary">
+                    {testingPaystack ? 'sync' : 'bolt'}
+                  </span>
+                  <span>{testingPaystack ? 'Testing API...' : 'Test Paystack Connection'}</span>
+                </button>
+
+                <div className="flex items-center gap-2 text-[11px] text-secondary">
+                  <span className="material-symbols-outlined text-sm text-emerald-600">verified</span>
+                  <span>Webhook: <code className="bg-surface-container px-1.5 py-0.5 rounded text-[10px]">/api/paystack/webhook</code></span>
+                </div>
+              </div>
+            </div>
+
+            {/* Test Connection Results Notice */}
+            {paystackTestResult && (
+              <div className={`p-3 rounded-lg border text-xs flex items-start gap-2.5 animate-in fade-in ${
+                paystackTestResult.success 
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900' 
+                  : 'bg-error-container/30 border-error/30 text-error'
+              }`}>
+                <span className="material-symbols-outlined text-sm mt-0.5 shrink-0">
+                  {paystackTestResult.success ? 'check_circle' : 'error'}
+                </span>
+                <div className="flex-1">
+                  <p className="font-bold">{paystackTestResult.message}</p>
+                  {paystackTestResult.banksCount !== undefined && (
+                    <p className="text-[11px] opacity-80 mt-0.5">
+                      ✓ Verified connection against Paystack API • {paystackTestResult.banksCount} Nigerian commercial &amp; FinTech banks accessible for NUBAN payouts.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Academic Gatekeeping & Graduation Standards Card */}
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-outline-variant pb-2">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-xl">workspace_premium</span>
+                <h3 className="font-headline-sm text-base font-bold text-on-surface">
+                  Academic Gatekeeping &amp; Graduation Standards
+                </h3>
+              </div>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
+                Institutional Policy
+              </span>
+            </div>
+
+            <p className="text-xs text-secondary">
+              Configure baseline institutional thresholds required before student completion certificates and digital credentials can be formally issued by academic leadership.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+              <div>
+                <label className="block font-label-md text-xs font-semibold text-on-surface mb-1">
+                  Minimum Mentored Learning Hours Required for Graduation
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min={1}
+                    max={500}
+                    value={defaultMinimumLearningHours}
+                    onChange={(e) => setDefaultMinimumLearningHours(Number(e.target.value))}
+                    className="w-full h-10 pl-3 pr-12 rounded bg-surface border border-outline-variant text-sm font-data-tabular font-bold text-primary focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                  />
+                  <span className="absolute right-3 top-2.5 text-xs text-secondary font-medium">Hours</span>
+                </div>
+                <p className="text-[11px] text-secondary mt-1">
+                  Default across all tracks: <strong>{defaultMinimumLearningHours} hours</strong>. Certificates remain cryptographically locked in the student portal until this threshold is verified.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-lg bg-surface border border-outline-variant/60 flex items-start gap-3">
+                <span className="material-symbols-outlined text-amber-500 text-xl shrink-0 mt-0.5">verified_user</span>
+                <div className="text-xs space-y-1">
+                  <p className="font-bold text-on-surface">Dual-Condition Graduation Enforcement</p>
+                  <p className="text-[11px] text-secondary leading-relaxed">
+                    1. <strong>Curriculum Mastery</strong>: 100% of all syllabus lessons and project deliverables completed.<br />
+                    2. <strong>Time Commitment</strong>: Attendance recorded by faculty mentors in live technical workshops meets or exceeds the minimum hours.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Multi-Campus Physical Hubs & Geofence Perimeter Manager */}
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-outline-variant pb-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-xl">share_location</span>
+                <div>
+                  <h3 className="font-headline-sm text-base font-bold text-on-surface">
+                    Multi-Campus Physical Hubs &amp; Geofencing Perimeter Manager
+                  </h3>
+                  <p className="text-[11px] text-secondary">
+                    Configure authorized regional facilities for high-precision GPS shift check-ins and punctuality tracking.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddCampus}
+                className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20 text-xs font-bold hover:bg-primary/20 transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">add_location_alt</span>
+                <span>Add Campus Hub</span>
+              </button>
+            </div>
+
+            <div className="space-y-3 pt-1">
+              {campusLocationsList.map((campus, index) => (
+                <div
+                  key={campus.id}
+                  className={`p-4 rounded-xl border transition-all ${
+                    campus.isActive
+                      ? 'bg-surface border-outline-variant shadow-xs'
+                      : 'bg-surface-container-lowest border-outline-variant/50 opacity-70'
+                  }`}
+                >
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3 border-b border-outline-variant/60 pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold font-data-tabular">
+                        {index + 1}
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-surface-container text-on-surface font-mono text-xs font-bold border border-outline-variant">
+                        {campus.code}
+                      </span>
+                      <span className="font-bold text-sm text-on-surface">{campus.name}</span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-secondary">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleCampus(campus.id)}
+                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                            campus.isActive ? 'bg-primary' : 'bg-outline-variant'
+                          }`}
+                          role="switch"
+                          aria-checked={campus.isActive}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                              campus.isActive ? 'translate-x-4' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                        <span>{campus.isActive ? 'Active Hub' : 'Inactive Hub'}</span>
+                      </label>
+
+                      {campusLocationsList.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCampus(campus.id)}
+                          className="p-1 rounded text-secondary hover:text-error hover:bg-surface-container transition-colors cursor-pointer"
+                          title="Remove Campus Hub"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                    <div className="md:col-span-4">
+                      <label className="block text-[11px] font-semibold text-secondary mb-1">Campus Hub Name</label>
+                      <input
+                        type="text"
+                        value={campus.name}
+                        onChange={(e) => handleUpdateCampus(campus.id, 'name', e.target.value)}
+                        className="w-full h-9 px-2.5 rounded bg-surface border border-outline-variant text-xs font-semibold text-on-surface outline-none focus:border-primary"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-[11px] font-semibold text-secondary mb-1">Campus Code</label>
+                      <input
+                        type="text"
+                        value={campus.code}
+                        onChange={(e) => handleUpdateCampus(campus.id, 'code', e.target.value.toUpperCase())}
+                        className="w-full h-9 px-2.5 rounded bg-surface border border-outline-variant text-xs font-mono font-bold text-on-surface outline-none focus:border-primary"
+                      />
+                    </div>
+
+                    <div className="md:col-span-4">
+                      <label className="block text-[11px] font-semibold text-secondary mb-1">Physical Address</label>
+                      <input
+                        type="text"
+                        value={campus.address}
+                        onChange={(e) => handleUpdateCampus(campus.id, 'address', e.target.value)}
+                        className="w-full h-9 px-2.5 rounded bg-surface border border-outline-variant text-xs text-on-surface outline-none focus:border-primary"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-[11px] font-semibold text-secondary mb-1">City / State</label>
+                      <input
+                        type="text"
+                        value={campus.city}
+                        onChange={(e) => handleUpdateCampus(campus.id, 'city', e.target.value)}
+                        className="w-full h-9 px-2.5 rounded bg-surface border border-outline-variant text-xs text-on-surface outline-none focus:border-primary"
+                      />
+                    </div>
+
+                    <div className="md:col-span-4">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-semibold text-secondary">Latitude</label>
+                        <button
+                          type="button"
+                          onClick={() => handleCaptureCampusGps(campus.id)}
+                          disabled={capturingGpsForCampus === campus.id}
+                          className="text-[10px] text-primary hover:underline font-semibold flex items-center gap-0.5 cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[12px]">my_location</span>
+                          <span>{capturingGpsForCampus === campus.id ? 'Detecting...' : 'Use My GPS'}</span>
+                        </button>
+                      </div>
+                      <input
+                        type="number"
+                        step="0.0001"
+                        value={campus.latitude}
+                        onChange={(e) => handleUpdateCampus(campus.id, 'latitude', parseFloat(e.target.value) || 0)}
+                        className="w-full h-9 px-2.5 rounded bg-surface border border-outline-variant text-xs font-mono text-on-surface outline-none focus:border-primary"
+                      />
+                    </div>
+
+                    <div className="md:col-span-4">
+                      <label className="block text-[11px] font-semibold text-secondary mb-1">Longitude</label>
+                      <input
+                        type="number"
+                        step="0.0001"
+                        value={campus.longitude}
+                        onChange={(e) => handleUpdateCampus(campus.id, 'longitude', parseFloat(e.target.value) || 0)}
+                        className="w-full h-9 px-2.5 rounded bg-surface border border-outline-variant text-xs font-mono text-on-surface outline-none focus:border-primary"
+                      />
+                    </div>
+
+                    <div className="md:col-span-4">
+                      <label className="block text-[11px] font-semibold text-secondary mb-1">
+                        Geofence Radius (Meters)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min={50}
+                          max={5000}
+                          step={50}
+                          value={campus.radiusMeters}
+                          onChange={(e) => handleUpdateCampus(campus.id, 'radiusMeters', parseInt(e.target.value) || 250)}
+                          className="w-full h-9 pl-2.5 pr-8 rounded bg-surface border border-outline-variant text-xs font-data-tabular font-bold text-on-surface outline-none focus:border-primary"
+                        />
+                        <span className="absolute right-2.5 top-2 text-[11px] text-secondary font-medium">m</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Progressive Web App (PWA) & Mobile Engine Card */}
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-outline-variant pb-3">
+              <div className="flex items-center gap-3">
+                <img
+                  src="/icons/icon-192.png"
+                  alt="CODELAB Insignia"
+                  className="w-10 h-10 rounded-xl shadow bg-[#0B0F19] p-0.5 object-contain"
+                />
+                <div>
+                  <h3 className="font-headline-sm text-base font-bold text-on-surface">
+                    Progressive Web App (PWA) &amp; Mobile Engine
+                  </h3>
+                  <p className="text-[11px] text-secondary">
+                    Mobile-first client configuration, Service Worker cache status &amp; standalone device installation
+                  </p>
+                </div>
+              </div>
+
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider shrink-0 ${
+                isStandalone
+                  ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/30'
+                  : 'bg-primary/10 text-primary border border-primary/20'
+              }`}>
+                {isStandalone ? '● Native Standalone App' : '○ Web Browser Tab'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+              <div className="p-3.5 rounded-xl bg-surface border border-outline-variant/60 space-y-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-secondary">Device Platform</p>
+                <p className="font-bold text-xs text-on-surface flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px] text-primary">
+                    {isIOS ? 'phone_iphone' : isAndroid ? 'phone_android' : 'desktop_mac'}
+                  </span>
+                  <span>{isIOS ? 'Apple iOS (iPhone/iPad)' : isAndroid ? 'Android Device' : 'Desktop / Laptop Browser'}</span>
+                </p>
+                <p className="text-[10px] text-secondary">
+                  {isIOS ? 'Requires Safari "Add to Home Screen"' : isAndroid ? 'Supports 1-click WebAPK installation' : 'Chromium / Edge installable'}
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-surface border border-outline-variant/60 space-y-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-secondary">Network &amp; Sync State</p>
+                <p className="font-bold text-xs text-on-surface flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
+                  <span>{isOnline ? 'Online & Synchronized' : 'Offline Mode (Local Cache)'}</span>
+                </p>
+                <p className="text-[10px] text-secondary">
+                  {isOnline ? 'Connected to live database & SMTP' : 'Reads served from client cache'}
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-surface border border-outline-variant/60 space-y-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-secondary">Service Worker Engine</p>
+                <p className="font-bold text-xs text-on-surface flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px] text-primary">offline_bolt</span>
+                  <span className="font-mono text-[11px]">nexus-crm-v1.0.0</span>
+                </p>
+                <p className="text-[10px] text-secondary">
+                  SPA offline routing &amp; asset pre-caching
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-outline-variant/60 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                {!isStandalone && (isInstallable || isIOS) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isIOS) setShowIOSInstallGuide(true);
+                      else promptInstall();
+                    }}
+                    className="px-3.5 py-2 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">install_mobile</span>
+                    <span>Install Nexus App on this Device</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm('Clear all local service worker caches and refresh the application?')) {
+                      clearCacheAndReload();
+                    }
+                  }}
+                  className="px-3 py-2 rounded-lg bg-surface border border-outline-variant text-xs text-secondary hover:text-on-surface hover:bg-surface-container transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">cleaning_services</span>
+                  <span>Clear Offline Cache &amp; Reload</span>
+                </button>
+              </div>
+
+              <p className="text-[11px] text-secondary">
+                Students and staff can install Nexus CRM directly without downloading from the App Store or Play Store.
+              </p>
+            </div>
+          </div>
+
           <div className="flex justify-end">
             <button
               type="submit"
@@ -744,7 +1511,371 @@ export const SettingsPage: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 2: STAFF & ROLE SECURITY */}
+      {/* TAB: MODULE MANAGEMENT & LAUNCH CONTROLS */}
+      {/* ========================================================================= */}
+      {activeTab === 'modules' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          {/* Header Card */}
+          <div className="p-6 rounded-2xl bg-surface border border-outline-variant shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="material-symbols-outlined text-primary text-2xl">toggle_on</span>
+                <h3 className="font-headline-md text-xl font-bold text-on-surface">Institutional Modules &amp; Launch Controls</h3>
+              </div>
+              <p className="text-secondary text-sm max-w-2xl leading-relaxed">
+                Toggle modules on or off as your operations expand. Disabled modules are hidden from staff and student navigation; direct URL visits show a &quot;Scheduled for Launch&quot; educational splash screen. Super Admins retain preview privileges.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => handleBulkModuleToggle(true)}
+                className="px-3.5 py-2 rounded-lg bg-primary/10 text-primary border border-primary/20 text-xs font-bold hover:bg-primary/20 transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">done_all</span>
+                <span>Enable All</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleBulkModuleToggle(false)}
+                className="px-3.5 py-2 rounded-lg bg-surface border border-outline-variant text-secondary text-xs font-semibold hover:bg-surface-container transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">filter_alt</span>
+                <span>Admissions Core Only</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Module Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 1. Classroom LMS */}
+            <div className={`p-5 rounded-2xl border transition-all ${
+              enabledModules.lms
+                ? 'bg-surface border-outline-variant shadow-xs'
+                : 'bg-surface-container-lowest border-outline-variant/60 opacity-80'
+            }`}>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    enabledModules.lms ? 'bg-primary/10 text-primary' : 'bg-surface-container text-secondary'
+                  }`}>
+                    <span className="material-symbols-outlined text-[22px]">local_library</span>
+                  </div>
+                  <div>
+                    <h4 className="font-title-md text-base font-bold text-on-surface">Classroom LMS &amp; Student Portal</h4>
+                    <p className="text-[11px] text-secondary">Student course progress, lessons, lab deliverable URLs &amp; mentor grading</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleModule('lms')}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    enabledModules.lms ? 'bg-primary' : 'bg-outline-variant'
+                  }`}
+                  role="switch"
+                  aria-checked={enabledModules.lms}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      enabledModules.lms ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-outline-variant/60 text-[11px]">
+                <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[10px] ${
+                  enabledModules.lms ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                }`}>
+                  {enabledModules.lms ? '● Active & Live' : '○ Scheduled for Launch'}
+                </span>
+                <span className="text-secondary">Routes: <code>/student/courses</code>, <code>/student/dashboard</code></span>
+              </div>
+            </div>
+
+            {/* 2. Admissions Lead Pipeline */}
+            <div className={`p-5 rounded-2xl border transition-all ${
+              enabledModules.leads
+                ? 'bg-surface border-outline-variant shadow-xs'
+                : 'bg-surface-container-lowest border-outline-variant/60 opacity-80'
+            }`}>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    enabledModules.leads ? 'bg-primary/10 text-primary' : 'bg-surface-container text-secondary'
+                  }`}>
+                    <span className="material-symbols-outlined text-[22px]">leaderboard</span>
+                  </div>
+                  <div>
+                    <h4 className="font-title-md text-base font-bold text-on-surface">Admissions &amp; Leads Pipeline</h4>
+                    <p className="text-[11px] text-secondary">Kanban sales funnel, inquiry screening, interview scheduling &amp; student conversion</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleModule('leads')}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    enabledModules.leads ? 'bg-primary' : 'bg-outline-variant'
+                  }`}
+                  role="switch"
+                  aria-checked={enabledModules.leads}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      enabledModules.leads ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-outline-variant/60 text-[11px]">
+                <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[10px] ${
+                  enabledModules.leads ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                }`}>
+                  {enabledModules.leads ? '● Active & Live' : '○ Scheduled for Launch'}
+                </span>
+                <span className="text-secondary">Route: <code>/leads</code></span>
+              </div>
+            </div>
+
+            {/* 3. Academic Programs & Cohorts */}
+            <div className={`p-5 rounded-2xl border transition-all ${
+              enabledModules.courses
+                ? 'bg-surface border-outline-variant shadow-xs'
+                : 'bg-surface-container-lowest border-outline-variant/60 opacity-80'
+            }`}>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    enabledModules.courses ? 'bg-primary/10 text-primary' : 'bg-surface-container text-secondary'
+                  }`}>
+                    <span className="material-symbols-outlined text-[22px]">menu_book</span>
+                  </div>
+                  <div>
+                    <h4 className="font-title-md text-base font-bold text-on-surface">Programs, Cohorts &amp; Curricula</h4>
+                    <p className="text-[11px] text-secondary">Course syllabus builder, cohort batch schedules &amp; tuition pricing in ₦</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleModule('courses')}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    enabledModules.courses ? 'bg-primary' : 'bg-outline-variant'
+                  }`}
+                  role="switch"
+                  aria-checked={enabledModules.courses}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      enabledModules.courses ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-outline-variant/60 text-[11px]">
+                <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[10px] ${
+                  enabledModules.courses ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                }`}>
+                  {enabledModules.courses ? '● Active & Live' : '○ Scheduled for Launch'}
+                </span>
+                <span className="text-secondary">Route: <code>/courses</code></span>
+              </div>
+            </div>
+
+            {/* 4. Enrolled Students & Records */}
+            <div className={`p-5 rounded-2xl border transition-all ${
+              enabledModules.students
+                ? 'bg-surface border-outline-variant shadow-xs'
+                : 'bg-surface-container-lowest border-outline-variant/60 opacity-80'
+            }`}>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    enabledModules.students ? 'bg-primary/10 text-primary' : 'bg-surface-container text-secondary'
+                  }`}>
+                    <span className="material-symbols-outlined text-[22px]">school</span>
+                  </div>
+                  <div>
+                    <h4 className="font-title-md text-base font-bold text-on-surface">Enrolled Students &amp; Billing</h4>
+                    <p className="text-[11px] text-secondary">Student directory, matriculation credentials, tuition installment invoices &amp; records</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleModule('students')}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    enabledModules.students ? 'bg-primary' : 'bg-outline-variant'
+                  }`}
+                  role="switch"
+                  aria-checked={enabledModules.students}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      enabledModules.students ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-outline-variant/60 text-[11px]">
+                <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[10px] ${
+                  enabledModules.students ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                }`}>
+                  {enabledModules.students ? '● Active & Live' : '○ Scheduled for Launch'}
+                </span>
+                <span className="text-secondary">Route: <code>/students</code></span>
+              </div>
+            </div>
+
+            {/* 5. Faculty Mentors & 37% Revenue Share */}
+            <div className={`p-5 rounded-2xl border transition-all ${
+              enabledModules.mentors
+                ? 'bg-surface border-outline-variant shadow-xs'
+                : 'bg-surface-container-lowest border-outline-variant/60 opacity-80'
+            }`}>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    enabledModules.mentors ? 'bg-primary/10 text-primary' : 'bg-surface-container text-secondary'
+                  }`}>
+                    <span className="material-symbols-outlined text-[22px]">groups</span>
+                  </div>
+                  <div>
+                    <h4 className="font-title-md text-base font-bold text-on-surface">Faculty Mentors &amp; 37% Revenue Share</h4>
+                    <p className="text-[11px] text-secondary">Faculty recruitment, 1-on-1 coaching logs, 37% commission calculation &amp; Paystack payouts</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleModule('mentors')}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    enabledModules.mentors ? 'bg-primary' : 'bg-outline-variant'
+                  }`}
+                  role="switch"
+                  aria-checked={enabledModules.mentors}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      enabledModules.mentors ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-outline-variant/60 text-[11px]">
+                <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[10px] ${
+                  enabledModules.mentors ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                }`}>
+                  {enabledModules.mentors ? '● Active & Live' : '○ Scheduled for Launch'}
+                </span>
+                <span className="text-secondary">Routes: <code>/mentors</code>, <code>/student/mentor</code></span>
+              </div>
+            </div>
+
+            {/* 6. Geofenced Staff Attendance */}
+            <div className={`p-5 rounded-2xl border transition-all ${
+              enabledModules.attendance
+                ? 'bg-surface border-outline-variant shadow-xs'
+                : 'bg-surface-container-lowest border-outline-variant/60 opacity-80'
+            }`}>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    enabledModules.attendance ? 'bg-primary/10 text-primary' : 'bg-surface-container text-secondary'
+                  }`}>
+                    <span className="material-symbols-outlined text-[22px]">schedule</span>
+                  </div>
+                  <div>
+                    <h4 className="font-title-md text-base font-bold text-on-surface">Staff Attendance &amp; Geofencing</h4>
+                    <p className="text-[11px] text-secondary">GPS clock-in/out, Victoria Island &amp; Yaba geofence radius &amp; punctuality tracking</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleModule('attendance')}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    enabledModules.attendance ? 'bg-primary' : 'bg-outline-variant'
+                  }`}
+                  role="switch"
+                  aria-checked={enabledModules.attendance}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      enabledModules.attendance ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-outline-variant/60 text-[11px]">
+                <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[10px] ${
+                  enabledModules.attendance ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                }`}>
+                  {enabledModules.attendance ? '● Active & Live' : '○ Scheduled for Launch'}
+                </span>
+                <span className="text-secondary">Route: <code>/attendance</code></span>
+              </div>
+            </div>
+
+            {/* 7. OpEx Requisitions & Financial Approvals */}
+            <div className={`p-5 rounded-2xl border transition-all ${
+              enabledModules.expenses
+                ? 'bg-surface border-outline-variant shadow-xs'
+                : 'bg-surface-container-lowest border-outline-variant/60 opacity-80'
+            }`}>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    enabledModules.expenses ? 'bg-primary/10 text-primary' : 'bg-surface-container text-secondary'
+                  }`}>
+                    <span className="material-symbols-outlined text-[22px]">payments</span>
+                  </div>
+                  <div>
+                    <h4 className="font-title-md text-base font-bold text-on-surface">OpEx Requisitions &amp; Approvals</h4>
+                    <p className="text-[11px] text-secondary">Operating expense submissions, receipt uploads, urgency flags &amp; bursary approvals</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleModule('expenses')}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    enabledModules.expenses ? 'bg-primary' : 'bg-outline-variant'
+                  }`}
+                  role="switch"
+                  aria-checked={enabledModules.expenses}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      enabledModules.expenses ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-outline-variant/60 text-[11px]">
+                <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[10px] ${
+                  enabledModules.expenses ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                }`}>
+                  {enabledModules.expenses ? '● Active & Live' : '○ Scheduled for Launch'}
+                </span>
+                <span className="text-secondary">Route: <code>/expenses</code></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 3: STAFF & ROLE SECURITY */}
       {/* ========================================================================= */}
       {activeTab === 'staff' && (
         <div className="space-y-stack-md animate-in fade-in duration-200">
@@ -1092,15 +2223,25 @@ export const SettingsPage: React.FC = () => {
             </div>
 
             {/* Template Selector Pills */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
               {[
-                { type: 'student_welcome', label: '1. Student', icon: 'school' },
+                { type: 'student_welcome', label: '1. Student Welcome', icon: 'school' },
                 { type: 'mentor_welcome', label: '2. Mentor Appt', icon: 'person_celebrate' },
-                { type: 'staff_welcome', label: '3. Staff', icon: 'badge' },
-                { type: 'payment_reminder', label: '4. Reminder', icon: 'payments' },
-                { type: 'invoice_receipt', label: '5. Invoice', icon: 'receipt_long' },
-                { type: 'session_confirmation', label: '6. Coaching', icon: 'groups' },
-                { type: 'password_reset', label: '7. Pass Reset', icon: 'lock_reset' },
+                { type: 'staff_welcome', label: '3. Staff Invite', icon: 'badge' },
+                { type: 'payment_reminder', label: '4. Tuition Reminder', icon: 'payments' },
+                { type: 'invoice_receipt', label: '5. Invoice & Receipt', icon: 'receipt_long' },
+                { type: 'session_confirmation', label: '6. Coaching Session', icon: 'groups' },
+                { type: 'password_reset', label: '7. Password Reset', icon: 'lock_reset' },
+                { type: 'expense_approval_request', label: '8. OpEx Approval Req', icon: 'pending_actions' },
+                { type: 'expense_approved', label: '9. OpEx Approved', icon: 'check_circle' },
+                { type: 'expense_rejected', label: '10. OpEx Declined', icon: 'cancel' },
+                { type: 'mentor_commission_earned', label: '11. 37% Commission', icon: 'savings' },
+                { type: 'mentor_payout_disbursed', label: '12. Mentor Payout', icon: 'account_balance_wallet' },
+                { type: 'lab_assignment_submitted', label: '13. Lab Deliverable', icon: 'assignment_turned_in' },
+                { type: 'lab_assignment_graded', label: '14. Lab Evaluation', icon: 'grade' },
+                { type: 'new_mentee_assigned', label: '15. New Mentee', icon: 'person_add' },
+                { type: 'proof_of_payment_alert', label: '16. Bank POP Slip', icon: 'document_scanner' },
+                { type: 'tuition_payment_alert', label: '17. Tuition Audit', icon: 'analytics' },
               ].map((t) => {
                 const isCustom = Boolean(settings.customEmailTemplates?.[t.type as EmailTemplatePayload['type']]);
                 return (

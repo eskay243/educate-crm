@@ -10,6 +10,7 @@ export const ResetPasswordPage: React.FC = () => {
 
   const tokenParam = searchParams.get('token') || '';
   const emailParam = searchParams.get('email') || '';
+  const roleParam = searchParams.get('role') || '';
 
   const [email, setEmail] = useState(emailParam);
   const [password, setPassword] = useState('');
@@ -18,6 +19,10 @@ export const ResetPasswordPage: React.FC = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  const loginTargetUrl = roleParam
+    ? `/login?role=${encodeURIComponent(roleParam)}&email=${encodeURIComponent(email)}`
+    : email ? `/login?email=${encodeURIComponent(email)}` : '/login';
 
   const getPasswordStrength = () => {
     if (!password) return { text: 'Empty', color: 'bg-outline-variant', width: '0%' };
@@ -91,7 +96,7 @@ export const ResetPasswordPage: React.FC = () => {
               <p className="text-xs text-secondary">Your new password is now active. You can proceed to sign in.</p>
             </div>
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => navigate(loginTargetUrl)}
               className="w-full h-11 rounded-lg bg-primary hover:bg-primary/90 text-on-primary font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
             >
               <span>Go to Sign In</span>
@@ -204,7 +209,7 @@ export const ResetPasswordPage: React.FC = () => {
 
         <div className="pt-4 border-t border-outline-variant/60 text-center">
           <button
-            onClick={() => navigate('/login')}
+            onClick={() => navigate(loginTargetUrl)}
             className="text-xs font-semibold text-primary hover:underline"
           >
             ← Return to Sign In

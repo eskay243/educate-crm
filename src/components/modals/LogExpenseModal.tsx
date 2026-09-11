@@ -49,6 +49,7 @@ export const LogExpenseModal: React.FC<LogExpenseModalProps> = ({ isOpen, onClos
       status: 'Awaiting Approval',
       vendor: vendor || 'Corporate Vendor NG',
       requestedBy: currentUser?.name ? `${currentUser.name} (${currentUser.role.replace('_', ' ')})` : 'Admissions / Finance Officer',
+      requesterEmail: currentUser?.email || 'admin@codelab.institute',
       receiptName: receiptFileName || 'proforma_invoice.pdf',
       description: description || undefined,
       urgency,

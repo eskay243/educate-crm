@@ -74,6 +74,21 @@ server {
     listen 80;
     server_name _;
 
+    # Service Worker (Never Cache)
+    location = /sw.js {
+        root /var/www/educate-crm/dist;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+        add_header Expires "0";
+    }
+
+    # Web App Manifest
+    location ~* \.(webmanifest|manifest\.json)$ {
+        root /var/www/educate-crm/dist;
+        add_header Content-Type "application/manifest+json";
+        add_header Cache-Control "public, max-age=604800";
+    }
+
     # Frontend Single Page Application
     location / {
         root /var/www/educate-crm/dist;

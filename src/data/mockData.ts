@@ -11,8 +11,72 @@ import {
   OrganizationSettings, 
   ActivityLogItem, 
   NotificationItem,
-  AttendanceRecord 
+  AttendanceRecord,
+  LMSModule,
+  StudentAssignmentSubmission,
+  CampusLocation,
+  StudentPerformanceReport
 } from '../types/crm';
+
+export const initialCampuses: CampusLocation[] = [
+  {
+    id: 'campus-vi',
+    code: 'LOS-VI',
+    name: 'Victoria Island Executive Hub',
+    address: 'Plot 14, Idejo Street, Victoria Island',
+    city: 'Lagos State',
+    latitude: 6.4281,
+    longitude: 3.4219,
+    radiusMeters: 300,
+    isActive: true,
+  },
+  {
+    id: 'campus-yaba',
+    code: 'LOS-YAB',
+    name: 'Yaba Innovation & Tech Campus',
+    address: '294 Herbert Macaulay Way, Alagomeji, Yaba',
+    city: 'Lagos State',
+    latitude: 6.5186,
+    longitude: 3.3768,
+    radiusMeters: 350,
+    isActive: true,
+  },
+  {
+    id: 'campus-abj',
+    code: 'ABJ-CBD',
+    name: 'Abuja Federal Executive Campus',
+    address: 'Plot 782, Cadastral Zone A00, Central Business District',
+    city: 'FCT Abuja',
+    latitude: 9.0579,
+    longitude: 7.4951,
+    radiusMeters: 400,
+    isActive: true,
+  },
+];
+
+export const initialStudentPerformanceReports: StudentPerformanceReport[] = [
+  {
+    id: 'rep-001',
+    reportCode: 'REP-CDL-2026-001',
+    studentId: 'stu-demo-001',
+    studentName: 'Adebayo Adeleke',
+    studentCode: 'STU-8492',
+    program: 'Full-Stack Software Engineering',
+    mentorId: 'men-demo-001',
+    mentorName: 'Dr. Chidi Okeke',
+    submittedAt: '2026-09-08T10:30:00Z',
+    performanceScore: 92,
+    performanceTier: 'Exceeding',
+    attendanceRating: 'Consistent',
+    technicalMasteryNotes: 'Adebayo demonstrates exceptional mastery in TypeScript and state architecture. Completed the Accessible Interactive Dashboard lab with stellar test coverage.',
+    welfareObservations: 'High engagement and active collaboration during group sessions. No device or connectivity impediments reported.',
+    recommendations: 'Recommended for peer code review leadership and direct referral to Paystack corporate hiring pipeline.',
+    managementFollowUpStatus: 'Resolved',
+    managementNotes: 'Reviewed and acknowledged by Head of Admissions and Super Admin.',
+    reviewedBy: 'Folake Solanke',
+    reviewedAt: '2026-09-09T14:00:00Z'
+  }
+];
 
 export const initialLeads: Lead[] = [];
 export const initialStudents: Student[] = [];
@@ -75,8 +139,182 @@ export const initialSettings: OrganizationSettings = {
     'Product Management',
     'Artificial Intelligence & Machine Learning',
     'Digital Marketing & Growth',
-  ]
+  ],
+  paystackPublicKey: 'pk_test_cd572a18dd78ed5493d15433b0e1f3c2057fce2a',
+  paystackSecretKey: 'sk_test_5a3331f29eadb22de95a766cdd1dc432e186ab7f',
+  paystackLiveMode: false,
+  enabledModules: {
+    lms: true,
+    leads: true,
+    courses: true,
+    students: true,
+    mentors: true,
+    attendance: true,
+    expenses: true,
+  },
+  defaultMinimumLearningHours: 40,
+  campusLocationsList: initialCampuses,
 };
+
+export const initialLMSModules: LMSModule[] = [
+  {
+    id: 'mod-1',
+    courseTitle: 'Full-Stack Software Engineering',
+    title: 'Module 1: Enterprise Web Architecture & Modern Frontend',
+    description: 'Master TypeScript, modern component architecture, state machines, and responsive layouts.',
+    order: 1,
+    lessons: [
+      {
+        id: 'les-1-1',
+        moduleId: 'mod-1',
+        title: '1.1 Deep Dive: TypeScript Generics & Strict Typing Systems',
+        durationMinutes: 45,
+        type: 'video',
+        videoUrl: 'https://www.youtube.com/embed/BCg4U1FzODs',
+        contentMarkdown: `### Learning Objectives
+- Master TypeScript strict compilation flags and type narrowing.
+- Implement reusable generic interfaces for enterprise REST and GraphQL consumers.
+- Build type-safe schemas using Zod and TypeScript AST validation.
+
+#### Architectural Checklist
+1. Never use \`any\` in production APIs. Use \`unknown\` and discriminant unions.
+2. Structure custom utility types using conditional types (\`T extends U ? X : Y\`).
+3. Maintain immutable state representations in client applications.`,
+        resources: [
+          { title: 'TypeScript 5 Handbook', url: 'https://www.typescriptlang.org/docs/' },
+          { title: 'Clean Code in TypeScript', url: 'https://github.com/labs/ts-patterns' }
+        ]
+      },
+      {
+        id: 'les-1-2',
+        moduleId: 'mod-1',
+        title: '1.2 State Architecture: TanStack Query & Optimistic Mutations',
+        durationMinutes: 50,
+        type: 'reading',
+        contentMarkdown: `### Enterprise State Management Patterns
+Managing server cache versus transient client UI state is the cornerstone of responsive web applications.
+
+#### Key Principles
+- **Server Cache**: Keep data cached with automatic invalidation and background refetching.
+- **Optimistic UI**: Mutate local state immediately, then revert gracefully if network or business validation fails.
+- **Deduplication**: Prevent redundant roundtrips across deeply nested component hierarchies.`,
+        resources: [
+          { title: 'TanStack Query v5 Docs', url: 'https://tanstack.com/query/latest' }
+        ]
+      },
+      {
+        id: 'les-1-3',
+        moduleId: 'mod-1',
+        title: '1.3 Hands-On Lab: Build an Accessible Interactive Dashboard Table',
+        durationMinutes: 90,
+        type: 'lab',
+        contentMarkdown: `### Lab Deliverables
+You will build a full-featured data table component featuring:
+- Server-side pagination and debounce searching
+- Keyboard navigation (WCAG 2.2 AA compliant)
+- Dynamic column sorting and export to CSV
+
+Submit your GitHub repository link and deployed Vercel/Netlify staging URL below.`,
+        resources: [
+          { title: 'W3C ARIA Table Guidelines', url: 'https://www.w3.org/WAI/ARIA/apg/patterns/table/' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'mod-2',
+    courseTitle: 'Full-Stack Software Engineering',
+    title: 'Module 2: Scalable Backend Services & API Security',
+    description: 'Design robust microservices with Node.js, Express, PostgreSQL, and secure auth tokens.',
+    order: 2,
+    lessons: [
+      {
+        id: 'les-2-1',
+        moduleId: 'mod-2',
+        title: '2.1 Relational Schema Modeling & Query Optimization in PostgreSQL',
+        durationMinutes: 60,
+        type: 'video',
+        videoUrl: 'https://www.youtube.com/embed/qw--VYLpxG4',
+        contentMarkdown: `### Database Engineering in Fintech & Edtech
+Learn normalization (3NF), B-tree indexing strategies, foreign key cascades, and ACID transactions.`,
+        resources: [
+          { title: 'PostgreSQL 16 Performance Guide', url: 'https://www.postgresql.org/docs/' }
+        ]
+      },
+      {
+        id: 'les-2-2',
+        moduleId: 'mod-2',
+        title: '2.2 Payment Gateway Integration: Paystack API & Webhook Verification',
+        durationMinutes: 65,
+        type: 'lab',
+        contentMarkdown: `### Production Payment Processing
+Integrate Paystack Inline and Webhooks to handle card payments, bank transfers, and automated commission payouts.
+
+#### Security Requirements
+- Compute and verify HMAC SHA512 signatures using your secret key.
+- Guarantee idempotent transaction processing to avoid double-crediting.
+- Mask sensitive transaction metadata.`,
+        resources: [
+          { title: 'Paystack Developer API Docs', url: 'https://paystack.com/docs/api/' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'mod-3',
+    courseTitle: 'Full-Stack Software Engineering',
+    title: 'Module 3: Cloud Deployment, Docker & DevOps Automation',
+    description: 'Deploy resilient containerized workloads to Linux VPS instances with Nginx reverse proxies and SSL certificates.',
+    order: 3,
+    lessons: [
+      {
+        id: 'les-3-1',
+        moduleId: 'mod-3',
+        title: '3.1 Containerization with Docker & Multi-Stage Production Builds',
+        durationMinutes: 55,
+        type: 'video',
+        videoUrl: 'https://www.youtube.com/embed/gAkwW2tuIqE',
+        contentMarkdown: `### Containerizing Full-Stack Applications
+Learn to write lean Dockerfiles, leverage caching layers, configure non-root user execution, and spin up multi-container compositions with Docker Compose.`,
+        resources: [
+          { title: 'Docker Official Documentation', url: 'https://docs.docker.com/' }
+        ]
+      },
+      {
+        id: 'les-3-2',
+        moduleId: 'mod-3',
+        title: '3.2 Capstone Project Submission & Mentor Defense',
+        durationMinutes: 120,
+        type: 'lab',
+        contentMarkdown: `### Capstone Project Defense
+Submit your production-ready SaaS application featuring real-time authentication, database persistence, payment integration, and cloud deployment. Your assigned mentor will review and schedule your 1-on-1 defense session.`,
+        resources: [
+          { title: 'Capstone Rubric & Evaluation Sheet', url: '#' }
+        ]
+      }
+    ]
+  }
+];
+
+export const initialAssignments: StudentAssignmentSubmission[] = [
+  {
+    id: 'sub-001',
+    studentId: 'stu-demo-001',
+    studentName: 'Adebayo Adeleke',
+    courseTitle: 'Full-Stack Software Engineering',
+    moduleTitle: 'Module 1: Enterprise Web Architecture & Modern Frontend',
+    taskTitle: '1.3 Hands-On Lab: Build an Accessible Interactive Dashboard Table',
+    githubUrl: 'https://github.com/codelab-institute/accessible-table-lab',
+    liveUrl: 'https://table-lab-demo.vercel.app',
+    notes: 'Completed all pagination requirements and full WCAG keyboard navigation support.',
+    submittedAt: '2026-09-08T14:30:00Z',
+    status: 'Passed',
+    grade: 95,
+    mentorFeedback: 'Outstanding work on keyboard event handling and focus management! Clean TypeScript interfaces throughout.',
+    reviewedBy: 'Dr. Chidi Okeke',
+    reviewedAt: '2026-09-09T10:15:00Z'
+  }
+];
 
 export const demoUsers: AuthUser[] = [
   {
@@ -86,6 +324,43 @@ export const demoUsers: AuthUser[] = [
     role: 'super_admin',
     roleTitle: 'Managing Director & Super Admin',
     department: 'Executive Board',
+    password: 'password123',
+  },
+  {
+    id: 'user-student-demo',
+    name: 'Adebayo Adeleke',
+    email: 'student@codelab.institute',
+    role: 'student',
+    roleTitle: 'Enrolled Scholar (Software Engineering)',
+    department: 'School of Technology',
+    password: 'password123',
+    studentId: 'stu-demo-001',
+  },
+  {
+    id: 'user-mentor-demo',
+    name: 'Dr. Chidi Okeke',
+    email: 'chidi.okeke@codelab.institute',
+    role: 'mentor',
+    roleTitle: 'Lead Engineering Faculty & Senior Mentor',
+    department: 'Engineering Mentorship',
+    password: 'password123',
+  },
+  {
+    id: 'user-admissions-demo',
+    name: 'Zainab Bello',
+    email: 'admissions@codelab.institute',
+    role: 'admissions',
+    roleTitle: 'Head of Admissions & Enrollments',
+    department: 'Admissions Office',
+    password: 'password123',
+  },
+  {
+    id: 'user-finance-demo',
+    name: 'Olumide Fashola',
+    email: 'finance@codelab.institute',
+    role: 'finance',
+    roleTitle: 'Bursar & Financial Controller',
+    department: 'Bursary & Accounts',
     password: 'password123',
   }
 ];

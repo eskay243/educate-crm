@@ -1,4 +1,4 @@
-export type UserRole = 'super_admin' | 'admissions' | 'mentor' | 'finance';
+export type UserRole = 'super_admin' | 'admissions' | 'mentor' | 'finance' | 'student';
 
 export interface AuthUser {
   id: string;
@@ -10,6 +10,7 @@ export interface AuthUser {
   avatarUrl?: string;
   department?: string;
   mentorId?: string; // Links to mentor profile if role is 'mentor'
+  studentId?: string; // Links to student record if role is 'student'
 }
 
 export type LeadStatus = 'Qualified' | 'Negotiation' | 'Discovery' | 'Overdue' | 'Contacted' | 'New' | 'Converted' | 'Lost';
@@ -55,6 +56,44 @@ export interface PaymentInstallment {
   status: 'Paid' | 'Scheduled' | 'Pending';
 }
 
+export interface LMSLesson {
+  id: string;
+  moduleId: string;
+  title: string;
+  durationMinutes: number;
+  type: 'video' | 'reading' | 'lab';
+  videoUrl?: string;
+  contentMarkdown?: string;
+  resources?: { title: string; url: string }[];
+}
+
+export interface LMSModule {
+  id: string;
+  courseTitle: string;
+  title: string;
+  description: string;
+  order: number;
+  lessons: LMSLesson[];
+}
+
+export interface StudentAssignmentSubmission {
+  id: string;
+  studentId: string;
+  studentName: string;
+  courseTitle: string;
+  moduleTitle: string;
+  taskTitle: string;
+  githubUrl?: string;
+  liveUrl?: string;
+  notes?: string;
+  submittedAt: string;
+  status: 'Pending' | 'Passed' | 'Needs Revision' | 'Exceptional';
+  grade?: number;
+  mentorFeedback?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+}
+
 export interface Student {
   id: string;
   studentCode: string;
@@ -72,8 +111,21 @@ export interface Student {
   enrolledDate: string;
   totalFees: number;
   outstandingBalance: number;
+  tuitionAmount?: number;
+  paidAmount?: number;
   courses: EnrolledCourse[];
   installments: PaymentInstallment[];
+  progressPercent?: number;
+  completedLessonIds?: string[];
+  assignmentSubmissions?: StudentAssignmentSubmission[];
+  attendedLearningHours?: number;
+  minimumRequiredHours?: number;
+  performanceScore?: number; // 0 - 100%
+  performanceTier?: 'Exceeding' | 'On Track' | 'Needs Support' | 'At Risk';
+  welfareNotes?: string;
+  certificateIssued?: boolean;
+  certificateNumber?: string;
+  certificateIssuedAt?: string;
 }
 
 export type MentorStatus = 'Active' | 'Available' | 'On Leave';
@@ -90,7 +142,10 @@ export interface Mentor {
   department: string;
   expertise: string[];
   courses?: string[];
+  track?: string;
+  specializedDepartments?: string[];
   hourlyRate?: number; // Deprecated - replaced by 37% enrollment commission
+  monthlyBasePay?: number;
   maxCapacity: number;
   activeMentees: number;
   rating: number;
@@ -98,6 +153,7 @@ export interface Mentor {
   commissionRate: number; // 37% of course tuition per enrolled student
   assignedEnrollmentsCount?: number;
   pendingPayout: number;
+  paidPayout?: number;
   totalEarned?: number;
   payoutStatus: PayoutStatus;
   status: MentorStatus;
@@ -106,6 +162,8 @@ export interface Mentor {
   bankName?: string;
   accountNumber?: string;
   accountName?: string;
+  bankCode?: string;
+  bankVerified?: boolean;
   isAccountVerified?: boolean;
   accountVerificationSource?: string;
   accountVerifiedAt?: string;
@@ -188,6 +246,7 @@ export interface Expense {
   status: ExpenseStatus;
   vendor: string;
   requestedBy?: string;
+  requesterEmail?: string;
   receiptName?: string;
   description?: string;
   rejectionReason?: string;
@@ -195,6 +254,27 @@ export interface Expense {
   reviewedAt?: string;
   urgency?: 'Standard' | 'Urgent' | 'Emergency';
 }
+
+export type EmailTemplateType = 
+  | 'student_welcome' 
+  | 'mentor_welcome' 
+  | 'staff_welcome' 
+  | 'password_reset' 
+  | 'payment_reminder' 
+  | 'invoice_receipt' 
+  | 'session_confirmation'
+  | 'expense_approval_request'
+  | 'expense_approved'
+  | 'expense_rejected'
+  | 'mentor_commission_earned'
+  | 'mentor_payout_disbursed'
+  | 'lab_assignment_submitted'
+  | 'lab_assignment_graded'
+  | 'new_mentee_assigned'
+  | 'proof_of_payment_alert'
+  | 'tuition_payment_alert'
+  | 'mentor_student_performance_report'
+  | 'student_certificate_issued';
 
 export interface ExecutiveKPIs {
   totalRevenue: number;
@@ -222,6 +302,7 @@ export interface CourseProgram {
   enrolledCount: number;
   status: 'Active' | 'Draft';
   rating: number;
+  minimumRequiredHours?: number; // Minimum learning session attendance hours required for graduation
 }
 
 export interface Cohort {
@@ -249,16 +330,21 @@ export interface Invoice {
   invoiceNumber: string;
   studentId: string;
   studentName: string;
-  studentEmail: string;
-  programName: string;
-  issueDate: string;
+  studentEmail?: string;
+  programName?: string;
+  program?: string;
+  description?: string;
+  issueDate?: string;
   dueDate: string;
   totalAmount: number;
+  amount?: number;
   paidAmount: number;
-  status: 'Paid' | 'Partial' | 'Overdue' | 'Unpaid';
+  status: 'Paid' | 'Partial' | 'Overdue' | 'Unpaid' | 'Pending';
   items: InvoiceItem[];
   paymentReference?: string;
   nibssBankName?: string;
+  paidDate?: string;
+  createdDate?: string;
 }
 
 export interface MentorshipSession {
@@ -268,6 +354,7 @@ export interface MentorshipSession {
   mentorName: string;
   studentId: string;
   studentName: string;
+  courseName?: string;
   date: string;
   time: string;
   durationHours: number;
@@ -275,6 +362,69 @@ export interface MentorshipSession {
   notes?: string;
   status: 'Scheduled' | 'Completed' | 'Cancelled';
   compensationAmount: number;
+  studentAttendance?: 'Attended' | 'Absent' | 'Pending';
+  attendanceMarkedAt?: string;
+  attendanceMarkedBy?: string;
+  hoursCredited?: number;
+}
+
+export interface StudentPerformanceReport {
+  id: string;
+  reportCode: string;
+  studentId: string;
+  studentName: string;
+  studentCode: string;
+  program: string;
+  mentorId: string;
+  mentorName: string;
+  submittedAt: string;
+  performanceScore: number; // 0 - 100%
+  performanceTier: 'Exceeding' | 'On Track' | 'Needs Support' | 'At Risk';
+  attendanceRating: 'Consistent' | 'Irregular' | 'Passive';
+  technicalMasteryNotes: string;
+  welfareObservations: string;
+  recommendations: string;
+  managementFollowUpStatus: 'Pending Review' | 'In Progress' | 'Resolved';
+  managementNotes?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+}
+
+export interface CampusLocation {
+  id: string;
+  name: string;
+  code: string;
+  address: string;
+  city: string;
+  latitude: number;
+  longitude: number;
+  radiusMeters: number;
+  isActive: boolean;
+}
+
+export interface StudentCertificate {
+  id: string;
+  certificateNumber: string; // e.g. CERT-CDL-2026-8492
+  studentId: string;
+  studentName: string;
+  studentCode: string;
+  program: string;
+  issueDate: string;
+  distinction: string; // e.g. "With Technical Honors"
+  learningHoursLogged: number;
+  syllabusMasteryPercent: number;
+  verified: boolean;
+  verificationUrl: string;
+}
+
+export interface EnabledModules {
+  lms: boolean;        // Classroom LMS & Student Portal (/student/courses, lab assignments, syllabus)
+  leads: boolean;      // Admissions & Lead Kanban Pipeline (/leads)
+  courses: boolean;    // Academic Programs & Cohorts (/courses)
+  students: boolean;   // Enrolled Students Management (/students)
+  mentors: boolean;    // Faculty Mentors Hub & 37% Revenue Share (/mentors, /student/mentor)
+  attendance: boolean; // Geofenced Staff Attendance & Clock-In (/attendance)
+  expenses: boolean;   // OpEx Requisitions & Financial Approvals (/expenses)
 }
 
 export interface OrganizationSettings {
@@ -321,6 +471,12 @@ export interface OrganizationSettings {
     subject?: string;
     data?: Record<string, any>;
   }>;
+  paystackPublicKey?: string;
+  paystackSecretKey?: string;
+  paystackLiveMode?: boolean;
+  enabledModules?: EnabledModules;
+  defaultMinimumLearningHours?: number; // Default 40 hours
+  campusLocationsList?: CampusLocation[];
 }
 
 export interface ActivityLogItem {
@@ -367,6 +523,12 @@ export type ModalType =
   | 'change-password'
   | 'clock-in'
   | 'clock-out'
+  | 'pay-tuition'
+  | 'submit-assignment'
+  | 'review-assignment'
+  | 'submit-payment-proof'
+  | 'view-certificate'
+  | 'submit-performance-report'
   | null;
 
 
