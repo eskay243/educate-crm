@@ -202,6 +202,7 @@ interface CRMContextType {
   tickets: SupportTicket[];
   createTicket: (ticketData: Omit<SupportTicket, 'id' | 'ticketNumber' | 'createdAt' | 'updatedAt' | 'comments'>) => Promise<void>;
   updateTicketStatus: (ticketId: string, status: TicketStatus, resolutionNotes?: string) => Promise<void>;
+  assignTicket: (ticketId: string, assignedToRole: string, assignedToName?: string, assignedToEmail?: string) => Promise<void>;
   addTicketComment: (ticketId: string, content: string) => Promise<void>;
 
   // Custom Roles & Permission Architecture
@@ -760,6 +761,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...ticketData,
       id: `tkt-${Date.now()}`,
       ticketNumber: `TKT-${1000 + ticketCount}`,
+      assignedToRole: ticketData.assignedToRole || 'super_admin',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       comments: [],
@@ -797,6 +799,24 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     await apiService.updateTicket(ticketId, { status, resolutionNotes });
     showToast('Ticket Updated', `Ticket status set to ${status.toUpperCase().replace('_', ' ')}.`, 'info');
+  };
+
+  const assignTicket = async (ticketId: string, assignedToRole: string, assignedToName?: string, assignedToEmail?: string) => {
+    setTickets(prev => prev.map(t => {
+      if (t.id === ticketId || t.ticketNumber === ticketId) {
+        return {
+          ...t,
+          assignedToRole,
+          assignedToName: assignedToName || t.assignedToName,
+          assignedToEmail: assignedToEmail || t.assignedToEmail,
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      return t;
+    }));
+
+    await apiService.updateTicket(ticketId, { assignedToRole, assignedToName, assignedToEmail });
+    showToast('Ticket Reassigned', `Ticket assigned to ${assignedToName || assignedToRole.toUpperCase().replace('_', ' ')}.`, 'info');
   };
 
   const addTicketComment = async (ticketId: string, content: string) => {
@@ -2696,6 +2716,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         tickets,
         createTicket,
         updateTicketStatus,
+        assignTicket,
         addTicketComment,
         customRoles,
         createCustomRole,

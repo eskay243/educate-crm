@@ -1343,6 +1343,286 @@ const sendStudentCertificateEmail = async (student: any, certificateNumber: stri
   }
 };
 
+// ----------------------------------------------------
+// Support Ticket Notifications: Raised, In Progress, Resolved
+// ----------------------------------------------------
+const sendTicketRaisedEmails = async (ticket: any) => {
+  try {
+    const { transporter, from } = await getTransporter();
+    const primaryColor = '#00236f';
+    const portalUrl = 'http://72.61.106.87/tickets';
+    const adminEmail = db.settings?.smtp?.user || db.settings?.email || 'admin@codelab.institute';
+
+    // 1. Confirmation Email to Ticket Creator
+    if (ticket.createdBy?.email) {
+      const creatorSubject = `🎫 [Support Ticket Received] #${ticket.ticketNumber} — ${ticket.title}`;
+      const creatorBody = `
+        <div style="padding: 32px 24px; color: #1e293b; line-height: 1.6; font-family: 'Inter', sans-serif;">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <span style="background-color: #eff6ff; color: #1d4ed8; font-weight: 700; font-size: 11px; padding: 6px 14px; border-radius: 20px; border: 1px solid #bfdbfe; text-transform: uppercase;">
+              ✓ Ticket Logged Successfully
+            </span>
+            <h2 style="color: ${primaryColor}; margin: 12px 0 6px 0; font-size: 20px; font-weight: 800;">
+              We have received your support ticket
+            </h2>
+            <p style="margin: 0; color: #64748b; font-size: 14px;">
+              Hello ${ticket.createdBy.name || 'Member'}, your request has been logged and assigned to Institutional Administration &amp; Operations Support.
+            </p>
+          </div>
+
+          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <tr>
+                <td style="padding: 6px 0; color: #64748b; width: 35%;">Ticket Reference:</td>
+                <td style="padding: 6px 0; font-family: monospace; font-weight: bold; color: ${primaryColor}; font-size: 14px;">${ticket.ticketNumber}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #64748b;">Subject / Title:</td>
+                <td style="padding: 6px 0; font-weight: 600;">${ticket.title}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #64748b;">Category:</td>
+                <td style="padding: 6px 0; text-transform: capitalize;">${String(ticket.category).replace('_', ' ')}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #64748b;">Priority Level:</td>
+                <td style="padding: 6px 0; text-transform: uppercase; font-weight: 700; color: ${ticket.priority === 'urgent' || ticket.priority === 'high' ? '#dc2626' : '#2563eb'};">${ticket.priority}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #64748b;">Assigned To:</td>
+                <td style="padding: 6px 0; font-weight: 600;">${ticket.assignedToName || (ticket.assignedToRole ? ticket.assignedToRole.toUpperCase().replace('_', ' ') : 'Super Admin / Operations')}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #64748b;">Current Status:</td>
+                <td style="padding: 6px 0;"><span style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 11px;">OPEN</span></td>
+              </tr>
+            </table>
+          </div>
+
+          <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 16px; margin: 20px 0; font-size: 13px; color: #334155;">
+            <strong>Your Submitted Description:</strong><br/>
+            <p style="margin: 8px 0 0 0; white-space: pre-wrap;">${ticket.description}</p>
+          </div>
+
+          <div style="text-align: center; margin: 28px 0;">
+            <a href="${portalUrl}" style="background-color: ${primaryColor}; color: #ffffff; padding: 12px 28px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
+              View Ticket &amp; Add Replies →
+            </a>
+          </div>
+          <p style="font-size: 12px; color: #64748b; text-align: center;">You will receive email notifications as updates and resolutions occur.</p>
+        </div>
+      `;
+      await transporter.sendMail({
+        from,
+        to: ticket.createdBy.email,
+        subject: creatorSubject,
+        html: wrapEmailHtml(creatorSubject, creatorBody),
+      });
+      console.log(`✅ [TICKET CREATOR CONFIRMATION SENT] To: ${ticket.createdBy.email}`);
+    }
+
+    // 2. Alert Email to Super Admin / Assigned Role
+    const adminSubject = `🔔 [Action Required] New Support Ticket #${ticket.ticketNumber} Raised by ${ticket.createdBy?.name || 'User'} (${ticket.createdBy?.roleTitle || 'Portal Member'})`;
+    const adminBody = `
+      <div style="padding: 32px 24px; color: #1e293b; line-height: 1.6; font-family: 'Inter', sans-serif;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <span style="background-color: #fef3c7; color: #b45309; font-weight: 700; font-size: 11px; padding: 6px 14px; border-radius: 20px; border: 1px solid #fde68a; text-transform: uppercase;">
+            ⚠️ New Support Ticket Received
+          </span>
+          <h2 style="color: ${primaryColor}; margin: 12px 0 6px 0; font-size: 20px; font-weight: 800;">
+            New Ticket Requiring Attention
+          </h2>
+          <p style="margin: 0; color: #64748b; font-size: 14px;">
+            A user has raised a support ticket requiring review or resolution.
+          </p>
+        </div>
+
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <tr>
+              <td style="padding: 6px 0; color: #64748b; width: 35%;">Ticket Reference:</td>
+              <td style="padding: 6px 0; font-family: monospace; font-weight: bold; color: ${primaryColor}; font-size: 14px;">${ticket.ticketNumber}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;">Title / Summary:</td>
+              <td style="padding: 6px 0; font-weight: 600;">${ticket.title}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;">Submitted By:</td>
+              <td style="padding: 6px 0;"><strong>${ticket.createdBy?.name || 'User'}</strong> (${ticket.createdBy?.email || 'N/A'}) • <span style="text-transform: capitalize;">${ticket.createdBy?.roleTitle || ticket.createdBy?.role || 'User'}</span></td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;">Category:</td>
+              <td style="padding: 6px 0; text-transform: capitalize;">${String(ticket.category).replace('_', ' ')}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;">Priority Level:</td>
+              <td style="padding: 6px 0; text-transform: uppercase; font-weight: 700; color: ${ticket.priority === 'urgent' || ticket.priority === 'high' ? '#dc2626' : '#2563eb'};">${ticket.priority}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;">Assigned Role:</td>
+              <td style="padding: 6px 0; font-weight: 600; text-transform: uppercase;">${ticket.assignedToRole || 'SUPER_ADMIN'}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 16px; margin: 20px 0; font-size: 13px; color: #334155;">
+          <strong>Issue Details:</strong><br/>
+          <p style="margin: 8px 0 0 0; white-space: pre-wrap;">${ticket.description}</p>
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${portalUrl}" style="background-color: ${primaryColor}; color: #ffffff; padding: 12px 28px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
+            Manage &amp; Respond in Tickets Hub →
+          </a>
+        </div>
+      </div>
+    `;
+
+    const adminRecipients: string[] = [adminEmail];
+    if (ticket.assignedToEmail && ticket.assignedToEmail !== adminEmail) {
+      adminRecipients.push(ticket.assignedToEmail);
+    }
+
+    await transporter.sendMail({
+      from,
+      to: adminRecipients.join(', '),
+      subject: adminSubject,
+      html: wrapEmailHtml(adminSubject, adminBody),
+    });
+    console.log(`✅ [TICKET ADMIN ALERT SENT] To: ${adminRecipients.join(', ')}`);
+  } catch (err) {
+    console.error('Error dispatching ticket raised emails:', err);
+  }
+};
+
+const sendTicketInProgressEmail = async (ticket: any) => {
+  if (!ticket.createdBy?.email) return;
+  try {
+    const { transporter, from } = await getTransporter();
+    const primaryColor = '#00236f';
+    const portalUrl = 'http://72.61.106.87/tickets';
+    const subject = `⚙️ [In Progress] Support Ticket #${ticket.ticketNumber} — ${ticket.title}`;
+    const bodyContent = `
+      <div style="padding: 32px 24px; color: #1e293b; line-height: 1.6; font-family: 'Inter', sans-serif;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <span style="background-color: #fef3c7; color: #b45309; font-weight: 700; font-size: 11px; padding: 6px 14px; border-radius: 20px; border: 1px solid #fde68a; text-transform: uppercase;">
+            ⚙️ Status Update: In Progress
+          </span>
+          <h2 style="color: ${primaryColor}; margin: 12px 0 6px 0; font-size: 20px; font-weight: 800;">
+            Your Support Ticket is Being Addressed
+          </h2>
+          <p style="margin: 0; color: #64748b; font-size: 14px;">
+            Hello ${ticket.createdBy.name || 'Member'}, our support and technical teams have reviewed your ticket and work is actively underway.
+          </p>
+        </div>
+
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <tr>
+              <td style="padding: 6px 0; color: #64748b; width: 35%;">Ticket Reference:</td>
+              <td style="padding: 6px 0; font-family: monospace; font-weight: bold; color: ${primaryColor}; font-size: 14px;">${ticket.ticketNumber}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;">Subject:</td>
+              <td style="padding: 6px 0; font-weight: 600;">${ticket.title}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;">Current Status:</td>
+              <td style="padding: 6px 0;"><span style="background: #fef3c7; color: #b45309; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 11px;">IN PROGRESS</span></td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;">Assigned Specialist:</td>
+              <td style="padding: 6px 0; font-weight: 600;">${ticket.assignedToName || (ticket.assignedToRole ? ticket.assignedToRole.toUpperCase().replace('_', ' ') : 'Operations Support Specialist')}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${portalUrl}" style="background-color: ${primaryColor}; color: #ffffff; padding: 12px 28px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
+            Track Ticket Progress →
+          </a>
+        </div>
+      </div>
+    `;
+
+    await transporter.sendMail({
+      from,
+      to: ticket.createdBy.email,
+      subject,
+      html: wrapEmailHtml(subject, bodyContent),
+    });
+    console.log(`✅ [TICKET IN PROGRESS EMAIL DISPATCHED] To: ${ticket.createdBy.email}`);
+  } catch (err) {
+    console.error('Error dispatching ticket in-progress email:', err);
+  }
+};
+
+const sendTicketResolvedEmail = async (ticket: any, resolutionNotes?: string) => {
+  if (!ticket.createdBy?.email) return;
+  try {
+    const { transporter, from } = await getTransporter();
+    const primaryColor = '#00236f';
+    const portalUrl = 'http://72.61.106.87/tickets';
+    const subject = `✅ [Resolved] Support Ticket #${ticket.ticketNumber} — ${ticket.title}`;
+    const bodyContent = `
+      <div style="padding: 32px 24px; color: #1e293b; line-height: 1.6; font-family: 'Inter', sans-serif;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <span style="background-color: #ecfdf5; color: #047857; font-weight: 700; font-size: 11px; padding: 6px 14px; border-radius: 20px; border: 1px solid #a7f3d0; text-transform: uppercase;">
+            ✓ Issue Resolved
+          </span>
+          <h2 style="color: #047857; margin: 12px 0 6px 0; font-size: 20px; font-weight: 800;">
+            Your Ticket has been Resolved!
+          </h2>
+          <p style="margin: 0; color: #64748b; font-size: 14px;">
+            Hello ${ticket.createdBy.name || 'Member'}, the support ticket or inquiry you submitted has been marked as resolved.
+          </p>
+        </div>
+
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <tr>
+              <td style="padding: 6px 0; color: #64748b; width: 35%;">Ticket Reference:</td>
+              <td style="padding: 6px 0; font-family: monospace; font-weight: bold; color: ${primaryColor}; font-size: 14px;">${ticket.ticketNumber}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;">Subject:</td>
+              <td style="padding: 6px 0; font-weight: 600;">${ticket.title}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;">Final Status:</td>
+              <td style="padding: 6px 0;"><span style="background: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 11px;">RESOLVED</span></td>
+            </tr>
+            ${resolutionNotes || ticket.resolutionNotes ? `
+            <tr>
+              <td style="padding: 6px 0; color: #64748b; vertical-align: top;">Resolution Summary:</td>
+              <td style="padding: 6px 0; color: #0f172a; font-weight: 500;">${resolutionNotes || ticket.resolutionNotes}</td>
+            </tr>
+            ` : ''}
+          </table>
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${portalUrl}" style="background-color: ${primaryColor}; color: #ffffff; padding: 12px 28px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
+            View Ticket Details →
+          </a>
+        </div>
+        <p style="font-size: 12px; color: #64748b; text-align: center;">If you still experience issues or have follow-up questions, you can reopen or post a comment directly on the ticket.</p>
+      </div>
+    `;
+
+    await transporter.sendMail({
+      from,
+      to: ticket.createdBy.email,
+      subject,
+      html: wrapEmailHtml(subject, bodyContent),
+    });
+    console.log(`✅ [TICKET RESOLVED EMAIL DISPATCHED] To: ${ticket.createdBy.email}`);
+  } catch (err) {
+    console.error('Error dispatching ticket resolved email:', err);
+  }
+};
+
 app.post('/api/email/test-connection', async (req: Request, res: Response) => {
   try {
     const { smtpConfig } = req.body;
@@ -2663,13 +2943,15 @@ app.get('/api/tickets', (req: Request, res: Response) => {
   res.json({ success: true, data: db.tickets });
 });
 
-app.post('/api/tickets', (req: Request, res: Response) => {
+app.post('/api/tickets', async (req: Request, res: Response) => {
   if (!Array.isArray(db.tickets)) db.tickets = [];
   const ticketCount = db.tickets.length + 1;
   const newTicket = {
     ...req.body,
     id: req.body.id || `tkt-${Date.now()}`,
     ticketNumber: req.body.ticketNumber || `TKT-${1000 + ticketCount}`,
+    assignedToRole: req.body.assignedToRole || 'super_admin',
+    assignedToName: req.body.assignedToName || 'Super Admin / Operations',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     status: req.body.status || 'open',
@@ -2678,7 +2960,7 @@ app.post('/api/tickets', (req: Request, res: Response) => {
 
   db.tickets.unshift(newTicket);
 
-  // Send admin notification
+  // Send system notification
   db.notifications.unshift({
     id: `notif-tkt-${Date.now()}`,
     title: `🎫 New Support Ticket: ${newTicket.ticketNumber}`,
@@ -2690,11 +2972,17 @@ app.post('/api/tickets', (req: Request, res: Response) => {
   });
 
   saveDatabase(db);
-  console.log(`[API] Ticket logged: ${newTicket.ticketNumber} - ${newTicket.title}`);
+  console.log(`[API] Ticket logged: ${newTicket.ticketNumber} - ${newTicket.title} (Assigned: ${newTicket.assignedToRole})`);
+
+  // Asynchronously dispatch confirmation to creator & alert to super admin / assigned role
+  sendTicketRaisedEmails(newTicket).catch(err => {
+    console.error('Failed to dispatch ticket raised emails:', err);
+  });
+
   res.status(201).json({ success: true, data: newTicket });
 });
 
-app.patch('/api/tickets/:id', (req: Request, res: Response) => {
+app.patch('/api/tickets/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
   if (!Array.isArray(db.tickets)) db.tickets = [];
   const index = db.tickets.findIndex(t => t.id === id || t.ticketNumber === id);
@@ -2702,17 +2990,33 @@ app.patch('/api/tickets/:id', (req: Request, res: Response) => {
     return res.status(404).json({ success: false, message: 'Ticket not found' });
   }
 
-  db.tickets[index] = {
+  const previousTicket = { ...db.tickets[index] };
+  const updatedTicket = {
     ...db.tickets[index],
     ...req.body,
     updatedAt: new Date().toISOString(),
   };
 
+  db.tickets[index] = updatedTicket;
   saveDatabase(db);
-  res.json({ success: true, data: db.tickets[index] });
+
+  // Detect status transitions and dispatch emails
+  if (req.body.status && req.body.status !== previousTicket.status) {
+    if (req.body.status === 'in_progress') {
+      sendTicketInProgressEmail(updatedTicket).catch(err => {
+        console.error('Failed to dispatch ticket in-progress email:', err);
+      });
+    } else if (req.body.status === 'resolved') {
+      sendTicketResolvedEmail(updatedTicket, req.body.resolutionNotes).catch(err => {
+        console.error('Failed to dispatch ticket resolved email:', err);
+      });
+    }
+  }
+
+  res.json({ success: true, data: updatedTicket });
 });
 
-app.post('/api/tickets/:id/comments', (req: Request, res: Response) => {
+app.post('/api/tickets/:id/comments', async (req: Request, res: Response) => {
   const { id } = req.params;
   if (!Array.isArray(db.tickets)) db.tickets = [];
   const index = db.tickets.findIndex(t => t.id === id || t.ticketNumber === id);
@@ -2737,6 +3041,49 @@ app.post('/api/tickets/:id/comments', (req: Request, res: Response) => {
   db.tickets[index].updatedAt = new Date().toISOString();
 
   saveDatabase(db);
+
+  // Dispatch comment notification email
+  try {
+    const ticket = db.tickets[index];
+    const isFromCreator = comment.authorEmail === ticket.createdBy?.email;
+    const recipient = isFromCreator
+      ? (ticket.assignedToEmail || db.settings?.smtp?.user || 'admin@codelab.institute')
+      : ticket.createdBy?.email;
+
+    if (recipient) {
+      const { transporter, from } = await getTransporter();
+      const primaryColor = '#00236f';
+      const portalUrl = 'http://72.61.106.87/tickets';
+      const subject = `💬 [Reply on Ticket] #${ticket.ticketNumber} — ${ticket.title}`;
+      const bodyContent = `
+        <div style="padding: 32px 24px; color: #1e293b; line-height: 1.6; font-family: 'Inter', sans-serif;">
+          <h2 style="color: ${primaryColor}; margin: 0 0 6px 0; font-size: 18px; font-weight: 800;">
+            New Message on Ticket #${ticket.ticketNumber}
+          </h2>
+          <p style="margin: 0; color: #64748b; font-size: 13px;">
+            <strong>${comment.authorName}</strong> (${comment.authorRole}) posted an update:
+          </p>
+          <div style="background-color: #f8fafc; border-left: 4px solid ${primaryColor}; border-radius: 4px; padding: 16px; margin: 18px 0; font-size: 13px; color: #1e293b;">
+            ${comment.content}
+          </div>
+          <div style="text-align: center; margin: 24px 0;">
+            <a href="${portalUrl}" style="background-color: ${primaryColor}; color: #ffffff; padding: 12px 26px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 13px; display: inline-block;">
+              View &amp; Reply →
+            </a>
+          </div>
+        </div>
+      `;
+      transporter.sendMail({
+        from,
+        to: recipient,
+        subject,
+        html: wrapEmailHtml(subject, bodyContent),
+      }).catch(err => console.error('Error dispatching ticket comment email:', err));
+    }
+  } catch (err) {
+    console.error('Error handling comment email dispatch:', err);
+  }
+
   res.status(201).json({ success: true, data: comment });
 });
 

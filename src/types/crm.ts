@@ -55,6 +55,9 @@ export interface SupportTicket {
     roleTitle: string;
   };
   assignedTo?: string;
+  assignedToRole?: UserRole | string;
+  assignedToName?: string;
+  assignedToEmail?: string;
   createdAt: string;
   updatedAt: string;
   comments: TicketComment[];

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useCRM, formatNaira } from '../context/CRMContext';
 import { PerformanceMeter } from '../components/common/PerformanceMeter';
 
@@ -26,6 +26,10 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
   const [tableSearch, setTableSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [courseFilter, setCourseFilter] = useState<string>('All');
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
 
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [reminderSent, setReminderSent] = useState(false);
@@ -59,6 +63,20 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
       return matchesSearch && matchesStatus && matchesCourse;
     });
   }, [displayedStudents, tableSearch, statusFilter, courseFilter]);
+
+  // Reset page when filter or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [tableSearch, statusFilter, courseFilter]);
+
+  const totalStudents = filteredStudents.length;
+  const totalPages = Math.max(1, Math.ceil(totalStudents / pageSize));
+  const validCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginatedStudents = useMemo(() => {
+    const startIndex = (validCurrentPage - 1) * pageSize;
+    return filteredStudents.slice(startIndex, startIndex + pageSize);
+  }, [filteredStudents, validCurrentPage, pageSize]);
 
   const totalTuition = useMemo(() => displayedStudents.reduce((sum, s) => sum + (s.totalFees || 0), 0), [displayedStudents]);
   const totalPaid = useMemo(() => displayedStudents.reduce((sum, s) => sum + (s.paidAmount || 0), 0), [displayedStudents]);
@@ -350,7 +368,7 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
               </select>
 
               <span className="text-xs text-secondary font-medium whitespace-nowrap pl-1">
-                Showing {filteredStudents.length} of {displayedStudents.length}
+                Showing {totalStudents === 0 ? 0 : (validCurrentPage - 1) * pageSize + 1}–{Math.min(validCurrentPage * pageSize, totalStudents)} of {totalStudents} students
               </span>
             </div>
           </div>
@@ -376,7 +394,7 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-outline-variant text-xs">
-                  {filteredStudents.map((student) => {
+                  {paginatedStudents.map((student) => {
                     const balance = student.outstandingBalance ?? ((student.totalFees || 0) - (student.paidAmount || 0));
                     return (
                       <tr key={student.id} className="hover:bg-surface-container-low/50 transition-colors">
@@ -530,6 +548,94 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Pagination Controls Footer */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 px-4 border-t border-outline-variant bg-surface text-xs">
+              <div className="flex items-center gap-2 text-secondary">
+                <span className="font-medium">Rows per page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="bg-surface-container-lowest border border-outline-variant rounded px-2 py-1 text-on-surface font-semibold outline-none cursor-pointer"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+                <span className="text-secondary ml-2 font-medium">
+                  Page <strong className="text-on-surface">{validCurrentPage}</strong> of <strong className="text-on-surface">{totalPages}</strong>
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={validCurrentPage <= 1}
+                  className="p-1 rounded border border-outline-variant bg-surface-container-lowest text-secondary hover:text-on-surface disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  title="First Page"
+                >
+                  <span className="material-symbols-outlined text-[16px]">first_page</span>
+                </button>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={validCurrentPage <= 1}
+                  className="p-1 rounded border border-outline-variant bg-surface-container-lowest text-secondary hover:text-on-surface disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  title="Previous Page"
+                >
+                  <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+                </button>
+
+                {/* Page Number Buttons */}
+                <div className="flex items-center gap-1 px-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum: number;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (validCurrentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (validCurrentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = validCurrentPage - 2 + i;
+                    }
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`w-7 h-7 rounded text-xs font-bold transition-colors cursor-pointer ${
+                          validCurrentPage === pageNum
+                            ? 'bg-primary text-on-primary shadow-xs'
+                            : 'bg-surface-container-lowest border border-outline-variant text-secondary hover:text-on-surface'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={validCurrentPage >= totalPages}
+                  className="p-1 rounded border border-outline-variant bg-surface-container-lowest text-secondary hover:text-on-surface disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  title="Next Page"
+                >
+                  <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={validCurrentPage >= totalPages}
+                  className="p-1 rounded border border-outline-variant bg-surface-container-lowest text-secondary hover:text-on-surface disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  title="Last Page"
+                >
+                  <span className="material-symbols-outlined text-[16px]">last_page</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

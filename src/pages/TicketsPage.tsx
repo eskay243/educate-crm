@@ -7,17 +7,35 @@ export const TicketsPage: React.FC = () => {
     tickets, 
     createTicket, 
     updateTicketStatus, 
+    assignTicket,
     addTicketComment, 
     currentUser, 
+    customRoles,
     showToast 
   } = useCRM();
+
+  const isSuperAdmin = currentUser?.role === 'super_admin';
+  const isStaff = isSuperAdmin || currentUser?.role === 'admissions' || currentUser?.role === 'finance' || currentUser?.role === 'it_support';
+
+  // Base Access Isolation:
+  // Super Admin can see all system tickets.
+  // Other user roles can strictly only access tickets they raised OR tickets assigned to their role/user.
+  const authorizedTickets = useMemo(() => {
+    if (isSuperAdmin) return tickets;
+    return tickets.filter(t => {
+      const isCreator = t.createdBy.email === currentUser?.email || t.createdBy.id === currentUser?.id;
+      const isAssignedRole = t.assignedToRole && t.assignedToRole === currentUser?.role;
+      const isAssignedUser = (t.assignedTo && t.assignedTo === currentUser?.id) || (t.assignedToEmail && t.assignedToEmail === currentUser?.email);
+      return isCreator || isAssignedRole || isAssignedUser;
+    });
+  }, [tickets, currentUser, isSuperAdmin]);
 
   // Search and Filter States
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<'all' | 'my_tickets'>('all');
+  const [activeTab, setActiveTab] = useState<string>(isSuperAdmin ? 'all' : 'my_tickets');
 
   // Modal / Drawer States
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -28,36 +46,63 @@ export const TicketsPage: React.FC = () => {
   const [newCategory, setNewCategory] = useState<TicketCategory>('observation');
   const [newPriority, setNewPriority] = useState<TicketPriority>('medium');
   const [newDescription, setNewDescription] = useState('');
+  const [newAssignedRole, setNewAssignedRole] = useState<string>('super_admin');
 
   // Comment Input State
   const [replyText, setReplyText] = useState('');
 
-  const isStaff = currentUser?.role === 'super_admin' || currentUser?.role === 'admissions' || currentUser?.role === 'finance' || currentUser?.role === 'it_support';
+  const defaultRolesList = [
+    { id: 'super_admin', name: 'Super Admin / Operations' },
+    { id: 'admissions', name: 'Head of Admissions & Enrollments' },
+    { id: 'finance', name: 'Finance Directorate' },
+    { id: 'mentor', name: 'Academic Faculty Mentors' },
+    { id: 'it_support', name: 'IT Infrastructure & Support' },
+  ];
+
+  const availableRoles = useMemo(() => {
+    const customList = (customRoles || []).map(r => ({ id: r.id, name: r.name }));
+    const combined = [...defaultRolesList];
+    customList.forEach(c => {
+      if (!combined.some(x => x.id === c.id)) combined.push(c);
+    });
+    return combined;
+  }, [customRoles]);
 
   const filteredTickets = useMemo(() => {
-    return tickets.filter(t => {
+    return authorizedTickets.filter(t => {
       const matchesSearch = 
         t.ticketNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
         t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.createdBy.name.toLowerCase().includes(searchQuery.toLowerCase());
+        t.createdBy.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (t.assignedToName || '').toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesStatus = statusFilter === 'all' || t.status === statusFilter;
       const matchesCategory = categoryFilter === 'all' || t.category === categoryFilter;
       const matchesPriority = priorityFilter === 'all' || t.priority === priorityFilter;
-      const matchesTab = activeTab === 'all' || t.createdBy.email === currentUser?.email || t.createdBy.id === currentUser?.id;
+
+      let matchesTab = true;
+      if (activeTab === 'all') {
+        matchesTab = true;
+      } else if (activeTab === 'my_tickets') {
+        matchesTab = t.createdBy.email === currentUser?.email || t.createdBy.id === currentUser?.id;
+      } else if (activeTab === 'assigned_admin') {
+        matchesTab = !t.assignedToRole || t.assignedToRole === 'super_admin';
+      } else if (activeTab === 'assigned_role') {
+        matchesTab = t.assignedToRole === currentUser?.role || t.assignedTo === currentUser?.id;
+      }
 
       return matchesSearch && matchesStatus && matchesCategory && matchesPriority && matchesTab;
     });
-  }, [tickets, searchQuery, statusFilter, categoryFilter, priorityFilter, activeTab, currentUser]);
+  }, [authorizedTickets, searchQuery, statusFilter, categoryFilter, priorityFilter, activeTab, currentUser]);
 
   const stats = useMemo(() => {
-    const total = tickets.length;
-    const open = tickets.filter(t => t.status === 'open').length;
-    const inProgress = tickets.filter(t => t.status === 'in_progress').length;
-    const resolved = tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length;
+    const total = authorizedTickets.length;
+    const open = authorizedTickets.filter(t => t.status === 'open').length;
+    const inProgress = authorizedTickets.filter(t => t.status === 'in_progress').length;
+    const resolved = authorizedTickets.filter(t => t.status === 'resolved' || t.status === 'closed').length;
     return { total, open, inProgress, resolved };
-  }, [tickets]);
+  }, [authorizedTickets]);
 
   const activeTicket = useMemo(() => {
     return tickets.find(t => t.id === selectedTicketId) || null;
@@ -70,12 +115,17 @@ export const TicketsPage: React.FC = () => {
       return;
     }
 
+    const targetRole = isSuperAdmin ? newAssignedRole : 'super_admin';
+    const roleObj = availableRoles.find(r => r.id === targetRole);
+
     createTicket({
       title: newTitle.trim(),
       description: newDescription.trim(),
       category: newCategory,
       priority: newPriority,
       status: 'open',
+      assignedToRole: targetRole,
+      assignedToName: roleObj?.name || 'Super Admin / Operations',
       createdBy: {
         id: currentUser?.id || `usr-${Date.now()}`,
         name: currentUser?.name || 'Authorized User',
@@ -89,6 +139,7 @@ export const TicketsPage: React.FC = () => {
     setNewDescription('');
     setNewCategory('observation');
     setNewPriority('medium');
+    setNewAssignedRole('super_admin');
     setIsCreateModalOpen(false);
   };
 
@@ -224,27 +275,66 @@ export const TicketsPage: React.FC = () => {
       <div className="space-y-stack-sm">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-surface-container-lowest p-3 rounded-xl border border-outline-variant">
           {/* Tabs */}
-          <div className="inline-flex rounded-lg border border-outline-variant bg-surface p-0.5">
-            <button
-              onClick={() => setActiveTab('all')}
-              className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'all'
-                  ? 'bg-primary text-on-primary shadow-xs'
-                  : 'text-secondary hover:text-on-surface'
-              }`}
-            >
-              All Tickets ({tickets.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('my_tickets')}
-              className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'my_tickets'
-                  ? 'bg-primary text-on-primary shadow-xs'
-                  : 'text-secondary hover:text-on-surface'
-              }`}
-            >
-              My Tickets ({tickets.filter(t => t.createdBy.email === currentUser?.email || t.createdBy.id === currentUser?.id).length})
-            </button>
+          <div className="inline-flex flex-wrap rounded-lg border border-outline-variant bg-surface p-0.5">
+            {isSuperAdmin ? (
+              <>
+                <button
+                  onClick={() => setActiveTab('all')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'all'
+                      ? 'bg-primary text-on-primary shadow-xs'
+                      : 'text-secondary hover:text-on-surface'
+                  }`}
+                >
+                  All Institutional Tickets ({authorizedTickets.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('assigned_admin')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'assigned_admin'
+                      ? 'bg-primary text-on-primary shadow-xs'
+                      : 'text-secondary hover:text-on-surface'
+                  }`}
+                >
+                  Assigned to Super Admin ({authorizedTickets.filter(t => !t.assignedToRole || t.assignedToRole === 'super_admin').length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('my_tickets')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'my_tickets'
+                      ? 'bg-primary text-on-primary shadow-xs'
+                      : 'text-secondary hover:text-on-surface'
+                  }`}
+                >
+                  Raised by Me ({authorizedTickets.filter(t => t.createdBy.email === currentUser?.email || t.createdBy.id === currentUser?.id).length})
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setActiveTab('my_tickets')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'my_tickets'
+                      ? 'bg-primary text-on-primary shadow-xs'
+                      : 'text-secondary hover:text-on-surface'
+                  }`}
+                >
+                  My Submitted Tickets ({authorizedTickets.filter(t => t.createdBy.email === currentUser?.email || t.createdBy.id === currentUser?.id).length})
+                </button>
+                {authorizedTickets.some(t => t.assignedToRole === currentUser?.role || t.assignedTo === currentUser?.id) && (
+                  <button
+                    onClick={() => setActiveTab('assigned_role')}
+                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                      activeTab === 'assigned_role'
+                        ? 'bg-primary text-on-primary shadow-xs'
+                        : 'text-secondary hover:text-on-surface'
+                    }`}
+                  >
+                    Assigned to My Role ({authorizedTickets.filter(t => t.assignedToRole === currentUser?.role || t.assignedTo === currentUser?.id).length})
+                  </button>
+                )}
+              </>
+            )}
           </div>
 
           {/* Search Box */}
@@ -335,6 +425,7 @@ export const TicketsPage: React.FC = () => {
                 <th className="p-3">Category</th>
                 <th className="p-3">Priority</th>
                 <th className="p-3">Status</th>
+                <th className="p-3">Assigned To</th>
                 <th className="p-3">Submitted By</th>
                 <th className="p-3">Updated</th>
                 <th className="p-3 pr-4 text-right">Actions</th>
@@ -372,6 +463,13 @@ export const TicketsPage: React.FC = () => {
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold border ${getStatusBadgeClass(ticket.status)}`}>
                       {ticket.status.replace('_', ' ').toUpperCase()}
                     </span>
+                  </td>
+
+                  <td className="p-3 whitespace-nowrap">
+                    <div className="flex items-center gap-1.5 text-on-surface font-medium text-xs">
+                      <span className="material-symbols-outlined text-[15px] text-primary">assignment_ind</span>
+                      <span>{ticket.assignedToName || (ticket.assignedToRole ? ticket.assignedToRole.toUpperCase().replace('_', ' ') : 'Super Admin')}</span>
+                    </div>
                   </td>
 
                   <td className="p-3 whitespace-nowrap">
@@ -483,6 +581,24 @@ export const TicketsPage: React.FC = () => {
                 </div>
               </div>
 
+              {isSuperAdmin && (
+                <div>
+                  <label className="block text-secondary font-semibold mb-1">Assign Ticket To Role / Directorate</label>
+                  <select
+                    value={newAssignedRole}
+                    onChange={(e) => setNewAssignedRole(e.target.value)}
+                    className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none cursor-pointer"
+                  >
+                    {availableRoles.map(r => (
+                      <option key={r.id} value={r.id}>{r.name}</option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-secondary mt-1">
+                    By default, tickets route to Super Admin. You can route this ticket directly to Admissions, Finance, Mentors, or IT.
+                  </p>
+                </div>
+              )}
+
               <div>
                 <label className="block text-secondary font-semibold mb-1">Detailed Description &amp; Steps *</label>
                 <textarea
@@ -556,6 +672,35 @@ export const TicketsPage: React.FC = () => {
                 {activeTicket.description}
               </div>
 
+              {/* Assignment & Routing Card */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-lg bg-surface border border-outline-variant text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-secondary font-semibold">Assigned To:</span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-primary/10 text-primary font-bold text-[11px]">
+                    <span className="material-symbols-outlined text-[14px]">assignment_ind</span>
+                    {activeTicket.assignedToName || (activeTicket.assignedToRole ? activeTicket.assignedToRole.toUpperCase().replace('_', ' ') : 'Super Admin / Operations')}
+                  </span>
+                </div>
+                {isSuperAdmin && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] text-secondary font-medium">Reassign:</span>
+                    <select
+                      value={activeTicket.assignedToRole || 'super_admin'}
+                      onChange={(e) => {
+                        const nextRole = e.target.value;
+                        const roleObj = availableRoles.find(r => r.id === nextRole);
+                        assignTicket(activeTicket.id, nextRole, roleObj?.name);
+                      }}
+                      className="px-2 py-1 text-[11px] bg-surface-container-lowest border border-outline-variant rounded font-semibold text-on-surface cursor-pointer outline-none"
+                    >
+                      {availableRoles.map(r => (
+                        <option key={r.id} value={r.id}>{r.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
               {/* Status Action Buttons for Staff */}
               {isStaff && (
                 <div className="flex items-center gap-2 pt-1">
@@ -563,8 +708,15 @@ export const TicketsPage: React.FC = () => {
                   {(['open', 'in_progress', 'resolved', 'closed'] as TicketStatus[]).map((st) => (
                     <button
                       key={st}
-                      onClick={() => updateTicketStatus(activeTicket.id, st)}
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold capitalize transition-all cursor-pointer ${
+                      onClick={() => {
+                        let notes: string | undefined = undefined;
+                        if (st === 'resolved' && !activeTicket.resolutionNotes) {
+                          const userNotes = window.prompt('Optional resolution notes to include in email notification:', 'Issue successfully reviewed and resolved.');
+                          if (userNotes) notes = userNotes;
+                        }
+                        updateTicketStatus(activeTicket.id, st, notes);
+                      }}
+                      className={`px-2.5 py-1 rounded text-[11px] font-bold capitalize transition-all cursor-pointer ${
                         activeTicket.status === st
                           ? 'bg-primary text-on-primary shadow-xs'
                           : 'bg-surface border border-outline-variant text-secondary hover:text-on-surface'
