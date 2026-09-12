@@ -3,7 +3,7 @@ import { useCRM, formatNaira } from '../context/CRMContext';
 import { LeadStatus } from '../types/crm';
 
 export const LeadManagementPage: React.FC = () => {
-  const { leads, updateLeadStatus, convertLeadToStudent, openModal, globalSearch } = useCRM();
+  const { leads, updateLeadStatus, updateLeadNotes, convertLeadToStudent, openModal, globalSearch } = useCRM();
 
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('kanban');
   const [tableSearch, setTableSearch] = useState('');
@@ -297,6 +297,21 @@ export const LeadManagementPage: React.FC = () => {
                             <p className="text-[11px] text-secondary truncate font-semibold">{lead.company}</p>
                             <p className="text-[11px] text-secondary truncate">{lead.programInterest}</p>
 
+                            {/* Discovery Notes & Background */}
+                            {lead.notes && (
+                              <div 
+                                className="p-2 rounded bg-surface-container-low border border-outline-variant/60 text-[11px] text-on-surface-variant flex items-start gap-1.5 cursor-pointer hover:bg-surface-container transition-colors"
+                                title={lead.notes}
+                                onClick={() => {
+                                  setNoteModalLeadId(lead.id);
+                                  setNoteText(lead.notes || '');
+                                }}
+                              >
+                                <span className="material-symbols-outlined text-[14px] text-primary shrink-0 mt-0.5">description</span>
+                                <span className="line-clamp-2 leading-tight">{lead.notes}</span>
+                              </div>
+                            )}
+
                             <div className="flex items-center justify-between pt-2 border-t border-outline-variant/60 text-[10px]">
                               <span className="text-secondary font-medium">Rep: {lead.assignedRep.split(' ')[0]}</span>
                               <span className="font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
@@ -309,10 +324,10 @@ export const LeadManagementPage: React.FC = () => {
                               <button
                                 onClick={() => {
                                   setNoteModalLeadId(lead.id);
-                                  setNoteText('');
+                                  setNoteText(lead.notes || '');
                                 }}
                                 className="text-secondary hover:text-primary p-1 text-[11px] rounded hover:bg-surface-container"
-                                title="Add Touchpoint Note"
+                                title="View / Edit Discovery Notes"
                               >
                                 <span className="material-symbols-outlined text-[16px]">edit_note</span>
                               </button>
@@ -386,6 +401,7 @@ export const LeadManagementPage: React.FC = () => {
                   </th>
                   <th className="p-stack-md">Lead / Prospect</th>
                   <th className="p-stack-md">Company</th>
+                  <th className="p-stack-md">Discovery Notes</th>
                   <th className="p-stack-md">Status</th>
                   <th className="p-stack-md">Deal Value</th>
                   <th className="p-stack-md">Source</th>
@@ -416,6 +432,23 @@ export const LeadManagementPage: React.FC = () => {
                       </div>
                     </td>
                     <td className="p-stack-md font-medium text-on-surface">{lead.company || 'N/A'}</td>
+                    <td className="p-stack-md max-w-xs">
+                      {lead.notes ? (
+                        <div 
+                          className="text-xs text-secondary line-clamp-2 cursor-pointer hover:text-primary transition-colors flex items-start gap-1"
+                          title={lead.notes}
+                          onClick={() => {
+                            setNoteModalLeadId(lead.id);
+                            setNoteText(lead.notes || '');
+                          }}
+                        >
+                          <span className="material-symbols-outlined text-[14px] text-primary shrink-0 mt-0.5">description</span>
+                          <span className="line-clamp-2">{lead.notes}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-outline italic">No notes</span>
+                      )}
+                    </td>
                     <td className="p-stack-md">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusBadge(lead.status as LeadStatus)}`}>
                         {lead.status}
@@ -431,10 +464,10 @@ export const LeadManagementPage: React.FC = () => {
                         <button 
                           onClick={() => {
                             setNoteModalLeadId(lead.id);
-                            setNoteText('');
+                            setNoteText(lead.notes || '');
                           }}
                           className="text-secondary hover:text-primary transition-colors p-1.5 rounded hover:bg-surface-container" 
-                          title="View / Add Note"
+                          title="View / Edit Discovery Notes"
                         >
                           <span className="material-symbols-outlined text-[20px]">edit_note</span>
                         </button>
@@ -461,20 +494,23 @@ export const LeadManagementPage: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-margin-page">
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-lg p-stack-lg max-w-md w-full space-y-4">
             <div className="flex justify-between items-center border-b border-outline-variant pb-3">
-              <h3 className="font-headline-md text-headline-md font-bold text-on-surface">Lead Notes &amp; Activity Log</h3>
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[20px]">edit_note</span>
+                <h3 className="font-headline-md text-headline-md font-bold text-on-surface">Discovery Notes &amp; Background</h3>
+              </div>
               <button onClick={() => setNoteModalLeadId(null)} className="text-secondary hover:text-on-surface">
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
 
             <div className="space-y-2">
-              <label className="font-label-md text-xs text-secondary font-semibold">Touchpoint Notes</label>
+              <label className="font-label-md text-xs text-secondary font-semibold">Intake Background &amp; Notes</label>
               <textarea
-                rows={3}
+                rows={4}
                 value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
-                placeholder="Log call outcome, WhatsApp feedback, or scheduled meeting date..."
-                className="w-full p-2.5 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                placeholder="Capture student background, career aspirations, schedule availability, or touchpoint feedback..."
+                className="w-full p-2.5 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none resize-y"
               />
             </div>
 
@@ -487,14 +523,14 @@ export const LeadManagementPage: React.FC = () => {
               </button>
               <button 
                 onClick={() => {
-                  if (noteText) {
-                    updateLeadStatus(noteModalLeadId, 'Negotiation', noteText);
+                  if (noteModalLeadId) {
+                    updateLeadNotes(noteModalLeadId, noteText);
                   }
                   setNoteModalLeadId(null);
                 }}
                 className="px-4 py-2 rounded bg-primary text-on-primary text-xs font-bold hover:bg-primary-container"
               >
-                Save Touchpoint Note
+                Save Discovery Notes
               </button>
             </div>
           </div>

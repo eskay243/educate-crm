@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useCRM, formatNaira } from '../context/CRMContext';
 
 export const CoursesCohortsPage: React.FC = () => {
-  const { courses, cohorts, openModal, globalSearch, setSelectedCourseForEditId, currentUser } = useCRM();
+  const { courses, cohorts, openModal, globalSearch, setSelectedCourseForEditId, currentUser, hasFeaturePermission } = useCRM();
 
   const [activeTab, setActiveTab] = useState<'programs' | 'cohorts'>('programs');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -11,6 +11,9 @@ export const CoursesCohortsPage: React.FC = () => {
   const effectiveSearch = globalSearch || searchQuery;
 
   const categories = ['All', 'Software Engineering', 'Data Science', 'Product Design', 'Cloud Engineering'];
+
+  const canManageCourses = currentUser?.role === 'super_admin' || currentUser?.role === 'admissions' || hasFeaturePermission('canAddCourses');
+  const canManageCohorts = currentUser?.role === 'super_admin' || currentUser?.role === 'admissions' || hasFeaturePermission('canAddCohorts');
 
   const filteredCourses = useMemo(() => {
     return courses.filter(c => {
@@ -44,7 +47,7 @@ export const CoursesCohortsPage: React.FC = () => {
           <p className="font-body-md text-body-md text-secondary">Manage curriculum tracks, course syllabi, tuition fees, and cohort scheduling.</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          {currentUser?.role === 'super_admin' && (
+          {canManageCourses && (
             <button
               onClick={() => openModal('create-course')}
               className="h-10 px-4 bg-secondary-container text-primary rounded font-label-md text-label-md font-bold hover:bg-surface-container-high transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
@@ -53,13 +56,15 @@ export const CoursesCohortsPage: React.FC = () => {
               <span>+ Add Academic Program</span>
             </button>
           )}
-          <button
-            onClick={() => openModal('create-cohort')}
-            className="h-10 px-4 bg-primary text-on-primary rounded font-label-md text-label-md font-bold hover:bg-primary/90 transition-colors shadow-xs flex items-center gap-2 cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[18px]">add_circle</span>
-            <span>Launch New Cohort</span>
-          </button>
+          {canManageCohorts && (
+            <button
+              onClick={() => openModal('create-cohort')}
+              className="h-10 px-4 bg-primary text-on-primary rounded font-label-md text-label-md font-bold hover:bg-primary/90 transition-colors shadow-xs flex items-center gap-2 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">add_circle</span>
+              <span>Launch New Cohort</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -242,7 +247,7 @@ export const CoursesCohortsPage: React.FC = () => {
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        {currentUser?.role === 'super_admin' ? (
+                        {canManageCourses ? (
                           <button
                             onClick={() => {
                               setSelectedCourseForEditId(course.id);

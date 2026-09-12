@@ -339,6 +339,15 @@
   ],
   "notifications": [
     {
+      "id": "notif-tkt-1789198810350",
+      "title": "🎫 New Support Ticket: TKT-1003",
+      "message": "Super Admin (Managing Director) submitted ticket: \"App Improvement: Dark Mode Accessibility\"",
+      "type": "system",
+      "timestamp": "Just now",
+      "read": false,
+      "link": "/tickets"
+    },
+    {
       "id": "notif-init",
       "title": "🚀 Production Workspace Ready",
       "message": "Demo data flushed. Initialized with 4 functional role templates. You can now provision staff and enroll students.",
@@ -564,6 +573,247 @@
       "mentorFeedback": "Outstanding work on keyboard event handling and focus management! Clean TypeScript interfaces throughout.",
       "reviewedBy": "Dr. Chidi Okeke",
       "reviewedAt": "2026-09-09T10:15:00Z"
+    }
+  ],
+  "tickets": [
+    {
+      "id": "tkt-001",
+      "ticketNumber": "TKT-1001",
+      "title": "Paystack checkout timeout on Mobile Safari during weekend",
+      "description": "Two prospective students reported an intermittent session delay when verifying OTP over MTN 4G network.",
+      "category": "billing",
+      "priority": "high",
+      "status": "open",
+      "createdBy": {
+        "id": "user-admissions-demo",
+        "name": "Zainab Bello",
+        "email": "admissions@codelab.institute",
+        "role": "admissions",
+        "roleTitle": "Head of Admissions & Enrollments"
+      },
+      "createdAt": "2026-09-10T14:22:00Z",
+      "updatedAt": "2026-09-10T14:22:00Z",
+      "comments": [
+        {
+          "id": "comm-1",
+          "ticketId": "tkt-001",
+          "authorName": "Abiola Adefowope",
+          "authorEmail": "abiola.adefowope@codelab.institute",
+          "authorRole": "Super Admin",
+          "content": "Investigating with Paystack webhook logs. Added a retry fallback timeout.",
+          "createdAt": "2026-09-10T15:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "tkt-002",
+      "ticketNumber": "TKT-1002",
+      "title": "Suggestion: Add dark mode toggle in PWA mobile bottom nav",
+      "description": "For night study sessions in the Yaba campus lab, a quick dark mode switch would improve readability.",
+      "category": "feature_request",
+      "priority": "medium",
+      "status": "in_progress",
+      "createdBy": {
+        "id": "stu-demo-001",
+        "name": "Adebayo Adeleke",
+        "email": "student@codelab.institute",
+        "role": "student",
+        "roleTitle": "Enrolled Scholar / Student"
+      },
+      "createdAt": "2026-09-11T09:15:00Z",
+      "updatedAt": "2026-09-11T11:45:00Z",
+      "comments": []
+    }
+  ],
+  "customRoles": [
+    {
+      "id": "super_admin",
+      "name": "Super Admin / Managing Director",
+      "description": "Complete unrestricted access across all institution modules, financial ledgers, and configurations.",
+      "isSystem": true,
+      "badgeColor": "bg-primary/10 text-primary border border-primary/20",
+      "allowedModules": [
+        "reports",
+        "leads",
+        "courses",
+        "students",
+        "mentors",
+        "attendance",
+        "expenses",
+        "tickets",
+        "settings",
+        "lms"
+      ],
+      "permissions": {
+        "canAddCourses": true,
+        "canAddCohorts": true,
+        "canAddLeads": true,
+        "canEnrollStudents": true,
+        "canLogExpenses": true,
+        "canApproveExpenses": true,
+        "canIssueCertificates": true,
+        "canViewBilling": true,
+        "canManageSettings": true,
+        "canManageAttendance": true,
+        "canSubmitReports": true
+      }
+    },
+    {
+      "id": "admissions",
+      "name": "Head of Admissions & Enrollments",
+      "description": "Manages prospect intake, converts leads, adds academic programs/cohorts, and registers student scholars.",
+      "isSystem": true,
+      "badgeColor": "bg-blue-500/10 text-blue-700 border border-blue-500/20",
+      "allowedModules": [
+        "reports",
+        "leads",
+        "courses",
+        "students",
+        "attendance",
+        "tickets"
+      ],
+      "permissions": {
+        "canAddCourses": true,
+        "canAddCohorts": true,
+        "canAddLeads": true,
+        "canEnrollStudents": true,
+        "canLogExpenses": false,
+        "canApproveExpenses": false,
+        "canIssueCertificates": true,
+        "canViewBilling": true,
+        "canManageSettings": false,
+        "canManageAttendance": true,
+        "canSubmitReports": false
+      }
+    },
+    {
+      "id": "mentor",
+      "name": "Faculty Mentor & Instructor",
+      "description": "Reviews student lab deliverables, grades assignments, conducts coaching sessions, and submits welfare reports.",
+      "isSystem": true,
+      "badgeColor": "bg-purple-500/10 text-purple-700 border border-purple-500/20",
+      "allowedModules": [
+        "mentors",
+        "students",
+        "courses",
+        "attendance",
+        "tickets"
+      ],
+      "permissions": {
+        "canAddCourses": false,
+        "canAddCohorts": false,
+        "canAddLeads": false,
+        "canEnrollStudents": false,
+        "canLogExpenses": false,
+        "canApproveExpenses": false,
+        "canIssueCertificates": false,
+        "canViewBilling": false,
+        "canManageSettings": false,
+        "canManageAttendance": true,
+        "canSubmitReports": true
+      }
+    },
+    {
+      "id": "finance",
+      "name": "Bursary & Financial Controller",
+      "description": "Authorizes expense disbursements, verifies NIBSS/Paystack student tuition settlements, and tracks budgets.",
+      "isSystem": true,
+      "badgeColor": "bg-emerald-500/10 text-emerald-700 border border-emerald-500/20",
+      "allowedModules": [
+        "reports",
+        "expenses",
+        "students",
+        "attendance",
+        "tickets"
+      ],
+      "permissions": {
+        "canAddCourses": false,
+        "canAddCohorts": false,
+        "canAddLeads": false,
+        "canEnrollStudents": false,
+        "canLogExpenses": true,
+        "canApproveExpenses": true,
+        "canIssueCertificates": false,
+        "canViewBilling": true,
+        "canManageSettings": false,
+        "canManageAttendance": true,
+        "canSubmitReports": false
+      }
+    },
+    {
+      "id": "student",
+      "name": "Enrolled Scholar / Student",
+      "description": "Scholar portal with access to curriculum tracks, interactive labs, mentor bookings, and tuition installment checkout.",
+      "isSystem": true,
+      "badgeColor": "bg-amber-500/10 text-amber-700 border border-amber-500/20",
+      "allowedModules": [
+        "lms",
+        "tickets"
+      ],
+      "permissions": {
+        "canAddCourses": false,
+        "canAddCohorts": false,
+        "canAddLeads": false,
+        "canEnrollStudents": false,
+        "canLogExpenses": false,
+        "canApproveExpenses": false,
+        "canIssueCertificates": false,
+        "canViewBilling": false,
+        "canManageSettings": false,
+        "canManageAttendance": false,
+        "canSubmitReports": false
+      }
+    },
+    {
+      "id": "it_support",
+      "name": "IT & Systems Operations",
+      "description": "Oversees technical infrastructure, system audit logs, app bug reports, and platform configurations.",
+      "isSystem": false,
+      "badgeColor": "bg-cyan-500/10 text-cyan-700 border border-cyan-500/20",
+      "allowedModules": [
+        "reports",
+        "attendance",
+        "tickets",
+        "settings"
+      ],
+      "permissions": {
+        "canAddCourses": false,
+        "canAddCohorts": false,
+        "canAddLeads": false,
+        "canEnrollStudents": false,
+        "canLogExpenses": false,
+        "canApproveExpenses": false,
+        "canIssueCertificates": false,
+        "canViewBilling": false,
+        "canManageSettings": true,
+        "canManageAttendance": true,
+        "canSubmitReports": false
+      }
+    },
+    {
+      "id": "customer_service",
+      "name": "Customer Support & Scholar Welfare",
+      "description": "Assists prospective inquiries, handles student complaints, manages support tickets, and monitors feedback.",
+      "isSystem": false,
+      "badgeColor": "bg-rose-500/10 text-rose-700 border border-rose-500/20",
+      "allowedModules": [
+        "leads",
+        "students",
+        "tickets"
+      ],
+      "permissions": {
+        "canAddCourses": false,
+        "canAddCohorts": false,
+        "canAddLeads": true,
+        "canEnrollStudents": false,
+        "canLogExpenses": false,
+        "canApproveExpenses": false,
+        "canIssueCertificates": false,
+        "canViewBilling": false,
+        "canManageSettings": false,
+        "canManageAttendance": false,
+        "canSubmitReports": false
+      }
     }
   ]
 }

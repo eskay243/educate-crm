@@ -18,9 +18,12 @@ import { StudentDashboardPage } from './pages/student/StudentDashboardPage';
 import { StudentCoursesPage } from './pages/student/StudentCoursesPage';
 import { StudentMentorPage } from './pages/student/StudentMentorPage';
 import { StudentBillingPage } from './pages/student/StudentBillingPage';
+import { TicketsPage } from './pages/TicketsPage';
 import { useCRM } from './context/CRMContext';
 
 import { ToastContainer } from './components/notifications/ToastContainer';
+import { PWAInstallPrompt } from './components/common/PWAInstallPrompt';
+import { OfflineIndicator } from './components/common/OfflineIndicator';
 
 const HomeRoute: React.FC = () => {
   const { currentUser } = useCRM();
@@ -147,12 +150,23 @@ export const App: React.FC = () => {
                 </ProtectedRoute>
               }
             />
+
+            <Route
+              path="tickets"
+              element={
+                <ProtectedRoute>
+                  <TicketsPage />
+                </ProtectedRoute>
+              }
+            />
             
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
       </BrowserRouter>
       <ToastContainer />
+      <PWAInstallPrompt />
+      <OfflineIndicator />
     </CRMProvider>
     </PWAProvider>
   );

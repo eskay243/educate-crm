@@ -1,4 +1,65 @@
-export type UserRole = 'super_admin' | 'admissions' | 'mentor' | 'finance' | 'student';
+export type BuiltInRole = 'super_admin' | 'admissions' | 'mentor' | 'finance' | 'student';
+export type UserRole = BuiltInRole | string;
+
+export interface RoleCapabilities {
+  canAddCourses: boolean;
+  canAddCohorts: boolean;
+  canAddLeads: boolean;
+  canEnrollStudents: boolean;
+  canLogExpenses: boolean;
+  canApproveExpenses: boolean;
+  canIssueCertificates: boolean;
+  canViewBilling: boolean;
+  canManageSettings: boolean;
+  canManageAttendance: boolean;
+  canSubmitReports: boolean;
+}
+
+export interface CustomRoleDefinition {
+  id: string;
+  name: string;
+  description: string;
+  isSystem?: boolean;
+  badgeColor?: string;
+  allowedModules: string[];
+  permissions: RoleCapabilities;
+}
+
+export type TicketCategory = 'bug' | 'feature_request' | 'academic' | 'billing' | 'welfare' | 'observation' | 'general';
+export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+
+export interface TicketComment {
+  id: string;
+  ticketId: string;
+  authorName: string;
+  authorEmail: string;
+  authorRole: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface SupportTicket {
+  id: string;
+  ticketNumber: string;
+  title: string;
+  description: string;
+  category: TicketCategory;
+  priority: TicketPriority;
+  status: TicketStatus;
+  createdBy: {
+    id: string;
+    name: string;
+    email: string;
+    role: UserRole;
+    roleTitle: string;
+  };
+  assignedTo?: string;
+  createdAt: string;
+  updatedAt: string;
+  comments: TicketComment[];
+  resolutionNotes?: string;
+}
 
 export interface AuthUser {
   id: string;
@@ -477,6 +538,7 @@ export interface OrganizationSettings {
   enabledModules?: EnabledModules;
   defaultMinimumLearningHours?: number; // Default 40 hours
   campusLocationsList?: CampusLocation[];
+  customRoles?: CustomRoleDefinition[];
 }
 
 export interface ActivityLogItem {

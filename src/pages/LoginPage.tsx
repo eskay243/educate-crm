@@ -4,6 +4,7 @@ import { useCRM } from '../context/CRMContext';
 import { demoUsers } from '../data/mockData';
 import { UserRole } from '../types/crm';
 import { BrandLogo } from '../components/common/BrandLogo';
+import { usePWA } from '../context/PWAContext';
 
 const VALID_ROLES: UserRole[] = ['super_admin', 'student', 'admissions', 'mentor', 'finance'];
 
@@ -25,9 +26,18 @@ const ROLE_SHORT_LABELS: Record<UserRole, string> = {
 
 export const LoginPage: React.FC = () => {
   const { login, settings, staffUsers, mentors, students } = useCRM();
+  const { isStandalone, isIOS, promptInstall, setShowIOSInstallGuide } = usePWA();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+
+  const handleInstallPWA = async () => {
+    if (isIOS) {
+      setShowIOSInstallGuide(true);
+    } else {
+      await promptInstall();
+    }
+  };
 
   const queryRole = searchParams.get('role') as UserRole | null;
   const queryEmail = searchParams.get('email') || '';
@@ -96,12 +106,6 @@ export const LoginPage: React.FC = () => {
     e.preventDefault();
     login(selectedRole, email);
     const target = selectedRole === 'student' ? '/student/dashboard' : (from === '/' ? '/' : from);
-    navigate(target, { replace: true });
-  };
-
-  const handleQuickLogin = (role: UserRole) => {
-    login(role);
-    const target = role === 'student' ? '/student/dashboard' : (from === '/' ? '/' : from);
     navigate(target, { replace: true });
   };
 
@@ -227,39 +231,26 @@ export const LoginPage: React.FC = () => {
               <span>Sign In to {ROLE_SHORT_LABELS[selectedRole]} Portal</span>
               <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
             </button>
+
+            {/* Mobile PWA Quick Install Action */}
+            {!isStandalone && (
+              <button
+                type="button"
+                onClick={handleInstallPWA}
+                className="w-full h-9 rounded border border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">install_mobile</span>
+                <span>Add Nexus CRM App to Home Screen</span>
+              </button>
+            )}
           </form>
 
-          {/* Quick Persona Switcher for Local/Demo Verification */}
-          <div className="pt-4 border-t border-outline-variant space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="font-label-md text-[11px] text-secondary font-semibold uppercase tracking-wider">
-                1-Click Demo Testing Personas
-              </p>
-              <span className="text-[10px] text-outline font-medium">Quick switch</span>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {demoUsers.map(user => (
-                <button
-                  key={user.id}
-                  type="button"
-                  onClick={() => handleQuickLogin(user.role)}
-                  className="p-2 rounded-lg border border-outline-variant bg-surface hover:border-primary hover:bg-surface-container-high transition-all text-left group"
-                >
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <span className="w-5 h-5 rounded-full bg-secondary-container text-primary flex items-center justify-center font-bold text-[9px] shrink-0">
-                      {user.name.slice(0, 2).toUpperCase()}
-                    </span>
-                    <span className="font-bold text-[11px] text-on-surface truncate group-hover:text-primary">
-                      {user.name.split(' ')[0]}
-                    </span>
-                  </div>
-                  <p className="text-[9px] text-secondary truncate font-medium">
-                    {ROLE_SHORT_LABELS[user.role] || user.role}
-                  </p>
-                </button>
-              ))}
-            </div>
+          {/* Institutional Security Notice */}
+          <div className="pt-4 border-t border-outline-variant/60 text-center space-y-1">
+            <p className="text-[11px] text-secondary flex items-center justify-center gap-1">
+              <span className="material-symbols-outlined text-[13px] text-outline">lock</span>
+              <span>Enterprise Single Sign-On &amp; Role-Based Institutional Access Control</span>
+            </p>
           </div>
         </div>
 

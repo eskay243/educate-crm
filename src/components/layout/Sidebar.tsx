@@ -19,7 +19,7 @@ interface NavItemConfig {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
-  const { openModal, resetAllData, currentUser, logout, settings, isModuleEnabled } = useCRM();
+  const { openModal, resetAllData, currentUser, logout, settings, isModuleEnabled, hasPermission, tickets } = useCRM();
   const { isStandalone, promptInstall, isIOS, setShowIOSInstallGuide } = usePWA();
   const navigate = useNavigate();
 
@@ -39,6 +39,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     { to: '/student/courses', label: 'Classroom & LMS', icon: 'local_library', allowedRoles: ['student'], module: 'lms' },
     { to: '/student/mentor', label: '1-on-1 Faculty Mentor', icon: 'support_agent', allowedRoles: ['student'], module: 'mentors' },
     { to: '/student/billing', label: 'Tuition & Invoicing', icon: 'receipt_long', allowedRoles: ['student'] },
+
+    // Universal Support & Feedback Module for all roles
+    { to: '/tickets', label: 'Support & Tickets', icon: 'confirmation_number' },
   ];
 
   const isStudent = currentUser?.role === 'student';
@@ -47,6 +50,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   const visibleNavItems = allNavItems.filter(item => {
     if (!currentUser) return false;
     
+    // Support & Tickets is universal to all authenticated roles
+    if (item.to === '/tickets') return true;
+
     // Role filter
     let roleAllowed = false;
     if (isStudent) {
@@ -54,7 +60,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     } else if (isSuperAdmin) {
       roleAllowed = !item.allowedRoles?.includes('student') || item.allowedRoles?.includes('super_admin');
     } else {
-      roleAllowed = !!item.allowedRoles?.includes(currentUser.role);
+      roleAllowed = item.allowedRoles ? hasPermission(item.allowedRoles) : true;
     }
     if (!roleAllowed) return false;
 
@@ -162,6 +168,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
                     {item.icon}
                   </span>
                   <span className="truncate">{item.label}</span>
+                  {item.to === '/tickets' && tickets.filter(t => t.status === 'open').length > 0 && (
+                    <span className="ml-auto text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-primary/15 text-primary font-data-tabular">
+                      {tickets.filter(t => t.status === 'open').length}
+                    </span>
+                  )}
                   {isItemDisabled && (
                     <span 
                       title="Module is disabled for staff and students"

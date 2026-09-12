@@ -22,8 +22,6 @@ import { ClockOutModal } from '../modals/ClockOutModal';
 import { CertificateModal } from '../modals/CertificateModal';
 import { SubmitPerformanceReportModal } from '../modals/SubmitPerformanceReportModal';
 import { MobileBottomNav } from './MobileBottomNav';
-import { PWAInstallPrompt } from '../common/PWAInstallPrompt';
-import { OfflineIndicator } from '../common/OfflineIndicator';
 
 export const AppLayout: React.FC = () => {
   const { activeModal, closeModal } = useCRM();
@@ -62,10 +60,6 @@ export const AppLayout: React.FC = () => {
         {/* Mobile Bottom Navigation Bar */}
         <MobileBottomNav onOpenMenu={() => setIsMobileSidebarOpen(true)} />
       </div>
-
-      {/* PWA Floating Install Prompt & Offline Connectivity Indicator */}
-      <PWAInstallPrompt />
-      <OfflineIndicator />
 
       {/* Global Modals */}
       <CreateRecordHubModal 

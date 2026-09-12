@@ -14,7 +14,10 @@ import {
   AttendanceRecord,
   LMSModule,
   StudentAssignmentSubmission,
-  StudentPerformanceReport
+  StudentPerformanceReport,
+  SupportTicket,
+  TicketComment,
+  CustomRoleDefinition
 } from '../types/crm';
 
 const API_BASE_URL = '/api';
@@ -474,6 +477,51 @@ class ApiService {
   async issueStudentCertificate(studentId: string) {
     return this.request<{ student: Student; certificateNumber: string }>(`/students/${studentId}/issue-certificate`, {
       method: 'POST',
+    });
+  }
+
+  // Support & Feedback Tickets
+  async getTickets(): Promise<SupportTicket[] | null> {
+    return this.request<SupportTicket[]>('/tickets');
+  }
+
+  async createTicket(ticketData: Partial<SupportTicket>): Promise<SupportTicket | null> {
+    return this.request<SupportTicket>('/tickets', {
+      method: 'POST',
+      body: JSON.stringify(ticketData),
+    });
+  }
+
+  async updateTicket(id: string, updates: Partial<SupportTicket>): Promise<SupportTicket | null> {
+    return this.request<SupportTicket>(`/tickets/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async addTicketComment(ticketId: string, commentData: { authorName: string; authorEmail: string; authorRole: string; content: string }): Promise<TicketComment | null> {
+    return this.request<TicketComment>(`/tickets/${ticketId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify(commentData),
+    });
+  }
+
+  // Custom Roles & Permissions
+  async getRoles(): Promise<CustomRoleDefinition[] | null> {
+    return this.request<CustomRoleDefinition[]>('/roles');
+  }
+
+  async saveRole(role: CustomRoleDefinition): Promise<CustomRoleDefinition | null> {
+    return this.request<CustomRoleDefinition>('/roles', {
+      method: 'POST',
+      body: JSON.stringify(role),
+    });
+  }
+
+  async updateRole(id: string, updates: Partial<CustomRoleDefinition>): Promise<CustomRoleDefinition | null> {
+    return this.request<CustomRoleDefinition>(`/roles/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
     });
   }
 }

@@ -40,6 +40,8 @@ import {
   initialAssignments,
   initialCampuses,
   initialStudentPerformanceReports,
+  defaultRoleDefinitions,
+  initialTickets,
 } from '../src/data/mockData.js';
 
 interface DatabaseSchema {
@@ -59,6 +61,8 @@ interface DatabaseSchema {
   lmsModules?: any[];
   assignments?: any[];
   studentPerformanceReports?: any[];
+  tickets?: any[];
+  customRoles?: any[];
 }
 
 const getInitialDatabase = (): DatabaseSchema => ({
@@ -77,6 +81,8 @@ const getInitialDatabase = (): DatabaseSchema => ({
   attendance: [],
   lmsModules: initialLMSModules,
   assignments: initialAssignments,
+  tickets: initialTickets,
+  customRoles: defaultRoleDefinitions,
 });
 
 const loadDatabase = (): DatabaseSchema => {
@@ -87,7 +93,11 @@ const loadDatabase = (): DatabaseSchema => {
       return initial;
     }
     const data = fs.readFileSync(DB_FILE, 'utf-8');
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+    if (!Array.isArray(parsed.courses)) parsed.courses = [];
+    if (!Array.isArray(parsed.tickets)) parsed.tickets = initialTickets;
+    if (!Array.isArray(parsed.customRoles)) parsed.customRoles = defaultRoleDefinitions;
+    return parsed;
   } catch (err) {
     console.error('Error loading database, returning default seed:', err);
     return getInitialDatabase();
@@ -1443,8 +1453,8 @@ app.get('/api/leads', (req: Request, res: Response) => {
 app.post('/api/leads', (req: Request, res: Response) => {
   const newLead = {
     ...req.body,
-    id: `lead-${Date.now()}`,
-    dateAdded: new Date().toISOString().split('T')[0],
+    id: req.body.id || `lead-${Date.now()}`,
+    dateAdded: req.body.dateAdded || new Date().toISOString().split('T')[0],
   };
   db.leads.unshift(newLead);
   saveDatabase(db);
@@ -1776,14 +1786,23 @@ app.get('/api/courses', (req: Request, res: Response) => {
 });
 
 app.post('/api/courses', (req: Request, res: Response) => {
+  if (!Array.isArray(db.courses)) {
+    db.courses = [];
+  }
   const newCourse = {
     ...req.body,
-    id: `course-${Date.now()}`,
-    enrolledCount: 0,
-    rating: 5.0,
+    id: req.body.id || `course-${Date.now()}`,
+    enrolledCount: req.body.enrolledCount || 0,
+    rating: req.body.rating || 5.0,
   };
-  db.courses.unshift(newCourse);
+  const existingIdx = db.courses.findIndex(c => c.id === newCourse.id || (c.code && newCourse.code && c.code.toUpperCase() === newCourse.code.toUpperCase()));
+  if (existingIdx >= 0) {
+    db.courses[existingIdx] = { ...db.courses[existingIdx], ...newCourse };
+  } else {
+    db.courses.unshift(newCourse);
+  }
   saveDatabase(db);
+  console.log(`[API] Saved course permanently to db: ${newCourse.title} (${newCourse.id})`);
   res.status(201).json({ success: true, data: newCourse });
 });
 
@@ -2634,6 +2653,129 @@ app.post('/api/students/:id/proof-of-payment', (req: Request, res: Response) => 
   saveDatabase(db);
   sendProofOfPaymentAlertEmail(student, proofRecord);
   res.status(201).json({ success: true, message: 'Proof of payment submitted for bursary verification.', data: proofRecord });
+});
+
+// ----------------------------------------------------
+// Global Support & Feedback Tickets Endpoints
+// ----------------------------------------------------
+app.get('/api/tickets', (req: Request, res: Response) => {
+  if (!Array.isArray(db.tickets)) db.tickets = initialTickets;
+  res.json({ success: true, data: db.tickets });
+});
+
+app.post('/api/tickets', (req: Request, res: Response) => {
+  if (!Array.isArray(db.tickets)) db.tickets = [];
+  const ticketCount = db.tickets.length + 1;
+  const newTicket = {
+    ...req.body,
+    id: req.body.id || `tkt-${Date.now()}`,
+    ticketNumber: req.body.ticketNumber || `TKT-${1000 + ticketCount}`,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    status: req.body.status || 'open',
+    comments: req.body.comments || [],
+  };
+
+  db.tickets.unshift(newTicket);
+
+  // Send admin notification
+  db.notifications.unshift({
+    id: `notif-tkt-${Date.now()}`,
+    title: `🎫 New Support Ticket: ${newTicket.ticketNumber}`,
+    message: `${newTicket.createdBy?.name || 'User'} (${newTicket.createdBy?.roleTitle || 'Member'}) submitted ticket: "${newTicket.title}"`,
+    type: 'system',
+    timestamp: 'Just now',
+    read: false,
+    link: '/tickets',
+  });
+
+  saveDatabase(db);
+  console.log(`[API] Ticket logged: ${newTicket.ticketNumber} - ${newTicket.title}`);
+  res.status(201).json({ success: true, data: newTicket });
+});
+
+app.patch('/api/tickets/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  if (!Array.isArray(db.tickets)) db.tickets = [];
+  const index = db.tickets.findIndex(t => t.id === id || t.ticketNumber === id);
+  if (index === -1) {
+    return res.status(404).json({ success: false, message: 'Ticket not found' });
+  }
+
+  db.tickets[index] = {
+    ...db.tickets[index],
+    ...req.body,
+    updatedAt: new Date().toISOString(),
+  };
+
+  saveDatabase(db);
+  res.json({ success: true, data: db.tickets[index] });
+});
+
+app.post('/api/tickets/:id/comments', (req: Request, res: Response) => {
+  const { id } = req.params;
+  if (!Array.isArray(db.tickets)) db.tickets = [];
+  const index = db.tickets.findIndex(t => t.id === id || t.ticketNumber === id);
+  if (index === -1) {
+    return res.status(404).json({ success: false, message: 'Ticket not found' });
+  }
+
+  const comment = {
+    id: `comm-${Date.now()}`,
+    ticketId: id,
+    authorName: req.body.authorName || 'Staff Member',
+    authorEmail: req.body.authorEmail || 'staff@codelab.institute',
+    authorRole: req.body.authorRole || 'Support',
+    content: req.body.content || '',
+    createdAt: new Date().toISOString(),
+  };
+
+  if (!Array.isArray(db.tickets[index].comments)) {
+    db.tickets[index].comments = [];
+  }
+  db.tickets[index].comments.push(comment);
+  db.tickets[index].updatedAt = new Date().toISOString();
+
+  saveDatabase(db);
+  res.status(201).json({ success: true, data: comment });
+});
+
+// ----------------------------------------------------
+// Custom Roles & Permissions Endpoints
+// ----------------------------------------------------
+app.get('/api/roles', (req: Request, res: Response) => {
+  if (!Array.isArray(db.customRoles)) db.customRoles = defaultRoleDefinitions;
+  res.json({ success: true, data: db.customRoles });
+});
+
+app.post('/api/roles', (req: Request, res: Response) => {
+  if (!Array.isArray(db.customRoles)) db.customRoles = [...defaultRoleDefinitions];
+  const roleData = req.body;
+  const existingIdx = db.customRoles.findIndex(r => r.id === roleData.id);
+  if (existingIdx >= 0) {
+    db.customRoles[existingIdx] = { ...db.customRoles[existingIdx], ...roleData };
+  } else {
+    db.customRoles.push(roleData);
+  }
+  saveDatabase(db);
+  res.status(201).json({ success: true, data: roleData });
+});
+
+app.patch('/api/roles/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  if (!Array.isArray(db.customRoles)) db.customRoles = [...defaultRoleDefinitions];
+  const index = db.customRoles.findIndex(r => r.id === id);
+  if (index === -1) {
+    return res.status(404).json({ success: false, message: 'Role not found' });
+  }
+
+  db.customRoles[index] = {
+    ...db.customRoles[index],
+    ...req.body,
+  };
+
+  saveDatabase(db);
+  res.json({ success: true, data: db.customRoles[index] });
 });
 
 app.listen(PORT, () => {

@@ -26,7 +26,11 @@ import {
   LMSModule,
   StudentAssignmentSubmission,
   EnabledModules,
-  StudentPerformanceReport
+  StudentPerformanceReport,
+  SupportTicket,
+  CustomRoleDefinition,
+  RoleCapabilities,
+  TicketStatus
 } from '../types/crm';
 import { 
   initialLeads, 
@@ -45,7 +49,9 @@ import {
   defaultAuthUser,
   initialLMSModules,
   initialAssignments,
-  initialStudentPerformanceReports
+  initialStudentPerformanceReports,
+  defaultRoleDefinitions,
+  initialTickets
 } from '../data/mockData';
 import { apiService } from '../services/api';
 import { emailService } from '../services/emailService';
@@ -125,6 +131,9 @@ interface CRMContextType {
   login: (role: UserRole, email?: string) => void;
   logout: () => void;
   hasPermission: (requiredRole: UserRole | UserRole[]) => boolean;
+  isSuperAdmin: boolean;
+  isSimulatingRole: boolean;
+  switchRole: (role: UserRole) => void;
   addStaffUser: (user: Omit<AuthUser, 'id'>) => void;
   updateUserRole: (userId: string, role: UserRole, mentorId?: string) => void;
 
@@ -151,6 +160,7 @@ interface CRMContextType {
   // Mutators
   addLead: (lead: Omit<Lead, 'id' | 'dateAdded'>) => void;
   updateLeadStatus: (id: string, status: LeadStatus, lossReason?: string) => void;
+  updateLeadNotes: (id: string, notes: string) => void;
   convertLeadToStudent: (leadId: string, program: string, mentorName: string) => void;
   
   enrollStudent: (student: Omit<Student, 'id' | 'enrolledDate' | 'studentCode'>) => void;
@@ -188,6 +198,18 @@ interface CRMContextType {
   // Module feature flag check
   isModuleEnabled: (module: keyof EnabledModules) => boolean;
 
+  // Support Tickets & Helpdesk
+  tickets: SupportTicket[];
+  createTicket: (ticketData: Omit<SupportTicket, 'id' | 'ticketNumber' | 'createdAt' | 'updatedAt' | 'comments'>) => Promise<void>;
+  updateTicketStatus: (ticketId: string, status: TicketStatus, resolutionNotes?: string) => Promise<void>;
+  addTicketComment: (ticketId: string, content: string) => Promise<void>;
+
+  // Custom Roles & Permission Architecture
+  customRoles: CustomRoleDefinition[];
+  createCustomRole: (roleData: Omit<CustomRoleDefinition, 'id'> | CustomRoleDefinition) => Promise<void>;
+  updateRolePermissions: (roleId: string, updates: Partial<CustomRoleDefinition>) => Promise<void>;
+  hasFeaturePermission: (permission: keyof RoleCapabilities) => boolean;
+
   // Reset to seed data
   resetAllData: () => void;
 }
@@ -209,6 +231,8 @@ const STORAGE_KEYS = {
   SETTINGS: 'nexus_clean_prod_settings_v1',
   LOGS: 'nexus_clean_prod_logs_v1',
   NOTIFICATIONS: 'nexus_clean_prod_notifications_v1',
+  TICKETS: 'nexus_clean_prod_tickets_v1',
+  ROLES: 'nexus_clean_prod_roles_v1',
 };
 
 export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -322,6 +346,16 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : initialStudentPerformanceReports;
   });
 
+  const [tickets, setTickets] = useState<SupportTicket[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.TICKETS);
+    return saved ? JSON.parse(saved) : initialTickets;
+  });
+
+  const [customRoles, setCustomRoles] = useState<CustomRoleDefinition[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.ROLES);
+    return saved ? JSON.parse(saved) : defaultRoleDefinitions;
+  });
+
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isBackendConnected, setIsBackendConnected] = useState<boolean>(false);
 
@@ -345,7 +379,23 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (data.students) setStudents(data.students);
         if (data.mentors) setMentors(data.mentors);
         if (data.expenses) setExpenses(data.expenses);
-        if (data.courses) setCourses(data.courses);
+        
+        // Permanent Course Persistence: Reconcile backend courses with localStorage
+        if (data.courses && Array.isArray(data.courses) && data.courses.length > 0) {
+          setCourses(data.courses);
+        } else {
+          const localSaved = localStorage.getItem(STORAGE_KEYS.COURSES);
+          if (localSaved) {
+            try {
+              const parsed = JSON.parse(localSaved);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setCourses(parsed);
+                parsed.forEach((c: any) => apiService.createCourse(c));
+              }
+            } catch (e) {}
+          }
+        }
+
         if (data.cohorts) setCohorts(data.cohorts);
         if (data.invoices) setInvoices(data.invoices);
         if (data.sessions) setSessions(data.sessions);
@@ -356,6 +406,8 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (data.lmsModules) setLmsModules(data.lmsModules);
         if (data.assignments) setAssignments(data.assignments);
         if ((data as any).studentPerformanceReports) setStudentPerformanceReports((data as any).studentPerformanceReports);
+        if ((data as any).tickets) setTickets((data as any).tickets);
+        if ((data as any).customRoles) setCustomRoles((data as any).customRoles);
         console.log('🚀 Synchronized live data with Express REST backend.');
       } else if (isMounted) {
         setIsBackendConnected(false);
@@ -390,6 +442,8 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => { localStorage.setItem('nexus_clean_prod_lms_modules_v1', JSON.stringify(lmsModules)); }, [lmsModules]);
   useEffect(() => { localStorage.setItem('nexus_clean_prod_assignments_v1', JSON.stringify(assignments)); }, [assignments]);
   useEffect(() => { localStorage.setItem('nexus_clean_prod_student_reports_v1', JSON.stringify(studentPerformanceReports)); }, [studentPerformanceReports]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(tickets)); }, [tickets]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEYS.ROLES, JSON.stringify(customRoles)); }, [customRoles]);
 
   // Current active student profile when logged in as a student
   const currentStudentProfile = useMemo(() => {
@@ -460,6 +514,14 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return notifications.filter(n => !n.read).length;
   }, [notifications]);
 
+  // Super Admin session tracking for role switching
+  const [isSuperAdminSession, setIsSuperAdminSession] = useState<boolean>(() => {
+    return sessionStorage.getItem('nexus_super_admin_session') === 'true';
+  });
+
+  const isSuperAdmin = currentUser?.role === 'super_admin' || isSuperAdminSession;
+  const isSimulatingRole = isSuperAdmin && currentUser?.role !== 'super_admin';
+
   // Auth actions
   const login = (role: UserRole, email?: string) => {
     let matched: AuthUser | undefined;
@@ -518,6 +580,15 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     }
 
+    // Set or clear super admin session flag based on authenticated account
+    if (matched.role === 'super_admin') {
+      sessionStorage.setItem('nexus_super_admin_session', 'true');
+      setIsSuperAdminSession(true);
+    } else {
+      sessionStorage.removeItem('nexus_super_admin_session');
+      setIsSuperAdminSession(false);
+    }
+
     setCurrentUser(matched);
     showToast('Signed In', `Welcome, ${matched.name} (${matched.roleTitle}).`, 'info');
     logActivity({
@@ -528,8 +599,87 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const switchRole = (newRole: UserRole) => {
+    // Strictly only allow role switching if user is a Super Admin
+    if (!isSuperAdmin) {
+      showToast('Permission Denied', 'Role switching is restricted exclusively to the Super Admin.', 'error');
+      return;
+    }
+
+    // Ensure session remembers that Super Admin originated this session
+    sessionStorage.setItem('nexus_super_admin_session', 'true');
+    setIsSuperAdminSession(true);
+
+    if (newRole === 'super_admin') {
+      // Revert back to original Super Admin account
+      const superAdminUser = staffUsers.find(u => u.role === 'super_admin') || demoUsers[0];
+      setCurrentUser(superAdminUser);
+      showToast('Super Admin Restored', 'Returned to Managing Director & Super Admin controls.', 'success');
+      logActivity({
+        title: 'Role Reverted to Super Admin',
+        description: 'Super Admin exited role simulation mode.',
+        type: 'system',
+        user: superAdminUser.name,
+      });
+      return;
+    }
+
+    // Find persona for target role
+    let targetUser: AuthUser | undefined;
+    if (newRole === 'mentor') {
+      const mentor = mentors[0];
+      if (mentor) {
+        targetUser = {
+          id: mentor.id,
+          name: mentor.name,
+          email: mentor.email,
+          role: 'mentor',
+          roleTitle: 'Faculty Mentor (Simulated)',
+          mentorId: mentor.id,
+          department: mentor.department,
+        };
+      }
+    } else if (newRole === 'student') {
+      const student = students[0];
+      if (student) {
+        targetUser = {
+          id: student.id,
+          name: student.name,
+          email: student.email,
+          role: 'student',
+          roleTitle: 'Enrolled Student (Simulated)',
+          studentId: student.id,
+        };
+      }
+    } else {
+      targetUser = staffUsers.find(u => u.role === newRole) || demoUsers.find(u => u.role === newRole);
+    }
+
+    if (!targetUser) {
+      targetUser = {
+        id: `sim-${newRole}`,
+        name: `${newRole.toUpperCase()} Persona`,
+        email: `${newRole}@codelab.institute`,
+        role: newRole,
+        roleTitle: `${newRole.replace('_', ' ')} (Simulated)`,
+      };
+    }
+
+    setCurrentUser(targetUser);
+    showToast('Role Switched (Simulation)', `Now previewing portal as ${targetUser.name} (${targetUser.roleTitle}).`, 'info');
+    logActivity({
+      title: 'Role Simulated by Super Admin',
+      description: `Super Admin switched active view to ${targetUser.roleTitle}.`,
+      type: 'system',
+      user: 'Super Admin (Simulation)',
+    });
+  };
+
   const logout = () => {
     setCurrentUser(null);
+    sessionStorage.removeItem('nexus_super_admin_session');
+    setIsSuperAdminSession(false);
+    localStorage.removeItem(STORAGE_KEYS.AUTH);
     showToast('Signed Out', 'You have been signed out of the portal.', 'info');
     logActivity({
       title: 'User Signed Out',
@@ -543,7 +693,137 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!currentUser) return false;
     if (currentUser.role === 'super_admin') return true;
     const rolesArray = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
-    return rolesArray.includes(currentUser.role);
+    if (rolesArray.includes(currentUser.role)) return true;
+
+    // Check if custom role has permission for these modules
+    const matchedRole = customRoles.find(r => r.id === currentUser.role);
+    if (matchedRole && matchedRole.allowedModules) {
+      for (const role of rolesArray) {
+        if (matchedRole.allowedModules.includes(role)) return true;
+      }
+    }
+    return false;
+  };
+
+  const hasFeaturePermission = (permission: keyof RoleCapabilities): boolean => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'super_admin') return true;
+
+    // Direct check for Admissions having permission to add courses (per user requirement)
+    if (permission === 'canAddCourses' && currentUser.role === 'admissions') return true;
+
+    const matchedRole = customRoles.find(r => r.id === currentUser.role);
+    if (matchedRole && matchedRole.permissions) {
+      return Boolean(matchedRole.permissions[permission]);
+    }
+
+    return false;
+  };
+
+  const createCustomRole = async (roleData: Omit<CustomRoleDefinition, 'id'> | CustomRoleDefinition) => {
+    const id = ('id' in roleData && roleData.id) ? roleData.id : `role_${roleData.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Date.now().toString().slice(-4)}`;
+    const fullRole: CustomRoleDefinition = {
+      ...roleData,
+      id,
+      isSystem: false,
+    };
+    setCustomRoles(prev => [...prev.filter(r => r.id !== id), fullRole]);
+    await apiService.saveRole(fullRole);
+    showToast('Role Created', `Custom role "${fullRole.name}" successfully configured.`, 'success');
+    logActivity({
+      title: 'Custom Role Created',
+      description: `Role "${fullRole.name}" created with custom module permissions.`,
+      type: 'system',
+      user: currentUser?.name || 'Super Admin',
+    });
+  };
+
+  const updateRolePermissions = async (roleId: string, updates: Partial<CustomRoleDefinition>) => {
+    setCustomRoles(prev => prev.map(r => r.id === roleId ? { ...r, ...updates } : r));
+    const targetRole = customRoles.find(r => r.id === roleId);
+    if (targetRole) {
+      await apiService.updateRole(roleId, { ...targetRole, ...updates });
+    }
+    showToast('Permissions Updated', `Permissions for role updated successfully.`, 'info');
+    logActivity({
+      title: 'Role Permissions Modified',
+      description: `Capabilities for role "${roleId}" updated by Super Admin.`,
+      type: 'system',
+      user: currentUser?.name || 'Super Admin',
+    });
+  };
+
+  // Support Tickets & Helpdesk Actions
+  const createTicket = async (ticketData: Omit<SupportTicket, 'id' | 'ticketNumber' | 'createdAt' | 'updatedAt' | 'comments'>) => {
+    const ticketCount = tickets.length + 1;
+    const newTicket: SupportTicket = {
+      ...ticketData,
+      id: `tkt-${Date.now()}`,
+      ticketNumber: `TKT-${1000 + ticketCount}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      comments: [],
+    };
+
+    setTickets(prev => [newTicket, ...prev]);
+    await apiService.createTicket(newTicket);
+    showToast('Ticket Submitted', `Ticket #${newTicket.ticketNumber} logged. Support has been alerted.`, 'success');
+    addNotification({
+      title: `🎫 Ticket #${newTicket.ticketNumber} Logged`,
+      message: `${newTicket.createdBy.name} (${newTicket.createdBy.roleTitle}): "${newTicket.title}"`,
+      type: 'system',
+      link: '/tickets',
+    });
+    logActivity({
+      title: 'Support Ticket Logged',
+      description: `Ticket #${newTicket.ticketNumber}: "${newTicket.title}" raised by ${newTicket.createdBy.name}.`,
+      type: 'system',
+      user: newTicket.createdBy.name,
+    });
+  };
+
+  const updateTicketStatus = async (ticketId: string, status: TicketStatus, resolutionNotes?: string) => {
+    setTickets(prev => prev.map(t => {
+      if (t.id === ticketId || t.ticketNumber === ticketId) {
+        return {
+          ...t,
+          status,
+          resolutionNotes: resolutionNotes || t.resolutionNotes,
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      return t;
+    }));
+
+    await apiService.updateTicket(ticketId, { status, resolutionNotes });
+    showToast('Ticket Updated', `Ticket status set to ${status.toUpperCase().replace('_', ' ')}.`, 'info');
+  };
+
+  const addTicketComment = async (ticketId: string, content: string) => {
+    if (!currentUser || !content.trim()) return;
+    const commentData = {
+      id: `comm-${Date.now()}`,
+      ticketId,
+      authorName: currentUser.name,
+      authorEmail: currentUser.email,
+      authorRole: currentUser.roleTitle,
+      content,
+      createdAt: new Date().toISOString(),
+    };
+
+    setTickets(prev => prev.map(t => {
+      if (t.id === ticketId || t.ticketNumber === ticketId) {
+        return {
+          ...t,
+          comments: [...t.comments, commentData],
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      return t;
+    }));
+
+    await apiService.addTicketComment(ticketId, commentData);
+    showToast('Comment Posted', 'Your reply has been added to the ticket.', 'success');
   };
 
   const addStaffUser = (userData: Omit<AuthUser, 'id'>) => {
@@ -633,7 +913,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       lastContactChannel: 'via Email',
     };
     setLeads(prev => [newLead, ...prev]);
-    apiService.createLead(newLeadData);
+    apiService.createLead(newLead as any);
     showToast('Lead Added', `${newLead.name} added to pipeline.`, 'success');
     addNotification({
       title: 'New Lead Registered',
@@ -677,6 +957,12 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       type: 'lead',
       user: 'Operations',
     });
+  };
+
+  const updateLeadNotes = (id: string, notes: string) => {
+    setLeads(prev => prev.map(l => l.id === id ? { ...l, notes } : l));
+    apiService.updateLead(id, { notes });
+    showToast('Notes Saved', 'Discovery notes updated successfully.', 'success');
   };
 
   const convertLeadToStudent = async (leadId: string, program?: string, mentorName?: string) => {
@@ -1200,21 +1486,32 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Courses & Cohorts
-  const addCourse = (courseData: Omit<CourseProgram, 'id' | 'enrolledCount' | 'rating'>) => {
+  const addCourse = async (courseData: Omit<CourseProgram, 'id' | 'enrolledCount' | 'rating'>) => {
     const newCourse: CourseProgram = {
       ...courseData,
       id: `course-${Date.now()}`,
       enrolledCount: 0,
       rating: 5.0,
     };
-    setCourses(prev => [newCourse, ...prev]);
-    apiService.createCourse(courseData);
-    showToast('Course Added', `${newCourse.title} added to catalog.`, 'success');
+
+    setCourses(prev => {
+      const updated = [newCourse, ...prev.filter(c => c.code !== newCourse.code)];
+      localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(updated));
+      return updated;
+    });
+
+    try {
+      await apiService.createCourse(newCourse);
+    } catch (err) {
+      console.error('[CRM] Could not persist course to server:', err);
+    }
+
+    showToast('Course Added', `${newCourse.title} added to catalog permanently.`, 'success');
     logActivity({
       title: 'New Program Curriculum Created',
       description: `${newCourse.title} added to curriculum catalog.`,
       type: 'system',
-      user: 'Academic Director',
+      user: currentUser?.name || 'Academic Director',
     });
   };
 
@@ -2366,6 +2663,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSelectedMentorForEditId,
         addLead,
         updateLeadStatus,
+        updateLeadNotes,
         convertLeadToStudent,
         enrollStudent,
         updateStudentStatus,
@@ -2391,7 +2689,18 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         restoreDatabaseBackup,
         flushProductionData,
         sendStaffWelcomeEmail,
+        isSuperAdmin,
+        isSimulatingRole,
+        switchRole,
         isModuleEnabled,
+        tickets,
+        createTicket,
+        updateTicketStatus,
+        addTicketComment,
+        customRoles,
+        createCustomRole,
+        updateRolePermissions,
+        hasFeaturePermission,
         resetAllData,
       }}
     >

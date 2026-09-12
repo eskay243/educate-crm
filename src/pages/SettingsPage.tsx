@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useCRM } from '../context/CRMContext';
-import { UserRole, EnabledModules, CampusLocation } from '../types/crm';
+import { UserRole, EnabledModules, CampusLocation, RoleCapabilities } from '../types/crm';
 import { emailService, EmailTemplatePayload, EmailDispatchLog } from '../services/emailService';
 import { apiService } from '../services/api';
 import { NIGERIAN_BANKS } from '../data/nigerianBanks';
@@ -24,7 +24,10 @@ export const SettingsPage: React.FC = () => {
     flushProductionData,
     sendStaffWelcomeEmail,
     openModal,
-    showToast
+    showToast,
+    customRoles,
+    createCustomRole,
+    updateRolePermissions,
   } = useCRM();
 
   const {
@@ -115,6 +118,25 @@ export const SettingsPage: React.FC = () => {
   const [newStaffRole, setNewStaffRole] = useState<UserRole>('admissions');
   const [newStaffDept, setNewStaffDept] = useState('Admissions');
   const [newStaffMentorId, setNewStaffMentorId] = useState('');
+
+  // Custom Roles & Permission Architect State
+  const [showCreateRoleModal, setShowCreateRoleModal] = useState(false);
+  const [newRoleName, setNewRoleName] = useState('');
+  const [newRoleDescription, setNewRoleDescription] = useState('');
+  const [newRoleModules, setNewRoleModules] = useState<string[]>(['courses', 'students', 'tickets']);
+  const [newRolePermissions, setNewRolePermissions] = useState<RoleCapabilities>({
+    canAddCourses: false,
+    canAddCohorts: false,
+    canAddLeads: false,
+    canEnrollStudents: false,
+    canLogExpenses: false,
+    canApproveExpenses: false,
+    canIssueCertificates: false,
+    canViewBilling: false,
+    canManageSettings: false,
+    canManageAttendance: false,
+    canSubmitReports: false,
+  });
 
   // SMTP Settings State - configured for Zoho Mail
   const [smtpHost, setSmtpHost] = useState(settings.smtp?.host === 'smtppro.zoho.com' || settings.smtp?.host === 'smtp.hostinger.com' ? 'smtp.zoho.com' : (settings.smtp?.host || 'smtp.zoho.com'));
@@ -646,19 +668,21 @@ export const SettingsPage: React.FC = () => {
     e.preventDefault();
     if (!newStaffName || !newStaffEmail) return;
 
-    const roleTitleMap: Record<UserRole, string> = {
+    const matchedCustomRole = customRoles.find(r => r.id === newStaffRole);
+    const roleTitleMap: Record<string, string> = {
       super_admin: 'Managing Director & Super Admin',
       admissions: 'Admissions Officer',
       mentor: 'Faculty Mentor',
       finance: 'Chief Financial Officer / Controller',
       student: 'Enrolled Scholar / Student',
     };
+    const effectiveRoleTitle = matchedCustomRole?.name || roleTitleMap[newStaffRole] || newStaffRole;
 
     addStaffUser({
       name: newStaffName,
       email: newStaffEmail,
       role: newStaffRole,
-      roleTitle: roleTitleMap[newStaffRole],
+      roleTitle: effectiveRoleTitle,
       department: newStaffDept,
       password: newStaffPassword || 'password123',
       mentorId: newStaffRole === 'mentor' ? (newStaffMentorId || mentors[0]?.id || 'men-1') : undefined,
@@ -668,21 +692,52 @@ export const SettingsPage: React.FC = () => {
     emailService.sendEmail({
       to: newStaffEmail,
       recipientName: newStaffName,
-      subject: `Welcome to Nexus Institute — Set Your Password (${roleTitleMap[newStaffRole]})`,
+      subject: `Welcome to Nexus Institute — Set Your Password (${effectiveRoleTitle})`,
       type: 'staff_welcome',
       data: {
-        roleTitle: roleTitleMap[newStaffRole],
+        roleTitle: effectiveRoleTitle,
         department: newStaffDept,
         setupUrl: `http://72.61.106.87/reset-password?email=${encodeURIComponent(newStaffEmail)}&token=welcome-${Date.now()}`
       }
     });
 
-    showToast('Staff Provisioned', `Account created & Welcome Email dispatched to ${newStaffEmail}.`, 'success');
-
     setNewStaffName('');
     setNewStaffEmail('');
     setNewStaffPassword('');
+    setNewStaffRole('admissions');
+    setNewStaffDept('Admissions');
     setShowAddStaffForm(false);
+    showToast('Staff Member Provisioned', `${newStaffName} (${effectiveRoleTitle}) added. Setup email sent.`, 'success');
+  };
+
+  const handleCreateRoleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRoleName.trim()) return;
+
+    await createCustomRole({
+      name: newRoleName.trim(),
+      description: newRoleDescription.trim() || 'Custom institutional role',
+      allowedModules: newRoleModules,
+      permissions: newRolePermissions,
+    });
+
+    setNewRoleName('');
+    setNewRoleDescription('');
+    setNewRoleModules(['courses', 'students', 'tickets']);
+    setNewRolePermissions({
+      canAddCourses: false,
+      canAddCohorts: false,
+      canAddLeads: false,
+      canEnrollStudents: false,
+      canLogExpenses: false,
+      canApproveExpenses: false,
+      canIssueCertificates: false,
+      canViewBilling: false,
+      canManageSettings: false,
+      canManageAttendance: false,
+      canSubmitReports: false,
+    });
+    setShowCreateRoleModal(false);
   };
 
   const handleSendTestEmail = async () => {
@@ -1926,12 +1981,21 @@ export const SettingsPage: React.FC = () => {
                     <select
                       value={newStaffRole}
                       onChange={(e) => setNewStaffRole(e.target.value as UserRole)}
-                      className="w-full h-9 px-3 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
+                      className="w-full h-9 px-3 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary cursor-pointer"
                     >
-                      <option value="super_admin">Super Admin (Full Platform Access)</option>
-                      <option value="admissions">Admissions Officer (Leads &amp; Enrolling)</option>
-                      <option value="mentor">Faculty Mentor (Coaching &amp; Syllabus)</option>
-                      <option value="finance">Chief Financial Officer (Billing &amp; Expenses)</option>
+                      <optgroup label="System Roles">
+                        <option value="super_admin">Super Admin (Full Platform Access)</option>
+                        <option value="admissions">Admissions Officer (Leads &amp; Enrolling)</option>
+                        <option value="mentor">Faculty Mentor (Coaching &amp; Syllabus)</option>
+                        <option value="finance">Chief Financial Officer (Billing &amp; Expenses)</option>
+                      </optgroup>
+                      {customRoles.filter(r => !['super_admin', 'admissions', 'mentor', 'finance', 'student'].includes(r.id)).length > 0 && (
+                        <optgroup label="Custom Configured Roles">
+                          {customRoles.filter(r => !['super_admin', 'admissions', 'mentor', 'finance', 'student'].includes(r.id)).map(cr => (
+                            <option key={cr.id} value={cr.id}>{cr.name}</option>
+                          ))}
+                        </optgroup>
+                      )}
                     </select>
                   </div>
                   <div>
@@ -2032,12 +2096,21 @@ export const SettingsPage: React.FC = () => {
                         <select
                           value={user.role}
                           onChange={(e) => updateUserRole(user.id, e.target.value as UserRole)}
-                          className="px-2 py-1 rounded bg-surface border border-outline-variant text-xs font-semibold outline-none focus:border-primary"
+                          className="px-2 py-1 rounded bg-surface border border-outline-variant text-xs font-semibold outline-none focus:border-primary cursor-pointer"
                         >
-                          <option value="super_admin">Super Admin</option>
-                          <option value="admissions">Admissions</option>
-                          <option value="mentor">Faculty Mentor</option>
-                          <option value="finance">Finance Officer</option>
+                          <optgroup label="System Roles">
+                            <option value="super_admin">Super Admin</option>
+                            <option value="admissions">Admissions</option>
+                            <option value="mentor">Faculty Mentor</option>
+                            <option value="finance">Finance Officer</option>
+                          </optgroup>
+                          {customRoles.filter(r => !['super_admin', 'admissions', 'mentor', 'finance', 'student'].includes(r.id)).length > 0 && (
+                            <optgroup label="Custom Roles">
+                              {customRoles.filter(r => !['super_admin', 'admissions', 'mentor', 'finance', 'student'].includes(r.id)).map(cr => (
+                                <option key={cr.id} value={cr.id}>{cr.name}</option>
+                              ))}
+                            </optgroup>
+                          )}
                         </select>
                       </td>
                       <td className="p-3 text-secondary">{user.department || 'Executive'}</td>
@@ -2069,6 +2142,241 @@ export const SettingsPage: React.FC = () => {
               </table>
             </div>
           </div>
+
+          {/* Role & Permission Architect Section */}
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-outline-variant pb-3">
+              <div>
+                <h3 className="font-headline-sm text-base font-bold text-on-surface flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-[22px]">admin_panel_settings</span>
+                  <span>Role &amp; Permission Architect</span>
+                </h3>
+                <p className="text-xs text-secondary mt-0.5">
+                  Configure custom roles (IT, Customer Service, Academic Registrar) and toggle granular capabilities (e.g. Add Courses, Intake Leads, Enroll Students).
+                </p>
+              </div>
+              <button
+                onClick={() => setShowCreateRoleModal(true)}
+                className="h-9 px-4 rounded-lg bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs shrink-0"
+              >
+                <span className="material-symbols-outlined text-[16px]">add_moderator</span>
+                <span>+ Create Custom Role</span>
+              </button>
+            </div>
+
+            {/* Roles Matrix */}
+            <div className="space-y-4">
+              {customRoles.map((role) => (
+                <div 
+                  key={role.id}
+                  className="p-4 rounded-xl bg-surface border border-outline-variant/80 space-y-3"
+                >
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <span className="font-bold text-sm text-on-surface">{role.name}</span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        role.isSystem ? 'bg-secondary-container text-secondary' : 'bg-primary/15 text-primary'
+                      }`}>
+                        {role.isSystem ? 'System Built-in' : 'Custom Defined'}
+                      </span>
+                      <span className="font-mono text-[10px] text-secondary">({role.id})</span>
+                    </div>
+                    <p className="text-xs text-secondary italic">{role.description}</p>
+                  </div>
+
+                  {/* Modules Bar */}
+                  <div className="flex items-center gap-1.5 flex-wrap text-xs">
+                    <span className="text-[11px] font-semibold text-secondary">Accessible Modules:</span>
+                    {(role.allowedModules || []).map((m) => (
+                      <span key={m} className="px-2 py-0.5 rounded bg-surface-container text-on-surface text-[11px] font-medium border border-outline-variant/50 capitalize">
+                        {m}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Capability Toggles */}
+                  <div className="pt-2 border-t border-outline-variant/40">
+                    <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block mb-2">
+                      Granular Feature Permissions:
+                    </span>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 text-xs">
+                      {[
+                        { key: 'canAddCourses' as const, label: 'Add / Edit Courses', icon: 'menu_book' },
+                        { key: 'canAddCohorts' as const, label: 'Launch Cohorts', icon: 'rocket_launch' },
+                        { key: 'canAddLeads' as const, label: 'Intake Leads', icon: 'leaderboard' },
+                        { key: 'canEnrollStudents' as const, label: 'Enroll Students', icon: 'school' },
+                        { key: 'canViewBilling' as const, label: 'View Tuition Ledger', icon: 'payments' },
+                        { key: 'canLogExpenses' as const, label: 'Log Expenses', icon: 'receipt' },
+                        { key: 'canApproveExpenses' as const, label: 'Approve Expenses', icon: 'verified' },
+                        { key: 'canIssueCertificates' as const, label: 'Issue Certificates', icon: 'workspace_premium' },
+                        { key: 'canManageSettings' as const, label: 'Manage Settings', icon: 'settings' },
+                        { key: 'canManageAttendance' as const, label: 'Staff Attendance', icon: 'schedule' },
+                        { key: 'canSubmitReports' as const, label: 'Submit Evaluations', icon: 'assessment' },
+                      ].map(({ key, label, icon }) => {
+                        const isGranted = role.id === 'super_admin' || Boolean(role.permissions?.[key]);
+                        const isImmutable = role.id === 'super_admin';
+
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            disabled={isImmutable}
+                            onClick={() => {
+                              if (isImmutable) return;
+                              const currentPerms = role.permissions || {
+                                canAddCourses: false, canAddCohorts: false, canAddLeads: false, canEnrollStudents: false,
+                                canLogExpenses: false, canApproveExpenses: false, canIssueCertificates: false, canViewBilling: false,
+                                canManageSettings: false, canManageAttendance: false, canSubmitReports: false
+                              };
+                              updateRolePermissions(role.id, {
+                                permissions: {
+                                  ...currentPerms,
+                                  [key]: !currentPerms[key],
+                                }
+                              });
+                            }}
+                            className={`p-2 rounded-lg border text-left flex items-center justify-between transition-all ${
+                              isGranted
+                                ? 'bg-primary/10 border-primary text-primary font-semibold'
+                                : 'bg-surface border-outline-variant text-secondary'
+                            } ${isImmutable ? 'opacity-80 cursor-not-allowed' : 'cursor-pointer hover:border-primary'}`}
+                          >
+                            <span className="flex items-center gap-1.5 truncate">
+                              <span className="material-symbols-outlined text-[15px]">{icon}</span>
+                              <span className="truncate">{label}</span>
+                            </span>
+                            <span className="material-symbols-outlined text-[16px] shrink-0">
+                              {isGranted ? 'check_circle' : 'cancel'}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Create Custom Role Modal */}
+          {showCreateRoleModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-margin-page animate-in fade-in duration-150">
+              <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-xl p-stack-lg max-w-lg w-full space-y-4 max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-center border-b border-outline-variant pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-[22px]">add_moderator</span>
+                    <h3 className="font-headline-md text-headline-md font-bold text-on-surface">Architect Custom Role</h3>
+                  </div>
+                  <button onClick={() => setShowCreateRoleModal(false)} className="text-secondary hover:text-on-surface">
+                    <span className="material-symbols-outlined text-[20px]">close</span>
+                  </button>
+                </div>
+
+                <form onSubmit={handleCreateRoleSubmit} className="space-y-3.5 text-xs">
+                  <div>
+                    <label className="block text-secondary font-semibold mb-1">Role Title / Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={newRoleName}
+                      onChange={(e) => setNewRoleName(e.target.value)}
+                      placeholder="e.g. IT Support Specialist or Customer Service"
+                      className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-secondary font-semibold mb-1">Role Description &amp; Scope *</label>
+                    <input
+                      type="text"
+                      required
+                      value={newRoleDescription}
+                      onChange={(e) => setNewRoleDescription(e.target.value)}
+                      placeholder="e.g. Handles technical support, student inquiries and system maintenance"
+                      className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-secondary font-semibold mb-1.5">Accessible Modules *</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { id: 'courses', label: 'Programs & Cohorts' },
+                        { id: 'leads', label: 'Leads Pipeline' },
+                        { id: 'students', label: 'Students & Billing' },
+                        { id: 'mentors', label: 'Mentors & Sessions' },
+                        { id: 'attendance', label: 'Staff Attendance' },
+                        { id: 'expenses', label: 'Expenses & Budget' },
+                        { id: 'tickets', label: 'Support & Tickets' },
+                      ].map((mod) => (
+                        <label key={mod.id} className="flex items-center gap-2 p-2 rounded border border-outline-variant/60 cursor-pointer hover:bg-surface">
+                          <input
+                            type="checkbox"
+                            checked={newRoleModules.includes(mod.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setNewRoleModules(prev => [...prev, mod.id]);
+                              } else {
+                                setNewRoleModules(prev => prev.filter(m => m !== mod.id));
+                              }
+                            }}
+                            className="rounded accent-primary cursor-pointer"
+                          />
+                          <span>{mod.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-secondary font-semibold mb-1.5">Granular Permissions</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { key: 'canAddCourses' as const, label: 'Add / Edit Courses' },
+                        { key: 'canAddCohorts' as const, label: 'Launch Cohorts' },
+                        { key: 'canAddLeads' as const, label: 'Intake Leads' },
+                        { key: 'canEnrollStudents' as const, label: 'Enroll Students' },
+                        { key: 'canViewBilling' as const, label: 'View Tuition Ledger' },
+                        { key: 'canLogExpenses' as const, label: 'Log Expenses' },
+                        { key: 'canApproveExpenses' as const, label: 'Approve Expenses' },
+                        { key: 'canIssueCertificates' as const, label: 'Issue Certificates' },
+                        { key: 'canManageAttendance' as const, label: 'Staff Attendance' },
+                        { key: 'canSubmitReports' as const, label: 'Submit Evaluations' },
+                      ].map(({ key, label }) => (
+                        <label key={key} className="flex items-center gap-2 p-2 rounded border border-outline-variant/60 cursor-pointer hover:bg-surface">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(newRolePermissions[key])}
+                            onChange={(e) => {
+                              setNewRolePermissions(prev => ({ ...prev, [key]: e.target.checked }));
+                            }}
+                            className="rounded accent-primary cursor-pointer"
+                          />
+                          <span>{label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-3 border-t border-outline-variant">
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateRoleModal(false)}
+                      className="px-4 py-2 rounded-lg border border-outline-variant text-secondary font-semibold hover:bg-surface-container"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 rounded-lg bg-primary text-on-primary font-bold hover:bg-primary/90 transition-colors shadow-xs"
+                    >
+                      Save Custom Role
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -10,7 +10,7 @@ export interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles, requiredModule }) => {
-  const { currentUser, hasPermission, login, isModuleEnabled } = useCRM();
+  const { currentUser, hasPermission, isModuleEnabled, isSuperAdmin, switchRole } = useCRM();
   const location = useLocation();
 
   if (!currentUser) {
@@ -31,19 +31,21 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
 
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Link
-            to="/"
+            to={currentUser.role === 'student' ? '/student/dashboard' : '/'}
             className="px-4 h-10 rounded bg-surface border border-outline-variant font-label-md text-xs font-semibold text-on-surface hover:bg-surface-container transition-colors flex items-center gap-1.5"
           >
             <span className="material-symbols-outlined text-[16px]">arrow_back</span>
             <span>Return to Dashboard</span>
           </Link>
-          <button
-            onClick={() => login('super_admin')}
-            className="px-4 h-10 rounded bg-primary text-on-primary font-label-md text-xs font-bold hover:bg-primary-container transition-colors shadow-xs flex items-center gap-1.5"
-          >
-            <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
-            <span>Switch to Super Admin</span>
-          </button>
+          {isSuperAdmin && (
+            <button
+              onClick={() => switchRole('super_admin')}
+              className="px-4 h-10 rounded bg-primary text-on-primary font-label-md text-xs font-bold hover:bg-primary-container transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
+              <span>Return to Super Admin</span>
+            </button>
+          )}
         </div>
       </div>
     );
