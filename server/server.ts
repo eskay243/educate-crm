@@ -2834,13 +2834,11 @@ app.get('/api/wallet/summary', async (_req: Request, res: Response) => {
           const ngnBalance = balData.data.find((b: any) => b.currency === 'NGN');
           if (ngnBalance) {
             paystackLiveBalance = ngnBalance.balance / 100;
-            // In live mode, ensure the balance strictly matches Paystack's real ledger balance
             if (secretKey.startsWith('sk_live_')) {
-              db.wallet.balance = paystackLiveBalance;
               if (!db.wallet.virtualAccount || db.wallet.virtualAccount.accountNumber !== '9817707007') {
                 db.wallet.virtualAccount = defaultWallet.virtualAccount;
+                saveDatabase(db);
               }
-              saveDatabase(db);
             }
           }
         }
@@ -2853,9 +2851,6 @@ app.get('/api/wallet/summary', async (_req: Request, res: Response) => {
       success: true,
       data: {
         ...db.wallet,
-        balance: (secretKey && secretKey.startsWith('sk_live_') && paystackLiveBalance !== undefined)
-          ? paystackLiveBalance 
-          : (db.wallet.balance || 0),
         paystackLiveBalance,
       }
     });
