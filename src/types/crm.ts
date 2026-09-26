@@ -312,6 +312,7 @@ export interface Expense {
   requestedBy?: string;
   requesterEmail?: string;
   receiptName?: string;
+  receiptUrl?: string;
   description?: string;
   rejectionReason?: string;
   reviewedBy?: string;

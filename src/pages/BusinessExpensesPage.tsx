@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useCRM, formatNaira } from '../context/CRMContext';
 import { Expense, ExpenseStatus } from '../types/crm';
 import { RejectExpenseModal } from '../components/modals/RejectExpenseModal';
+import { ViewExpenseModal } from '../components/modals/ViewExpenseModal';
 
 export interface BusinessExpensesPageProps {}
 
@@ -28,6 +29,10 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
   // Rejection modal state
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [selectedExpenseForReject, setSelectedExpenseForReject] = useState<Expense | null>(null);
+
+  // View Requisition Dossier modal state
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [selectedExpenseForView, setSelectedExpenseForView] = useState<Expense | null>(null);
 
   const isSuperAdmin = currentUser?.role === 'super_admin';
   const showBudgetCardToUser = isSuperAdmin || (settings.showBudgetToStaff !== false);
@@ -111,6 +116,16 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
     setSelectedExpenseForReject(expense);
     setRejectModalOpen(true);
   };
+
+  const handleOpenViewModal = (expense: Expense) => {
+    setSelectedExpenseForView(expense);
+    setViewModalOpen(true);
+  };
+
+  const currentViewingExpense = useMemo(() => {
+    if (!selectedExpenseForView) return null;
+    return expenses.find(e => e.id === selectedExpenseForView.id) || selectedExpenseForView;
+  }, [expenses, selectedExpenseForView]);
 
   const handleConfirmReject = (id: string, reason: string) => {
     rejectExpense(id, reason);
@@ -452,9 +467,14 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                     >
                       {/* Requisition ID & Urgency */}
                       <td className="px-stack-md py-3 align-top">
-                        <span className="font-data-tabular font-bold text-primary block">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenViewModal(expense)}
+                          className="font-data-tabular font-bold text-primary hover:underline block text-left cursor-pointer"
+                          title="Click to view full requisition details and attachments"
+                        >
                           #{expense.expenseCode}
-                        </span>
+                        </button>
                         <span className="text-[10px] text-secondary font-data-tabular block">
                           {expense.date}
                         </span>
@@ -469,17 +489,35 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
 
                       {/* Description, Dept & Rejection Reason */}
                       <td className="px-stack-md py-3 align-top max-w-xs">
-                        <p className="font-bold text-on-surface leading-snug">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenViewModal(expense)}
+                          className="font-bold text-on-surface hover:text-primary transition-colors text-left leading-snug cursor-pointer block"
+                          title="Click to view full requisition details and attachments"
+                        >
                           {expense.title}
-                        </p>
+                        </button>
                         {expense.description && (
                           <p className="text-[11px] text-secondary mt-0.5 line-clamp-2">
                             {expense.description}
                           </p>
                         )}
-                        <span className="inline-block mt-1 px-1.5 py-0.2 rounded bg-surface-container text-secondary text-[10px] font-semibold">
-                          Dept: {expense.department}
-                        </span>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                          <span className="inline-block px-1.5 py-0.2 rounded bg-surface-container text-secondary text-[10px] font-semibold">
+                            Dept: {expense.department}
+                          </span>
+                          {Boolean(expense.receiptUrl || expense.receiptName) && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenViewModal(expense)}
+                              className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-semibold border border-primary/20 cursor-pointer transition-colors"
+                              title="Click to inspect attached receipt or quotation"
+                            >
+                              <span className="material-symbols-outlined text-[13px]">attachment</span>
+                              <span>Attached Doc</span>
+                            </button>
+                          )}
+                        </div>
 
                         {/* Side Note / Rejection Reason Badge */}
                         {isRejected && expense.rejectionReason && (
@@ -543,27 +581,36 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                       {/* Governance Decision (Approve / Reject) */}
                       <td className="px-stack-md py-3 align-top text-right whitespace-nowrap">
                         {isSuperAdmin ? (
-                          isAwaiting ? (
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                onClick={() => approveExpense(expense.id)}
-                                className="h-8 px-2.5 rounded bg-[#DCFCE7] hover:bg-[#bbf7d0] text-[#166534] text-xs font-bold flex items-center gap-1 border border-[#166534]/30 transition-all cursor-pointer shadow-2xs"
-                                title="Approve funds release and deduct from approved monthly budget"
-                              >
-                                <span className="material-symbols-outlined text-[16px]">check</span>
-                                <span>Approve</span>
-                              </button>
-                              <button
-                                onClick={() => handleOpenRejectModal(expense)}
-                                className="h-8 px-2.5 rounded bg-[#FEE2E2] hover:bg-[#fecaca] text-[#991B1B] text-xs font-bold flex items-center gap-1 border border-[#991B1B]/30 transition-all cursor-pointer shadow-2xs"
-                                title="Reject this requisition with a required feedback side note"
-                              >
-                                <span className="material-symbols-outlined text-[16px]">close</span>
-                                <span>Reject</span>
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-end gap-1">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenViewModal(expense)}
+                              className="h-8 px-2.5 rounded bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold flex items-center gap-1 border border-outline-variant transition-all cursor-pointer shadow-2xs"
+                              title="Inspect full requisition details and attached document"
+                            >
+                              <span className="material-symbols-outlined text-[16px] text-primary">visibility</span>
+                              <span>View</span>
+                            </button>
+                            {isAwaiting ? (
+                              <>
+                                <button
+                                  onClick={() => approveExpense(expense.id)}
+                                  className="h-8 px-2.5 rounded bg-[#DCFCE7] hover:bg-[#bbf7d0] text-[#166534] text-xs font-bold flex items-center gap-1 border border-[#166534]/30 transition-all cursor-pointer shadow-2xs"
+                                  title="Approve funds release and deduct from approved monthly budget"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">check</span>
+                                  <span>Approve</span>
+                                </button>
+                                <button
+                                  onClick={() => handleOpenRejectModal(expense)}
+                                  className="h-8 px-2.5 rounded bg-[#FEE2E2] hover:bg-[#fecaca] text-[#991B1B] text-xs font-bold flex items-center gap-1 border border-[#991B1B]/30 transition-all cursor-pointer shadow-2xs"
+                                  title="Reject this requisition with a required feedback side note"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">close</span>
+                                  <span>Reject</span>
+                                </button>
+                              </>
+                            ) : (
                               <select
                                 value={expense.status}
                                 onChange={(e) => {
@@ -583,10 +630,19 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                                 <option value="Rejected">Rejected</option>
                                 <option value="In Review">In Review</option>
                               </select>
-                            </div>
-                          )
+                            )}
+                          </div>
                         ) : (
-                          <div className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenViewModal(expense)}
+                              className="h-7 px-2.5 rounded bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold flex items-center gap-1 border border-outline-variant transition-all cursor-pointer shadow-2xs"
+                              title="View requisition dossier and documents"
+                            >
+                              <span className="material-symbols-outlined text-[15px] text-primary">visibility</span>
+                              <span>View</span>
+                            </button>
                             {isAwaiting ? (
                               <span className="text-[11px] text-[#854D0E] font-semibold bg-[#FEF9C3] px-2 py-1 rounded">
                                 Awaiting Admin Review
@@ -611,6 +667,23 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
           )}
         </div>
       </div>
+
+      {/* View Expense Requisition Dossier Modal */}
+      <ViewExpenseModal
+        isOpen={viewModalOpen}
+        onClose={() => {
+          setViewModalOpen(false);
+          setSelectedExpenseForView(null);
+        }}
+        expense={currentViewingExpense}
+        isSuperAdmin={isSuperAdmin}
+        onApprove={(id) => {
+          approveExpense(id);
+        }}
+        onReject={(exp) => {
+          handleOpenRejectModal(exp);
+        }}
+      />
 
       {/* Reject Expense Side Note Modal */}
       <RejectExpenseModal

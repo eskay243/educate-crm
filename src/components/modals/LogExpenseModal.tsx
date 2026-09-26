@@ -26,12 +26,21 @@ export const LogExpenseModal: React.FC<LogExpenseModalProps> = ({ isOpen, onClos
   const [urgency, setUrgency] = useState<'Standard' | 'Urgent' | 'Emergency'>('Standard');
   const [description, setDescription] = useState('');
   const [receiptFileName, setReceiptFileName] = useState<string>('');
+  const [receiptUrl, setReceiptUrl] = useState<string>('');
 
   if (!isOpen) return null;
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setReceiptFileName(e.target.files[0].name);
+      const file = e.target.files[0];
+      setReceiptFileName(file.name);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setReceiptUrl(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -50,7 +59,8 @@ export const LogExpenseModal: React.FC<LogExpenseModalProps> = ({ isOpen, onClos
       vendor: vendor || 'Corporate Vendor NG',
       requestedBy: currentUser?.name ? `${currentUser.name} (${currentUser.role.replace('_', ' ')})` : 'Admissions / Finance Officer',
       requesterEmail: currentUser?.email || 'admin@codelab.institute',
-      receiptName: receiptFileName || 'proforma_invoice.pdf',
+      receiptName: receiptFileName || (receiptUrl ? 'proforma_invoice.pdf' : undefined),
+      receiptUrl: receiptUrl || undefined,
       description: description || undefined,
       urgency,
     });
@@ -236,7 +246,15 @@ export const LogExpenseModal: React.FC<LogExpenseModalProps> = ({ isOpen, onClos
                   <span className="material-symbols-outlined text-primary text-[16px]">receipt</span>
                   <span className="font-semibold text-on-surface">{receiptFileName}</span>
                 </div>
-                <button type="button" onClick={() => setReceiptFileName('')} className="text-error hover:text-error/80 cursor-pointer">
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setReceiptFileName('');
+                    setReceiptUrl('');
+                  }} 
+                  className="text-error hover:text-error/80 cursor-pointer p-1"
+                  title="Remove attachment"
+                >
                   <span className="material-symbols-outlined text-[16px]">close</span>
                 </button>
               </div>
