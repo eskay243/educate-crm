@@ -75,16 +75,16 @@ interface DatabaseSchema {
 }
 
 const defaultWallet = {
-  balance: 850000,
+  balance: 0,
   monthlyBudgetLimit: 1500000,
   virtualAccount: {
-    accountNumber: '9928174820',
-    accountName: 'CODELAB EDUCARE / OPS WALLET',
-    bankName: 'Wema Bank (Paystack DVA)',
+    accountNumber: '9817707007',
+    accountName: 'CODELABEDUCAR/WALLET NEXUS',
+    bankName: 'Wema Bank',
     bankCode: '035',
-    customerCode: 'CUS_cdl_ops_9928',
-    customerEmail: 'wallet-operations@codelab.institute',
-    assignedAt: '2026-09-01T08:00:00.000Z',
+    customerCode: 'CUS_0urz9hjjax0fyuv',
+    customerEmail: 'wallet-operations@growpot.cloud',
+    assignedAt: new Date().toISOString(),
     status: 'active',
     provider: 'wema-bank',
   },
@@ -2738,7 +2738,14 @@ app.post('/api/paystack/disburse-mentor', async (req: Request, res: Response) =>
       const recipientData = await recipientRes.json();
       const recipientCode = recipientData?.data?.recipient_code;
 
-      if (recipientCode) {
+      if (!recipientCode) {
+        if (secretKey.startsWith('sk_live_')) {
+          return res.status(400).json({
+            success: false,
+            message: recipientData?.message || 'Could not validate recipient bank account on Paystack. Please check the account number and bank.'
+          });
+        }
+      } else {
         const transferRes = await fetch('https://api.paystack.co/transfer', {
           method: 'POST',
           headers: {
@@ -2827,6 +2834,14 @@ app.get('/api/wallet/summary', async (_req: Request, res: Response) => {
           const ngnBalance = balData.data.find((b: any) => b.currency === 'NGN');
           if (ngnBalance) {
             paystackLiveBalance = ngnBalance.balance / 100;
+            // In live mode, ensure the balance strictly matches Paystack's real ledger balance
+            if (secretKey.startsWith('sk_live_')) {
+              db.wallet.balance = paystackLiveBalance;
+              if (!db.wallet.virtualAccount || db.wallet.virtualAccount.accountNumber !== '9817707007') {
+                db.wallet.virtualAccount = defaultWallet.virtualAccount;
+              }
+              saveDatabase(db);
+            }
           }
         }
       } catch (e) {
@@ -2838,6 +2853,9 @@ app.get('/api/wallet/summary', async (_req: Request, res: Response) => {
       success: true,
       data: {
         ...db.wallet,
+        balance: (secretKey && secretKey.startsWith('sk_live_') && paystackLiveBalance !== undefined)
+          ? paystackLiveBalance 
+          : (db.wallet.balance || 0),
         paystackLiveBalance,
       }
     });
@@ -3060,7 +3078,14 @@ app.post('/api/wallet/disburse-expense', async (req: Request, res: Response) => 
       const recipientData = await recipientRes.json();
       const recipientCode = recipientData?.data?.recipient_code;
 
-      if (recipientCode) {
+      if (!recipientCode) {
+        if (secretKey.startsWith('sk_live_')) {
+          return res.status(400).json({
+            success: false,
+            message: recipientData?.message || 'Could not validate recipient bank account on Paystack. Please check the account number and bank.'
+          });
+        }
+      } else {
         const transferRes = await fetch('https://api.paystack.co/transfer', {
           method: 'POST',
           headers: {
