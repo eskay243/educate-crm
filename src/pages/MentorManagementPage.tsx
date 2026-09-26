@@ -18,7 +18,8 @@ export const MentorManagementPage: React.FC = () => {
     setSelectedMentorForBookingId,
     setSelectedMentorForEditId,
     currentUser,
-    showToast
+    setSelectedMentorForDisburse,
+    wallet
   } = useCRM();
 
   const [activeTab, setActiveTab] = useState<'roster' | 'sessions' | 'reports'>('roster');
@@ -218,9 +219,14 @@ export const MentorManagementPage: React.FC = () => {
           <p className="font-body-sm text-body-sm text-secondary mb-unit">
             {isMentor ? 'My Pending Tuition Share' : 'Pending Tuition Share (37%)'}
           </p>
-          <h3 className="font-display text-display font-bold text-on-surface">
-            {formatNaira(pendingTuitionShareTotal)}
-          </h3>
+          <div className="flex justify-between items-baseline flex-wrap gap-1">
+            <h3 className="font-display text-display font-bold text-on-surface">
+              {formatNaira(pendingTuitionShareTotal)}
+            </h3>
+            <span className="text-[11px] font-medium text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+              Wallet: {formatNaira(wallet?.balance || 0)}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -442,16 +448,13 @@ export const MentorManagementPage: React.FC = () => {
                               {(isSuperAdmin || isFinance) && mentor.pendingPayout > 0 && (
                                 <button 
                                   onClick={() => {
-                                    if (!mentor.isAccountVerified) {
-                                      showToast('Verification Notice', `${mentor.name}'s bank account is not verified yet. Please verify in Edit Profile before final settlement.`, 'warning');
-                                    } else {
-                                      showToast('Disbursement Initiated', `NIBSS electronic settlement of ${formatNaira(mentor.pendingPayout)} queued for ${mentor.name} (${mentor.bankName} - ${mentor.accountNumber}).`, 'success');
-                                    }
+                                    setSelectedMentorForDisburse(mentor);
+                                    openModal('disburse-mentor');
                                   }}
                                   className={`px-2.5 py-1 rounded text-white font-sans text-xs font-semibold shadow-xs transition-colors flex items-center gap-1 cursor-pointer ${
                                     mentor.isAccountVerified ? 'bg-[#166534] hover:bg-[#15803d]' : 'bg-amber-600 hover:bg-amber-700'
                                   }`}
-                                  title={mentor.isAccountVerified ? "Disburse 37% Commission Share via NIBSS" : "Account Unverified - Check details before disbursement"}
+                                  title={mentor.isAccountVerified ? "Disburse 37% Commission Share via Expense Wallet" : "Account Unverified - Verify before disbursement"}
                                 >
                                   <span className="material-symbols-outlined text-[14px]">send_money</span>
                                   <span>{mentor.isAccountVerified ? 'Disburse Share' : 'Verify & Disburse'}</span>

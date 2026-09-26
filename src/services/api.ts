@@ -17,7 +17,9 @@ import {
   StudentPerformanceReport,
   SupportTicket,
   TicketComment,
-  CustomRoleDefinition
+  CustomRoleDefinition,
+  ExpenseAndBudgetWallet,
+  VirtualAccountDetails
 } from '../types/crm';
 
 const API_BASE_URL = '/api';
@@ -524,6 +526,53 @@ class ApiService {
       body: JSON.stringify(updates),
     });
   }
+
+  // Expense & Budget Wallet
+  async getWalletSummary(): Promise<ExpenseAndBudgetWallet | null> {
+    return this.request<ExpenseAndBudgetWallet>('/wallet/summary');
+  }
+
+  async generateVirtualAccount(): Promise<VirtualAccountDetails | null> {
+    return this.request<VirtualAccountDetails>('/wallet/virtual-account', {
+      method: 'POST',
+    });
+  }
+
+  async verifyWalletTopUp(reference: string, amountNaira: number): Promise<ExpenseAndBudgetWallet | null> {
+    return this.request<ExpenseAndBudgetWallet>('/wallet/topup/verify', {
+      method: 'POST',
+      body: JSON.stringify({ reference, amountNaira }),
+    });
+  }
+
+  async disburseExpenseFromWallet(payload: {
+    expenseId: string;
+    bankCode: string;
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+    reason?: string;
+  }) {
+    return this.request<{ expense: Expense; walletBalance: number; transferRef: string }>('/wallet/disburse-expense', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async disburseMentorFromWallet(mentorId: string, amount: number, reason?: string) {
+    return this.request<{ mentor: Mentor; transferRef: string; disburseAmount: number; walletBalance: number }>('/paystack/disburse-mentor', {
+      method: 'POST',
+      body: JSON.stringify({ mentorId, amount, reason }),
+    });
+  }
+
+  async updateBudgetLimit(limit: number): Promise<ExpenseAndBudgetWallet | null> {
+    return this.request<ExpenseAndBudgetWallet>('/wallet/budget-limit', {
+      method: 'PUT',
+      body: JSON.stringify({ limit }),
+    });
+  }
 }
 
 export const apiService = new ApiService();
+

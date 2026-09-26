@@ -21,6 +21,8 @@ import { ClockInModal } from '../modals/ClockInModal';
 import { ClockOutModal } from '../modals/ClockOutModal';
 import { CertificateModal } from '../modals/CertificateModal';
 import { SubmitPerformanceReportModal } from '../modals/SubmitPerformanceReportModal';
+import { TopUpWalletModal } from '../modals/TopUpWalletModal';
+import { DisburseFundsModal } from '../modals/DisburseFundsModal';
 import { MobileBottomNav } from './MobileBottomNav';
 
 export const AppLayout: React.FC = () => {
@@ -128,6 +130,14 @@ export const AppLayout: React.FC = () => {
       />
       <SubmitPerformanceReportModal
         isOpen={activeModal === 'submit-performance-report'}
+        onClose={closeModal}
+      />
+      <TopUpWalletModal
+        isOpen={activeModal === 'top-up-wallet'}
+        onClose={closeModal}
+      />
+      <DisburseFundsModal
+        isOpen={activeModal === 'disburse-expense' || activeModal === 'disburse-mentor'}
         onClose={closeModal}
       />
       <ChangePasswordModal />

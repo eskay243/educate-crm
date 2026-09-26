@@ -30,7 +30,9 @@ import {
   SupportTicket,
   CustomRoleDefinition,
   RoleCapabilities,
-  TicketStatus
+  TicketStatus,
+  ExpenseAndBudgetWallet,
+  VirtualAccountDetails
 } from '../types/crm';
 import { 
   initialLeads, 
@@ -57,6 +59,7 @@ import { apiService } from '../services/api';
 import { emailService } from '../services/emailService';
 import { calculateDistanceMeters } from '../utils/geo';
 import { launchPaystackPayment } from '../services/paystackService';
+
 
 export const formatNaira = (amount: number, fractionDigits = 0): string => {
   return '₦' + new Intl.NumberFormat('en-NG', {
@@ -119,6 +122,26 @@ interface CRMContextType {
   payTuitionWithPaystack: (options: { amountNaira: number; invoiceId?: string }) => Promise<void>;
   submitProofOfPayment: (payload: { amount: number; bankName: string; referenceNumber: string; receiptProofUrl?: string; notes?: string }) => Promise<void>;
   disburseMentorPayout: (mentorId: string, amount: number, reason?: string) => Promise<void>;
+  
+  // Operational Expense & Budget Wallet
+  wallet: ExpenseAndBudgetWallet;
+  selectedExpenseForDisburse: Expense | null;
+  setSelectedExpenseForDisburse: (expense: Expense | null) => void;
+  selectedMentorForDisburse: Mentor | null;
+  setSelectedMentorForDisburse: (mentor: Mentor | null) => void;
+  generateVirtualAccount: () => Promise<VirtualAccountDetails | null>;
+  topUpWallet: (amountNaira: number, reference?: string) => Promise<boolean>;
+  disburseExpenseFromWallet: (payload: {
+    expenseId: string;
+    bankCode: string;
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+    reason?: string;
+  }) => Promise<boolean>;
+  disburseMentorFromWallet: (mentorId: string, amount: number, reason?: string) => Promise<boolean>;
+  updateWalletBudgetLimit: (limit: number) => Promise<void>;
+  refreshWalletSummary: () => Promise<void>;
   
   // Attendance, Reports & Graduation Gatekeeping
   markSessionAttendance: (sessionId: string, status: 'Attended' | 'Absent', hoursCredited?: number) => Promise<void>;
@@ -234,6 +257,52 @@ const STORAGE_KEYS = {
   NOTIFICATIONS: 'nexus_clean_prod_notifications_v1',
   TICKETS: 'nexus_clean_prod_tickets_v1',
   ROLES: 'nexus_clean_prod_roles_v1',
+  WALLET: 'nexus_clean_prod_wallet_v1',
+};
+
+export const defaultWalletState: ExpenseAndBudgetWallet = {
+  balance: 850000,
+  monthlyBudgetLimit: 1500000,
+  virtualAccount: {
+    accountNumber: '9928174820',
+    accountName: 'CODELAB EDUCARE / OPS WALLET',
+    bankName: 'Wema Bank (Paystack DVA)',
+    bankCode: '035',
+    customerCode: 'CUS_cdl_ops_9928',
+    customerEmail: 'wallet-operations@codelab.institute',
+    assignedAt: '2026-09-01T08:00:00.000Z',
+    status: 'active',
+    provider: 'wema-bank',
+  },
+  transactions: [
+    {
+      id: 'wtx-seed-001',
+      type: 'credit',
+      category: 'dva_bank_deposit',
+      amount: 1000000,
+      reference: 'DVA-DEP-9928174820-001',
+      description: 'Direct NUBAN bank transfer deposit from Executive Treasury via NIP',
+      timestamp: '2026-09-02T10:30:00.000Z',
+      balanceAfter: 1000000,
+      initiatedBy: 'Managing Director (Treasury)',
+      channel: 'dedicated_nuban'
+    },
+    {
+      id: 'wtx-seed-002',
+      type: 'debit',
+      category: 'expense_payout',
+      amount: 150000,
+      reference: 'TRF-EXP-20260905-8841',
+      description: 'OpEx Disbursement for Fiber Internet Bandwidth (EXP-2026-003)',
+      timestamp: '2026-09-05T14:15:00.000Z',
+      balanceAfter: 850000,
+      initiatedBy: 'Finance Controller',
+      recipientName: 'MainOne Technologies Ltd',
+      recipientBank: 'Access Bank',
+      recipientAccountNumber: '0039281746'
+    }
+  ],
+  lastSyncedAt: new Date().toISOString()
 };
 
 export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -369,6 +438,14 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedCourseForEditId, setSelectedCourseForEditId] = useState<string | null>(null);
   const [selectedMentorForEditId, setSelectedMentorForEditId] = useState<string | null>(null);
 
+  // Operational Expense & Budget Wallet state
+  const [wallet, setWallet] = useState<ExpenseAndBudgetWallet>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.WALLET);
+    return saved ? JSON.parse(saved) : defaultWalletState;
+  });
+  const [selectedExpenseForDisburse, setSelectedExpenseForDisburse] = useState<Expense | null>(null);
+  const [selectedMentorForDisburse, setSelectedMentorForDisburse] = useState<Mentor | null>(null);
+
   // Bootstrap from backend on mount
   useEffect(() => {
     let isMounted = true;
@@ -409,14 +486,30 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if ((data as any).studentPerformanceReports) setStudentPerformanceReports((data as any).studentPerformanceReports);
         if ((data as any).tickets) setTickets((data as any).tickets);
         if ((data as any).customRoles) setCustomRoles((data as any).customRoles);
+        if ((data as any).wallet) setWallet((data as any).wallet);
         console.log('🚀 Synchronized live data with Express REST backend.');
       } else if (isMounted) {
         setIsBackendConnected(false);
       }
     };
     syncWithBackend();
+
+    // Also fetch dedicated wallet summary from /api/wallet/summary
+    const fetchWallet = async () => {
+      const summary = await apiService.getWalletSummary();
+      if (summary && isMounted) {
+        setWallet(summary);
+      }
+    };
+    fetchWallet();
+
     return () => { isMounted = false; };
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.WALLET, JSON.stringify(wallet));
+  }, [wallet]);
+
 
   // Persist state to localStorage as fallback
   useEffect(() => { 
@@ -2343,53 +2436,269 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const disburseMentorPayout = async (mentorId: string, amount: number, reason?: string) => {
-    const mentor = mentors.find(m => m.id === mentorId);
-    if (!mentor) return;
-
-    setMentors(prev => prev.map(m => {
-      if (m.id !== mentorId) return m;
-      return {
-        ...m,
-        pendingPayout: Math.max(0, (m.pendingPayout || 0) - amount),
-        paidPayout: (m.paidPayout || 0) + amount,
-      };
-    }));
-
-    showToast('Disbursement Processed', `₦${amount.toLocaleString()} sent to ${mentor.name}'s verified ${mentor.bankName} account via Paystack!`, 'success');
-
-    logActivity({
-      title: `Mentor Disbursement Processed`,
-      description: `₦${amount.toLocaleString()} disbursed to ${mentor.name} (${mentor.bankName} - ${mentor.accountNumber}) via Paystack.`,
-      type: 'mentor',
-      user: currentUser?.name || 'Bursary',
-    });
-
-    // Dispatch Credit Advice Email to Mentor
-    if (mentor.email) {
-      emailService.sendEmail({
-        to: mentor.email,
-        recipientName: mentor.name,
-        subject: `💸 Faculty Honorarium Disbursed: ₦${amount.toLocaleString()} [${mentor.bankName || 'NIBSS Settlement'}]`,
-        type: 'mentor_payout_disbursed',
-        data: {
-          amount,
-          bankName: mentor.bankName,
-          accountNumber: mentor.accountNumber,
-          transferRef: `TRF-NIBSS-${Date.now().toString().slice(-6)}`,
-          portalUrl: 'http://72.61.106.87/mentors',
-        }
-      }).catch(err => console.error('Error sending mentor payout credit advice email:', err));
-    }
-
-    if (isBackendConnected) {
-      try {
-        await apiService.disburseMentorPayout(mentorId, amount, reason);
-      } catch (e) {
-        console.warn('Backend disburse error:', e);
+  const refreshWalletSummary = async () => {
+    try {
+      const summary = await apiService.getWalletSummary();
+      if (summary) {
+        setWallet(summary);
       }
+    } catch (e) {
+      console.warn('Error refreshing wallet:', e);
     }
   };
+
+  const generateVirtualAccount = async (): Promise<VirtualAccountDetails | null> => {
+    try {
+      const dva = await apiService.generateVirtualAccount();
+      if (dva) {
+        setWallet(prev => ({
+          ...prev,
+          virtualAccount: dva,
+        }));
+        showToast('Virtual Account Generated', `Assigned ${dva.bankName} NUBAN: ${dva.accountNumber} to Expense & Budget Wallet.`, 'success');
+        return dva;
+      }
+    } catch (e) {
+      console.error('Error generating virtual account:', e);
+      showToast('Error', 'Could not generate Dedicated Virtual Account', 'error');
+    }
+    return null;
+  };
+
+  const topUpWallet = async (amountNaira: number, reference?: string): Promise<boolean> => {
+    try {
+      const topupRef = reference || `CDL-WAL-TOP-${Date.now()}`;
+      const updated = await apiService.verifyWalletTopUp(topupRef, amountNaira);
+      if (updated) {
+        setWallet(updated);
+        showToast('Wallet Credited', `Successfully deposited ₦${amountNaira.toLocaleString()} into Expense & Budget Wallet!`, 'success');
+        return true;
+      } else {
+        // Fallback for offline simulation
+        setWallet(prev => {
+          const newBal = prev.balance + amountNaira;
+          return {
+            ...prev,
+            balance: newBal,
+            transactions: [
+              {
+                id: `wtx-${Date.now()}-top`,
+                type: 'credit',
+                category: 'card_topup',
+                amount: amountNaira,
+                reference: topupRef,
+                description: 'Instant Wallet Top-Up via Paystack Checkout',
+                timestamp: new Date().toISOString(),
+                balanceAfter: newBal,
+                initiatedBy: currentUser?.name || 'Super Admin',
+                channel: 'paystack_inline'
+              },
+              ...prev.transactions
+            ]
+          };
+        });
+        showToast('Wallet Credited (Offline)', `₦${amountNaira.toLocaleString()} credited to wallet balance.`, 'success');
+        return true;
+      }
+    } catch (e) {
+      console.error('Error topping up wallet:', e);
+      showToast('Top-Up Failed', 'Unable to process wallet top-up.', 'error');
+      return false;
+    }
+  };
+
+  const disburseExpenseFromWallet = async (payload: {
+    expenseId: string;
+    bankCode: string;
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+    reason?: string;
+  }): Promise<boolean> => {
+    const expense = expenses.find(e => e.id === payload.expenseId);
+    if (!expense) return false;
+
+    if (wallet.balance < expense.amount) {
+      showToast('Insufficient Wallet Balance', `Available: ${formatNaira(wallet.balance)}, Required: ${formatNaira(expense.amount)}. Please top up the wallet first.`, 'error');
+      return false;
+    }
+
+    try {
+      const res = await apiService.disburseExpenseFromWallet(payload);
+      if (res && res.expense) {
+        setExpenses(prev => prev.map(e => e.id === payload.expenseId ? res.expense : e));
+        if (res.walletBalance !== undefined) {
+          setWallet(prev => ({
+            ...prev,
+            balance: res.walletBalance,
+            transactions: [
+              {
+                id: `wtx-${Date.now()}-exp`,
+                type: 'debit',
+                category: 'expense_payout',
+                amount: expense.amount,
+                reference: res.transferRef || `TRF-EXP-${Date.now()}`,
+                description: `OpEx Disbursement: ${expense.title} (${expense.expenseCode})`,
+                timestamp: new Date().toISOString(),
+                balanceAfter: res.walletBalance,
+                initiatedBy: currentUser?.name || 'Finance Controller',
+                recipientName: payload.accountName,
+                recipientBank: payload.bankName,
+                recipientAccountNumber: payload.accountNumber,
+                channel: 'paystack_transfer'
+              },
+              ...prev.transactions
+            ]
+          }));
+        }
+        showToast('Expense Disbursed', `₦${expense.amount.toLocaleString()} paid from Expense Wallet to ${payload.accountName} (${payload.bankName})!`, 'success');
+        return true;
+      } else {
+        // Local simulation fallback
+        const newBal = Math.max(0, wallet.balance - expense.amount);
+        const trfRef = `TRF-EXP-${Date.now()}`;
+        setExpenses(prev => prev.map(e => e.id === payload.expenseId ? {
+          ...e,
+          status: 'Paid',
+          disbursementBankName: payload.bankName,
+          disbursementAccountNumber: payload.accountNumber,
+          disbursementAccountName: payload.accountName,
+          disbursementBankCode: payload.bankCode,
+          isDisbursedViaWallet: true,
+          transferReference: trfRef,
+          disbursedAt: new Date().toISOString()
+        } : e));
+        setWallet(prev => ({
+          ...prev,
+          balance: newBal,
+          transactions: [
+            {
+              id: `wtx-${Date.now()}-exp`,
+              type: 'debit',
+              category: 'expense_payout',
+              amount: expense.amount,
+              reference: trfRef,
+              description: `OpEx Disbursement: ${expense.title} (${expense.expenseCode})`,
+              timestamp: new Date().toISOString(),
+              balanceAfter: newBal,
+              initiatedBy: currentUser?.name || 'Finance Controller',
+              recipientName: payload.accountName,
+              recipientBank: payload.bankName,
+              recipientAccountNumber: payload.accountNumber,
+              channel: 'paystack_transfer'
+            },
+            ...prev.transactions
+          ]
+        }));
+        showToast('Expense Disbursed', `₦${expense.amount.toLocaleString()} paid to ${payload.accountName}!`, 'success');
+        return true;
+      }
+    } catch (e: any) {
+      console.error('Error disbursing expense:', e);
+      showToast('Disbursement Error', e.message || 'Failed to disburse expense from wallet', 'error');
+      return false;
+    }
+  };
+
+  const disburseMentorFromWallet = async (mentorId: string, amount: number, reason?: string): Promise<boolean> => {
+    const mentor = mentors.find(m => m.id === mentorId);
+    if (!mentor) return false;
+
+    if (wallet.balance < amount) {
+      showToast('Insufficient Wallet Balance', `Available: ${formatNaira(wallet.balance)}, Required: ${formatNaira(amount)}. Please fund the wallet before paying mentors.`, 'error');
+      return false;
+    }
+
+    try {
+      const res = await apiService.disburseMentorFromWallet(mentorId, amount, reason);
+      if (res && res.mentor) {
+        setMentors(prev => prev.map(m => m.id === mentorId ? res.mentor : m));
+        if (res.walletBalance !== undefined) {
+          setWallet(prev => ({
+            ...prev,
+            balance: res.walletBalance,
+            transactions: [
+              {
+                id: `wtx-${Date.now()}-men`,
+                type: 'debit',
+                category: 'mentor_payout',
+                amount,
+                reference: res.transferRef || `TRF-MEN-${Date.now()}`,
+                description: `37% Commission Share Disbursement to ${mentor.name}`,
+                timestamp: new Date().toISOString(),
+                balanceAfter: res.walletBalance,
+                initiatedBy: currentUser?.name || 'Finance Controller',
+                recipientName: mentor.accountName || mentor.name,
+                recipientBank: mentor.bankName,
+                recipientAccountNumber: mentor.accountNumber,
+                channel: 'paystack_transfer'
+              },
+              ...prev.transactions
+            ]
+          }));
+        }
+        showToast('Disbursement Completed', `₦${amount.toLocaleString()} disbursed from Expense Wallet to ${mentor.name} (${mentor.bankName} - ${mentor.accountNumber})!`, 'success');
+        return true;
+      } else {
+        // Fallback simulation
+        const newBal = Math.max(0, wallet.balance - amount);
+        const trfRef = `TRF-MEN-${Date.now()}`;
+        setMentors(prev => prev.map(m => m.id === mentorId ? {
+          ...m,
+          pendingPayout: Math.max(0, (m.pendingPayout || 0) - amount),
+          paidPayout: (m.paidPayout || 0) + amount,
+        } : m));
+        setWallet(prev => ({
+          ...prev,
+          balance: newBal,
+          transactions: [
+            {
+              id: `wtx-${Date.now()}-men`,
+              type: 'debit',
+              category: 'mentor_payout',
+              amount,
+              reference: trfRef,
+              description: `37% Commission Share Disbursement to ${mentor.name}`,
+              timestamp: new Date().toISOString(),
+              balanceAfter: newBal,
+              initiatedBy: currentUser?.name || 'Finance Controller',
+              recipientName: mentor.accountName || mentor.name,
+              recipientBank: mentor.bankName,
+              recipientAccountNumber: mentor.accountNumber,
+              channel: 'paystack_transfer'
+            },
+            ...prev.transactions
+          ]
+        }));
+        showToast('Disbursement Completed', `₦${amount.toLocaleString()} disbursed to ${mentor.name}!`, 'success');
+        return true;
+      }
+    } catch (e: any) {
+      console.error('Error disbursing mentor share:', e);
+      showToast('Disbursement Error', e.message || 'Failed to disburse mentor share', 'error');
+      return false;
+    }
+  };
+
+  const updateWalletBudgetLimit = async (limit: number) => {
+    try {
+      const res = await apiService.updateBudgetLimit(limit);
+      if (res) {
+        setWallet(res);
+      } else {
+        setWallet(prev => ({ ...prev, monthlyBudgetLimit: limit }));
+      }
+      setSettings(prev => ({ ...prev, operatingBudget: limit }));
+      showToast('Budget Limit Updated', `Monthly budget limit updated to ${formatNaira(limit)}.`, 'success');
+    } catch (e) {
+      setWallet(prev => ({ ...prev, monthlyBudgetLimit: limit }));
+    }
+  };
+
+  const disburseMentorPayout = async (mentorId: string, amount: number, reason?: string) => {
+    await disburseMentorFromWallet(mentorId, amount, reason);
+  };
+
 
   const calculatePerformanceTier = (score: number): 'Exceeding' | 'On Track' | 'Needs Support' | 'At Risk' => {
     if (score >= 90) return 'Exceeding';
@@ -2723,6 +3032,17 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateRolePermissions,
         hasFeaturePermission,
         resetAllData,
+        wallet,
+        selectedExpenseForDisburse,
+        setSelectedExpenseForDisburse,
+        selectedMentorForDisburse,
+        setSelectedMentorForDisburse,
+        generateVirtualAccount,
+        topUpWallet,
+        disburseExpenseFromWallet,
+        disburseMentorFromWallet,
+        updateWalletBudgetLimit,
+        refreshWalletSummary,
       }}
     >
       {children}

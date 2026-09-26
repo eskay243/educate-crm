@@ -9,6 +9,14 @@ import crypto from 'crypto';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+try {
+  if (typeof process.loadEnvFile === 'function') {
+    process.loadEnvFile();
+  }
+} catch {
+  // .env file is optional
+}
+
 const app = express();
 const PORT = process.env.PORT || 5001;
 const DB_FILE = path.join(__dirname, 'data', 'db.json');
@@ -63,7 +71,53 @@ interface DatabaseSchema {
   studentPerformanceReports?: any[];
   tickets?: any[];
   customRoles?: any[];
+  wallet?: any;
 }
+
+const defaultWallet = {
+  balance: 850000,
+  monthlyBudgetLimit: 1500000,
+  virtualAccount: {
+    accountNumber: '9928174820',
+    accountName: 'CODELAB EDUCARE / OPS WALLET',
+    bankName: 'Wema Bank (Paystack DVA)',
+    bankCode: '035',
+    customerCode: 'CUS_cdl_ops_9928',
+    customerEmail: 'wallet-operations@codelab.institute',
+    assignedAt: '2026-09-01T08:00:00.000Z',
+    status: 'active',
+    provider: 'wema-bank',
+  },
+  transactions: [
+    {
+      id: 'wtx-seed-001',
+      type: 'credit',
+      category: 'dva_bank_deposit',
+      amount: 1000000,
+      reference: 'DVA-DEP-9928174820-001',
+      description: 'Direct NUBAN bank transfer deposit from Executive Treasury via NIP',
+      timestamp: '2026-09-02T10:30:00.000Z',
+      balanceAfter: 1000000,
+      initiatedBy: 'Managing Director (Treasury)',
+      channel: 'dedicated_nuban'
+    },
+    {
+      id: 'wtx-seed-002',
+      type: 'debit',
+      category: 'expense_payout',
+      amount: 150000,
+      reference: 'TRF-EXP-20260905-8841',
+      description: 'OpEx Disbursement for Fiber Internet Bandwidth (EXP-2026-003)',
+      timestamp: '2026-09-05T14:15:00.000Z',
+      balanceAfter: 850000,
+      initiatedBy: 'Finance Controller',
+      recipientName: 'MainOne Technologies Ltd',
+      recipientBank: 'Access Bank',
+      recipientAccountNumber: '0039281746'
+    }
+  ],
+  lastSyncedAt: new Date().toISOString()
+};
 
 const getInitialDatabase = (): DatabaseSchema => ({
   leads: initialLeads,
@@ -83,6 +137,7 @@ const getInitialDatabase = (): DatabaseSchema => ({
   assignments: initialAssignments,
   tickets: initialTickets,
   customRoles: defaultRoleDefinitions,
+  wallet: defaultWallet,
 });
 
 const loadDatabase = (): DatabaseSchema => {
@@ -97,6 +152,7 @@ const loadDatabase = (): DatabaseSchema => {
     if (!Array.isArray(parsed.courses)) parsed.courses = [];
     if (!Array.isArray(parsed.tickets)) parsed.tickets = initialTickets;
     if (!Array.isArray(parsed.customRoles)) parsed.customRoles = defaultRoleDefinitions;
+    if (!parsed.wallet) parsed.wallet = defaultWallet;
     return parsed;
   } catch (err) {
     console.error('Error loading database, returning default seed:', err);
@@ -2652,8 +2708,17 @@ app.post('/api/paystack/disburse-mentor', async (req: Request, res: Response) =>
       return res.status(400).json({ success: false, message: 'Disbursement amount must be greater than 0' });
     }
 
+    if (!db.wallet) db.wallet = defaultWallet;
+    if ((db.wallet.balance || 0) < disburseAmount) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Insufficient Expense & Budget Wallet balance. Available: ₦${(db.wallet.balance || 0).toLocaleString()}, Required: ₦${disburseAmount.toLocaleString()}. Please fund the wallet first.` 
+      });
+    }
+
     const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
     const transferRef = `TRF-MEN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    let paystackTransferCode = '';
 
     if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
       const recipientRes = await fetch('https://api.paystack.co/transferrecipient', {
@@ -2684,25 +2749,46 @@ app.post('/api/paystack/disburse-mentor', async (req: Request, res: Response) =>
             source: 'balance',
             amount: Math.round(disburseAmount * 100),
             recipient: recipientCode,
-            reason: reason || `Honorarium / Commission for ${mentor.name}`,
+            reason: reason || `37% Tuition Commission for ${mentor.name}`,
             reference: transferRef
           })
         });
         const transferResult = await transferRes.json();
         if (!transferResult.status) {
-          return res.status(400).json({ success: false, message: transferResult.message || 'Transfer failed' });
+          return res.status(400).json({ success: false, message: transferResult.message || 'Paystack transfer failed' });
         }
+        paystackTransferCode = transferResult.data?.transfer_code || '';
       }
     }
 
+    // Deduct from mentor pending payout
     mentor.pendingPayout = Math.max(0, (mentor.pendingPayout || 0) - disburseAmount);
     mentor.paidPayout = (mentor.paidPayout || 0) + disburseAmount;
+
+    // Deduct from wallet balance & record ledger
+    db.wallet.balance = Math.max(0, (db.wallet.balance || 0) - disburseAmount);
+    db.wallet.transactions.unshift({
+      id: `wtx-${Date.now()}-men`,
+      type: 'debit',
+      category: 'mentor_payout',
+      amount: disburseAmount,
+      reference: transferRef,
+      description: `37% Revenue Share Disbursement to ${mentor.name}`,
+      timestamp: new Date().toISOString(),
+      balanceAfter: db.wallet.balance,
+      initiatedBy: 'Finance Controller',
+      recipientName: mentor.accountName || mentor.name,
+      recipientBank: mentor.bankName,
+      recipientAccountNumber: mentor.accountNumber,
+      channel: 'paystack_transfer',
+      paystackTransferCode,
+    });
 
     db.activityLogs.unshift({
       id: `act-${Date.now()}-disb`,
       timestamp: new Date().toISOString(),
-      title: `Mentor Disbursement of ₦${disburseAmount.toLocaleString()} Processed`,
-      description: `Disbursed to ${mentor.name} (${mentor.bankName} - ${mentor.accountNumber}) via Paystack. Ref: ${transferRef}`,
+      title: `Mentor Disbursement of ₦${disburseAmount.toLocaleString()} Disbursed from Wallet`,
+      description: `Disbursed to ${mentor.name} (${mentor.bankName} - ${mentor.accountNumber}) via Paystack NIBSS. Wallet Balance: ₦${db.wallet.balance.toLocaleString()}. Ref: ${transferRef}`,
       type: 'mentor',
       user: 'Finance Controller'
     });
@@ -2711,12 +2797,357 @@ app.post('/api/paystack/disburse-mentor', async (req: Request, res: Response) =>
     sendMentorPayoutAdviceEmail(mentor, disburseAmount, transferRef);
     res.json({
       success: true,
-      message: `₦${disburseAmount.toLocaleString()} successfully disbursed to ${mentor.name}'s verified bank account!`,
-      data: { mentor, transferRef, disburseAmount }
+      message: `₦${disburseAmount.toLocaleString()} successfully disbursed from Expense Wallet to ${mentor.name}'s verified bank account!`,
+      data: { mentor, transferRef, disburseAmount, walletBalance: db.wallet.balance }
     });
   } catch (error: any) {
     console.error('Paystack disbursement error:', error);
     res.status(500).json({ success: false, message: error.message || 'Disbursement failed' });
+  }
+});
+
+// ----------------------------------------------------
+// Operational Expense & Budget Wallet Endpoints
+// ----------------------------------------------------
+app.get('/api/wallet/summary', async (_req: Request, res: Response) => {
+  try {
+    if (!db.wallet) db.wallet = defaultWallet;
+
+    // Attempt to fetch live Paystack balance if secret key is present
+    const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
+    let paystackLiveBalance: number | undefined = undefined;
+
+    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
+      try {
+        const balRes = await fetch('https://api.paystack.co/balance', {
+          headers: { Authorization: `Bearer ${secretKey}` },
+        });
+        const balData: any = await balRes.json();
+        if (balData.status && Array.isArray(balData.data)) {
+          const ngnBalance = balData.data.find((b: any) => b.currency === 'NGN');
+          if (ngnBalance) {
+            paystackLiveBalance = ngnBalance.balance / 100;
+          }
+        }
+      } catch (e) {
+        console.warn('Could not query live Paystack balance:', e);
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        ...db.wallet,
+        paystackLiveBalance,
+      }
+    });
+  } catch (error: any) {
+    console.error('Wallet summary error:', error);
+    res.status(500).json({ success: false, message: 'Could not fetch wallet details' });
+  }
+});
+
+app.post('/api/wallet/virtual-account', async (_req: Request, res: Response) => {
+  try {
+    if (!db.wallet) db.wallet = defaultWallet;
+
+    const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
+    const walletEmail = 'wallet-operations@codelab.institute';
+
+    // If live or real test Paystack key is available:
+    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
+      try {
+        // 1. Create or fetch Paystack customer
+        const customerRes = await fetch('https://api.paystack.co/customer', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${secretKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: walletEmail,
+            first_name: 'CODELAB EDUCARE',
+            last_name: 'Operations Budget Wallet',
+            phone: '+2348029182736',
+          })
+        });
+        const customerData: any = await customerRes.json();
+        const customerCode = customerData?.data?.customer_code;
+
+        if (customerCode) {
+          // 2. Request Dedicated Virtual Account
+          const dvaRes = await fetch('https://api.paystack.co/dedicated_account', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${secretKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              customer: customerCode,
+              preferred_bank: 'wema-bank',
+            })
+          });
+          const dvaData: any = await dvaRes.json();
+
+          if (dvaData.status && dvaData.data) {
+            db.wallet.virtualAccount = {
+              accountNumber: dvaData.data.account_number,
+              accountName: dvaData.data.account_name || 'CODELAB EDUCARE / OPS WALLET',
+              bankName: dvaData.data.bank?.name || 'Wema Bank (Paystack DVA)',
+              bankCode: dvaData.data.bank?.id ? String(dvaData.data.bank.id) : '035',
+              customerCode,
+              customerEmail: walletEmail,
+              assignedAt: new Date().toISOString(),
+              status: 'active',
+              provider: dvaData.data.bank?.slug || 'wema-bank',
+            };
+            saveDatabase(db);
+            return res.json({
+              success: true,
+              message: 'Paystack Dedicated Virtual Account created successfully via Wema Bank.',
+              data: db.wallet.virtualAccount,
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('Live DVA creation encountered API error, falling back to instant sandbox DVA:', err);
+      }
+    }
+
+    // Fallback / Sandbox DVA generation
+    const randomNuban = `99${Math.floor(10000000 + Math.random() * 90000000)}`;
+    db.wallet.virtualAccount = {
+      accountNumber: randomNuban,
+      accountName: 'CODELAB EDUCARE / OPS WALLET',
+      bankName: 'Wema Bank (Paystack DVA)',
+      bankCode: '035',
+      customerCode: `CUS_cdl_ops_${randomNuban.slice(-4)}`,
+      customerEmail: walletEmail,
+      assignedAt: new Date().toISOString(),
+      status: 'active',
+      provider: 'wema-bank',
+    };
+    saveDatabase(db);
+
+    res.json({
+      success: true,
+      message: 'Dedicated Virtual Account provisioned successfully for OpEx & Budget Wallet.',
+      data: db.wallet.virtualAccount,
+    });
+  } catch (error: any) {
+    console.error('Virtual account generation error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Could not generate virtual account' });
+  }
+});
+
+app.post('/api/wallet/topup/verify', async (req: Request, res: Response) => {
+  try {
+    const { reference, amountNaira } = req.body;
+    if (!amountNaira || Number(amountNaira) <= 0) {
+      return res.status(400).json({ success: false, message: 'Valid top-up amount required' });
+    }
+
+    const amount = Number(amountNaira);
+    const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
+    const topupRef = reference || `CDL-WAL-TOP-${Date.now()}`;
+
+    if (secretKey && secretKey.startsWith('sk_live_') && reference) {
+      const verifyRes = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+        headers: { Authorization: `Bearer ${secretKey}` }
+      });
+      const verifyData: any = await verifyRes.json();
+      if (!verifyData.status || verifyData.data?.status !== 'success') {
+        return res.status(400).json({ success: false, message: 'Paystack transaction verification failed' });
+      }
+    } else if (secretKey && secretKey.startsWith('sk_test_') && reference && !reference.includes('TEST') && !reference.includes('SIM') && !reference.includes('mock')) {
+      try {
+        const verifyRes = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+          headers: { Authorization: `Bearer ${secretKey}` }
+        });
+        const verifyData: any = await verifyRes.json();
+        if (verifyData.status && verifyData.data?.status !== 'success') {
+          return res.status(400).json({ success: false, message: 'Paystack transaction verification failed' });
+        }
+      } catch (err) {
+        console.warn('Sandbox Paystack verification exception, proceeding with simulated top-up:', err);
+      }
+    }
+
+    if (!db.wallet) db.wallet = defaultWallet;
+    db.wallet.balance = (db.wallet.balance || 0) + amount;
+
+    db.wallet.transactions.unshift({
+      id: `wtx-${Date.now()}-top`,
+      type: 'credit',
+      category: 'card_topup',
+      amount,
+      reference: topupRef,
+      description: `In-App Instant Wallet Top-Up via Paystack Checkout`,
+      timestamp: new Date().toISOString(),
+      balanceAfter: db.wallet.balance,
+      initiatedBy: 'Finance / Super Admin',
+      channel: 'paystack_inline'
+    });
+
+    db.activityLogs.unshift({
+      id: `act-${Date.now()}-top`,
+      timestamp: new Date().toISOString(),
+      title: `Operational Wallet Funded: ₦${amount.toLocaleString()}`,
+      description: `Instant online top-up processed via Paystack. Available Wallet Balance: ₦${db.wallet.balance.toLocaleString()}. Ref: ${topupRef}`,
+      type: 'finance',
+      user: 'Super Admin'
+    });
+
+    saveDatabase(db);
+    res.json({
+      success: true,
+      message: `Operational Wallet credited with ₦${amount.toLocaleString()}! New balance: ₦${db.wallet.balance.toLocaleString()}`,
+      data: db.wallet,
+    });
+  } catch (error: any) {
+    console.error('Wallet top-up error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Top-up failed' });
+  }
+});
+
+app.post('/api/wallet/disburse-expense', async (req: Request, res: Response) => {
+  try {
+    const { expenseId, bankCode, bankName, accountNumber, accountName, reason } = req.body;
+    const expense = db.expenses.find(e => e.id === expenseId);
+
+    if (!expense) {
+      return res.status(404).json({ success: false, message: 'Expense record not found' });
+    }
+
+    const disburseAmount = Number(expense.amount);
+    if (!db.wallet) db.wallet = defaultWallet;
+
+    if ((db.wallet.balance || 0) < disburseAmount) {
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient Expense & Budget Wallet balance. Available: ₦${(db.wallet.balance || 0).toLocaleString()}, Required: ₦${disburseAmount.toLocaleString()}. Please fund the wallet before disbursing.`
+      });
+    }
+
+    const targetBankCode = bankCode || expense.disbursementBankCode || '058';
+    const targetAccNumber = accountNumber || expense.disbursementAccountNumber;
+    const targetAccName = accountName || expense.disbursementAccountName || expense.vendor;
+    const targetBankName = bankName || expense.disbursementBankName || 'Commercial Bank';
+
+    if (!targetAccNumber) {
+      return res.status(400).json({ success: false, message: 'Recipient 10-digit bank account number is required for disbursement' });
+    }
+
+    const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
+    const transferRef = `TRF-EXP-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    let paystackTransferCode = '';
+
+    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
+      const recipientRes = await fetch('https://api.paystack.co/transferrecipient', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${secretKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'nuban',
+          name: targetAccName,
+          account_number: targetAccNumber,
+          bank_code: targetBankCode,
+          currency: 'NGN',
+        })
+      });
+      const recipientData = await recipientRes.json();
+      const recipientCode = recipientData?.data?.recipient_code;
+
+      if (recipientCode) {
+        const transferRes = await fetch('https://api.paystack.co/transfer', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${secretKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            source: 'balance',
+            amount: Math.round(disburseAmount * 100),
+            recipient: recipientCode,
+            reason: reason || `OpEx Disbursement: ${expense.title} (${expense.expenseCode})`,
+            reference: transferRef
+          })
+        });
+        const transferResult = await transferRes.json();
+        if (!transferResult.status) {
+          return res.status(400).json({ success: false, message: transferResult.message || 'Paystack transfer failed' });
+        }
+        paystackTransferCode = transferResult.data?.transfer_code || '';
+      }
+    }
+
+    // Deduct from wallet
+    db.wallet.balance = Math.max(0, (db.wallet.balance || 0) - disburseAmount);
+
+    // Update Expense record
+    expense.status = 'Paid';
+    expense.disbursementBankName = targetBankName;
+    expense.disbursementAccountNumber = targetAccNumber;
+    expense.disbursementAccountName = targetAccName;
+    expense.disbursementBankCode = targetBankCode;
+    expense.isDisbursedViaWallet = true;
+    expense.transferReference = transferRef;
+    expense.disbursedAt = new Date().toISOString();
+
+    db.wallet.transactions.unshift({
+      id: `wtx-${Date.now()}-exp`,
+      type: 'debit',
+      category: 'expense_payout',
+      amount: disburseAmount,
+      reference: transferRef,
+      description: `OpEx Disbursement: ${expense.title} (${expense.expenseCode})`,
+      timestamp: new Date().toISOString(),
+      balanceAfter: db.wallet.balance,
+      initiatedBy: 'Finance Controller',
+      recipientName: targetAccName,
+      recipientBank: targetBankName,
+      recipientAccountNumber: targetAccNumber,
+      channel: 'paystack_transfer',
+      paystackTransferCode,
+    });
+
+    db.activityLogs.unshift({
+      id: `act-${Date.now()}-expdisb`,
+      timestamp: new Date().toISOString(),
+      title: `OpEx Requisition ₦${disburseAmount.toLocaleString()} Disbursed`,
+      description: `Disbursed for ${expense.title} to ${targetAccName} (${targetBankName} - ${targetAccNumber}) from Expense Wallet. Ref: ${transferRef}`,
+      type: 'finance',
+      user: 'Finance Controller'
+    });
+
+    saveDatabase(db);
+    res.json({
+      success: true,
+      message: `₦${disburseAmount.toLocaleString()} successfully disbursed from Expense Wallet to ${targetAccName}!`,
+      data: { expense, walletBalance: db.wallet.balance, transferRef }
+    });
+  } catch (error: any) {
+    console.error('OpEx disbursement error:', error);
+    res.status(500).json({ success: false, message: error.message || 'OpEx disbursement failed' });
+  }
+});
+
+app.put('/api/wallet/budget-limit', (req: Request, res: Response) => {
+  try {
+    const { limit } = req.body;
+    if (!limit || Number(limit) < 0) {
+      return res.status(400).json({ success: false, message: 'Valid budget limit required' });
+    }
+    if (!db.wallet) db.wallet = defaultWallet;
+    db.wallet.monthlyBudgetLimit = Number(limit);
+    if (!db.settings) db.settings = initialSettings;
+    db.settings.operatingBudget = Number(limit);
+    saveDatabase(db);
+    res.json({ success: true, message: 'Monthly budget limit updated successfully', data: db.wallet });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Failed to update budget limit' });
   }
 });
 
@@ -2741,6 +3172,38 @@ app.post('/api/paystack/webhook', async (req: Request, res: Response) => {
       const studentId = data.metadata?.studentId;
       const invoiceId = data.metadata?.invoiceId;
 
+      // 1. Check if this is an inbound transfer to the Dedicated Virtual Account for the Expense Wallet
+      const isDvaDeposit = 
+        data.channel === 'dedicated_nuban' ||
+        data.customer?.email === db.wallet?.virtualAccount?.customerEmail ||
+        data.metadata?.target === 'expense_wallet';
+
+      if (isDvaDeposit) {
+        if (!db.wallet) db.wallet = defaultWallet;
+        db.wallet.balance = (db.wallet.balance || 0) + amountPaid;
+        db.wallet.transactions.unshift({
+          id: `wtx-${Date.now()}-dva`,
+          type: 'credit',
+          category: 'dva_bank_deposit',
+          amount: amountPaid,
+          reference: data.reference || `DVA-IN-${Date.now()}`,
+          description: `Bank Transfer deposit received via Dedicated Virtual Account (${data.authorization?.bank || 'NIP Transfer'})`,
+          timestamp: new Date().toISOString(),
+          balanceAfter: db.wallet.balance,
+          initiatedBy: data.customer?.first_name ? `${data.customer.first_name} ${data.customer.last_name || ''}` : 'Inbound NIP Transfer',
+          channel: 'dedicated_nuban'
+        });
+        db.activityLogs.unshift({
+          id: `act-${Date.now()}-wtop`,
+          timestamp: new Date().toISOString(),
+          title: `Operational Wallet Funded: ₦${amountPaid.toLocaleString()}`,
+          description: `Received via Dedicated NUBAN transfer. Ref: ${data.reference}`,
+          type: 'finance',
+          user: 'Paystack NIBSS Webhook'
+        });
+      }
+
+      // 2. Student tuition payment processing
       if (studentId) {
         const student = db.students.find(s => s.id === studentId);
         if (student) {

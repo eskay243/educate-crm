@@ -17,14 +17,19 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
     settings, 
     updateSettings, 
     showToast, 
-    currentUser 
+    currentUser,
+    wallet,
+    setSelectedExpenseForDisburse,
+    generateVirtualAccount
   } = useCRM();
 
+  const [activeLedgerView, setActiveLedgerView] = useState<'expenses' | 'wallet_ledger'>('expenses');
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [tableSearch, setTableSearch] = useState('');
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   const [newBudgetValue, setNewBudgetValue] = useState<number>(settings.operatingBudget || 1500000);
+  const [copiedNuban, setCopiedNuban] = useState(false);
   
   // Rejection modal state
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -163,10 +168,17 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
             Request operational funds, track monthly budget deductions, and review pending approval requisitions.
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3 flex-wrap">
+          <button 
+            onClick={() => openModal('top-up-wallet')}
+            className="h-10 px-4 bg-[#166534] hover:bg-[#15803d] text-white font-label-md text-label-md font-bold rounded-lg flex items-center gap-2 transition-colors shadow-xs cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span>
+            <span>+ Fund Expense Wallet</span>
+          </button>
           <button 
             onClick={() => openModal('export-report')}
-            className="h-10 px-4 bg-surface-container-lowest border border-outline-variant text-on-surface font-label-md text-label-md font-semibold rounded-lg flex items-center gap-2 hover:bg-surface-container-low transition-colors shadow-xs cursor-pointer"
+            className="h-10 px-3.5 bg-surface-container-lowest border border-outline-variant text-on-surface font-label-md text-label-md font-semibold rounded-lg flex items-center gap-1.5 hover:bg-surface-container-low transition-colors shadow-xs cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">download</span>
             <span>Export CSV</span>
@@ -176,8 +188,124 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
             className="h-10 px-4 bg-primary text-on-primary font-label-md text-label-md font-bold rounded-lg flex items-center gap-2 hover:bg-primary/90 transition-colors shadow-xs cursor-pointer"
           >
             <span className="material-symbols-outlined text-[20px]">add_card</span>
-            <span>+ Request Office Expense (OpEx)</span>
+            <span>+ Request OpEx Requisition</span>
           </button>
+        </div>
+      </div>
+
+      {/* Operational Expense & Budget Wallet Hero Card */}
+      <div className="bg-gradient-to-br from-[#00174a] via-[#00236f] to-[#04328c] text-white rounded-2xl p-6 shadow-md border border-blue-900/40 relative overflow-hidden">
+        <div className="absolute right-0 top-0 w-96 h-96 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          {/* Left Column: Wallet Liquid Balance */}
+          <div className="lg:col-span-6 space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                Operational Expense &amp; Budget Wallet
+              </span>
+              <span className="text-white/60 text-xs">• Paystack NIBSS</span>
+            </div>
+
+            <div>
+              <span className="text-white/70 text-xs font-medium">Available Liquid Balance</span>
+              <div className="font-display text-3xl sm:text-4xl font-bold font-data-tabular text-white tracking-tight flex items-baseline gap-2 mt-0.5">
+                <span>{formatNaira(wallet?.balance || 0)}</span>
+                <span className="text-xs text-emerald-300 font-sans font-semibold bg-white/10 px-2 py-0.5 rounded-full">
+                  Liquid Funds
+                </span>
+              </div>
+            </div>
+
+            <p className="text-white/75 text-xs max-w-md">
+              All approved office expenses, hardware procurements, and faculty mentor 37% revenue shares are disbursed directly from this wallet.
+            </p>
+
+            <div className="flex items-center gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => openModal('top-up-wallet')}
+                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">add_card</span>
+                <span>Top Up Wallet</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveLedgerView(activeLedgerView === 'wallet_ledger' ? 'expenses' : 'wallet_ledger')}
+                className="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold transition-all border border-white/20 flex items-center gap-1.5 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">receipt_long</span>
+                <span>{activeLedgerView === 'wallet_ledger' ? 'View Requisitions Ledger' : 'View Wallet Audit Ledger'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Right Column: Dedicated Virtual Account (NUBAN) Card */}
+          <div className="lg:col-span-6 bg-white/10 backdrop-blur-md rounded-xl p-4.5 border border-white/15 space-y-3">
+            <div className="flex justify-between items-start">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300 block">
+                  Dedicated Inflow Virtual Account (DVA)
+                </span>
+                <div className="font-semibold text-sm text-white flex items-center gap-1 mt-0.5">
+                  <span className="material-symbols-outlined text-[16px] text-emerald-400">verified</span>
+                  <span>{wallet?.virtualAccount?.bankName || 'Wema Bank (Paystack DVA)'}</span>
+                </div>
+              </div>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-400/20 text-emerald-200 border border-emerald-300/30">
+                Auto-Credit 24/7
+              </span>
+            </div>
+
+            {wallet?.virtualAccount ? (
+              <>
+                <div className="bg-black/25 rounded-lg p-3 flex items-center justify-between border border-white/10">
+                  <div>
+                    <span className="text-[10px] text-white/70 block">NUBAN Account Number</span>
+                    <span className="font-mono text-xl sm:text-2xl font-bold tracking-widest text-emerald-300 font-data-tabular">
+                      {wallet.virtualAccount.accountNumber}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!wallet.virtualAccount?.accountNumber) return;
+                      navigator.clipboard.writeText(wallet.virtualAccount.accountNumber);
+                      setCopiedNuban(true);
+                      showToast('NUBAN Copied', `${wallet.virtualAccount.accountNumber} copied to clipboard.`, 'info');
+                      setTimeout(() => setCopiedNuban(false), 2000);
+                    }}
+                    className={`px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer ${
+                      copiedNuban ? 'bg-emerald-500 text-white' : 'bg-white/20 hover:bg-white/30 text-white'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[14px]">
+                      {copiedNuban ? 'done' : 'content_copy'}
+                    </span>
+                    <span>{copiedNuban ? 'Copied' : 'Copy'}</span>
+                  </button>
+                </div>
+
+                <div className="flex justify-between items-center text-[11px] text-white/80 pt-0.5">
+                  <span>Beneficiary: <strong className="text-white font-medium">{wallet.virtualAccount.accountName}</strong></span>
+                  <span className="text-white/60">Any Nigerian Bank App via NIP</span>
+                </div>
+              </>
+            ) : (
+              <div className="py-3 text-center space-y-2">
+                <p className="text-xs text-white/80">No dedicated virtual account created yet.</p>
+                <button
+                  type="button"
+                  onClick={() => generateVirtualAccount()}
+                  className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded text-xs font-bold cursor-pointer"
+                >
+                  Generate Dedicated NUBAN
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -355,61 +483,95 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
 
       {/* Filter Tabs & Requisitions Ledger */}
       <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-xs">
-        {/* Filter Navigation Bar */}
-        <div className="p-stack-md border-b border-outline-variant flex justify-between items-center bg-surface-bright flex-wrap gap-3">
-          {/* Status Filters */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[11px] font-bold text-secondary uppercase tracking-wider mr-1">Status:</span>
-            {[
-              { id: 'All', label: 'All Records' },
-              { id: 'Awaiting Approval', label: 'Awaiting Approval', count: pendingCount },
-              { id: 'Approved', label: 'Approved' },
-              { id: 'Rejected', label: 'Rejected' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setSelectedStatus(tab.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  selectedStatus === tab.id
-                    ? 'bg-primary text-on-primary shadow-xs'
-                    : 'bg-surface border border-outline-variant text-secondary hover:text-on-surface hover:bg-surface-container'
-                }`}
-              >
-                <span>{tab.label}</span>
-                {tab.count !== undefined && tab.count > 0 && (
-                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                    selectedStatus === tab.id ? 'bg-white text-primary' : 'bg-[#FEF9C3] text-[#854D0E]'
-                  }`}>
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            ))}
+        {/* Primary View Switcher: OpEx Requisitions vs Wallet Transactions */}
+        <div className="px-stack-md pt-stack-md border-b border-outline-variant flex items-center gap-2 bg-surface-container-low">
+          <button
+            type="button"
+            onClick={() => setActiveLedgerView('expenses')}
+            className={`pb-3 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-2 cursor-pointer ${
+              activeLedgerView === 'expenses'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-secondary hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[17px]">receipt_long</span>
+            <span>OpEx Requisitions Ledger ({expenses.length})</span>
+          </button>
 
-            <div className="h-5 w-[1px] bg-outline-variant mx-1 hidden sm:block" />
-
-            {/* Category Dropdown */}
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="h-8 px-2.5 rounded-lg border border-outline-variant bg-surface text-xs font-semibold text-on-surface outline-none cursor-pointer"
-            >
-              {categories.map((c) => (
-                <option key={c} value={c}>{c === 'All' ? 'All Categories' : c}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Search Box */}
-          <div className="relative w-full sm:w-64">
-            <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">
-              search
+          <button
+            type="button"
+            onClick={() => setActiveLedgerView('wallet_ledger')}
+            className={`pb-3 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-2 cursor-pointer ${
+              activeLedgerView === 'wallet_ledger'
+                ? 'border-[#166534] text-[#166534]'
+                : 'border-transparent text-secondary hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[17px]">account_balance_wallet</span>
+            <span>Wallet Transactions &amp; Audit Trail ({wallet?.transactions?.length || 0})</span>
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-data-tabular">
+              {formatNaira(wallet?.balance || 0)}
             </span>
-            <input 
-              type="text"
-              value={tableSearch}
-              onChange={(e) => setTableSearch(e.target.value)}
-              placeholder="Search requisitions, items, notes..."
+          </button>
+        </div>
+
+        {activeLedgerView === 'expenses' ? (
+          <>
+            {/* Filter Navigation Bar */}
+            <div className="p-stack-md border-b border-outline-variant flex justify-between items-center bg-surface-bright flex-wrap gap-3">
+              {/* Status Filters */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[11px] font-bold text-secondary uppercase tracking-wider mr-1">Status:</span>
+                {[
+                  { id: 'All', label: 'All Records' },
+                  { id: 'Awaiting Approval', label: 'Awaiting Approval', count: pendingCount },
+                  { id: 'Approved', label: 'Approved' },
+                  { id: 'Rejected', label: 'Rejected' },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setSelectedStatus(tab.id)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      selectedStatus === tab.id
+                        ? 'bg-primary text-on-primary shadow-xs'
+                        : 'bg-surface border border-outline-variant text-secondary hover:text-on-surface hover:bg-surface-container'
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    {tab.count !== undefined && tab.count > 0 && (
+                      <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                        selectedStatus === tab.id ? 'bg-white text-primary' : 'bg-[#FEF9C3] text-[#854D0E]'
+                      }`}>
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+
+                <div className="h-5 w-[1px] bg-outline-variant mx-1 hidden sm:block" />
+
+                {/* Category Dropdown */}
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="h-8 px-2.5 rounded-lg border border-outline-variant bg-surface text-xs font-semibold text-on-surface outline-none cursor-pointer"
+                >
+                  {categories.map((c) => (
+                    <option key={c} value={c}>{c === 'All' ? 'All Categories' : c}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Search Box */}
+              <div className="relative w-full sm:w-64">
+                <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">
+                  search
+                </span>
+                <input 
+                  type="text"
+                  value={tableSearch}
+                  onChange={(e) => setTableSearch(e.target.value)}
+                  placeholder="Search requisitions, items, notes..."
               className="w-full h-8 pl-8 pr-3 rounded-lg bg-surface border border-outline-variant text-body-sm focus:border-primary outline-none text-xs"
             />
           </div>
@@ -591,6 +753,23 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                               <span className="material-symbols-outlined text-[16px] text-primary">visibility</span>
                               <span>View</span>
                             </button>
+
+                            {/* Disburse from Wallet button for Approved expenses */}
+                            {isApproved && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedExpenseForDisburse(expense);
+                                  openModal('disburse-expense');
+                                }}
+                                className="h-8 px-2.5 rounded bg-[#166534] hover:bg-[#15803d] text-white text-xs font-bold flex items-center gap-1 shadow-2xs transition-all cursor-pointer"
+                                title="Disburse approved funds directly to recipient bank account from Expense Wallet via NIBSS"
+                              >
+                                <span className="material-symbols-outlined text-[15px]">send_money</span>
+                                <span>Disburse</span>
+                              </button>
+                            )}
+
                             {isAwaiting ? (
                               <>
                                 <button
@@ -629,6 +808,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                                 <option value="Awaiting Approval">Awaiting Approval</option>
                                 <option value="Rejected">Rejected</option>
                                 <option value="In Review">In Review</option>
+                                <option value="Paid">Paid</option>
                               </select>
                             )}
                           </div>
@@ -666,7 +846,108 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
             </table>
           )}
         </div>
+      </>
+    ) : (
+      /* Wallet Transactions & Audit Ledger Table */
+      <div className="overflow-x-auto">
+        {(!wallet?.transactions || wallet.transactions.length === 0) ? (
+          <div className="p-12 text-center flex flex-col items-center justify-center space-y-3">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+              <span className="material-symbols-outlined text-[28px]">receipt_long</span>
+            </div>
+            <div className="max-w-sm space-y-1">
+              <h3 className="font-bold text-sm text-on-surface">No Wallet Transactions Yet</h3>
+              <p className="text-xs text-secondary">
+                Inbound NUBAN bank deposits, card top-ups, OpEx disbursements, and mentor payouts will appear here in chronological order.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => openModal('top-up-wallet')}
+              className="px-4 h-9 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 flex items-center gap-1.5 cursor-pointer shadow-xs"
+            >
+              <span className="material-symbols-outlined text-[16px]">add_card</span>
+              <span>Fund Expense Wallet</span>
+            </button>
+          </div>
+        ) : (
+          <table className="w-full text-left border-collapse text-body-sm">
+            <thead>
+              <tr className="border-b border-outline-variant bg-surface text-secondary uppercase font-label-md text-[11px] tracking-wider font-semibold">
+                <th className="px-stack-md py-3">Date &amp; Time</th>
+                <th className="px-stack-md py-3">Category &amp; Event</th>
+                <th className="px-stack-md py-3">Reference / NIP</th>
+                <th className="px-stack-md py-3">Beneficiary / Depositor</th>
+                <th className="px-stack-md py-3 text-right">Inflow / Outflow</th>
+                <th className="px-stack-md py-3 text-right">Balance After</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-outline-variant/60">
+              {wallet.transactions.map((tx) => {
+                const isCredit = tx.type === 'credit';
+                return (
+                  <tr key={tx.id} className="hover:bg-surface-container-low/50 transition-colors">
+                    <td className="px-stack-md py-3 align-top whitespace-nowrap text-xs text-secondary font-mono">
+                      {new Date(tx.timestamp).toLocaleString('en-NG', {
+                        dateStyle: 'medium',
+                        timeStyle: 'short'
+                      })}
+                    </td>
+                    <td className="px-stack-md py-3 align-top">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                          isCredit ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-red-100 text-red-700'
+                        }`}>
+                          <span className="material-symbols-outlined text-[16px]">
+                            {isCredit ? 'arrow_downward' : 'arrow_upward'}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="font-semibold text-xs text-on-surface">
+                            {tx.category === 'dva_bank_deposit' ? 'Dedicated NUBAN Bank Deposit' :
+                             tx.category === 'card_topup' ? 'In-App Online Top-Up (Paystack Pop)' :
+                             tx.category === 'mentor_payout' ? 'Faculty 37% Revenue Share' :
+                             tx.category === 'expense_payout' ? 'OpEx Requisition Disbursement' :
+                             'Wallet Adjustment'}
+                          </div>
+                          <span className="text-[11px] text-secondary">{tx.description}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-stack-md py-3 align-top whitespace-nowrap">
+                      <span className="font-mono text-xs text-secondary font-medium bg-surface-container px-2 py-0.5 rounded">
+                        {tx.reference}
+                      </span>
+                    </td>
+                    <td className="px-stack-md py-3 align-top text-xs">
+                      {tx.recipientName ? (
+                        <div>
+                          <strong className="text-on-surface block">{tx.recipientName}</strong>
+                          <span className="text-[10px] text-secondary">
+                            {tx.recipientBank ? `${tx.recipientBank} (${tx.recipientAccountNumber || ''})` : ''}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-secondary">{tx.initiatedBy || 'Executive Treasury'}</span>
+                      )}
+                    </td>
+                    <td className={`px-stack-md py-3 align-top text-right whitespace-nowrap font-bold text-sm font-data-tabular ${
+                      isCredit ? 'text-[#166534]' : 'text-red-700'
+                    }`}>
+                      {isCredit ? `+${formatNaira(tx.amount)}` : `-${formatNaira(tx.amount)}`}
+                    </td>
+                    <td className="px-stack-md py-3 align-top text-right whitespace-nowrap font-semibold text-xs font-data-tabular text-on-surface">
+                      {formatNaira(tx.balanceAfter)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
+    )}
+  </div>
 
       {/* View Expense Requisition Dossier Modal */}
       <ViewExpenseModal

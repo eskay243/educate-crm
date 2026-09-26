@@ -124,3 +124,70 @@ export const launchPaystackPayment = async (options: PaystackCheckoutOptions) =>
     if (onCancel) onCancel();
   }
 };
+
+export interface WalletTopUpCheckoutOptions {
+  publicKey: string;
+  email: string;
+  amountNaira: number;
+  onSuccess: (response: { reference: string; amountNaira: number }) => void;
+  onCancel?: () => void;
+}
+
+export const launchWalletTopUpCheckout = async (options: WalletTopUpCheckoutOptions) => {
+  const { publicKey, email, amountNaira, onSuccess, onCancel } = options;
+  const isRealKey = publicKey && publicKey.startsWith('pk_') && !publicKey.includes('sample');
+  const amountInKobo = Math.round(amountNaira * 100);
+  const reference = `CDL-WAL-TOP-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+  if (isRealKey) {
+    const isLoaded = await loadPaystackScript();
+    if (isLoaded && window.PaystackPop) {
+      const handler = window.PaystackPop.setup({
+        key: publicKey,
+        email: email || 'finance@codelab.institute',
+        amount: amountInKobo,
+        ref: reference,
+        currency: 'NGN',
+        metadata: {
+          target: 'expense_wallet',
+          custom_fields: [
+            { display_name: 'Purpose', variable_name: 'purpose', value: 'Operational Expense & Budget Wallet Top-Up' },
+            { display_name: 'Institution', variable_name: 'institution', value: 'CODELAB EDUCARE LTD' },
+          ],
+        },
+        callback: (response) => {
+          onSuccess({
+            reference: response.reference || reference,
+            amountNaira,
+          });
+        },
+        onClose: () => {
+          if (onCancel) onCancel();
+        },
+      });
+
+      handler.openIframe();
+      return;
+    }
+  }
+
+  // Fallback simulator modal for development / sandbox
+  const confirmed = window.confirm(
+    `[CODELAB EDUCARE - Paystack Wallet Top-Up Simulator]\n\n` +
+    `Wallet: Operational Expense & Budget Fund\n` +
+    `Deposit Amount: ₦${amountNaira.toLocaleString()}\n` +
+    `Reference: ${reference}\n\n` +
+    `Mode: ${isRealKey ? 'Paystack Script Loading Fallback' : 'Sandbox / Test Simulator'}\n\n` +
+    `Click OK to simulate an authorized card/bank transfer top-up.`
+  );
+
+  if (confirmed) {
+    onSuccess({
+      reference,
+      amountNaira,
+    });
+  } else {
+    if (onCancel) onCancel();
+  }
+};
+

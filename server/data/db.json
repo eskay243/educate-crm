@@ -72,8 +72,8 @@
       "hourlyRate": 8500,
       "sessionsCount": 14,
       "totalEarned": 780000,
-      "pendingPayout": 125000,
-      "paidPayout": 655000,
+      "pendingPayout": 0,
+      "paidPayout": 780000,
       "joinedDate": "2025-11-01",
       "rating": 4.9
     }
@@ -86,7 +86,7 @@
       "date": "2026-09-10",
       "department": "Technology",
       "paymentMethod": "Nigerian Bank Transfer",
-      "status": "Approved",
+      "status": "Paid",
       "vendor": "Direct Computers Lagos",
       "requestedBy": "Admissions & Lab Tech (Staff)",
       "requesterEmail": "admin@codelab.institute",
@@ -95,7 +95,14 @@
       "id": "exp-1789042947889",
       "expenseCode": "EXP-2320",
       "reviewedBy": "Abiola Adefowope (Super Admin)",
-      "reviewedAt": "2026-09-10"
+      "reviewedAt": "2026-09-10",
+      "disbursementBankName": "Guaranty Trust Bank (GTBank)",
+      "disbursementAccountNumber": "0123456789",
+      "disbursementAccountName": "Direct Computers Lagos",
+      "disbursementBankCode": "058",
+      "isDisbursedViaWallet": true,
+      "transferReference": "TRF-EXP-1790435541310-9166",
+      "disbursedAt": "2026-09-26T15:12:22.401Z"
     }
   ],
   "courses": [],
@@ -230,9 +237,9 @@
       "Artificial Intelligence & Machine Learning",
       "Digital Marketing & Growth"
     ],
-    "paystackPublicKey": "pk_test_cd572a18dd78ed5493d15433b0e1f3c2057fce2a",
-    "paystackSecretKey": "sk_test_5a3331f29eadb22de95a766cdd1dc432e186ab7f",
-    "paystackLiveMode": false,
+    "paystackPublicKey": "pk_live_a7de64f99e0078a97cc486eb8d19262eb6533ce0",
+    "paystackSecretKey": "",
+    "paystackLiveMode": true,
     "enabledModules": {
       "lms": true,
       "leads": true,
@@ -280,6 +287,30 @@
     ]
   },
   "activityLogs": [
+    {
+      "id": "act-1790435549773-disb",
+      "timestamp": "2026-09-26T15:12:29.773Z",
+      "title": "Mentor Disbursement of ₦125,000 Disbursed from Wallet",
+      "description": "Disbursed to Dr. Chidi Okeke (Guaranty Trust Bank (GTBank) - 0123456789) via Paystack NIBSS. Wallet Balance: ₦475,000. Ref: TRF-MEN-1790435548484-5326",
+      "type": "mentor",
+      "user": "Finance Controller"
+    },
+    {
+      "id": "act-1790435542401-expdisb",
+      "timestamp": "2026-09-26T15:12:22.401Z",
+      "title": "OpEx Requisition ₦450,000 Disbursed",
+      "description": "Disbursed for Lab 2 Workstation Upgrades to Direct Computers Lagos (Guaranty Trust Bank (GTBank) - 0123456789) from Expense Wallet. Ref: TRF-EXP-1790435541310-9166",
+      "type": "finance",
+      "user": "Finance Controller"
+    },
+    {
+      "id": "act-1790435525411-top",
+      "timestamp": "2026-09-26T15:12:05.411Z",
+      "title": "Operational Wallet Funded: ₦200,000",
+      "description": "Instant online top-up processed via Paystack. Available Wallet Balance: ₦1,050,000. Ref: CDL-WAL-TEST-001",
+      "type": "finance",
+      "user": "Super Admin"
+    },
     {
       "id": "act-1789110106105-att",
       "timestamp": "2026-09-11T07:01:46.105Z",
@@ -815,5 +846,93 @@
         "canSubmitReports": false
       }
     }
-  ]
+  ],
+  "wallet": {
+    "balance": 475000,
+    "monthlyBudgetLimit": 1500000,
+    "virtualAccount": {
+      "accountNumber": "9977340777",
+      "accountName": "CODELAB EDUCARE / OPS WALLET",
+      "bankName": "Wema Bank (Paystack DVA)",
+      "bankCode": "035",
+      "customerCode": "CUS_cdl_ops_0777",
+      "customerEmail": "wallet-operations@codelab.institute",
+      "assignedAt": "2026-09-26T15:12:08.925Z",
+      "status": "active",
+      "provider": "wema-bank"
+    },
+    "transactions": [
+      {
+        "id": "wtx-1790435549773-men",
+        "type": "debit",
+        "category": "mentor_payout",
+        "amount": 125000,
+        "reference": "TRF-MEN-1790435548484-5326",
+        "description": "37% Revenue Share Disbursement to Dr. Chidi Okeke",
+        "timestamp": "2026-09-26T15:12:29.773Z",
+        "balanceAfter": 475000,
+        "initiatedBy": "Finance Controller",
+        "recipientName": "CHIDI OKEKE",
+        "recipientBank": "Guaranty Trust Bank (GTBank)",
+        "recipientAccountNumber": "0123456789",
+        "channel": "paystack_transfer",
+        "paystackTransferCode": ""
+      },
+      {
+        "id": "wtx-1790435542401-exp",
+        "type": "debit",
+        "category": "expense_payout",
+        "amount": 450000,
+        "reference": "TRF-EXP-1790435541310-9166",
+        "description": "OpEx Disbursement: Lab 2 Workstation Upgrades (EXP-2320)",
+        "timestamp": "2026-09-26T15:12:22.401Z",
+        "balanceAfter": 600000,
+        "initiatedBy": "Finance Controller",
+        "recipientName": "Direct Computers Lagos",
+        "recipientBank": "Guaranty Trust Bank (GTBank)",
+        "recipientAccountNumber": "0123456789",
+        "channel": "paystack_transfer",
+        "paystackTransferCode": ""
+      },
+      {
+        "id": "wtx-1790435525411-top",
+        "type": "credit",
+        "category": "card_topup",
+        "amount": 200000,
+        "reference": "CDL-WAL-TEST-001",
+        "description": "In-App Instant Wallet Top-Up via Paystack Checkout",
+        "timestamp": "2026-09-26T15:12:05.411Z",
+        "balanceAfter": 1050000,
+        "initiatedBy": "Finance / Super Admin",
+        "channel": "paystack_inline"
+      },
+      {
+        "id": "wtx-seed-001",
+        "type": "credit",
+        "category": "dva_bank_deposit",
+        "amount": 1000000,
+        "reference": "DVA-DEP-9928174820-001",
+        "description": "Direct NUBAN bank transfer deposit from Executive Treasury via NIP",
+        "timestamp": "2026-09-02T10:30:00.000Z",
+        "balanceAfter": 1000000,
+        "initiatedBy": "Managing Director (Treasury)",
+        "channel": "dedicated_nuban"
+      },
+      {
+        "id": "wtx-seed-002",
+        "type": "debit",
+        "category": "expense_payout",
+        "amount": 150000,
+        "reference": "TRF-EXP-20260905-8841",
+        "description": "OpEx Disbursement for Fiber Internet Bandwidth (EXP-2026-003)",
+        "timestamp": "2026-09-05T14:15:00.000Z",
+        "balanceAfter": 850000,
+        "initiatedBy": "Finance Controller",
+        "recipientName": "MainOne Technologies Ltd",
+        "recipientBank": "Access Bank",
+        "recipientAccountNumber": "0039281746"
+      }
+    ],
+    "lastSyncedAt": "2026-09-26T15:11:59.200Z"
+  }
 }

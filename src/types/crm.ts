@@ -318,6 +318,13 @@ export interface Expense {
   reviewedBy?: string;
   reviewedAt?: string;
   urgency?: 'Standard' | 'Urgent' | 'Emergency';
+  disbursementBankName?: string;
+  disbursementAccountNumber?: string;
+  disbursementAccountName?: string;
+  disbursementBankCode?: string;
+  isDisbursedViaWallet?: boolean;
+  transferReference?: string;
+  disbursedAt?: string;
 }
 
 export type EmailTemplateType = 
@@ -543,6 +550,54 @@ export interface OrganizationSettings {
   defaultMinimumLearningHours?: number; // Default 40 hours
   campusLocationsList?: CampusLocation[];
   customRoles?: CustomRoleDefinition[];
+  expenseWallet?: ExpenseAndBudgetWallet;
+}
+
+export interface VirtualAccountDetails {
+  accountNumber: string;
+  accountName: string;
+  bankName: string;
+  bankCode?: string;
+  customerCode?: string;
+  customerEmail?: string;
+  assignedAt: string;
+  status: 'active' | 'pending' | 'simulated';
+  provider: string;
+}
+
+export type WalletTransactionType = 'credit' | 'debit';
+export type WalletTransactionCategory = 
+  | 'dva_bank_deposit' 
+  | 'card_topup' 
+  | 'expense_payout' 
+  | 'mentor_payout' 
+  | 'refund'
+  | 'adjustment';
+
+export interface WalletTransaction {
+  id: string;
+  type: WalletTransactionType;
+  category: WalletTransactionCategory;
+  amount: number;
+  reference: string;
+  description: string;
+  timestamp: string;
+  balanceAfter: number;
+  initiatedBy?: string;
+  recipientName?: string;
+  recipientBank?: string;
+  recipientAccountNumber?: string;
+  channel?: string;
+  paystackTransferCode?: string;
+}
+
+export interface ExpenseAndBudgetWallet {
+  balance: number;
+  virtualAccount: VirtualAccountDetails | null;
+  monthlyBudgetLimit: number;
+  transactions: WalletTransaction[];
+  lastSyncedAt?: string;
+  paystackLiveBalance?: number;
 }
 
 export interface ActivityLogItem {
@@ -595,6 +650,10 @@ export type ModalType =
   | 'submit-payment-proof'
   | 'view-certificate'
   | 'submit-performance-report'
+  | 'top-up-wallet'
+  | 'disburse-expense'
+  | 'disburse-mentor'
   | null;
+
 
 
