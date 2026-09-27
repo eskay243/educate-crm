@@ -1,110 +1,2490 @@
 {
-  "leads": [],
+  "leads": [
+    {
+      "name": "Oyin Ojobo",
+      "email": "oyinojobo@gmail.com",
+      "phone": "08144334918",
+      "company": "Enterprise Client",
+      "programInterest": "Fullstack web Development ",
+      "status": "New",
+      "score": 75,
+      "source": "Google Ads",
+      "lastContactDate": "Today",
+      "lastContactChannel": "via Email",
+      "assignedRep": "Zainab Bello",
+      "dealValue": 550000,
+      "notes": "interested but distance is a barrier",
+      "id": "lead-1789652252713",
+      "initials": "OO",
+      "dateAdded": "2026-09-17"
+    },
+    {
+      "name": "Oyin Ojobo",
+      "email": "oyinojobo@gmail.com",
+      "phone": "08144334918",
+      "company": "Enterprise Client",
+      "programInterest": "Advance Frontend Development ",
+      "status": "New",
+      "score": 75,
+      "source": "Organic Search",
+      "lastContactDate": "Today",
+      "lastContactChannel": "via Email",
+      "assignedRep": "Zainab Bello",
+      "dealValue": 150000,
+      "notes": "INterested but funds not available",
+      "id": "lead-1789486812974",
+      "initials": "OO",
+      "dateAdded": "2026-09-15"
+    },
+    {
+      "name": "Oyin Ojobo",
+      "email": "oyinojobo@gmail.com",
+      "phone": "08144334918",
+      "company": "Enterprise Client",
+      "programInterest": "Advance Frontend Development ",
+      "status": "Lost",
+      "score": 75,
+      "source": "Organic Search",
+      "lastContactDate": "Today",
+      "lastContactChannel": "via Email",
+      "assignedRep": "Zainab Bello",
+      "dealValue": 150000,
+      "notes": "Direct intake record created from admin dashboard. | Loss Reason: Unresponsive to Follow-ups",
+      "id": "lead-1789486590641",
+      "dateAdded": "2026-09-15"
+    },
+    {
+      "name": "History News",
+      "email": "Historynews@gmail.com",
+      "phone": "+234 800 123 4567",
+      "company": "Enterprise Client",
+      "programInterest": "Data Analyisis & AI Automation",
+      "status": "Lost",
+      "score": 75,
+      "source": "Organic Search",
+      "lastContactDate": "Today",
+      "lastContactChannel": "via Email",
+      "assignedRep": "Zainab Bello",
+      "dealValue": 350000,
+      "notes": "A lead from tiktok reached out making enquiry gave him all the info course price course details and mode of learning and he stopped responding | Loss Reason: Price / Budget Constraint",
+      "id": "lead-1789124874127",
+      "dateAdded": "2026-09-11"
+    },
+    {
+      "name": "Chris",
+      "email": "chris@gmail.com",
+      "phone": "07082928610",
+      "company": "Enterprise Client",
+      "programInterest": "Data Analysis",
+      "status": "Negotiation",
+      "score": 75,
+      "source": "Organic Search",
+      "lastContactDate": "Today",
+      "lastContactChannel": "via Email",
+      "assignedRep": "Zainab Bello",
+      "dealValue": 200000,
+      "notes": "Interested in data analysis but he travelled and after several follow up no response still  | Loss Reason: currently out of abuja after several follow up no response | Loss Reason: I will call later",
+      "id": "lead-1789124193004",
+      "dateAdded": "2026-09-11"
+    },
+    {
+      "name": "Carlise",
+      "email": "carlise@gmail.com",
+      "phone": "917842887855",
+      "company": "Enterprise Client",
+      "programInterest": "Data Analysis",
+      "status": "Negotiation",
+      "score": 75,
+      "source": "Direct Referral",
+      "lastContactDate": "Today",
+      "lastContactChannel": "via Email",
+      "assignedRep": "Zainab Bello",
+      "dealValue": 200000,
+      "notes": "He was interested in data analysis but he said he will get back soon and i have done follow up but no response yet but he was interested | Loss Reason: Interested but he has not gotten back to me yet after follow up",
+      "id": "lead-1789123615513",
+      "dateAdded": "2026-09-11"
+    },
+    {
+      "name": "Bhiggest Miike",
+      "email": "bhiggestmiike@gmail.com",
+      "phone": "07078591252",
+      "company": "Enterprise Client",
+      "programInterest": "UI/UX Design ",
+      "status": "Converted",
+      "score": 75,
+      "source": "Organic Search",
+      "lastContactDate": "Today",
+      "lastContactChannel": "via Email",
+      "assignedRep": "Zainab Bello",
+      "dealValue": 150000,
+      "notes": "Also trying to get laptop and funds for the training",
+      "id": "lead-1789123236544",
+      "dateAdded": "2026-09-11"
+    },
+    {
+      "name": "Uncle P",
+      "email": "unclep@gmail.com",
+      "phone": "08035843742",
+      "company": "Enterprise Client",
+      "programInterest": "Data Analysis",
+      "status": "Converted",
+      "score": 75,
+      "source": "Direct Referral",
+      "lastContactDate": "Today",
+      "lastContactChannel": "via Email",
+      "assignedRep": "Zainab Bello",
+      "dealValue": 200000,
+      "notes": "He is interested but does not have a laptop so now that the center has laptops a follow up message will be sent to him",
+      "id": "lead-1789121951083",
+      "dateAdded": "2026-09-11"
+    }
+  ],
   "students": [
     {
-      "id": "stu-demo-001",
-      "studentCode": "STU-8492",
-      "name": "Adebayo Adeleke",
-      "email": "student@codelab.institute",
-      "phone": "+234 802 918 2736",
-      "program": "Full-Stack Software Engineering",
-      "mentorName": "Dr. Chidi Okeke",
-      "mentorId": "men-demo-001",
+      "id": "stu-1789170782348",
+      "studentCode": "STU-9051",
+      "name": "Uncle P",
+      "email": "unclep@gmail.com",
+      "phone": "08035843742",
+      "program": "Data Analysis",
+      "mentorName": "Dr. Arthur Pendelton",
       "status": "Active",
-      "attendanceRate": 98,
-      "tuitionStatus": "Partial",
-      "cohort": "Alpha Cohort 2026",
-      "tuitionAmount": 450000,
-      "paidAmount": 250000,
-      "outstandingBalance": 200000,
-      "enrolledDate": "2026-01-15",
-      "progressPercent": 33,
-      "attendedLearningHours": 38,
-      "minimumRequiredHours": 40,
-      "performanceScore": 92,
-      "performanceTier": "Exceeding",
-      "completedLessonIds": [
-        "les-1-1"
-      ],
-      "assignmentSubmissions": [
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 2026-Q4",
+      "enrolledDate": "2026-09-11",
+      "totalFees": 850000,
+      "outstandingBalance": 0,
+      "courses": [
         {
-          "id": "sub-001",
-          "studentId": "stu-demo-001",
-          "studentName": "Adebayo Adeleke",
-          "courseTitle": "Full-Stack Software Engineering",
-          "moduleTitle": "Module 1: Enterprise Web Architecture & Modern Frontend",
-          "taskTitle": "1.3 Hands-On Lab: Build an Accessible Interactive Dashboard Table",
-          "githubUrl": "https://github.com/codelab-institute/accessible-table-lab",
-          "liveUrl": "https://table-lab-demo.vercel.app",
-          "notes": "Completed all pagination requirements and full WCAG keyboard navigation support.",
-          "submittedAt": "2026-09-08T14:30:00Z",
-          "status": "Passed",
-          "grade": 95,
-          "mentorFeedback": "Outstanding work on keyboard event handling and focus management! Clean TypeScript interfaces throughout.",
-          "reviewedBy": "Dr. Chidi Okeke",
-          "reviewedAt": "2026-09-09T10:15:00Z"
+          "id": "c-1789170782348",
+          "code": "FS-501",
+          "name": "Data Analysis",
+          "semester": "Fall Semester 2026",
+          "instructor": "Dr. Arthur Pendelton",
+          "fee": 850000,
+          "billedDate": "2026-09-11"
         }
       ],
-      "certificateIssued": true,
-      "certificateNumber": "CERT-CDL-2026-8492",
-      "certificateIssuedAt": "2026-09-11T07:01:07.687Z"
+      "installments": [
+        {
+          "id": "inst-1789170782348",
+          "description": "Full Course Tuition",
+          "dueDate": "2026-09-11",
+          "amount": 850000,
+          "status": "Paid"
+        }
+      ]
+    },
+    {
+      "id": "stu-1789170781816",
+      "studentCode": "STU-7830",
+      "name": "Bhiggest Miike",
+      "email": "bhiggestmiike@gmail.com",
+      "phone": "07078591252",
+      "program": "UI/UX Design ",
+      "mentorName": "Dr. Arthur Pendelton",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 2026-Q4",
+      "enrolledDate": "2026-09-11",
+      "totalFees": 850000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789170781817",
+          "code": "FS-501",
+          "name": "UI/UX Design ",
+          "semester": "Fall Semester 2026",
+          "instructor": "Dr. Arthur Pendelton",
+          "fee": 850000,
+          "billedDate": "2026-09-11"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1789170781818",
+          "description": "Full Course Tuition",
+          "dueDate": "2026-09-11",
+          "amount": 850000,
+          "status": "Paid"
+        }
+      ]
+    },
+    {
+      "id": "stu-1789170775779",
+      "studentCode": "STU-9306",
+      "name": "History News",
+      "email": "Historynews@gmail.com",
+      "phone": "+234 800 123 4567",
+      "program": "Data Analyisis & AI Automation",
+      "mentorName": "Dr. Arthur Pendelton",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 2026-Q4",
+      "enrolledDate": "2026-09-11",
+      "totalFees": 850000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789170775779",
+          "code": "FS-501",
+          "name": "Data Analyisis & AI Automation",
+          "semester": "Fall Semester 2026",
+          "instructor": "Dr. Arthur Pendelton",
+          "fee": 850000,
+          "billedDate": "2026-09-11"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1789170775779",
+          "description": "Full Course Tuition",
+          "dueDate": "2026-09-11",
+          "amount": 850000,
+          "status": "Paid"
+        }
+      ]
+    },
+    {
+      "name": "PROMISE ANURIKA G OKOROJI",
+      "email": "okorojipromise1998@gmail.com",
+      "phone": "08100809329",
+      "program": "Data Analysis ",
+      "mentorName": "Godsmiracle Ibitoye ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 200000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789137652401",
+          "code": "CEL-0105",
+          "name": "Data Analysis ",
+          "semester": "Term 2026",
+          "instructor": "Godsmiracle Ibitoye ",
+          "fee": 200000,
+          "billedDate": "2025-10-15"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789137652401",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-10-15",
+          "amount": 200000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789137640775",
+      "studentCode": "STU-9436",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "UZOKA PEACE ESOMCHUKWU ",
+      "email": "esomopizzy@gmail.com",
+      "phone": "09067249197",
+      "program": "Data Science ",
+      "mentorName": "Godsmiracle Ibitoye ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Partial",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 4500000,
+      "outstandingBalance": 4050000,
+      "courses": [
+        {
+          "id": "c-1789137571889",
+          "code": "CEL-0106",
+          "name": "Data Science ",
+          "semester": "Term 2026",
+          "instructor": "Godsmiracle Ibitoye ",
+          "fee": 4500000,
+          "billedDate": "2025-09-19"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789137571889",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-09-19",
+          "amount": 450000,
+          "status": "Paid"
+        },
+        {
+          "id": "inst-2-1789137571889",
+          "description": "Installment 2 (Tuition Balance Settlement)",
+          "dueDate": "2026-10-11",
+          "amount": 4050000,
+          "status": "Pending"
+        }
+      ],
+      "id": "stu-1789137560243",
+      "studentCode": "STU-4173",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "ABUBAKAR SADIQ UMAR",
+      "email": "abubakarcerdikq@gmail.com",
+      "phone": "08148860917",
+      "program": "Basic Frontend Development ",
+      "mentorName": "Ayomikun  Kunle ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 200000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789137465146",
+          "code": "CEL-0101",
+          "name": "Basic Frontend Development ",
+          "semester": "Term 2026",
+          "instructor": "Ayomikun  Kunle ",
+          "fee": 200000,
+          "billedDate": "2025-09-25"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789137465146",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-09-25",
+          "amount": 200000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789137453521",
+      "studentCode": "STU-6342",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "EMMANUELLA MOSES",
+      "email": "commymos@gmail.com",
+      "phone": "8140685326",
+      "program": "Graphic Design",
+      "mentorName": "kamal aliyu",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 60000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789137370726",
+          "code": "CEL-117",
+          "name": "Graphic Design",
+          "semester": "Term 2026",
+          "instructor": "kamal aliyu",
+          "fee": 60000,
+          "billedDate": "2025-08-01"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789137370726",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-08-01",
+          "amount": 60000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789137358964",
+      "studentCode": "STU-5191",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "AYOBAMI ABIODUN ",
+      "email": "ayobamiabiodun51@gmail.com",
+      "phone": "09025103258",
+      "program": "UI/UX ",
+      "mentorName": "Ayomikun  Kunle ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 150000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789137226210",
+          "code": "CEL-0112",
+          "name": "UI/UX ",
+          "semester": "Term 2026",
+          "instructor": "Ayomikun  Kunle ",
+          "fee": 150000,
+          "billedDate": "2025-08-14"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789137226210",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-08-14",
+          "amount": 150000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789137214569",
+      "studentCode": "STU-6839",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "PROSPER OJOCHEGBE IBRAHIM",
+      "email": "ibrahimshehu535@gmail.com",
+      "phone": "08062757000",
+      "program": "Fullstack web Development ",
+      "mentorName": "Promise Oviawele",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Partial",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 700000,
+      "outstandingBalance": 200000,
+      "courses": [
+        {
+          "id": "c-1789137114698",
+          "code": "CEL-0104",
+          "name": "Fullstack web Development ",
+          "semester": "Term 2026",
+          "instructor": "Promise Oviawele",
+          "fee": 700000,
+          "billedDate": "2025-06-26"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789137114698",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-06-26",
+          "amount": 500000,
+          "status": "Paid"
+        },
+        {
+          "id": "inst-2-1789137114698",
+          "description": "Installment 2 (Tuition Balance Settlement)",
+          "dueDate": "2026-10-11",
+          "amount": 200000,
+          "status": "Pending"
+        }
+      ],
+      "id": "stu-1789137103072",
+      "studentCode": "STU-8592",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "CHIJIOKE CHUKWUNEDU",
+      "email": "ceejaychukwunedu@yahoo.com",
+      "phone": "7065859169",
+      "program": "Data Science ",
+      "mentorName": "Godsmiracle Ibitoye ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Partial",
+      "cohort": "Cohort 2 2025 ",
+      "totalFees": 450000,
+      "outstandingBalance": 100000,
+      "courses": [
+        {
+          "id": "c-1789137013458",
+          "code": "CEL-0106",
+          "name": "Data Science ",
+          "semester": "Term 2026",
+          "instructor": "Godsmiracle Ibitoye ",
+          "fee": 450000,
+          "billedDate": "2026-09-11"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789137013458",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2026-09-11",
+          "amount": 350000,
+          "status": "Paid"
+        },
+        {
+          "id": "inst-2-1789137013458",
+          "description": "Installment 2 (Tuition Balance Settlement)",
+          "dueDate": "2026-10-11",
+          "amount": 100000,
+          "status": "Pending"
+        }
+      ],
+      "id": "stu-1789137001700",
+      "studentCode": "STU-3481",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "IFEANYI ANTHONY",
+      "email": "bioseifeanyi50@gmail.com",
+      "phone": "9063545998",
+      "program": "AI with Python Machine Learning ",
+      "mentorName": "Ayomikun  Kunle ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 350000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789136940701",
+          "code": "CEL-0108",
+          "name": "AI with Python Machine Learning ",
+          "semester": "Term 2026",
+          "instructor": "Ayomikun  Kunle ",
+          "fee": 350000,
+          "billedDate": "2025-08-22"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789136940701",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-08-22",
+          "amount": 350000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789136929093",
+      "studentCode": "STU-8706",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "Suleiman Salihu",
+      "email": "sulex.suleiman@gmail.com",
+      "phone": "07069285288",
+      "program": "cyber Security",
+      "mentorName": "Ayomikun  Kunle ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Partial",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 250000,
+      "outstandingBalance": 90000,
+      "courses": [
+        {
+          "id": "c-1789135528971",
+          "code": "CEL-0114",
+          "name": "cyber Security",
+          "semester": "Term 2026",
+          "instructor": "Ayomikun  Kunle ",
+          "fee": 250000,
+          "billedDate": "2026-02-07"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789135528971",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2026-02-07",
+          "amount": 160000,
+          "status": "Paid"
+        },
+        {
+          "id": "inst-2-1789135528971",
+          "description": "Installment 2 (Tuition Balance Settlement)",
+          "dueDate": "2026-10-11",
+          "amount": 90000,
+          "status": "Pending"
+        }
+      ],
+      "id": "stu-1789135528728",
+      "studentCode": "STU-8991",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "SULTAN ABDULWAHAB",
+      "email": "abdulwahabsultan021@gmail.com",
+      "phone": "09031950287",
+      "program": "Fullstack web Development ",
+      "mentorName": "Promise Oviawele",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Partial",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 800000,
+      "outstandingBalance": 300000,
+      "courses": [
+        {
+          "id": "c-1789135285065",
+          "code": "CEL-0104",
+          "name": "Fullstack web Development ",
+          "semester": "Term 2026",
+          "instructor": "Promise Oviawele",
+          "fee": 800000,
+          "billedDate": "2025-08-11"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789135285065",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-08-11",
+          "amount": 500000,
+          "status": "Paid"
+        },
+        {
+          "id": "inst-2-1789135285065",
+          "description": "Installment 2 (Tuition Balance Settlement)",
+          "dueDate": "2026-10-11",
+          "amount": 300000,
+          "status": "Pending"
+        }
+      ],
+      "id": "stu-1789135274120",
+      "studentCode": "STU-7742",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "EBUBECHIKA J.O",
+      "email": "officialjohnson013@gmail.com",
+      "phone": "08137522425",
+      "program": "Data Analysis ",
+      "mentorName": "Ayomikun  Kunle ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 125000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789134951021",
+          "code": "CEL-0105",
+          "name": "Data Analysis ",
+          "semester": "Term 2026",
+          "instructor": "Ayomikun  Kunle ",
+          "fee": 125000,
+          "billedDate": "2026-07-08"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789134951021",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2026-07-08",
+          "amount": 125000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789134940078",
+      "studentCode": "STU-3060",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "HENRY EKENE NDUPU",
+      "email": "henryspirash94@gmail.com",
+      "phone": "08167295049",
+      "program": "Data Analysis ",
+      "mentorName": "Ayomikun  Kunle ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 250000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789134530539",
+          "code": "CEL-0105",
+          "name": "Data Analysis ",
+          "semester": "Term 2026",
+          "instructor": "Ayomikun  Kunle ",
+          "fee": 250000,
+          "billedDate": "2025-06-30"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789134530539",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-06-30",
+          "amount": 250000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789134519546",
+      "studentCode": "STU-8804",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "EHIS ATHENA ENAHOLO",
+      "email": "Ijsremedy@gmail.com",
+      "phone": "8109526887",
+      "program": "Data Analysis ",
+      "mentorName": "Ayomikun  Kunle ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 150000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789134274115",
+          "code": "CEL-0105",
+          "name": "Data Analysis ",
+          "semester": "Term 2026",
+          "instructor": "Ayomikun  Kunle ",
+          "fee": 150000,
+          "billedDate": "2025-07-01"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789134274115",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-07-01",
+          "amount": 150000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789134263203",
+      "studentCode": "STU-6381",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "KASHIO SHEKINAH",
+      "email": "Shekinaguv@gmail.com",
+      "phone": "8161393239",
+      "program": "cyber Security",
+      "mentorName": "kamal aliyu",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 50000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789134158940",
+          "code": "CEL-0114",
+          "name": "cyber Security",
+          "semester": "Term 2026",
+          "instructor": "kamal aliyu",
+          "fee": 50000,
+          "billedDate": "2025-05-28"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789134158940",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-05-28",
+          "amount": 50000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789134147915",
+      "studentCode": "STU-9692",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "Muhammed Obansa ",
+      "email": "obmunirah199@gmail.com",
+      "phone": "09025486023",
+      "program": "Basic Frontend Development ",
+      "mentorName": "Promise Oviawele",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 370000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789133464974",
+          "code": "CEL-0101",
+          "name": "Basic Frontend Development ",
+          "semester": "Term 2026",
+          "instructor": "Promise Oviawele",
+          "fee": 370000,
+          "billedDate": "2026-12-07"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789133464974",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2026-12-07",
+          "amount": 3700000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789133464671",
+      "studentCode": "STU-8689",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "ENDURANCE EBE",
+      "email": "darianebe8@gmail.com",
+      "phone": "08146490108",
+      "program": "cyber Security",
+      "mentorName": "Obassesam Usang ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 400000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789132927934",
+          "code": "CEL-0114",
+          "name": "cyber Security",
+          "semester": "Term 2026",
+          "instructor": "Obassesam Usang ",
+          "fee": 400000,
+          "billedDate": "2026-08-05"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789132927934",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2026-08-05",
+          "amount": 400000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789132927623",
+      "studentCode": "STU-1071",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "EMEDIONG ESSIEN AKPAN",
+      "email": "eminigodsent@gmail.com",
+      "phone": "08133772115",
+      "program": "cyber Security",
+      "mentorName": "Obassesam Usang ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 350000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789132789717",
+          "code": "CEL-0114",
+          "name": "cyber Security",
+          "semester": "Term 2026",
+          "instructor": "Obassesam Usang ",
+          "fee": 350000,
+          "billedDate": "2026-08-05"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789132789717",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2026-08-05",
+          "amount": 350000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789132789487",
+      "studentCode": "STU-8955",
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 8
+    },
+    {
+      "name": "ZULAIHAT ABDULRAHMAN",
+      "email": "Zulaihatabdulrahman2020@gmail.com",
+      "phone": "9066504920",
+      "program": "Basic Frontend Development ",
+      "mentorName": "Ayomikun  Kunle ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 150000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789132463546",
+          "code": "CEL-0101",
+          "name": "Basic Frontend Development ",
+          "semester": "Term 2026",
+          "instructor": "Ayomikun  Kunle ",
+          "fee": 150000,
+          "billedDate": "2025-03-27"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789132463546",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-03-27",
+          "amount": 150000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789132452516",
+      "studentCode": "STU-9899",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "ZAINAB FOLARIN ",
+      "email": "zfolarin30@gmail.com",
+      "phone": "9016774717",
+      "program": "UI/UX ",
+      "mentorName": "Damilola Ajuwon ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 150000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789132246970",
+          "code": "CEL-0112",
+          "name": "UI/UX ",
+          "semester": "Term 2026",
+          "instructor": "Damilola Ajuwon ",
+          "fee": 150000,
+          "billedDate": "2025-03-26"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789132246970",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-03-26",
+          "amount": 150000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789132235951",
+      "studentCode": "STU-8912",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "FATIMA ",
+      "email": "apekemustapha717@gmail.com",
+      "phone": "8133772115",
+      "program": "UI/UX ",
+      "mentorName": "Damilola Ajuwon ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 150000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789132134018",
+          "code": "CEL-0112",
+          "name": "UI/UX ",
+          "semester": "Term 2026",
+          "instructor": "Damilola Ajuwon ",
+          "fee": 150000,
+          "billedDate": "2026-08-05"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789132134018",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2026-08-05",
+          "amount": 150000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789132133717",
+      "studentCode": "STU-6094",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "VICTORIA WILLIAMS",
+      "email": "williamsvictoria509@gmail.com",
+      "phone": "09068044078",
+      "program": "Digital Marketing ",
+      "mentorName": "kamal aliyu",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 125000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789132086393",
+          "code": "CEL-0109",
+          "name": "Digital Marketing ",
+          "semester": "Term 2026",
+          "instructor": "kamal aliyu",
+          "fee": 125000,
+          "billedDate": "2025-03-25"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789132086393",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-03-25",
+          "amount": 125000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789132075368",
+      "studentCode": "STU-6110",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "VICTOR NWABUNMA",
+      "email": "uzochukwuvictor@yahoo.com",
+      "phone": "8068411653",
+      "program": "Data Analysis ",
+      "mentorName": "Godsmiracle Ibitoye ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 200000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789131951844",
+          "code": "CEL-0105",
+          "name": "Data Analysis ",
+          "semester": "Term 2026",
+          "instructor": "Godsmiracle Ibitoye ",
+          "fee": 200000,
+          "billedDate": "2025-02-11"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789131951844",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-02-11",
+          "amount": 200000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789131940828",
+      "studentCode": "STU-7298",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "VICTOR EZEOKAFOR",
+      "email": "ezeokaforvictorchiboy@gmail.com",
+      "phone": "9133398822",
+      "program": "Fullstack web Development ",
+      "mentorName": "kamal aliyu",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Partial",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 540000,
+      "outstandingBalance": 270000,
+      "courses": [
+        {
+          "id": "c-1789131760255",
+          "code": "CEL-0104",
+          "name": "Fullstack web Development ",
+          "semester": "Term 2026",
+          "instructor": "Promise Oviawele",
+          "fee": 540000,
+          "billedDate": "2025-12-11"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789131760255",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-12-11",
+          "amount": 270000,
+          "status": "Paid"
+        },
+        {
+          "id": "inst-2-1789131760255",
+          "description": "Installment 2 (Tuition Balance Settlement)",
+          "dueDate": "2026-10-11",
+          "amount": 270000,
+          "status": "Pending"
+        }
+      ],
+      "id": "stu-1789131759952",
+      "studentCode": "STU-5191",
+      "enrolledDate": "2026-09-11",
+      "mentorId": "men-1789052796561"
+    },
+    {
+      "name": "MUBARAK ABDULMALIK",
+      "email": "mubarakabdulmalik7563@gmail.com",
+      "phone": "8067191103",
+      "program": "Basic Frontend Development ",
+      "mentorName": "Ayomikun  Kunle ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 200000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789131142964",
+          "code": "CEL-0101",
+          "name": "Basic Frontend Development ",
+          "semester": "Term 2026",
+          "instructor": "Ayomikun  Kunle ",
+          "fee": 200000,
+          "billedDate": "2025-12-10"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789131142964",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-12-10",
+          "amount": 200000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789131142685",
+      "studentCode": "STU-6865",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "UMOH IMOH MICHEAL ",
+      "email": "imohemyk@gmail.com",
+      "phone": "7081237229",
+      "program": "Data Analysis ",
+      "mentorName": "Ayomikun  Kunle ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 150000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789131153396",
+          "code": "CEL-0105",
+          "name": "Data Analysis ",
+          "semester": "Term 2026",
+          "instructor": "Ayomikun  Kunle ",
+          "fee": 150000,
+          "billedDate": "2025-12-30"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789131153396",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-12-30",
+          "amount": 150000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789131142401",
+      "studentCode": "STU-7695",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "UJUNWA  MARYROSE EYA ",
+      "email": "ujunwarose1995@gmail.com",
+      "phone": "9038987975",
+      "program": "Data Analysis ",
+      "mentorName": "Ayomikun  Kunle ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 200000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789131058910",
+          "code": "CEL-0105",
+          "name": "Data Analysis ",
+          "semester": "Term 2026",
+          "instructor": "Ayomikun  Kunle ",
+          "fee": 200000,
+          "billedDate": "2026-05-05"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789131058910",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2026-05-05",
+          "amount": 200000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789131047892",
+      "studentCode": "STU-1132",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "UGOCHUKWU CHIDERA",
+      "email": "deerahugoh@gmail.com",
+      "phone": "8062531619",
+      "program": "Data Analysis ",
+      "mentorName": "Godsmiracle Ibitoye ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 250000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789130960501",
+          "code": "CEL-0105",
+          "name": "Data Analysis ",
+          "semester": "Term 2026",
+          "instructor": "Godsmiracle Ibitoye ",
+          "fee": 250000,
+          "billedDate": "2025-04-23"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789130960501",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-04-23",
+          "amount": 250000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789130949479",
+      "studentCode": "STU-6188",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "SAMUEL OLUWAFEMI",
+      "email": "Samueloluwafemiojo@gmail.com",
+      "phone": "8103814277",
+      "program": "Basic Frontend Development ",
+      "mentorName": "Promise Oviawele",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 150000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789130701397",
+          "code": "CEL-0101",
+          "name": "Basic Frontend Development ",
+          "semester": "Term 2026",
+          "instructor": "Promise Oviawele",
+          "fee": 150000,
+          "billedDate": "2025-04-24"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789130701397",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-04-24",
+          "amount": 150000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789130690413",
+      "studentCode": "STU-6535",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "PRINCEWILL CHUKWUDUBEM",
+      "email": "Flexyugoh081@gmail.com",
+      "phone": "08136141471",
+      "program": "Fullstack web Development ",
+      "mentorName": "Promise Oviawele",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 540000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789130511863",
+          "code": "CEL-0104",
+          "name": "Fullstack web Development ",
+          "semester": "Term 2026",
+          "instructor": "Promise Oviawele",
+          "fee": 540000,
+          "billedDate": "2025-04-23"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789130511863",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-04-23",
+          "amount": 549999,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789130500858",
+      "studentCode": "STU-4689",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "OLUWAKEMI MOSES MARY",
+      "email": "oluwakemimoses02@gmail.com",
+      "phone": "8149488944",
+      "program": "Project Management ",
+      "mentorName": "Ayomikun  Kunle ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 150000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789130244472",
+          "code": "TECH-101",
+          "name": "Project Management ",
+          "semester": "Term 2026",
+          "instructor": "Ayomikun  Kunle ",
+          "fee": 150000,
+          "billedDate": "2025-04-22"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789130244472",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-04-22",
+          "amount": 150000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789130233491",
+      "studentCode": "STU-9491",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "OKORO PAULINUS FAVOUR ",
+      "email": "okorofavour162@gmail.com",
+      "phone": "9072297823",
+      "program": "Basic Frontend Development ",
+      "mentorName": "Promise Oviawele",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 300000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789129921682",
+          "code": "CEL-0101",
+          "name": "Basic Frontend Development ",
+          "semester": "Term 2026",
+          "instructor": "Promise Oviawele",
+          "fee": 300000,
+          "billedDate": "2025-04-24"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789129921682",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-04-24",
+          "amount": 300000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789129910717",
+      "studentCode": "STU-5653",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "KUMAPAYI FAITH",
+      "email": "thefusionbags@gmail.com",
+      "phone": "9061583009",
+      "program": "Basic Frontend Development ",
+      "mentorName": "Promise Oviawele",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 150000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789129753112",
+          "code": "CEL-0101",
+          "name": "Basic Frontend Development ",
+          "semester": "Term 2026",
+          "instructor": "Promise Oviawele",
+          "fee": 150000,
+          "billedDate": "2025-04-18"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789129753112",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-04-18",
+          "amount": 150000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789129742177",
+      "studentCode": "STU-5337",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "JOSEPHINE IGOH ",
+      "email": "josephineigoh82@gmail.com",
+      "phone": "9068918963",
+      "program": "Data Analysis ",
+      "mentorName": "Godsmiracle Ibitoye ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 2 2025 ",
+      "totalFees": 200000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789129580050",
+          "code": "CEL-0105",
+          "name": "Data Analysis ",
+          "semester": "Term 2026",
+          "instructor": "Godsmiracle Ibitoye ",
+          "fee": 200000,
+          "billedDate": "2025-04-18"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789129580050",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-04-18",
+          "amount": 220000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789129569102",
+      "studentCode": "STU-7726",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "IFEANYI STANLEY ",
+      "email": "ifyebonumah@gmail.com",
+      "phone": "8060334511",
+      "program": "Data Analysis ",
+      "mentorName": "Godsmiracle Ibitoye ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 200000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789129461312",
+          "code": "CEL-0105",
+          "name": "Data Analysis ",
+          "semester": "Term 2026",
+          "instructor": "Godsmiracle Ibitoye ",
+          "fee": 200000,
+          "billedDate": "2025-04-18"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789129461312",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-04-18",
+          "amount": 200000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789129450278",
+      "studentCode": "STU-5731",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "GIFT OJOCHEGBE SHAIBU",
+      "email": "shaibugift18@gmail.com",
+      "phone": "7043247701",
+      "program": "Basic Frontend Development ",
+      "mentorName": "Promise Oviawele",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 200000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789129316474",
+          "code": "CEL-0101",
+          "name": "Basic Frontend Development ",
+          "semester": "Term 2026",
+          "instructor": "Promise Oviawele",
+          "fee": 200000,
+          "billedDate": "2025-04-07"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789129316474",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-04-07",
+          "amount": 200000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789129305529",
+      "studentCode": "STU-3176",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "EMMANUEL IBITAYO",
+      "email": "ibitayoemmanuel46@gmail.com",
+      "phone": "9063211855",
+      "program": "Data Analysis ",
+      "mentorName": "Godsmiracle Ibitoye ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "Cohort 1 2026",
+      "totalFees": 200000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789129130035",
+          "code": "CEL-0105",
+          "name": "Data Analysis ",
+          "semester": "Term 2026",
+          "instructor": "Godsmiracle Ibitoye ",
+          "fee": 200000,
+          "billedDate": "2025-04-02"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789129130035",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-04-02",
+          "amount": 200000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789129119003",
+      "studentCode": "STU-2147",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "GODSPOWER JOHN",
+      "email": "johngodspower008@gmail.com",
+      "phone": "08108334779",
+      "program": "Data Analysis",
+      "mentorName": "Godsmiracle Ibitoye ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "COHORT 2 2026 ",
+      "totalFees": 200000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789129031035",
+          "code": "TECH-101",
+          "name": "Data Analysis",
+          "semester": "Term 2026",
+          "instructor": "Godsmiracle Ibitoye ",
+          "fee": 200000,
+          "billedDate": "2026-06-01"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789129031035",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2026-06-01",
+          "amount": 200000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789129030966",
+      "studentCode": "STU-9660",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "DEBORAH NWABUNMA",
+      "email": "victordeborah94@gmail.com",
+      "phone": "08149265770",
+      "program": "Digital Marketing ",
+      "mentorName": "Ayomikun  Kunle ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "COHORT 2 2026 ",
+      "totalFees": 125000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789127861356",
+          "code": "TECH-101",
+          "name": "Digital Marketing ",
+          "semester": "Term 2026",
+          "instructor": "Ayomikun  Kunle ",
+          "fee": 125000,
+          "billedDate": "2025-04-01"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789127861356",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-04-01",
+          "amount": 125000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789127850395",
+      "studentCode": "STU-5818",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "CHRIS STEPHEN",
+      "email": "chrisstephen117@gmail.com",
+      "phone": "+234 800 000 0000",
+      "program": "Web development ",
+      "mentorName": "Promise Oviawele",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "COHORT 2 2026 ",
+      "totalFees": 240000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789127606568",
+          "code": "TECH-101",
+          "name": "Web development ",
+          "semester": "Term 2026",
+          "instructor": "Promise Oviawele",
+          "fee": 240000,
+          "billedDate": "2025-03-11"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789127606568",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-03-11",
+          "amount": 240000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789127595520",
+      "studentCode": "STU-6340",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "ADENIKE OLAJUYIGBE ",
+      "email": "olajuyigbeadenike@gmail.com",
+      "phone": "07051601027",
+      "program": "Data Analysis ",
+      "mentorName": "Godsmiracle Ibitoye ",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Paid",
+      "cohort": "COHORT 2 2026 ",
+      "totalFees": 250000,
+      "outstandingBalance": 0,
+      "courses": [
+        {
+          "id": "c-1789127401222",
+          "code": "TECH-101",
+          "name": "Data Analysis ",
+          "semester": "Term 2026",
+          "instructor": "Godsmiracle Ibitoye ",
+          "fee": 250000,
+          "billedDate": "2025-01-16"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789127401222",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-01-16",
+          "amount": 250000,
+          "status": "Paid"
+        }
+      ],
+      "id": "stu-1789127390465",
+      "studentCode": "STU-6116",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "Naomi Musa",
+      "email": "musanaomi593@gmail.com",
+      "phone": "07030593376",
+      "program": "Data Analysis",
+      "mentorName": "kamal aliyu",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Partial",
+      "cohort": "COHORT 2 2026 ",
+      "totalFees": 200000,
+      "outstandingBalance": 50000,
+      "courses": [
+        {
+          "id": "c-1789127135343",
+          "code": "TECH-101",
+          "name": "Data Analysis",
+          "semester": "Term 2026",
+          "instructor": "kamal aliyu",
+          "fee": 200000,
+          "billedDate": "2026-08-13"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789127135343",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2026-08-13",
+          "amount": 150000,
+          "status": "Paid"
+        },
+        {
+          "id": "inst-2-1789127135343",
+          "description": "Installment 2 (Tuition Balance Settlement)",
+          "dueDate": "2026-10-11",
+          "amount": 50000,
+          "status": "Pending"
+        }
+      ],
+      "id": "stu-1789127135478",
+      "studentCode": "STU-5212",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "ABDUKHALIQ SULEIMAN ",
+      "email": "khaliqgrey96@gmail.com",
+      "phone": "9022212083",
+      "program": "Frontend Development",
+      "mentorName": "kamal aliyu",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Overdue",
+      "cohort": "COHORT 2 2026 ",
+      "totalFees": 300000,
+      "outstandingBalance": 300000,
+      "courses": [
+        {
+          "id": "c-1789123678633",
+          "code": "TECH-101",
+          "name": "Frontend Development",
+          "semester": "Term 2026",
+          "instructor": "kamal aliyu",
+          "fee": 300000,
+          "billedDate": "2025-01-15"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789123678633",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2025-01-15",
+          "amount": 0,
+          "status": "Paid"
+        },
+        {
+          "id": "inst-2-1789123678633",
+          "description": "Installment 2 (Tuition Balance Settlement)",
+          "dueDate": "2026-10-11",
+          "amount": 300000,
+          "status": "Pending"
+        }
+      ],
+      "id": "stu-1789123667599",
+      "studentCode": "STU-6075",
+      "enrolledDate": "2026-09-11"
+    },
+    {
+      "name": "zubairu",
+      "email": "zubairu@gmail.com",
+      "phone": "080746425677",
+      "program": "basic frontend ",
+      "mentorName": "Faculty Mentor Assigned",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Partial",
+      "cohort": "COHORT 2 2026 ",
+      "totalFees": 350000,
+      "outstandingBalance": 200000,
+      "courses": [
+        {
+          "id": "c-1789052597019",
+          "code": "TECH-101",
+          "name": "basic frontend ",
+          "semester": "Term 2026",
+          "instructor": "Faculty Mentor Assigned",
+          "fee": 350000,
+          "billedDate": "2026-09-10"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1-1789052597019",
+          "description": "Initial Deposit / Seat Lock",
+          "dueDate": "2026-09-10",
+          "amount": 150000,
+          "status": "Paid"
+        },
+        {
+          "id": "inst-2-1789052597019",
+          "description": "Installment 2 (Tuition Balance Settlement)",
+          "dueDate": "2026-10-10",
+          "amount": 200000,
+          "status": "Pending"
+        }
+      ],
+      "id": "stu-1789052591941",
+      "studentCode": "STU-9819",
+      "enrolledDate": "2026-09-10"
     }
   ],
   "mentors": [
     {
-      "id": "men-demo-001",
-      "mentorCode": "MEN-1049",
-      "name": "Dr. Chidi Okeke",
-      "email": "chidi.okeke@codelab.institute",
-      "phone": "+234 803 456 7890",
-      "track": "Full-Stack Software Engineering",
-      "specializedDepartments": [
-        "Software Engineering",
-        "Cloud Engineering & DevOps"
+      "name": "Ayomikun  Kunle ",
+      "email": "ayomikunleslie@gmail.com",
+      "phone": "08074738876",
+      "role": "Cybersecurity & Information Security Lead Mentor",
+      "department": "Cybersecurity & Information Security",
+      "expertise": [
+        "Cyber Security"
       ],
+      "commissionRate": 37,
+      "activeMentees": 2,
+      "assignedEnrollmentsCount": 2,
+      "maxCapacity": 15,
+      "rating": 5,
       "status": "Active",
-      "bankName": "Guaranty Trust Bank (GTBank)",
-      "accountNumber": "0123456789",
-      "accountName": "CHIDI OKEKE",
-      "bankVerified": true,
-      "bankCode": "058",
-      "monthlyBasePay": 350000,
-      "hourlyRate": 8500,
-      "sessionsCount": 14,
-      "totalEarned": 780000,
-      "pendingPayout": 125000,
-      "paidPayout": 655000,
-      "joinedDate": "2025-11-01",
-      "rating": 4.9
+      "pendingPayout": 166500,
+      "totalEarned": 166500,
+      "payoutStatus": "Completed",
+      "bankName": "OPay (PayCom)",
+      "accountNumber": "8024507673",
+      "accountName": "ABIMBOLA EKUNDAYO LESLIE",
+      "isAccountVerified": true,
+      "id": "men-1789127106622",
+      "mentorCode": "MN-4831",
+      "joinedDate": "2026-09-11",
+      "sessionsCount": 0,
+      "bio": "",
+      "accountVerificationSource": "cbn_nuban_verified",
+      "accountVerifiedAt": "2026-09-11T15:32:35.967Z"
+    },
+    {
+      "name": "Opara Light ",
+      "email": "lightopara@gmail.com",
+      "phone": "09053020297",
+      "role": "Artificial Intelligence & Machine Learning Lead Mentor",
+      "department": "Artificial Intelligence & Machine Learning",
+      "expertise": [
+        "Ai Automation"
+      ],
+      "commissionRate": 37,
+      "activeMentees": 0,
+      "assignedEnrollmentsCount": 0,
+      "maxCapacity": 15,
+      "rating": 5,
+      "status": "Active",
+      "pendingPayout": 0,
+      "totalEarned": 0,
+      "payoutStatus": "Completed",
+      "bankName": "Access Bank Nigeria PLC",
+      "accountNumber": "",
+      "accountName": "OPARA LIGHT ",
+      "isAccountVerified": false,
+      "id": "men-1789126940698",
+      "mentorCode": "MN-5968",
+      "joinedDate": "2026-09-11",
+      "sessionsCount": 0
+    },
+    {
+      "name": "Obasesam Usang ",
+      "email": "obaz4real@gmail.com",
+      "phone": "08105201167",
+      "role": "Cybersecurity & Information Security Lead Mentor",
+      "department": "Cybersecurity & Information Security",
+      "expertise": [
+        "Cyber Security"
+      ],
+      "commissionRate": 37,
+      "activeMentees": 2,
+      "assignedEnrollmentsCount": 2,
+      "maxCapacity": 15,
+      "rating": 5,
+      "status": "Active",
+      "pendingPayout": 277500,
+      "totalEarned": 277500,
+      "payoutStatus": "Completed",
+      "bankName": "OPay (PayCom)",
+      "accountNumber": "7080161308",
+      "accountName": "OBASSESAM USANG EFFIOM",
+      "isAccountVerified": false,
+      "id": "men-1789126765011",
+      "mentorCode": "MN-2889",
+      "joinedDate": "2026-09-11",
+      "sessionsCount": 3,
+      "bio": "IT professional and cybersecurity specialist based in Abuja, Nigeria, with over six years of hands-on experience leading technology across financial services, real estate, hospitality, retail, and education. My unique background spanning postgraduate cybersecurity and undergraduate accounting/finance shapes how I align secure technology with overarching business goals."
+    },
+    {
+      "name": "Damilola Ajuwon ",
+      "email": "ajuwondamilola23@gmail.com",
+      "phone": "09095606971",
+      "role": "Product Design (UI/UX) Lead Mentor",
+      "department": "Product Design (UI/UX)",
+      "expertise": [
+        "Product UI/UX Design"
+      ],
+      "commissionRate": 37,
+      "activeMentees": 1,
+      "assignedEnrollmentsCount": 1,
+      "maxCapacity": 15,
+      "rating": 5,
+      "status": "Active",
+      "pendingPayout": 55500,
+      "totalEarned": 55500,
+      "payoutStatus": "Completed",
+      "bankName": "Access Bank Nigeria PLC",
+      "accountNumber": "",
+      "accountName": "DAMILOLA AJUWON ",
+      "isAccountVerified": false,
+      "id": "men-1789126200444",
+      "mentorCode": "MN-3759",
+      "joinedDate": "2026-09-11",
+      "sessionsCount": 0
+    },
+    {
+      "name": "Promise Oviawele",
+      "email": "promiseoviawele4@gmail.com",
+      "phone": "07040521112",
+      "role": "Software Engineering Lead Mentor",
+      "department": "Software Engineering",
+      "expertise": [
+        "Full-Stack Software Engineering"
+      ],
+      "commissionRate": 37,
+      "activeMentees": 2,
+      "assignedEnrollmentsCount": 2,
+      "maxCapacity": 15,
+      "rating": 5,
+      "status": "Active",
+      "pendingPayout": 336700,
+      "totalEarned": 336700,
+      "payoutStatus": "Completed",
+      "bankName": "Access Bank Nigeria PLC",
+      "accountNumber": "",
+      "accountName": "PROMISE OVIAWELE",
+      "isAccountVerified": false,
+      "id": "men-1789126100630",
+      "mentorCode": "MN-6438",
+      "joinedDate": "2026-09-11",
+      "sessionsCount": 0
+    },
+    {
+      "name": "Godsmiracle Ibitoye ",
+      "email": "ibitayogodsmiracle@gmail.com",
+      "phone": "09117505795",
+      "role": "Data Science & Analytics Lead Mentor",
+      "department": "Data Science & Analytics",
+      "expertise": [
+        "Data Science & Analytics"
+      ],
+      "commissionRate": 37,
+      "activeMentees": 1,
+      "assignedEnrollmentsCount": 1,
+      "maxCapacity": 28,
+      "rating": 5,
+      "status": "Active",
+      "pendingPayout": 74000,
+      "totalEarned": 74000,
+      "payoutStatus": "Completed",
+      "bankName": "Access Bank Nigeria PLC",
+      "accountNumber": "",
+      "accountName": "GODSMIRACLE IBITOYE ",
+      "isAccountVerified": false,
+      "id": "men-1789126021588",
+      "mentorCode": "MN-4161",
+      "joinedDate": "2026-09-11",
+      "sessionsCount": 0
+    },
+    {
+      "name": "kamal aliyu",
+      "email": "kamala@gmail.com",
+      "phone": "0907283567",
+      "role": "Software Engineering Lead Mentor",
+      "department": "Software Engineering",
+      "expertise": [
+        "Basic frontend Development"
+      ],
+      "commissionRate": 37,
+      "activeMentees": 4,
+      "assignedEnrollmentsCount": 4,
+      "maxCapacity": 15,
+      "rating": 5,
+      "status": "Active",
+      "pendingPayout": 197950,
+      "totalEarned": 197950,
+      "payoutStatus": "Completed",
+      "bankName": "Access Bank Nigeria PLC",
+      "accountNumber": "",
+      "accountName": "KAMAL ALIYU",
+      "isAccountVerified": false,
+      "id": "men-1789052796561",
+      "mentorCode": "MN-8719",
+      "joinedDate": "2026-09-10",
+      "sessionsCount": 0
     }
   ],
   "expenses": [
     {
-      "title": "Lab 2 Workstation Upgrades",
-      "category": "Equipment",
-      "amount": 450000,
-      "date": "2026-09-10",
-      "department": "Technology",
+      "title": "SIPCore Monthly subscription",
+      "category": "Software & Tools",
+      "amount": 11000,
+      "date": "2026-09-25",
+      "department": "Finance & Ops",
       "paymentMethod": "Nigerian Bank Transfer",
-      "status": "Pending",
-      "vendor": "Direct Computers Lagos",
-      "requestedBy": "Admissions & Lab Tech (Staff)",
-      "requesterEmail": "admin@codelab.institute",
-      "urgency": "Urgent",
-      "description": "4x Core i7 workstations for Victoria Island campus cohort.",
-      "id": "exp-1789042947889",
-      "expenseCode": "EXP-2320",
-      "reviewedBy": "Abiola Adefowope (Super Admin)",
-      "reviewedAt": "2026-09-10",
-      "disbursementBankName": "Guaranty Trust Bank (GTBank)",
-      "disbursementAccountNumber": "0123456789",
-      "disbursementAccountName": "Direct Computers Lagos",
-      "disbursementBankCode": "058"
+      "status": "Awaiting Approval",
+      "vendor": "Corporate Vendor NG",
+      "requestedBy": "Ndifreke Precious Henry (finance)",
+      "requesterEmail": "ndifrekehenry001@gmail.com",
+      "receiptName": "REQUEST FOR FUNDS.pdf",
+      "description": "SIPCore Monthly subscription",
+      "urgency": "Standard",
+      "id": "exp-1790330620562",
+      "expenseCode": "EXP-6406"
+    },
+    {
+      "title": "Storage Cabinet and Transportation ",
+      "category": "Office & Ops",
+      "amount": 230000,
+      "date": "2026-09-08",
+      "department": "Facilities",
+      "paymentMethod": "Nigerian Bank Transfer",
+      "status": "Approved",
+      "vendor": "Corporate Vendor NG",
+      "requestedBy": "Folake Solanke (admissions)",
+      "receiptName": "proforma_invoice.pdf",
+      "description": "for storing the laptops acquired for safe keeping ",
+      "urgency": "Emergency",
+      "id": "exp-1788859848488",
+      "expenseCode": "EXP-5936",
+      "reviewedBy": "Abiola Adefowope",
+      "reviewedAt": "2026-09-08"
     }
   ],
-  "courses": [],
-  "cohorts": [],
+  "courses": [
+    {
+      "code": "CEL-117",
+      "title": "Graphic Design",
+      "category": "Product Design (UI/UX)",
+      "description": "Comprehensive professional training track in Graphic Design.",
+      "durationWeeks": 4,
+      "tuitionFee": 60000,
+      "syllabusModules": [
+        "Core Foundational Architecture",
+        "Applied Industry Capstone & System Design"
+      ],
+      "leadInstructor": "kamal aliyu",
+      "status": "Active",
+      "id": "course-1789137305640",
+      "enrolledCount": 0,
+      "rating": 5
+    },
+    {
+      "code": "CEL-0114",
+      "title": "Cyber Security",
+      "category": "Cybersecurity & Information Security",
+      "description": "Comprehensive professional training track in cyber Security.",
+      "durationWeeks": 12,
+      "tuitionFee": 250000,
+      "syllabusModules": [
+        "Core Foundational Architecture",
+        "Applied Industry Capstone & System Design"
+      ],
+      "leadInstructor": "Obassesam Usang ",
+      "status": "Active",
+      "id": "course-1789132549615",
+      "enrolledCount": 0,
+      "rating": 5
+    },
+    {
+      "code": "CEL-0113",
+      "title": "Project Management ",
+      "category": "Product Management",
+      "description": "Comprehensive professional training track in Project Management .",
+      "durationWeeks": 12,
+      "tuitionFee": 150000,
+      "syllabusModules": [
+        "Core Foundational Architecture",
+        "Applied Industry Capstone & System Design"
+      ],
+      "leadInstructor": "kamal aliyu",
+      "status": "Active",
+      "id": "course-1789130374811",
+      "enrolledCount": 0,
+      "rating": 5
+    },
+    {
+      "code": "CEL-0112",
+      "title": "UI/UX ",
+      "category": "Product Design (UI/UX)",
+      "description": "Comprehensive professional training track in UI/UX .",
+      "durationWeeks": 12,
+      "tuitionFee": 150000,
+      "syllabusModules": [
+        "Core Foundational Architecture",
+        "Applied Industry Capstone & System Design"
+      ],
+      "leadInstructor": "Damilola Ajuwon ",
+      "status": "Active",
+      "id": "course-1789128701476",
+      "enrolledCount": 0,
+      "rating": 5
+    },
+    {
+      "code": "CEL-0111",
+      "title": "Content creating and Video editing ",
+      "category": "Digital Marketing & Growth",
+      "description": "Comprehensive professional training track in Content creating and Video editing .",
+      "durationWeeks": 4,
+      "tuitionFee": 50000,
+      "syllabusModules": [
+        "Core Foundational Architecture",
+        "Applied Industry Capstone & System Design"
+      ],
+      "leadInstructor": "kamal aliyu",
+      "status": "Active",
+      "id": "course-1789128656555",
+      "enrolledCount": 0,
+      "rating": 5
+    },
+    {
+      "code": "CEL-0110",
+      "title": "Social Media Management ",
+      "category": "Digital Marketing & Growth",
+      "description": "Comprehensive professional training track in Social Media Management .",
+      "durationWeeks": 16,
+      "tuitionFee": 50000,
+      "syllabusModules": [
+        "Core Foundational Architecture",
+        "Applied Industry Capstone & System Design"
+      ],
+      "leadInstructor": "kamal aliyu",
+      "status": "Active",
+      "id": "course-1789128620149",
+      "enrolledCount": 0,
+      "rating": 5
+    },
+    {
+      "code": "CEL-0109",
+      "title": "Digital Marketing ",
+      "category": "Digital Marketing & Growth",
+      "description": "Comprehensive professional training track in Digital Marketing .",
+      "durationWeeks": 16,
+      "tuitionFee": 240000,
+      "syllabusModules": [
+        "Core Foundational Architecture",
+        "Applied Industry Capstone & System Design"
+      ],
+      "leadInstructor": "kamal aliyu",
+      "status": "Active",
+      "id": "course-1789128577843",
+      "enrolledCount": 0,
+      "rating": 5
+    },
+    {
+      "code": "CEL-0108",
+      "title": "AI with Python Machine Learning ",
+      "category": "Artificial Intelligence & Machine Learning",
+      "description": "Comprehensive professional training track in AI with Python Machine Learning .",
+      "durationWeeks": 16,
+      "tuitionFee": 350000,
+      "syllabusModules": [
+        "Core Foundational Architecture",
+        "Applied Industry Capstone & System Design"
+      ],
+      "leadInstructor": "Godsmiracle Ibitoye ",
+      "status": "Active",
+      "id": "course-1789128527826",
+      "enrolledCount": 0,
+      "rating": 5
+    },
+    {
+      "code": "CEL-0107",
+      "title": "Ai Automation ",
+      "category": "Artificial Intelligence & Machine Learning",
+      "description": "Comprehensive professional training track in Ai Automation .",
+      "durationWeeks": 12,
+      "tuitionFee": 150000,
+      "syllabusModules": [
+        "Core Foundational Architecture",
+        "Applied Industry Capstone & System Design"
+      ],
+      "leadInstructor": "Opara Light ",
+      "status": "Active",
+      "id": "course-1789128471320",
+      "enrolledCount": 0,
+      "rating": 5
+    },
+    {
+      "code": "CEL-0106",
+      "title": "Data Science ",
+      "category": "Data Science & Analytics",
+      "description": "Comprehensive professional training track in Data Science .",
+      "durationWeeks": 24,
+      "tuitionFee": 450000,
+      "syllabusModules": [
+        "Core Foundational Architecture",
+        "Applied Industry Capstone & System Design"
+      ],
+      "leadInstructor": "Godsmiracle Ibitoye ",
+      "status": "Active",
+      "id": "course-1789128423830",
+      "enrolledCount": 0,
+      "rating": 5
+    },
+    {
+      "code": "CEL-0105",
+      "title": "Data Analysis ",
+      "category": "Data Science & Analytics",
+      "description": "Comprehensive professional training track in Data Analysis .",
+      "durationWeeks": 16,
+      "tuitionFee": 200000,
+      "syllabusModules": [
+        "Core Foundational Architecture",
+        "Applied Industry Capstone & System Design"
+      ],
+      "leadInstructor": "Godsmiracle Ibitoye ",
+      "status": "Active",
+      "id": "course-1789128399795",
+      "enrolledCount": 0,
+      "rating": 5
+    },
+    {
+      "code": "CEL-0104",
+      "title": "Fullstack web Development ",
+      "category": "Software Engineering",
+      "description": "Comprehensive professional training track in Fullstack web Development .",
+      "durationWeeks": 23,
+      "tuitionFee": 550000,
+      "syllabusModules": [
+        "Core Foundational Architecture",
+        "Applied Industry Capstone & System Design"
+      ],
+      "leadInstructor": "Promise Oviawele",
+      "status": "Active",
+      "id": "course-1789128365582",
+      "enrolledCount": 0,
+      "rating": 5
+    },
+    {
+      "code": "CEL-0103",
+      "title": "Backend Development ",
+      "category": "Software Engineering",
+      "description": "Comprehensive professional training track in Backend Development .",
+      "durationWeeks": 12,
+      "tuitionFee": 150000,
+      "syllabusModules": [
+        "Core Foundational Architecture",
+        "Applied Industry Capstone & System Design"
+      ],
+      "leadInstructor": "Promise Oviawele",
+      "status": "Active",
+      "id": "course-1789128336912",
+      "enrolledCount": 0,
+      "rating": 5
+    },
+    {
+      "code": "CEL-0102",
+      "title": "Advance Frontend Development ",
+      "category": "Software Engineering",
+      "description": "Comprehensive professional training track in Advance Frontend Development .",
+      "durationWeeks": 12,
+      "tuitionFee": 150000,
+      "syllabusModules": [
+        "Core Foundational Architecture",
+        "Applied Industry Capstone & System Design"
+      ],
+      "leadInstructor": "Promise Oviawele",
+      "status": "Active",
+      "id": "course-1789128315002",
+      "enrolledCount": 0,
+      "rating": 5
+    },
+    {
+      "code": "CEL-0101",
+      "title": "Basic Frontend Development ",
+      "category": "Software Engineering",
+      "description": "Comprehensive professional training track in Basic Frontend Development .",
+      "durationWeeks": 16,
+      "tuitionFee": 200000,
+      "syllabusModules": [
+        "Core Foundational Architecture",
+        "Applied Industry Capstone & System Design"
+      ],
+      "leadInstructor": "Promise Oviawele",
+      "status": "Active",
+      "id": "course-1789128275775",
+      "enrolledCount": 0,
+      "rating": 5
+    }
+  ],
+  "cohorts": [
+    {
+      "cohortCode": "COH-2026-COHORT-1",
+      "name": "Cohort 1 2026",
+      "programId": "prog-1789128041598",
+      "programName": "ALL Courses ",
+      "startDate": "2026-01-12",
+      "endDate": "2026-06-30",
+      "maxCapacity": 40,
+      "instructorName": "Godsmiracle Ibitoye ",
+      "status": "Upcoming",
+      "id": "cohort-1789128031857",
+      "enrolledCount": 0
+    },
+    {
+      "cohortCode": "COH-2026-COHORT-2",
+      "name": "Cohort 2 2025 ",
+      "programId": "prog-1789128003735",
+      "programName": "ALL Courses ",
+      "startDate": "2025-08-04",
+      "endDate": "2025-12-19",
+      "maxCapacity": 40,
+      "instructorName": "Godsmiracle Ibitoye ",
+      "status": "Upcoming",
+      "id": "cohort-1789127994800",
+      "enrolledCount": 0
+    },
+    {
+      "cohortCode": "COH-2026-COHORT-1",
+      "name": "Cohort 1 2025 ",
+      "programId": "prog-1789127963525",
+      "programName": "ALL Courses ",
+      "startDate": "2025-01-06",
+      "endDate": "2025-07-31",
+      "maxCapacity": 40,
+      "instructorName": "Godsmiracle Ibitoye ",
+      "status": "Upcoming",
+      "id": "cohort-1789127955393",
+      "enrolledCount": 0
+    },
+    {
+      "cohortCode": "COH-2026-COHORT-1",
+      "name": "Cohort 1 2025 ",
+      "programId": "prog-1789127945023",
+      "programName": "ALL Courses ",
+      "startDate": "2025-01-06",
+      "endDate": "2025-07-31",
+      "maxCapacity": 40,
+      "instructorName": "Godsmiracle Ibitoye ",
+      "status": "Upcoming",
+      "id": "cohort-1789127936111",
+      "enrolledCount": 0
+    },
+    {
+      "cohortCode": "COH-2026-COHORT-2",
+      "name": "COHORT 2 2026 ",
+      "programId": "prog-1789044127568",
+      "programName": "all courses ",
+      "startDate": "2026-06-08",
+      "endDate": "2026-11-30",
+      "maxCapacity": 50,
+      "instructorName": "Faculty Mentor Assigned",
+      "status": "Upcoming",
+      "id": "cohort-1789044117392",
+      "enrolledCount": 0
+    }
+  ],
   "invoices": [
+    {
+      "id": "inv-1789170782348",
+      "invoiceNumber": "INV-2026-63593",
+      "studentId": "stu-1789170782348",
+      "studentName": "Uncle P",
+      "studentEmail": "unclep@gmail.com",
+      "programName": "Data Analysis",
+      "issueDate": "2026-09-11",
+      "dueDate": "2026-10-11",
+      "totalAmount": 850000,
+      "paidAmount": 850000,
+      "status": "Paid",
+      "items": [
+        {
+          "id": "item-1",
+          "description": "Data Analysis Tuition",
+          "amount": 850000
+        }
+      ],
+      "paymentReference": "NIBSS-TRX-2531304",
+      "nibssBankName": "Access Bank Nigeria PLC"
+    },
+    {
+      "id": "inv-1789170781818",
+      "invoiceNumber": "INV-2026-26628",
+      "studentId": "stu-1789170781816",
+      "studentName": "Bhiggest Miike",
+      "studentEmail": "bhiggestmiike@gmail.com",
+      "programName": "UI/UX Design ",
+      "issueDate": "2026-09-11",
+      "dueDate": "2026-10-11",
+      "totalAmount": 850000,
+      "paidAmount": 850000,
+      "status": "Paid",
+      "items": [
+        {
+          "id": "item-1",
+          "description": "UI/UX Design  Tuition",
+          "amount": 850000
+        }
+      ],
+      "paymentReference": "NIBSS-TRX-8332762",
+      "nibssBankName": "Access Bank Nigeria PLC"
+    },
+    {
+      "id": "inv-1789170775779",
+      "invoiceNumber": "INV-2026-47787",
+      "studentId": "stu-1789170775779",
+      "studentName": "History News",
+      "studentEmail": "Historynews@gmail.com",
+      "programName": "Data Analyisis & AI Automation",
+      "issueDate": "2026-09-11",
+      "dueDate": "2026-10-11",
+      "totalAmount": 850000,
+      "paidAmount": 850000,
+      "status": "Paid",
+      "items": [
+        {
+          "id": "item-1",
+          "description": "Data Analyisis & AI Automation Tuition",
+          "amount": 850000
+        }
+      ],
+      "paymentReference": "NIBSS-TRX-5081521",
+      "nibssBankName": "Access Bank Nigeria PLC"
+    },
     {
       "id": "inv-demo-001",
       "invoiceNumber": "INV-2026-84920",
@@ -120,66 +2500,61 @@
   ],
   "sessions": [
     {
-      "mentorId": "m-1",
-      "mentorName": "Dr. Arthur Pendelton",
-      "studentId": "s-1",
-      "studentName": "Chidi Okeke",
-      "date": "2026-09-15",
-      "time": "14:00",
-      "durationHours": 2,
-      "topic": "Full-Stack Architecture & Microservices",
+      "mentorId": "men-1789126765011",
+      "mentorName": "Obasesam Usang ",
+      "studentId": "stu-1789132789487",
+      "studentName": "EMEDIONG ESSIEN AKPAN",
+      "date": "2026-09-22",
+      "time": "16:30 - 18:30 (WAT)",
+      "durationHours": 3,
+      "topic": "Core Communication Protocols, Analytical Tools, and Live Packet Interception Practicals",
+      "notes": "Resumed the Network Security Fundamentals module covering Category 2 and Category 3 glossary terms. Explained the security implications of unencrypted protocols (HTTP/Telnet) versus encrypted protocols (HTTPS/SSH) using practical analogies. Guided the students through two live Kali Linux practicals. Students successfully launched Wireshark with root privileges, captured baseline traffic on the eth0 interface, and used display filters to isolate HTTP POST requests and extract cleartext credentials.\n\nAction Items:\n1. Students must complete the Take-Home Assignment (answering questions 1 through 7).\n2. Save the assignment as a PDF and upload it to the course portal before the next scheduled class.\n3. Retain the recorded PCAP files from today's exercises for future forensic review.",
       "status": "Completed",
-      "compensationAmount": 50000,
-      "attendanceMarkedAt": "2026-09-11T07:01:46.105Z",
-      "attendanceMarkedBy": "Dr. Arthur Pendelton",
-      "hoursCredited": 2,
-      "id": "sess-1789042947921",
-      "sessionCode": "SES-8767",
-      "studentAttendance": "Attended"
-    }
-  ],
-  "studentPerformanceReports": [
-    {
-      "studentId": "stu-001",
-      "studentName": "Chidinma Eze",
-      "studentCode": "STU-CDL-2026-001",
-      "program": "Full-Stack Software Engineering",
-      "mentorId": "ment-001",
-      "mentorName": "Dr. Arthur Pendelton",
-      "mentorEmail": "arthur.pendelton@codelab.institute",
-      "performanceScore": 94,
-      "attendanceConsistency": "Exemplary (95-100%)",
-      "technicalMastery": "Top 5% of cohort in data modeling and Dockerized microservices.",
-      "welfareObservations": "Highly engaged, punctual, stable power and internet connectivity verified.",
-      "recommendations": "Recommend for accelerated FinTech internship track and enterprise placement.",
-      "sendEmailNotification": false,
-      "id": "rep-1789110049945",
-      "reportCode": "REP-CDL-2026-5509",
-      "submittedAt": "2026-09-11T07:00:49.945Z",
-      "managementFollowUpStatus": "Action Taken",
-      "reviewedBy": "Management",
-      "reviewedAt": "2026-09-11T07:00:49.956Z"
+      "compensationAmount": 0,
+      "id": "sess-1790102523007",
+      "sessionCode": "SES-7812",
+      "studentAttendance": "Attended",
+      "attendanceMarkedAt": "2026-09-22T18:42:19.885Z",
+      "attendanceMarkedBy": "Obasesam Usang ",
+      "hoursCredited": 3
     },
     {
-      "id": "rep-001",
-      "reportCode": "REP-CDL-2026-001",
-      "studentId": "stu-demo-001",
-      "studentName": "Adebayo Adeleke",
-      "studentCode": "STU-8492",
-      "program": "Full-Stack Software Engineering",
-      "mentorId": "men-demo-001",
-      "mentorName": "Dr. Chidi Okeke",
-      "submittedAt": "2026-09-08T10:30:00Z",
-      "performanceScore": 92,
-      "performanceTier": "Exceeding",
-      "attendanceRating": "Consistent",
-      "technicalMasteryNotes": "Adebayo demonstrates exceptional mastery in TypeScript and state architecture. Completed the Accessible Interactive Dashboard lab with stellar test coverage.",
-      "welfareObservations": "High engagement and active collaboration during group sessions. No device or connectivity impediments reported.",
-      "recommendations": "Recommended for peer code review leadership and direct referral to Paystack corporate hiring pipeline.",
-      "managementFollowUpStatus": "Resolved",
-      "managementNotes": "Reviewed and acknowledged by Head of Admissions and Super Admin.",
-      "reviewedBy": "Folake Solanke",
-      "reviewedAt": "2026-09-09T14:00:00Z"
+      "mentorId": "men-1789126765011",
+      "mentorName": "Obasesam Usang ",
+      "studentId": "stu-1789132789487",
+      "studentName": "EMEDIONG ESSIEN AKPAN",
+      "date": "2026-09-18",
+      "time": "13:30 - 16:00 (WAT)",
+      "durationHours": 3,
+      "topic": "Network Architecture, Addressing (MAC vs. IP), Transport Mechanics (TCP/UDP), and Protocol Security",
+      "notes": "Student demonstrated strong comprehension during today's deep dive into network security fundamentals and protocol mechanics. We analyzed data packetization and evaluated physical vs. logical addressing—distinguishing MAC addresses as permanent hardware fingerprints and IP addresses as temporary network locations.\n\nWe broke down core communication concepts using practical scenarios:\n1. DNS operations on Port 53 mapping domain names to IP addresses.\n2. Connection-oriented TCP (guaranteed delivery) vs. connectionless UDP (high-speed transmission).\n3. The security risks of unencrypted transit over HTTP (Port 80 cleartext) versus encrypted transit over HTTPS (Port 443 SSL/TLS).\n4. Baseline traffic monitoring fundamentals to prepare for packet analysis.\n\nAction Items:\n1. Review all Category 1 terms in the Network Protocols Glossary (IP, MAC, DNS, TCP, UDP).\n2. Complete Part 1 (Port & Protocol Mapping) and Part 2 (Scenario Analysis) of the Take-Home Assignment.\n3. Verify local Wireshark installation and promiscuous mode settings ahead of our cleartext credential extraction practical.",
+      "status": "Completed",
+      "compensationAmount": 0,
+      "id": "sess-1789743960941",
+      "sessionCode": "SES-3194",
+      "studentAttendance": "Attended",
+      "attendanceMarkedAt": "2026-09-18T15:06:20.461Z",
+      "attendanceMarkedBy": "Obasesam Usang ",
+      "hoursCredited": 3
+    },
+    {
+      "mentorId": "men-1789126765011",
+      "mentorName": "Obasesam Usang ",
+      "studentId": "stu-1789132789487",
+      "studentName": "EMEDIONG ESSIEN AKPAN",
+      "date": "2026-09-17",
+      "time": "18:00 - 20:00 (WAT)",
+      "durationHours": 2,
+      "topic": "Network Architecture, Protocol Analysis, and Baseline Traffic Capture",
+      "notes": "Covered physical vs. logical addressing (MAC vs IP), transport protocols (TCP vs UDP), and essential Linux network commands. Guided the student through booting Kali Linux in VMware, launching Wireshark with administrative privileges, and capturing live baseline network traffic on the eth0 interface.",
+      "status": "Completed",
+      "compensationAmount": 0,
+      "id": "sess-1789734290658",
+      "sessionCode": "SES-8200",
+      "studentAttendance": "Attended",
+      "attendanceMarkedAt": "2026-09-18T15:01:41.358Z",
+      "attendanceMarkedBy": "Obasesam Usang ",
+      "hoursCredited": 2
     }
   ],
   "settings": {
@@ -197,19 +2572,19 @@
     "cacNumber": "RC-1849201",
     "defaultCurrency": "NGN (₦)",
     "defaultNIBSSBank": {
-      "bankName": "Access Bank Nigeria PLC",
-      "accountNumber": "0812948192",
-      "accountName": "NEXUS TECH OPERATIONS LTD"
+      "bankName": "OPay (PayCom)",
+      "accountNumber": "8074738876",
+      "accountName": "Abimbola ekundayo Leslie"
     },
     "emailAlertsEnabled": true,
     "autoInvoiceGeneration": true,
-    "operatingBudget": 1500000,
+    "operatingBudget": 300000,
     "showBudgetToStaff": true,
     "officeLocation": {
-      "name": "Lagos Headquarters Hub (Yaba, Lagos)",
-      "latitude": 6.5181,
-      "longitude": 3.3768,
-      "radiusMeters": 400
+      "name": "Victoria Island Executive Hub",
+      "latitude": 6.4281,
+      "longitude": 3.4219,
+      "radiusMeters": 300
     },
     "workHoursPolicy": {
       "expectedClockInTime": "09:00",
@@ -246,7 +2621,6 @@
       "attendance": true,
       "expenses": true
     },
-    "defaultMinimumLearningHours": 40,
     "campusLocationsList": [
       {
         "id": "campus-vi",
@@ -281,80 +2655,34 @@
         "radiusMeters": 400,
         "isActive": true
       }
-    ]
+    ],
+    "defaultMinimumLearningHours": 40,
+    "logoUrl": ""
   },
   "activityLogs": [
     {
-      "id": "act-1790435549773-disb",
-      "timestamp": "2026-09-26T15:12:29.773Z",
-      "title": "Mentor Disbursement of ₦125,000 Disbursed from Wallet",
-      "description": "Disbursed to Dr. Chidi Okeke (Guaranty Trust Bank (GTBank) - 0123456789) via Paystack NIBSS. Wallet Balance: ₦475,000. Ref: TRF-MEN-1790435548484-5326",
-      "type": "mentor",
-      "user": "Finance Controller"
-    },
-    {
-      "id": "act-1790435542401-expdisb",
-      "timestamp": "2026-09-26T15:12:22.401Z",
-      "title": "OpEx Requisition ₦450,000 Disbursed",
-      "description": "Disbursed for Lab 2 Workstation Upgrades to Direct Computers Lagos (Guaranty Trust Bank (GTBank) - 0123456789) from Expense Wallet. Ref: TRF-EXP-1790435541310-9166",
-      "type": "finance",
-      "user": "Finance Controller"
-    },
-    {
-      "id": "act-1790435525411-top",
-      "timestamp": "2026-09-26T15:12:05.411Z",
-      "title": "Operational Wallet Funded: ₦200,000",
-      "description": "Instant online top-up processed via Paystack. Available Wallet Balance: ₦1,050,000. Ref: CDL-WAL-TEST-001",
-      "type": "finance",
-      "user": "Super Admin"
-    },
-    {
-      "id": "act-1789110106105-att",
-      "timestamp": "2026-09-11T07:01:46.105Z",
+      "id": "act-1790102539885-att",
+      "timestamp": "2026-09-22T18:42:19.885Z",
       "title": "Session Attendance: Attended",
-      "description": "Dr. Arthur Pendelton marked Chidi Okeke as Attended (2 hrs) for \"Full-Stack Architecture & Microservices\".",
+      "description": "Obasesam Usang  marked EMEDIONG ESSIEN AKPAN as Attended (3 hrs) for \"Core Communication Protocols, Analytical Tools, and Live Packet Interception Practicals\".",
       "type": "mentor",
-      "user": "Dr. Arthur Pendelton"
+      "user": "Obasesam Usang "
     },
     {
-      "id": "act-1789110067687-cert",
-      "timestamp": "2026-09-11T07:01:07.687Z",
-      "title": "Certificate of Completion Issued",
-      "description": "Official Certificate #CERT-CDL-2026-8492 issued to Adebayo Adeleke for Full-Stack Software Engineering.",
-      "type": "student",
-      "user": "Academic Board"
-    },
-    {
-      "id": "act-1789110067684-att",
-      "timestamp": "2026-09-11T07:01:07.684Z",
-      "title": "Session Attendance: undefined",
-      "description": "Dr. Arthur Pendelton marked Chidi Okeke as undefined (2 hrs) for \"Full-Stack Architecture & Microservices\".",
+      "id": "act-1789743980461-att",
+      "timestamp": "2026-09-18T15:06:20.461Z",
+      "title": "Session Attendance: Attended",
+      "description": "Obasesam Usang  marked EMEDIONG ESSIEN AKPAN as Attended (3 hrs) for \"Network Architecture, Addressing (MAC vs. IP), Transport Mechanics (TCP/UDP), and Protocol Security\".",
       "type": "mentor",
-      "user": "Dr. Arthur Pendelton"
+      "user": "Obasesam Usang "
     },
     {
-      "id": "act-1789110049956-rev",
-      "timestamp": "2026-09-11T07:00:49.956Z",
-      "title": "Report Follow-Up: Action Taken",
-      "description": "Report #REP-CDL-2026-5509 updated to \"Action Taken\" by Management.",
-      "type": "system",
-      "user": "Management"
-    },
-    {
-      "id": "act-1789110049945-rep",
-      "timestamp": "2026-09-11T07:00:49.945Z",
-      "title": "Mentor Report: Chidinma Eze",
-      "description": "Dr. Arthur Pendelton submitted performance evaluation for Chidinma Eze (Score: 94% - undefined).",
+      "id": "act-1789743701358-att",
+      "timestamp": "2026-09-18T15:01:41.358Z",
+      "title": "Session Attendance: Attended",
+      "description": "Obasesam Usang  marked EMEDIONG ESSIEN AKPAN as Attended (2 hrs) for \"Network Architecture, Protocol Analysis, and Baseline Traffic Capture\".",
       "type": "mentor",
-      "user": "Dr. Arthur Pendelton"
-    },
-    {
-      "id": "act-1789042947924-sub",
-      "timestamp": "2026-09-10T12:22:27.924Z",
-      "title": "Assignment Submitted",
-      "description": "Chidi Okeke submitted E-Commerce State Pipeline with Redux Toolkit",
-      "type": "student",
-      "user": "Chidi Okeke"
+      "user": "Obasesam Usang "
     },
     {
       "id": "act-init",
@@ -367,13 +2695,94 @@
   ],
   "notifications": [
     {
-      "id": "notif-tkt-1789198810350",
-      "title": "🎫 New Support Ticket: TKT-1003",
-      "message": "Super Admin (Managing Director) submitted ticket: \"App Improvement: Dark Mode Accessibility\"",
+      "id": "notif-tkt-1789655834066",
+      "title": "🎫 New Support Ticket: TKT-1009",
+      "message": "Zainab Bello (Head of Admissions & Enrollments) submitted ticket: \"Invoice shows wrong student's data on every record\"",
       "type": "system",
       "timestamp": "Just now",
       "read": false,
       "link": "/tickets"
+    },
+    {
+      "id": "notif-tkt-1789388058727",
+      "title": "🎫 New Support Ticket: TKT-1008",
+      "message": "Zainab Bello (Head of Admissions & Enrollments) submitted ticket: \"Students information\"",
+      "type": "system",
+      "timestamp": "Just now",
+      "read": true,
+      "link": "/tickets"
+    },
+    {
+      "id": "notif-tkt-1789385067989",
+      "title": "🎫 New Support Ticket: TKT-1007",
+      "message": "Zainab Bello (Head of Admissions & Enrollments) submitted ticket: \"Mentors Access\"",
+      "type": "system",
+      "timestamp": "Just now",
+      "read": false,
+      "link": "/tickets"
+    },
+    {
+      "id": "notif-tkt-1789384962329",
+      "title": "🎫 New Support Ticket: TKT-1006",
+      "message": "Zainab Bello (Head of Admissions & Enrollments) submitted ticket: \"Clock in\"",
+      "type": "system",
+      "timestamp": "Just now",
+      "read": false,
+      "link": "/tickets"
+    },
+    {
+      "id": "notif-tkt-1789374440841",
+      "title": "🎫 New Support Ticket: TKT-1005",
+      "message": "Zainab Bello (Head of Admissions & Enrollments) submitted ticket: \"ADD Course\"",
+      "type": "system",
+      "timestamp": "Just now",
+      "read": false,
+      "link": "/tickets"
+    },
+    {
+      "id": "notif-tkt-1789199826648",
+      "title": "🎫 New Support Ticket: TKT-1004",
+      "message": "Super Admin Operational Testing (Managing Director) submitted ticket: \"Prod Verification: Ticket Role Isolation & Pagination\"",
+      "type": "system",
+      "timestamp": "Just now",
+      "read": false,
+      "link": "/tickets"
+    },
+    {
+      "id": "notif-tkt-1789198952057",
+      "title": "🎫 New Support Ticket: TKT-1003",
+      "message": "Super Admin Verification (Managing Director) submitted ticket: \"Deployment Verification Test Ticket\"",
+      "type": "system",
+      "timestamp": "Just now",
+      "read": false,
+      "link": "/tickets"
+    },
+    {
+      "id": "notif-1789170782349",
+      "title": "Lead Converted to Active Student",
+      "message": "Uncle P enrolled in Data Analysis. Invoice #INV-2026-63593 (₦850,000) generated.",
+      "type": "admissions",
+      "timestamp": "Just now",
+      "read": false,
+      "link": "/students"
+    },
+    {
+      "id": "notif-1789170781819",
+      "title": "Lead Converted to Active Student",
+      "message": "Bhiggest Miike enrolled in UI/UX Design . Invoice #INV-2026-26628 (₦850,000) generated.",
+      "type": "admissions",
+      "timestamp": "Just now",
+      "read": false,
+      "link": "/students"
+    },
+    {
+      "id": "notif-1789170775780",
+      "title": "Lead Converted to Active Student",
+      "message": "History News enrolled in Data Analyisis & AI Automation. Invoice #INV-2026-47787 (₦850,000) generated.",
+      "type": "admissions",
+      "timestamp": "Just now",
+      "read": false,
+      "link": "/students"
     },
     {
       "id": "notif-init",
@@ -381,11 +2790,20 @@
       "message": "Demo data flushed. Initialized with 4 functional role templates. You can now provision staff and enroll students.",
       "type": "system",
       "timestamp": "Just now",
-      "read": false,
+      "read": true,
       "link": "/settings"
     }
   ],
   "staffUsers": [
+    {
+      "name": "Ndifreke Precious Henry",
+      "email": "ndifrekehenry001@gmail.com",
+      "role": "finance",
+      "roleTitle": "Chief Financial Officer / Controller",
+      "department": "Admin/Program Officer",
+      "password": "Password123",
+      "id": "user-1789117130703"
+    },
     {
       "id": "user-admin",
       "name": "Abiola Adefowope",
@@ -431,6 +2849,540 @@
       "roleTitle": "Bursar & Financial Controller",
       "department": "Bursary & Accounts",
       "password": "password123"
+    }
+  ],
+  "attendance": [
+    {
+      "id": "att-1790433016485",
+      "userId": "user-1789117130703",
+      "userName": "Ndifreke Precious Henry",
+      "userEmail": "ndifrekehenry001@gmail.com",
+      "userRole": "finance",
+      "roleTitle": "Chief Financial Officer / Controller",
+      "department": "Admin/Program Officer",
+      "staffId": "user-1789117130703",
+      "staffName": "Ndifreke Precious Henry",
+      "staffEmail": "ndifrekehenry001@gmail.com",
+      "date": "2026-09-26",
+      "clockInTime": "03:30 PM",
+      "clockInTimestamp": 1790433017152,
+      "workMode": "Remote",
+      "locationName": "Remote Workstation (Home / Flex)",
+      "geoStatus": "Remote Verified",
+      "punctuality": "Late",
+      "punctualityStatus": "Late",
+      "shiftFocus": "Tuition Invoicing & Bank Reconciliation",
+      "dailyTasksFocus": "Tuition Invoicing & Bank Reconciliation",
+      "status": "Clocked In"
+    },
+    {
+      "id": "att-1790330500294",
+      "userId": "user-admissions-demo",
+      "userName": "Zainab Bello",
+      "userEmail": "admissions@codelab.institute",
+      "userRole": "admissions",
+      "roleTitle": "Head of Admissions & Enrollments",
+      "department": "Admissions Office",
+      "staffId": "user-admissions-demo",
+      "staffName": "Zainab Bello",
+      "staffEmail": "admissions@codelab.institute",
+      "date": "2026-09-25",
+      "clockInTime": "11:01 am",
+      "clockInTimestamp": 1790330499952,
+      "workMode": "On-Site / Hub",
+      "locationName": "Abuja Federal Executive Campus",
+      "geoStatus": "GPS Unavailable",
+      "punctuality": "Late",
+      "punctualityStatus": "Late",
+      "shiftFocus": "Student Admissions & Lead Follow-ups; Curriculum Review & Code Mentoring; Student Helpdesk & Technical Support; Tuition Invoicing & Bank Reconciliation; Academic Faculty Management",
+      "dailyTasksFocus": "Student Admissions & Lead Follow-ups; Curriculum Review & Code Mentoring; Student Helpdesk & Technical Support; Tuition Invoicing & Bank Reconciliation; Academic Faculty Management",
+      "status": "Clocked In"
+    },
+    {
+      "id": "att-1790323589909",
+      "userId": "user-1789117130703",
+      "userName": "Ndifreke Precious Henry",
+      "userEmail": "ndifrekehenry001@gmail.com",
+      "userRole": "finance",
+      "roleTitle": "Chief Financial Officer / Controller",
+      "department": "Admin/Program Officer",
+      "staffId": "user-1789117130703",
+      "staffName": "Ndifreke Precious Henry",
+      "staffEmail": "ndifrekehenry001@gmail.com",
+      "date": "2026-09-25",
+      "clockInTime": "09:06 AM",
+      "clockInTimestamp": 1790323587903,
+      "workMode": "On-Site / Hub",
+      "locationName": "Abuja Federal Executive Campus",
+      "geoStatus": "GPS Unavailable",
+      "punctuality": "On-Time",
+      "punctualityStatus": "On-Time",
+      "shiftFocus": "Academic Faculty Management",
+      "dailyTasksFocus": "Academic Faculty Management",
+      "status": "Clocked Out",
+      "clockOutTime": "05:26 PM",
+      "clockOutTimestamp": 1790353572878,
+      "totalHoursWorked": 8.33,
+      "workSummary": "Organized departmental curriculum materials and cohort schedules"
+    },
+    {
+      "id": "att-1790243811856",
+      "userId": "user-admissions-demo",
+      "userName": "Zainab Bello",
+      "userEmail": "admissions@codelab.institute",
+      "userRole": "admissions",
+      "roleTitle": "Head of Admissions & Enrollments",
+      "department": "Admissions Office",
+      "staffId": "user-admissions-demo",
+      "staffName": "Zainab Bello",
+      "staffEmail": "admissions@codelab.institute",
+      "date": "2026-09-24",
+      "clockInTime": "10:56 am",
+      "clockInTimestamp": 1790243811548,
+      "workMode": "On-Site / Hub",
+      "locationName": "Abuja Federal Executive Campus",
+      "geoStatus": "GPS Unavailable",
+      "punctuality": "Late",
+      "punctualityStatus": "Late",
+      "shiftFocus": "Student Admissions & Lead Follow-ups; Student Helpdesk & Technical Support; Academic Faculty Management; Tuition Invoicing & Bank Reconciliation",
+      "dailyTasksFocus": "Student Admissions & Lead Follow-ups; Student Helpdesk & Technical Support; Academic Faculty Management; Tuition Invoicing & Bank Reconciliation",
+      "status": "Clocked Out",
+      "clockOutTime": "11:01 am",
+      "clockOutTimestamp": 1790330472033,
+      "totalHoursWorked": 24.07,
+      "workSummary": "Reconciled student tuition fee receipts with bank records"
+    },
+    {
+      "id": "att-1790150881658",
+      "userId": "user-1789117130703",
+      "userName": "Ndifreke Precious Henry",
+      "userEmail": "ndifrekehenry001@gmail.com",
+      "userRole": "finance",
+      "roleTitle": "Chief Financial Officer / Controller",
+      "department": "Admin/Program Officer",
+      "staffId": "user-1789117130703",
+      "staffName": "Ndifreke Precious Henry",
+      "staffEmail": "ndifrekehenry001@gmail.com",
+      "date": "2026-09-23",
+      "clockInTime": "09:08 AM",
+      "clockInTimestamp": 1790150881109,
+      "workMode": "On-Site / Hub",
+      "locationName": "Abuja Federal Executive Campus",
+      "geoStatus": "GPS Unavailable",
+      "punctuality": "On-Time",
+      "punctualityStatus": "On-Time",
+      "shiftFocus": "Academic Faculty Management",
+      "dailyTasksFocus": "Academic Faculty Management",
+      "status": "Clocked Out",
+      "clockOutTime": "05:23 PM",
+      "clockOutTimestamp": 1790353404455,
+      "totalHoursWorked": 56.26,
+      "workSummary": "Organized departmental curriculum materials and cohort schedules"
+    },
+    {
+      "id": "att-1789984056579",
+      "userId": "user-1789117130703",
+      "userName": "Ndifreke Precious Henry",
+      "userEmail": "ndifrekehenry001@gmail.com",
+      "userRole": "finance",
+      "roleTitle": "Chief Financial Officer / Controller",
+      "department": "Admin/Program Officer",
+      "staffId": "user-1789117130703",
+      "staffName": "Ndifreke Precious Henry",
+      "staffEmail": "ndifrekehenry001@gmail.com",
+      "date": "2026-09-21",
+      "clockInTime": "10:47 AM",
+      "clockInTimestamp": 1789984056022,
+      "workMode": "On-Site / Hub",
+      "locationName": "Abuja Federal Executive Campus",
+      "geoStatus": "GPS Unavailable",
+      "punctuality": "Late",
+      "punctualityStatus": "Late",
+      "shiftFocus": "Academic Faculty Management",
+      "dailyTasksFocus": "Academic Faculty Management",
+      "status": "Clocked Out",
+      "clockOutTime": "05:46 AM",
+      "clockOutTimestamp": 1790052412409,
+      "totalHoursWorked": 18.99,
+      "workSummary": "Organized departmental curriculum materials and cohort schedules"
+    },
+    {
+      "id": "att-1789977790605",
+      "userId": "user-admissions-demo",
+      "userName": "Zainab Bello",
+      "userEmail": "admissions@codelab.institute",
+      "userRole": "admissions",
+      "roleTitle": "Head of Admissions & Enrollments",
+      "department": "Admissions Office",
+      "staffId": "user-admissions-demo",
+      "staffName": "Zainab Bello",
+      "staffEmail": "admissions@codelab.institute",
+      "date": "2026-09-21",
+      "clockInTime": "09:03 am",
+      "clockInTimestamp": 1789977790608,
+      "workMode": "On-Site / Hub",
+      "locationName": "Abuja Federal Executive Campus",
+      "geoStatus": "GPS Unavailable",
+      "punctuality": "On-Time",
+      "punctualityStatus": "On-Time",
+      "shiftFocus": "Student Admissions & Lead Follow-ups; Student Helpdesk & Technical Support",
+      "dailyTasksFocus": "Student Admissions & Lead Follow-ups; Student Helpdesk & Technical Support",
+      "status": "Clocked Out",
+      "clockOutTime": "10:43 am",
+      "clockOutTimestamp": 1790243038814,
+      "totalHoursWorked": 73.68,
+      "workSummary": "Resolved open student support tickets and course queries"
+    },
+    {
+      "id": "att-1789721811600",
+      "userId": "user-1789117130703",
+      "userName": "Ndifreke Precious Henry",
+      "userEmail": "ndifrekehenry001@gmail.com",
+      "userRole": "finance",
+      "roleTitle": "Chief Financial Officer / Controller",
+      "department": "Admin/Program Officer",
+      "staffId": "user-1789117130703",
+      "staffName": "Ndifreke Precious Henry",
+      "staffEmail": "ndifrekehenry001@gmail.com",
+      "date": "2026-09-18",
+      "clockInTime": "09:56 AM",
+      "clockInTimestamp": 1789721811113,
+      "workMode": "On-Site / Hub",
+      "locationName": "Abuja Federal Executive Campus",
+      "geoStatus": "GPS Unavailable",
+      "punctuality": "Late",
+      "punctualityStatus": "Late",
+      "shiftFocus": "Academic Faculty Management",
+      "dailyTasksFocus": "Academic Faculty Management",
+      "status": "Clocked Out",
+      "clockOutTime": "05:56 PM",
+      "clockOutTimestamp": 1789750573066,
+      "totalHoursWorked": 7.99,
+      "workSummary": "Organized departmental curriculum materials and cohort schedules"
+    },
+    {
+      "id": "att-1789636425394",
+      "userId": "user-admin",
+      "userName": "Abiola Adefowope",
+      "userEmail": "abiola.adefowope@codelab.institute",
+      "userRole": "super_admin",
+      "roleTitle": "Managing Director & Super Admin",
+      "department": "Executive Board",
+      "staffId": "user-admin",
+      "staffName": "Abiola Adefowope",
+      "staffEmail": "abiola.adefowope@codelab.institute",
+      "date": "2026-09-17",
+      "clockInTime": "10:13 AM",
+      "clockInTimestamp": 1789636423883,
+      "workMode": "Remote",
+      "locationName": "Remote Workstation (Home / Flex)",
+      "geoStatus": "Remote Verified",
+      "punctuality": "Late",
+      "punctualityStatus": "Late",
+      "shiftFocus": "Curriculum Review & Code Mentoring",
+      "dailyTasksFocus": "Curriculum Review & Code Mentoring",
+      "status": "Clocked Out",
+      "clockOutTime": "09:13 AM",
+      "clockOutTimestamp": 1789805629184,
+      "totalHoursWorked": 47,
+      "workSummary": "Organized departmental curriculum materials and cohort schedules"
+    },
+    {
+      "id": "att-1789636026965",
+      "userId": "user-admissions-demo",
+      "userName": "Zainab Bello",
+      "userEmail": "admissions@codelab.institute",
+      "userRole": "admissions",
+      "roleTitle": "Head of Admissions & Enrollments",
+      "department": "Admissions Office",
+      "staffId": "user-admissions-demo",
+      "staffName": "Zainab Bello",
+      "staffEmail": "admissions@codelab.institute",
+      "date": "2026-09-17",
+      "clockInTime": "10:07 am",
+      "clockInTimestamp": 1789636026977,
+      "workMode": "On-Site / Hub",
+      "locationName": "Abuja Federal Executive Campus",
+      "geoStatus": "GPS Unavailable",
+      "punctuality": "Late",
+      "punctualityStatus": "Late",
+      "shiftFocus": "Student Admissions & Lead Follow-ups; Academic Faculty Management; Student Helpdesk & Technical Support",
+      "dailyTasksFocus": "Student Admissions & Lead Follow-ups; Academic Faculty Management; Student Helpdesk & Technical Support",
+      "status": "Clocked Out",
+      "clockOutTime": "09:02 am",
+      "clockOutTimestamp": 1789977771304,
+      "totalHoursWorked": 94.93,
+      "workSummary": "Resolved open student support tickets and course queries"
+    },
+    {
+      "id": "att-1789548443402",
+      "userId": "user-1789117130703",
+      "userName": "Ndifreke Precious Henry",
+      "userEmail": "ndifrekehenry001@gmail.com",
+      "userRole": "finance",
+      "roleTitle": "Chief Financial Officer / Controller",
+      "department": "Admin/Program Officer",
+      "staffId": "user-1789117130703",
+      "staffName": "Ndifreke Precious Henry",
+      "staffEmail": "ndifrekehenry001@gmail.com",
+      "date": "2026-09-16",
+      "clockInTime": "09:47 AM",
+      "clockInTimestamp": 1789548440495,
+      "workMode": "On-Site / Hub",
+      "locationName": "Abuja federal executive campus ",
+      "geoStatus": "GPS Unavailable",
+      "punctuality": "Late",
+      "punctualityStatus": "Late",
+      "shiftFocus": "Tuition Invoicing & Bank Reconciliation",
+      "dailyTasksFocus": "Tuition Invoicing & Bank Reconciliation",
+      "status": "Clocked Out",
+      "clockOutTime": "05:11 PM",
+      "clockOutTimestamp": 1789575094871,
+      "totalHoursWorked": 7.4,
+      "workSummary": "Organized departmental curriculum materials and cohort schedules"
+    },
+    {
+      "id": "att-1789544835645",
+      "userId": "men-1789126940698",
+      "userName": "Opara Light ",
+      "userEmail": "lightopara@gmail.com",
+      "userRole": "mentor",
+      "roleTitle": "Artificial Intelligence & Machine Learning Lead Mentor",
+      "department": "Artificial Intelligence & Machine Learning",
+      "staffId": "men-1789126940698",
+      "staffName": "Opara Light ",
+      "staffEmail": "lightopara@gmail.com",
+      "date": "2026-09-16",
+      "clockInTime": "08:47 AM",
+      "clockInTimestamp": 1789544835901,
+      "workMode": "Remote",
+      "locationName": "Remote Workstation (Home / Flex)",
+      "geoStatus": "Remote Verified",
+      "punctuality": "On-Time",
+      "punctualityStatus": "On-Time",
+      "shiftFocus": "Curriculum Review & Code Mentoring",
+      "dailyTasksFocus": "Curriculum Review & Code Mentoring",
+      "status": "Clocked Out",
+      "clockOutTime": "11:53 AM",
+      "clockOutTimestamp": 1790333584246,
+      "totalHoursWorked": 219.1,
+      "workSummary": "Processed student admissions & answered prospect inquiries"
+    },
+    {
+      "id": "att-1789464924399",
+      "userId": "user-admissions-demo",
+      "userName": "Zainab Bello",
+      "userEmail": "admissions@codelab.institute",
+      "userRole": "admissions",
+      "roleTitle": "Head of Admissions & Enrollments",
+      "department": "Admissions Office",
+      "staffId": "user-admissions-demo",
+      "staffName": "Zainab Bello",
+      "staffEmail": "admissions@codelab.institute",
+      "date": "2026-09-15",
+      "clockInTime": "10:35 am",
+      "clockInTimestamp": 1789464923588,
+      "workMode": "Remote",
+      "locationName": "Remote Workstation (Home / Flex)",
+      "geoStatus": "Remote Verified",
+      "punctuality": "Late",
+      "punctualityStatus": "Late",
+      "shiftFocus": "Student Admissions & Lead Follow-ups; Student Helpdesk & Technical Support; Academic Faculty Management",
+      "dailyTasksFocus": "Student Admissions & Lead Follow-ups; Student Helpdesk & Technical Support; Academic Faculty Management",
+      "status": "Clocked Out",
+      "clockOutTime": "10:06 am",
+      "clockOutTimestamp": 1789636002446,
+      "totalHoursWorked": 47.52,
+      "workSummary": "Organized departmental curriculum materials and cohort schedules"
+    },
+    {
+      "id": "att-1789375133414",
+      "userId": "user-1789117130703",
+      "userName": "Ndifreke Precious Henry",
+      "userEmail": "ndifrekehenry001@gmail.com",
+      "userRole": "finance",
+      "roleTitle": "Chief Financial Officer / Controller",
+      "department": "Admin/Program Officer",
+      "staffId": "user-1789117130703",
+      "staffName": "Ndifreke Precious Henry",
+      "staffEmail": "ndifrekehenry001@gmail.com",
+      "date": "2026-09-14",
+      "clockInTime": "09:38 AM",
+      "clockInTimestamp": 1789375135121,
+      "workMode": "On-Site / Hub",
+      "locationName": "Victoria Island Executive Hub",
+      "geoStatus": "GPS Unavailable",
+      "punctuality": "Late",
+      "punctualityStatus": "Late",
+      "shiftFocus": "Student Helpdesk & Technical Support; Academic Faculty Management",
+      "dailyTasksFocus": "Student Helpdesk & Technical Support; Academic Faculty Management",
+      "status": "Clocked Out",
+      "clockOutTime": "09:45 AM",
+      "clockOutTimestamp": 1789548328876,
+      "totalHoursWorked": 48.11,
+      "workSummary": "Organized departmental curriculum materials and cohort schedules"
+    },
+    {
+      "id": "att-1789374001114",
+      "userId": "user-admissions-demo",
+      "userName": "Zainab Bello",
+      "userEmail": "admissions@codelab.institute",
+      "userRole": "admissions",
+      "roleTitle": "Head of Admissions & Enrollments",
+      "department": "Admissions Office",
+      "staffId": "user-admissions-demo",
+      "staffName": "Zainab Bello",
+      "staffEmail": "admissions@codelab.institute",
+      "date": "2026-09-14",
+      "clockInTime": "09:20 AM",
+      "clockInTimestamp": 1789374012922,
+      "workMode": "On-Site / Hub",
+      "locationName": "Abuja Federal Executive Campus",
+      "geoStatus": "GPS Unavailable",
+      "punctuality": "Late",
+      "punctualityStatus": "Late",
+      "shiftFocus": "Student Admissions & Lead Follow-ups; Curriculum Review & Code Mentoring; Student Helpdesk & Technical Support",
+      "dailyTasksFocus": "Student Admissions & Lead Follow-ups; Curriculum Review & Code Mentoring; Student Helpdesk & Technical Support",
+      "status": "Clocked Out",
+      "clockOutTime": "10:15 am",
+      "clockOutTimestamp": 1789463734625,
+      "totalHoursWorked": 24.92,
+      "workSummary": "Organized departmental curriculum materials and cohort schedules"
+    },
+    {
+      "id": "att-1789125409266",
+      "userId": "user-admin",
+      "userName": "Abiola Adefowope",
+      "userEmail": "abiola.adefowope@codelab.institute",
+      "userRole": "super_admin",
+      "roleTitle": "Managing Director & Super Admin",
+      "department": "Executive Board",
+      "staffId": "user-admin",
+      "staffName": "Abiola Adefowope",
+      "staffEmail": "abiola.adefowope@codelab.institute",
+      "date": "2026-09-11",
+      "clockInTime": "12:17 PM",
+      "clockInTimestamp": 1789125420309,
+      "workMode": "On-Site / Hub",
+      "locationName": "Victoria Island Executive Hub",
+      "geoStatus": "GPS Unavailable",
+      "punctuality": "Late",
+      "punctualityStatus": "Late",
+      "shiftFocus": "Curriculum Review & Code Mentoring; Student Helpdesk & Technical Support; Student Admissions & Lead Follow-ups",
+      "dailyTasksFocus": "Curriculum Review & Code Mentoring; Student Helpdesk & Technical Support; Student Admissions & Lead Follow-ups",
+      "status": "Clocked Out",
+      "clockOutTime": "08:35 am",
+      "clockOutTimestamp": 1789198530239,
+      "totalHoursWorked": 20.31,
+      "workSummary": "Resolved open student support tickets and course queries"
+    },
+    {
+      "id": "att-1789123307006",
+      "userId": "user-admissions",
+      "userName": "Folake Solanke",
+      "userEmail": "admissions@codelab.institute",
+      "userRole": "admissions",
+      "roleTitle": "Head of Admissions",
+      "department": "Operations",
+      "staffId": "user-admissions",
+      "staffName": "Folake Solanke",
+      "staffEmail": "admissions@codelab.institute",
+      "date": "2026-09-11",
+      "clockInTime": "11:41 AM",
+      "clockInTimestamp": 1789123318202,
+      "workMode": "Remote",
+      "locationName": "Remote Workstation (Home / Flex)",
+      "geoStatus": "Remote Verified",
+      "punctuality": "Late",
+      "punctualityStatus": "Late",
+      "shiftFocus": "Curriculum Review & Code Mentoring; Student Helpdesk & Technical Support; Student Admissions & Lead Follow-ups; Tuition Invoicing & Bank Reconciliation",
+      "dailyTasksFocus": "Curriculum Review & Code Mentoring; Student Helpdesk & Technical Support; Student Admissions & Lead Follow-ups; Tuition Invoicing & Bank Reconciliation",
+      "status": "Clocked Out",
+      "clockOutTime": "02:12 pm",
+      "clockOutTimestamp": 1789132349798,
+      "totalHoursWorked": 2.51,
+      "workSummary": "Hi, clocking out now — heading into class. Logged 5 bugs/suggestions from CRM/ERP testing today (Leads Pipeline lead source dropdown, notes/stage not persisting, invoice page blank, tuition amount display). Will continue after class. Thanks!"
+    },
+    {
+      "id": "att-1789121113008",
+      "userId": "user-1789117130703",
+      "userName": "Ndifreke Precious Henry",
+      "userEmail": "ndifrekehenry001@gmail.com",
+      "userRole": "finance",
+      "roleTitle": "Chief Financial Officer / Controller",
+      "department": "Admin/Program Officer",
+      "staffId": "user-1789117130703",
+      "staffName": "Ndifreke Precious Henry",
+      "staffEmail": "ndifrekehenry001@gmail.com",
+      "date": "2026-09-11",
+      "clockInTime": "11:05 AM",
+      "clockInTimestamp": 1789121113199,
+      "workMode": "On-Site / Hub",
+      "locationName": "Lagos Headquarters Hub (Yaba, Lagos)",
+      "geoStatus": "GPS Unavailable",
+      "punctuality": "Late",
+      "punctualityStatus": "Late",
+      "shiftFocus": "Academic Faculty Management; Tuition Invoicing & Bank Reconciliation; Curriculum Review & Code Mentoring; Student Admissions & Lead Follow-ups",
+      "dailyTasksFocus": "Academic Faculty Management; Tuition Invoicing & Bank Reconciliation; Curriculum Review & Code Mentoring; Student Admissions & Lead Follow-ups",
+      "status": "Clocked Out",
+      "clockOutTime": "05:07 PM",
+      "clockOutTimestamp": 1789142837170,
+      "totalHoursWorked": 6.03,
+      "workSummary": "Organized departmental curriculum materials and cohort schedules; Reconciled student tuition fee receipts with bank records; Processed student admissions & answered prospect inquiries"
+    },
+    {
+      "id": "att-1789120869648",
+      "userId": "user-admissions-demo",
+      "userName": "Zainab Bello",
+      "userEmail": "admissions@codelab.institute",
+      "userRole": "admissions",
+      "roleTitle": "Head of Admissions & Enrollments",
+      "department": "Admissions Office",
+      "staffId": "user-admissions-demo",
+      "staffName": "Zainab Bello",
+      "staffEmail": "admissions@codelab.institute",
+      "date": "2026-09-11",
+      "clockInTime": "11:01 am",
+      "clockInTimestamp": 1789120869514,
+      "workMode": "On-Site / Hub",
+      "locationName": "Lagos Headquarters Hub (Yaba, Lagos)",
+      "geoStatus": "GPS Unavailable",
+      "punctuality": "Late",
+      "punctualityStatus": "Late",
+      "shiftFocus": "Student Helpdesk & Technical Support",
+      "dailyTasksFocus": "Student Helpdesk & Technical Support",
+      "status": "Clocked Out",
+      "clockOutTime": "11:41 AM",
+      "clockOutTimestamp": 1789123297527,
+      "totalHoursWorked": 0.67,
+      "workSummary": "Conducted student code reviews and 1-on-1 mentorship; Reconciled student tuition fee receipts with bank records; Organized departmental curriculum materials and cohort schedules; Resolved open student support tickets and course queries"
+    },
+    {
+      "id": "att-1789043623211",
+      "userId": "user-admissions",
+      "userName": "Folake Solanke",
+      "userEmail": "humuhanilawal7@gmail.com",
+      "userRole": "admissions",
+      "roleTitle": "Head of Admissions",
+      "department": "Operations",
+      "staffId": "user-admissions",
+      "staffName": "Folake Solanke",
+      "staffEmail": "humuhanilawal7@gmail.com",
+      "date": "2026-09-10",
+      "clockInTime": "01:33 PM",
+      "clockInTimestamp": 1789043635020,
+      "workMode": "On-Site / Hub",
+      "locationName": "Lagos Headquarters Hub (Yaba, Lagos)",
+      "geoStatus": "GPS Unavailable",
+      "punctuality": "Late",
+      "punctualityStatus": "Late",
+      "shiftFocus": "Tuition Invoicing & Bank Reconciliation; Student Admissions & Lead Follow-ups; Academic Faculty Management",
+      "dailyTasksFocus": "Tuition Invoicing & Bank Reconciliation; Student Admissions & Lead Follow-ups; Academic Faculty Management",
+      "status": "Clocked Out",
+      "clockOutTime": "10:56 PM",
+      "clockOutTimestamp": 1789077365982,
+      "totalHoursWorked": 9.37,
+      "workSummary": "Processed student admissions & answered prospect inquiries; Conducted student code reviews and 1-on-1 mentorship; Reconciled student tuition fee receipts with bank records; Resolved open student support tickets and course queries; Organized departmental curriculum materials and cohort schedules"
     }
   ],
   "lmsModules": [
@@ -569,23 +3521,6 @@
   ],
   "assignments": [
     {
-      "id": "sub-1789042947924",
-      "studentId": "s-1",
-      "studentName": "Chidi Okeke",
-      "courseTitle": "Full-Stack Software Engineering",
-      "moduleTitle": "Module 3: React & State Management",
-      "taskTitle": "E-Commerce State Pipeline with Redux Toolkit",
-      "githubUrl": "https://github.com/codelab-student/ecommerce-lab",
-      "liveUrl": "https://ecommerce-lab.vercel.app",
-      "notes": "All unit tests passing, deployed on Vercel.",
-      "submittedAt": "2026-09-10T12:22:27.924Z",
-      "status": "Passed",
-      "grade": 98,
-      "mentorFeedback": "Outstanding work! Very clean TypeScript types and efficient state slice architecture.",
-      "reviewedBy": "Dr. Arthur Pendelton",
-      "reviewedAt": "2026-09-10T12:22:27.926Z"
-    },
-    {
       "id": "sub-001",
       "studentId": "stu-demo-001",
       "studentName": "Adebayo Adeleke",
@@ -603,7 +3538,196 @@
       "reviewedAt": "2026-09-09T10:15:00Z"
     }
   ],
+  "studentPerformanceReports": [
+    {
+      "id": "rep-001",
+      "reportCode": "REP-CDL-2026-001",
+      "studentId": "stu-demo-001",
+      "studentName": "Adebayo Adeleke",
+      "studentCode": "STU-8492",
+      "program": "Full-Stack Software Engineering",
+      "mentorId": "men-demo-001",
+      "mentorName": "Dr. Chidi Okeke",
+      "submittedAt": "2026-09-08T10:30:00Z",
+      "performanceScore": 92,
+      "performanceTier": "Exceeding",
+      "attendanceRating": "Consistent",
+      "technicalMasteryNotes": "Adebayo demonstrates exceptional mastery in TypeScript and state architecture. Completed the Accessible Interactive Dashboard lab with stellar test coverage.",
+      "welfareObservations": "High engagement and active collaboration during group sessions. No device or connectivity impediments reported.",
+      "recommendations": "Recommended for peer code review leadership and direct referral to Paystack corporate hiring pipeline.",
+      "managementFollowUpStatus": "Resolved",
+      "managementNotes": "Reviewed and acknowledged by Head of Admissions and Super Admin.",
+      "reviewedBy": "Folake Solanke",
+      "reviewedAt": "2026-09-09T14:00:00Z"
+    }
+  ],
   "tickets": [
+    {
+      "title": "Invoice shows wrong student's data on every record",
+      "description": "View Official Invoice\" always displays the same invoice (Uncle P, Data Analysis, ₦850,000, OPay account) regardless of which student's record it's opened from. Confirmed on 3 different students same wrong invoice every time. This is a billing/privacy risk if used with real students before fixed.",
+      "category": "bug",
+      "priority": "high",
+      "status": "open",
+      "assignedToRole": "super_admin",
+      "assignedToName": "Super Admin / Operations",
+      "createdBy": {
+        "id": "user-admissions-demo",
+        "name": "Zainab Bello",
+        "email": "admissions@codelab.institute",
+        "role": "admissions",
+        "roleTitle": "Head of Admissions & Enrollments"
+      },
+      "id": "tkt-1789655833655",
+      "ticketNumber": "TKT-1009",
+      "createdAt": "2026-09-17T14:37:14.066Z",
+      "updatedAt": "2026-09-17T14:37:14.066Z",
+      "comments": []
+    },
+    {
+      "title": "Students information",
+      "description": "Students information cannot be edited after submission and that is causing issues as we have noticed some things that needs correcting",
+      "category": "observation",
+      "priority": "high",
+      "status": "open",
+      "assignedToRole": "super_admin",
+      "assignedToName": "Super Admin / Operations",
+      "createdBy": {
+        "id": "user-admissions-demo",
+        "name": "Zainab Bello",
+        "email": "admissions@codelab.institute",
+        "role": "admissions",
+        "roleTitle": "Head of Admissions & Enrollments"
+      },
+      "id": "tkt-1789388070416",
+      "ticketNumber": "TKT-1008",
+      "createdAt": "2026-09-14T12:14:18.727Z",
+      "updatedAt": "2026-09-14T12:14:18.727Z",
+      "comments": []
+    },
+    {
+      "title": "Mentors Access",
+      "description": "Mentors are seeing each others profile, and all the other mentors information which is wrong can we block them from seeing other mentors profile",
+      "category": "observation",
+      "priority": "high",
+      "status": "open",
+      "assignedToRole": "super_admin",
+      "assignedToName": "Super Admin / Operations",
+      "createdBy": {
+        "id": "user-admissions-demo",
+        "name": "Zainab Bello",
+        "email": "admissions@codelab.institute",
+        "role": "admissions",
+        "roleTitle": "Head of Admissions & Enrollments"
+      },
+      "id": "tkt-1789385079757",
+      "ticketNumber": "TKT-1007",
+      "createdAt": "2026-09-14T11:24:27.989Z",
+      "updatedAt": "2026-09-14T11:24:27.989Z",
+      "comments": []
+    },
+    {
+      "title": "Clock in",
+      "description": "i was logged out after login in",
+      "category": "bug",
+      "priority": "medium",
+      "status": "open",
+      "assignedToRole": "super_admin",
+      "assignedToName": "Super Admin / Operations",
+      "createdBy": {
+        "id": "user-admissions-demo",
+        "name": "Zainab Bello",
+        "email": "admissions@codelab.institute",
+        "role": "admissions",
+        "roleTitle": "Head of Admissions & Enrollments"
+      },
+      "id": "tkt-1789384973770",
+      "ticketNumber": "TKT-1006",
+      "createdAt": "2026-09-14T11:22:42.329Z",
+      "updatedAt": "2026-09-14T11:22:42.329Z",
+      "comments": []
+    },
+    {
+      "title": "ADD Course",
+      "description": "the head of admissions and enrollment cannot add courses and thats part of my job functions",
+      "category": "feature_request",
+      "priority": "high",
+      "status": "open",
+      "assignedToRole": "super_admin",
+      "assignedToName": "Super Admin / Operations",
+      "createdBy": {
+        "id": "user-admissions-demo",
+        "name": "Zainab Bello",
+        "email": "admissions@codelab.institute",
+        "role": "admissions",
+        "roleTitle": "Head of Admissions & Enrollments"
+      },
+      "id": "tkt-1789374452676",
+      "ticketNumber": "TKT-1005",
+      "createdAt": "2026-09-14T08:27:20.841Z",
+      "updatedAt": "2026-09-14T08:27:20.841Z",
+      "comments": []
+    },
+    {
+      "title": "Prod Verification: Ticket Role Isolation & Pagination",
+      "description": "Verifying automated email triggers on status transitions (raised, in_progress, resolved).",
+      "category": "observation",
+      "priority": "medium",
+      "createdBy": {
+        "id": "verify-admin-user",
+        "name": "Super Admin Operational Testing",
+        "email": "abiola.adefowope@codelab.institute",
+        "role": "super_admin",
+        "roleTitle": "Managing Director"
+      },
+      "id": "tkt-1789199826648",
+      "ticketNumber": "TKT-1004",
+      "assignedToRole": "admissions",
+      "assignedToName": "Head of Admissions",
+      "createdAt": "2026-09-12T07:57:06.648Z",
+      "updatedAt": "2026-09-12T07:57:06.741Z",
+      "status": "resolved",
+      "comments": [
+        {
+          "id": "comm-1789199826715",
+          "ticketId": "tkt-1789199826648",
+          "authorName": "Admissions Officer",
+          "authorEmail": "admissions@codelab.institute",
+          "authorRole": "admissions",
+          "content": "Reviewing student onboarding issue.",
+          "createdAt": "2026-09-12T07:57:06.715Z"
+        }
+      ],
+      "resolutionNotes": "Issue investigated and resolved on production portal."
+    },
+    {
+      "title": "Deployment Verification Test Ticket",
+      "description": "Verifying support ticket creation on remote production Hostinger VPS.",
+      "category": "observation",
+      "priority": "low",
+      "status": "open",
+      "createdBy": {
+        "id": "admin-verify",
+        "name": "Super Admin Verification",
+        "email": "abiola.adefowope@codelab.institute",
+        "role": "super_admin",
+        "roleTitle": "Managing Director"
+      },
+      "id": "tkt-1789198952057",
+      "ticketNumber": "TKT-1003",
+      "createdAt": "2026-09-12T07:42:32.057Z",
+      "updatedAt": "2026-09-12T07:42:32.111Z",
+      "comments": [
+        {
+          "id": "comm-1789198952111",
+          "ticketId": "tkt-1789198952057",
+          "authorName": "Admissions Officer",
+          "authorEmail": "admissions@codelab.institute",
+          "authorRole": "admissions",
+          "content": "Verification comment successfully tested on production.",
+          "createdAt": "2026-09-12T07:42:32.111Z"
+        }
+      ]
+    },
     {
       "id": "tkt-001",
       "ticketNumber": "TKT-1001",
@@ -876,6 +4000,6 @@
         "status": "success"
       }
     ],
-    "lastSyncedAt": "2026-09-27T16:45:00.000Z"
+    "lastSyncedAt": "2026-09-27T16:58:57.025Z"
   }
 }

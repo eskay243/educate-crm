@@ -45,10 +45,23 @@ mkdir -p /var/www
 cd /var/www
 
 if [ -d "/var/www/educate-crm/.git" ]; then
-  echo -e "Pulling latest code from GitHub..."
+  echo -e "Creating safety backup of live database and logging snapshot..."
   cd /var/www/educate-crm
+  mkdir -p /var/backups
+  if [ -f "server/data/db.json" ]; then
+    cp server/data/db.json /tmp/pre_deploy_production_db.json
+    node scripts/backup-and-log.js 2>/dev/null || cp server/data/db.json /var/backups/db_backup_$(date +%Y%m%d_%H%M%S).json
+  fi
+
+  echo -e "Pulling latest code from GitHub..."
   git fetch origin main
   git reset --hard origin/main
+
+  if [ -f "/tmp/pre_deploy_production_db.json" ]; then
+    cp /tmp/pre_deploy_production_db.json server/data/db.json
+    echo -e "✓ Live production database safely preserved and restored"
+  fi
+  node scripts/backup-and-log.js 2>/dev/null || true
 else
   echo -e "Cloning repository from GitHub..."
   rm -rf /var/www/educate-crm

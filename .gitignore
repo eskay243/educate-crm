@@ -19,6 +19,9 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
+# Backups
+server/backups/*.json
+
 # Editor & OS
 .DS_Store
 .vscode

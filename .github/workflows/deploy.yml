@@ -47,19 +47,29 @@ jobs:
             # Navigate to project directory
             cd /var/www/educate-crm
             
-            # 1. Create safety backup of production database
+            # 1. Create safety backup & log restoration snapshot
             mkdir -p /var/backups
             if [ -f "server/data/db.json" ]; then
-              cp server/data/db.json /var/backups/db_backup_$(date +%Y%m%d_%H%M%S).json
-              echo "✓ Database backup created successfully"
+              cp server/data/db.json /tmp/pre_deploy_production_db.json
+              node scripts/backup-and-log.js 2>/dev/null || cp server/data/db.json /var/backups/db_backup_$(date +%Y%m%d_%H%M%S).json
+              echo "✓ Database backup & restoration log entry created"
             fi
             
             # 2. Pull latest code from main
             git fetch origin main
             git reset --hard origin/main
             echo "✓ Pulled latest code from GitHub main"
+
+            # 2b. Restore live production database so git NEVER overwrites live data
+            if [ -f "/tmp/pre_deploy_production_db.json" ]; then
+              cp /tmp/pre_deploy_production_db.json server/data/db.json
+              echo "✓ Live production database safely preserved and restored"
+            fi
             
-            # 3. Install dependencies
+            # 3. Log post-deploy snapshot
+            node scripts/backup-and-log.js 2>/dev/null || true
+            
+            # 4. Install dependencies
             npm install
             
             # 4. Compile frontend production bundle
