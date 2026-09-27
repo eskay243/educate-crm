@@ -2851,6 +2851,16 @@ async function reconcileLivePaystackWallet(secretKey: string) {
   const cleanTransactions: any[] = [];
 
   for (const t of liveInflows) {
+    const rawSenderAcc = t.authorization?.sender_bank_account_number || (t.authorization?.last4 ? `•••• ${t.authorization.last4}` : null);
+    const maskedSenderAcc = rawSenderAcc ? (rawSenderAcc.startsWith('•') ? rawSenderAcc : `•••• ${rawSenderAcc.slice(-4)}`) : null;
+    const senderBank = t.authorization?.sender_bank || t.authorization?.bank || (t.channel === 'dedicated_nuban' ? 'Interbank NIP' : null);
+    const senderName = t.authorization?.account_name || t.authorization?.sender_name || null;
+    const depositorLabel = senderName 
+      ? senderName 
+      : maskedSenderAcc 
+        ? `NIP Transfer (${maskedSenderAcc})` 
+        : (t.customer?.first_name && t.customer.first_name !== 'Nexus' ? `${t.customer.first_name} ${t.customer.last_name || ''}`.trim() : 'Inbound Bank Depositor');
+
     cleanTransactions.push({
       id: `wtx-paystack-${t.id}`,
       type: 'credit',
@@ -2863,7 +2873,12 @@ async function reconcileLivePaystackWallet(secretKey: string) {
         : `Online Wallet Top-Up via Paystack Checkout`,
       timestamp: t.paid_at || t.created_at,
       balanceAfter: (t.amount || 0) / 100,
-      initiatedBy: t.customer?.first_name ? `${t.customer.first_name} ${t.customer.last_name || ''}`.trim() : 'Bank Transfer',
+      initiatedBy: depositorLabel,
+      senderName,
+      senderBank,
+      senderAccountNumber: rawSenderAcc || null,
+      receiverAccountNumber: t.metadata?.receiver_account_number || t.authorization?.receiver_bank_account_number || '9817707007',
+      receiverBank: t.metadata?.receiver_bank || t.authorization?.receiver_bank || 'Wema Bank',
       channel: t.channel,
       status: 'success'
     });
@@ -3290,6 +3305,16 @@ app.post('/api/paystack/webhook', async (req: Request, res: Response) => {
       if (isDvaDeposit) {
         if (!db.wallet) db.wallet = defaultWallet;
         db.wallet.balance = (db.wallet.balance || 0) + amountPaid;
+        const rawSenderAcc = data.authorization?.sender_bank_account_number || (data.authorization?.last4 ? `•••• ${data.authorization.last4}` : null);
+        const maskedSenderAcc = rawSenderAcc ? (rawSenderAcc.startsWith('•') ? rawSenderAcc : `•••• ${rawSenderAcc.slice(-4)}`) : null;
+        const senderBank = data.authorization?.sender_bank || data.authorization?.bank || (data.channel === 'dedicated_nuban' ? 'Interbank NIP' : null);
+        const senderName = data.authorization?.account_name || data.authorization?.sender_name || null;
+        const depositorLabel = senderName 
+          ? senderName 
+          : maskedSenderAcc 
+            ? `NIP Transfer (${maskedSenderAcc})` 
+            : (data.customer?.first_name && data.customer.first_name !== 'Nexus' ? `${data.customer.first_name} ${data.customer.last_name || ''}`.trim() : 'Inbound Bank Depositor');
+
         db.wallet.transactions.unshift({
           id: `wtx-${Date.now()}-dva`,
           type: 'credit',
@@ -3299,7 +3324,12 @@ app.post('/api/paystack/webhook', async (req: Request, res: Response) => {
           description: `Bank Transfer deposit received via Dedicated Virtual Account (${data.authorization?.bank || 'NIP Transfer'})`,
           timestamp: new Date().toISOString(),
           balanceAfter: db.wallet.balance,
-          initiatedBy: data.customer?.first_name ? `${data.customer.first_name} ${data.customer.last_name || ''}` : 'Inbound NIP Transfer',
+          initiatedBy: depositorLabel,
+          senderName,
+          senderBank,
+          senderAccountNumber: rawSenderAcc || null,
+          receiverAccountNumber: data.metadata?.receiver_account_number || data.authorization?.receiver_bank_account_number || '9817707007',
+          receiverBank: data.metadata?.receiver_bank || data.authorization?.receiver_bank || 'Wema Bank',
           channel: 'dedicated_nuban'
         });
         db.activityLogs.unshift({

@@ -587,6 +587,11 @@ export interface WalletTransaction {
   recipientName?: string;
   recipientBank?: string;
   recipientAccountNumber?: string;
+  senderName?: string;
+  senderBank?: string;
+  senderAccountNumber?: string;
+  receiverAccountNumber?: string;
+  receiverBank?: string;
   fee?: number;
   status?: string;
   paystackTransferCode?: string;

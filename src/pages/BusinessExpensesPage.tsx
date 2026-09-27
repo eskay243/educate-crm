@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useCRM, formatNaira } from '../context/CRMContext';
-import { Expense, ExpenseStatus } from '../types/crm';
+import { Expense, ExpenseStatus, WalletTransaction } from '../types/crm';
 import { RejectExpenseModal } from '../components/modals/RejectExpenseModal';
 import { ViewExpenseModal } from '../components/modals/ViewExpenseModal';
+import { WalletTransactionDetailsModal } from '../components/modals/WalletTransactionDetailsModal';
 
 export interface BusinessExpensesPageProps {}
 
@@ -40,6 +41,9 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
   // View Requisition Dossier modal state
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedExpenseForView, setSelectedExpenseForView] = useState<Expense | null>(null);
+
+  // Wallet Transaction Audit Details modal state
+  const [selectedWalletTx, setSelectedWalletTx] = useState<WalletTransaction | null>(null);
 
   const isSuperAdmin = currentUser?.role === 'super_admin';
   const showBudgetCardToUser = isSuperAdmin || (settings.showBudgetToStaff !== false);
@@ -913,6 +917,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                 <th className="px-stack-md py-3">Beneficiary / Depositor</th>
                 <th className="px-stack-md py-3 text-right">Inflow / Outflow</th>
                 <th className="px-stack-md py-3 text-right">Balance After</th>
+                <th className="px-stack-md py-3 text-right">Audit</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/60">
@@ -955,9 +960,28 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                     <td className="px-stack-md py-3 align-top text-xs">
                       {tx.recipientName ? (
                         <div>
-                          <strong className="text-on-surface block">{tx.recipientName}</strong>
-                          <span className="text-[10px] text-secondary">
-                            {tx.recipientBank ? `${tx.recipientBank} (${tx.recipientAccountNumber || ''})` : ''}
+                          <div className="flex items-center gap-1">
+                            <strong className="text-on-surface block font-semibold">{tx.recipientName}</strong>
+                            <span className="material-symbols-outlined text-[14px] text-emerald-600" title="Account Holder Verified via NIBSS">verified</span>
+                          </div>
+                          <span className="text-[11px] text-secondary">
+                            {tx.recipientBank ? `${tx.recipientBank} (${tx.recipientAccountNumber || ''})` : 'Disbursed Payee'}
+                          </span>
+                        </div>
+                      ) : isCredit ? (
+                        <div>
+                          <strong className="text-on-surface block font-semibold">
+                            {tx.senderName || tx.initiatedBy || 'Inbound Bank Depositor'}
+                          </strong>
+                          <span className="text-[11px] text-secondary flex items-center gap-1">
+                            <span>{tx.senderBank || 'Wema Dedicated NUBAN'}</span>
+                            {tx.senderAccountNumber && (
+                              <span className="font-mono text-[10px] bg-surface-container px-1 py-0.5 rounded">
+                                {tx.senderAccountNumber.includes('X') || tx.senderAccountNumber.includes('•') 
+                                  ? tx.senderAccountNumber 
+                                  : `•••• ${tx.senderAccountNumber.slice(-4)}`}
+                              </span>
+                            )}
                           </span>
                         </div>
                       ) : (
@@ -971,6 +995,16 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                     </td>
                     <td className="px-stack-md py-3 align-top text-right whitespace-nowrap font-semibold text-xs font-data-tabular text-on-surface">
                       {formatNaira(tx.balanceAfter)}
+                    </td>
+                    <td className="px-stack-md py-3 align-top text-right whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedWalletTx(tx)}
+                        className="px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-xs font-semibold text-on-surface transition-colors flex items-center gap-1 ml-auto cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">receipt_long</span>
+                        <span>Audit Slip</span>
+                      </button>
                     </td>
                   </tr>
                 );
@@ -1008,6 +1042,13 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
         }}
         expense={selectedExpenseForReject}
         onConfirmReject={handleConfirmReject}
+      />
+
+      {/* Wallet Transaction Verification & Audit Slip Modal */}
+      <WalletTransactionDetailsModal
+        isOpen={Boolean(selectedWalletTx)}
+        onClose={() => setSelectedWalletTx(null)}
+        transaction={selectedWalletTx}
       />
     </div>
   );
