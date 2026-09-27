@@ -587,7 +587,8 @@ export interface WalletTransaction {
   recipientName?: string;
   recipientBank?: string;
   recipientAccountNumber?: string;
-  channel?: string;
+  fee?: number;
+  status?: string;
   paystackTransferCode?: string;
 }
 
@@ -598,6 +599,8 @@ export interface ExpenseAndBudgetWallet {
   transactions: WalletTransaction[];
   lastSyncedAt?: string;
   paystackLiveBalance?: number;
+  totalInflow?: number;
+  totalOutflow?: number;
 }
 
 export interface ActivityLogItem {

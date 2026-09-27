@@ -72,8 +72,8 @@
       "hourlyRate": 8500,
       "sessionsCount": 14,
       "totalEarned": 780000,
-      "pendingPayout": 0,
-      "paidPayout": 780000,
+      "pendingPayout": 125000,
+      "paidPayout": 655000,
       "joinedDate": "2025-11-01",
       "rating": 4.9
     }
@@ -86,7 +86,7 @@
       "date": "2026-09-10",
       "department": "Technology",
       "paymentMethod": "Nigerian Bank Transfer",
-      "status": "Paid",
+      "status": "Pending",
       "vendor": "Direct Computers Lagos",
       "requestedBy": "Admissions & Lab Tech (Staff)",
       "requesterEmail": "admin@codelab.institute",
@@ -99,10 +99,7 @@
       "disbursementBankName": "Guaranty Trust Bank (GTBank)",
       "disbursementAccountNumber": "0123456789",
       "disbursementAccountName": "Direct Computers Lagos",
-      "disbursementBankCode": "058",
-      "isDisbursedViaWallet": true,
-      "transferReference": "TRF-EXP-1790435541310-9166",
-      "disbursedAt": "2026-09-26T15:12:22.401Z"
+      "disbursementBankCode": "058"
     }
   ],
   "courses": [],
@@ -848,91 +845,37 @@
     }
   ],
   "wallet": {
-    "balance": 475000,
+    "balance": 200,
     "monthlyBudgetLimit": 1500000,
+    "totalInflow": 200,
+    "totalOutflow": 0,
     "virtualAccount": {
-      "accountNumber": "9977340777",
-      "accountName": "CODELAB EDUCARE / OPS WALLET",
-      "bankName": "Wema Bank (Paystack DVA)",
+      "accountNumber": "9817707007",
+      "accountName": "CODELABEDUCAR/WALLET NEXUS",
+      "bankName": "Wema Bank",
       "bankCode": "035",
-      "customerCode": "CUS_cdl_ops_0777",
-      "customerEmail": "wallet-operations@codelab.institute",
-      "assignedAt": "2026-09-26T15:12:08.925Z",
+      "customerCode": "CUS_0urz9hjjax0fyuv",
+      "customerEmail": "wallet-operations@growpot.cloud",
+      "assignedAt": "2026-09-26T16:17:45.955Z",
       "status": "active",
       "provider": "wema-bank"
     },
     "transactions": [
       {
-        "id": "wtx-1790435549773-men",
-        "type": "debit",
-        "category": "mentor_payout",
-        "amount": 125000,
-        "reference": "TRF-MEN-1790435548484-5326",
-        "description": "37% Revenue Share Disbursement to Dr. Chidi Okeke",
-        "timestamp": "2026-09-26T15:12:29.773Z",
-        "balanceAfter": 475000,
-        "initiatedBy": "Finance Controller",
-        "recipientName": "CHIDI OKEKE",
-        "recipientBank": "Guaranty Trust Bank (GTBank)",
-        "recipientAccountNumber": "0123456789",
-        "channel": "paystack_transfer",
-        "paystackTransferCode": ""
-      },
-      {
-        "id": "wtx-1790435542401-exp",
-        "type": "debit",
-        "category": "expense_payout",
-        "amount": 450000,
-        "reference": "TRF-EXP-1790435541310-9166",
-        "description": "OpEx Disbursement: Lab 2 Workstation Upgrades (EXP-2320)",
-        "timestamp": "2026-09-26T15:12:22.401Z",
-        "balanceAfter": 600000,
-        "initiatedBy": "Finance Controller",
-        "recipientName": "Direct Computers Lagos",
-        "recipientBank": "Guaranty Trust Bank (GTBank)",
-        "recipientAccountNumber": "0123456789",
-        "channel": "paystack_transfer",
-        "paystackTransferCode": ""
-      },
-      {
-        "id": "wtx-1790435525411-top",
-        "type": "credit",
-        "category": "card_topup",
-        "amount": 200000,
-        "reference": "CDL-WAL-TEST-001",
-        "description": "In-App Instant Wallet Top-Up via Paystack Checkout",
-        "timestamp": "2026-09-26T15:12:05.411Z",
-        "balanceAfter": 1050000,
-        "initiatedBy": "Finance / Super Admin",
-        "channel": "paystack_inline"
-      },
-      {
-        "id": "wtx-seed-001",
+        "id": "wtx-paystack-6597791530",
         "type": "credit",
         "category": "dva_bank_deposit",
-        "amount": 1000000,
-        "reference": "DVA-DEP-9928174820-001",
-        "description": "Direct NUBAN bank transfer deposit from Executive Treasury via NIP",
-        "timestamp": "2026-09-02T10:30:00.000Z",
-        "balanceAfter": 1000000,
-        "initiatedBy": "Managing Director (Treasury)",
-        "channel": "dedicated_nuban"
-      },
-      {
-        "id": "wtx-seed-002",
-        "type": "debit",
-        "category": "expense_payout",
-        "amount": 150000,
-        "reference": "TRF-EXP-20260905-8841",
-        "description": "OpEx Disbursement for Fiber Internet Bandwidth (EXP-2026-003)",
-        "timestamp": "2026-09-05T14:15:00.000Z",
-        "balanceAfter": 850000,
-        "initiatedBy": "Finance Controller",
-        "recipientName": "MainOne Technologies Ltd",
-        "recipientBank": "Access Bank",
-        "recipientAccountNumber": "0039281746"
+        "amount": 200,
+        "fee": 2,
+        "reference": "00001320260926171508000000019857872",
+        "description": "Live Bank Transfer via Dedicated NUBAN (Wema Bank NIP)",
+        "timestamp": "2026-09-26T16:15:16.000Z",
+        "balanceAfter": 200,
+        "initiatedBy": "Nexus Wallet",
+        "channel": "dedicated_nuban",
+        "status": "success"
       }
     ],
-    "lastSyncedAt": "2026-09-26T15:11:59.200Z"
+    "lastSyncedAt": "2026-09-27T16:45:00.000Z"
   }
 }

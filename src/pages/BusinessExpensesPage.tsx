@@ -20,7 +20,9 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
     currentUser,
     wallet,
     setSelectedExpenseForDisburse,
-    generateVirtualAccount
+    generateVirtualAccount,
+    reconcileWalletWithPaystack,
+    isSyncingWallet
   } = useCRM();
 
   const [activeLedgerView, setActiveLedgerView] = useState<'expenses' | 'wallet_ledger'>('expenses');
@@ -170,6 +172,15 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
         </div>
         <div className="flex gap-2 sm:gap-3 flex-wrap">
           <button 
+            onClick={reconcileWalletWithPaystack}
+            disabled={isSyncingWallet}
+            className="h-10 px-3.5 bg-blue-600/90 hover:bg-blue-600 text-white font-label-md text-label-md font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer disabled:opacity-50"
+            title="Force real-time reconciliation with live Paystack account"
+          >
+            <span className={`material-symbols-outlined text-[18px] ${isSyncingWallet ? 'animate-spin' : ''}`}>sync</span>
+            <span>{isSyncingWallet ? 'Syncing...' : 'Sync with Paystack'}</span>
+          </button>
+          <button 
             onClick={() => openModal('top-up-wallet')}
             className="h-10 px-4 bg-[#166534] hover:bg-[#15803d] text-white font-label-md text-label-md font-bold rounded-lg flex items-center gap-2 transition-colors shadow-xs cursor-pointer"
           >
@@ -217,11 +228,23 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
               </div>
             </div>
 
+            <div className="flex items-center gap-3 pt-0.5 text-xs text-white/80 flex-wrap">
+              <span className="flex items-center gap-1">
+                <span className="text-white/50">Total Inflows Funded:</span> 
+                <strong className="text-emerald-300 font-data-tabular">{formatNaira(wallet?.totalInflow ?? wallet?.balance ?? 0)}</strong>
+              </span>
+              <span>•</span>
+              <span className="flex items-center gap-1">
+                <span className="text-white/50">Total Outflows:</span> 
+                <strong className="text-white font-data-tabular">{formatNaira(wallet?.totalOutflow || 0)}</strong>
+              </span>
+            </div>
+
             <p className="text-white/75 text-xs max-w-md">
               All approved office expenses, hardware procurements, and faculty mentor 37% revenue shares are disbursed directly from this wallet.
             </p>
 
-            <div className="flex items-center gap-2.5 pt-1">
+            <div className="flex items-center gap-2.5 pt-1 flex-wrap">
               <button
                 type="button"
                 onClick={() => openModal('top-up-wallet')}
@@ -229,6 +252,16 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
               >
                 <span className="material-symbols-outlined text-[16px]">add_card</span>
                 <span>Top Up Wallet</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={reconcileWalletWithPaystack}
+                disabled={isSyncingWallet}
+                className="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold transition-all border border-white/20 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <span className={`material-symbols-outlined text-[16px] ${isSyncingWallet ? 'animate-spin' : ''}`}>sync</span>
+                <span>{isSyncingWallet ? 'Syncing...' : 'Sync Paystack'}</span>
               </button>
 
               <button

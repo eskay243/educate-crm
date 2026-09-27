@@ -142,6 +142,8 @@ interface CRMContextType {
   disburseMentorFromWallet: (mentorId: string, amount: number, reason?: string) => Promise<boolean>;
   updateWalletBudgetLimit: (limit: number) => Promise<void>;
   refreshWalletSummary: () => Promise<void>;
+  reconcileWalletWithPaystack: () => Promise<void>;
+  isSyncingWallet: boolean;
   
   // Attendance, Reports & Graduation Gatekeeping
   markSessionAttendance: (sessionId: string, status: 'Attended' | 'Absent', hoursCredited?: number) => Promise<void>;
@@ -257,51 +259,24 @@ const STORAGE_KEYS = {
   NOTIFICATIONS: 'nexus_clean_prod_notifications_v1',
   TICKETS: 'nexus_clean_prod_tickets_v1',
   ROLES: 'nexus_clean_prod_roles_v1',
-  WALLET: 'nexus_clean_prod_wallet_v1',
+  WALLET: 'nexus_clean_prod_wallet_v2',
 };
 
 export const defaultWalletState: ExpenseAndBudgetWallet = {
-  balance: 850000,
+  balance: 0,
   monthlyBudgetLimit: 1500000,
   virtualAccount: {
-    accountNumber: '9928174820',
-    accountName: 'CODELAB EDUCARE / OPS WALLET',
-    bankName: 'Wema Bank (Paystack DVA)',
+    accountNumber: '9817707007',
+    accountName: 'CODELABEDUCAR/WALLET NEXUS',
+    bankName: 'Wema Bank',
     bankCode: '035',
-    customerCode: 'CUS_cdl_ops_9928',
-    customerEmail: 'wallet-operations@codelab.institute',
-    assignedAt: '2026-09-01T08:00:00.000Z',
+    customerCode: 'CUS_0urz9hjjax0fyuv',
+    customerEmail: 'wallet-operations@growpot.cloud',
+    assignedAt: '2026-09-26T16:17:45.955Z',
     status: 'active',
     provider: 'wema-bank',
   },
-  transactions: [
-    {
-      id: 'wtx-seed-001',
-      type: 'credit',
-      category: 'dva_bank_deposit',
-      amount: 1000000,
-      reference: 'DVA-DEP-9928174820-001',
-      description: 'Direct NUBAN bank transfer deposit from Executive Treasury via NIP',
-      timestamp: '2026-09-02T10:30:00.000Z',
-      balanceAfter: 1000000,
-      initiatedBy: 'Managing Director (Treasury)',
-      channel: 'dedicated_nuban'
-    },
-    {
-      id: 'wtx-seed-002',
-      type: 'debit',
-      category: 'expense_payout',
-      amount: 150000,
-      reference: 'TRF-EXP-20260905-8841',
-      description: 'OpEx Disbursement for Fiber Internet Bandwidth (EXP-2026-003)',
-      timestamp: '2026-09-05T14:15:00.000Z',
-      balanceAfter: 850000,
-      initiatedBy: 'Finance Controller',
-      recipientName: 'MainOne Technologies Ltd',
-      recipientBank: 'Access Bank',
-      recipientAccountNumber: '0039281746'
-    }
-  ],
+  transactions: [],
   lastSyncedAt: new Date().toISOString()
 };
 
@@ -2436,6 +2411,8 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const [isSyncingWallet, setIsSyncingWallet] = useState<boolean>(false);
+
   const refreshWalletSummary = async () => {
     try {
       const summary = await apiService.getWalletSummary();
@@ -2444,6 +2421,24 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     } catch (e) {
       console.warn('Error refreshing wallet:', e);
+    }
+  };
+
+  const reconcileWalletWithPaystack = async () => {
+    setIsSyncingWallet(true);
+    try {
+      const summary = await apiService.reconcileWallet();
+      if (summary) {
+        setWallet(summary);
+        showToast('Wallet Reconciled', `Synchronized with Paystack live transactions. Balance: ₦${summary.balance.toLocaleString()}`, 'success');
+      } else {
+        await refreshWalletSummary();
+      }
+    } catch (e) {
+      console.warn('Error reconciling wallet:', e);
+      showToast('Sync Warning', 'Could not complete Paystack live reconciliation. Please check network.', 'warning');
+    } finally {
+      setIsSyncingWallet(false);
     }
   };
 
@@ -3043,6 +3038,8 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         disburseMentorFromWallet,
         updateWalletBudgetLimit,
         refreshWalletSummary,
+        reconcileWalletWithPaystack,
+        isSyncingWallet,
       }}
     >
       {children}

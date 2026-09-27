@@ -88,34 +88,7 @@ const defaultWallet = {
     status: 'active',
     provider: 'wema-bank',
   },
-  transactions: [
-    {
-      id: 'wtx-seed-001',
-      type: 'credit',
-      category: 'dva_bank_deposit',
-      amount: 1000000,
-      reference: 'DVA-DEP-9928174820-001',
-      description: 'Direct NUBAN bank transfer deposit from Executive Treasury via NIP',
-      timestamp: '2026-09-02T10:30:00.000Z',
-      balanceAfter: 1000000,
-      initiatedBy: 'Managing Director (Treasury)',
-      channel: 'dedicated_nuban'
-    },
-    {
-      id: 'wtx-seed-002',
-      type: 'debit',
-      category: 'expense_payout',
-      amount: 150000,
-      reference: 'TRF-EXP-20260905-8841',
-      description: 'OpEx Disbursement for Fiber Internet Bandwidth (EXP-2026-003)',
-      timestamp: '2026-09-05T14:15:00.000Z',
-      balanceAfter: 850000,
-      initiatedBy: 'Finance Controller',
-      recipientName: 'MainOne Technologies Ltd',
-      recipientBank: 'Access Bank',
-      recipientAccountNumber: '0039281746'
-    }
-  ],
+  transactions: [],
   lastSyncedAt: new Date().toISOString()
 };
 
@@ -2816,43 +2789,159 @@ app.post('/api/paystack/disburse-mentor', async (req: Request, res: Response) =>
 // ----------------------------------------------------
 // Operational Expense & Budget Wallet Endpoints
 // ----------------------------------------------------
-app.get('/api/wallet/summary', async (_req: Request, res: Response) => {
+async function reconcileLivePaystackWallet(secretKey: string) {
+  if (!db.wallet) db.wallet = defaultWallet;
+  const headers = { Authorization: `Bearer ${secretKey}` };
+
+  let paystackLiveBalance: number | undefined = undefined;
+
+  // 1. Fetch live balance from Paystack
   try {
-    if (!db.wallet) db.wallet = defaultWallet;
-
-    // Attempt to fetch live Paystack balance if secret key is present
-    const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
-    let paystackLiveBalance: number | undefined = undefined;
-
-    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
-      try {
-        const balRes = await fetch('https://api.paystack.co/balance', {
-          headers: { Authorization: `Bearer ${secretKey}` },
-        });
-        const balData: any = await balRes.json();
-        if (balData.status && Array.isArray(balData.data)) {
-          const ngnBalance = balData.data.find((b: any) => b.currency === 'NGN');
-          if (ngnBalance) {
-            paystackLiveBalance = ngnBalance.balance / 100;
-            if (secretKey.startsWith('sk_live_')) {
-              if (!db.wallet.virtualAccount || db.wallet.virtualAccount.accountNumber !== '9817707007') {
-                db.wallet.virtualAccount = defaultWallet.virtualAccount;
-                saveDatabase(db);
-              }
-            }
-          }
-        }
-      } catch (e) {
-        console.warn('Could not query live Paystack balance:', e);
+    const balRes = await fetch('https://api.paystack.co/balance', { headers });
+    const balData: any = await balRes.json();
+    if (balData.status && Array.isArray(balData.data)) {
+      const ngnBalance = balData.data.find((b: any) => b.currency === 'NGN');
+      if (ngnBalance) {
+        paystackLiveBalance = ngnBalance.balance / 100;
       }
+    }
+  } catch (e) {
+    console.warn('Reconcile: Failed to fetch balance from Paystack:', e);
+  }
+
+  // 2. Fetch live transactions from Paystack
+  let liveInflows: any[] = [];
+  try {
+    const txRes = await fetch('https://api.paystack.co/transaction?perPage=50', { headers });
+    const txData: any = await txRes.json();
+    if (txData.status && Array.isArray(txData.data)) {
+      liveInflows = txData.data.filter((t: any) => 
+        t.status === 'success' && (
+          t.channel === 'dedicated_nuban' ||
+          t.customer?.customer_code === db.wallet?.virtualAccount?.customerCode ||
+          t.customer?.email === db.wallet?.virtualAccount?.customerEmail ||
+          t.metadata?.target === 'expense_wallet' ||
+          t.metadata?.receiver_account_number === '9817707007' ||
+          t.metadata?.receiver_account_number === db.wallet?.virtualAccount?.accountNumber
+        )
+      );
+    }
+  } catch (e) {
+    console.warn('Reconcile: Failed to fetch transactions from Paystack:', e);
+  }
+
+  // 3. Fetch live transfers from Paystack
+  let liveOutflows: any[] = [];
+  try {
+    const trfRes = await fetch('https://api.paystack.co/transfer?perPage=50', { headers });
+    const trfData: any = await trfRes.json();
+    if (trfData.status && Array.isArray(trfData.data)) {
+      liveOutflows = trfData.data.filter((t: any) => t.status === 'success' || t.status === 'pending');
+    }
+  } catch (e) {
+    console.warn('Reconcile: Failed to fetch transfers from Paystack:', e);
+  }
+
+  // 4. Calculate verified figures
+  const totalInflow = liveInflows.reduce((sum, t) => sum + (t.amount || 0) / 100, 0);
+  const totalOutflow = liveOutflows.reduce((sum, t) => sum + (t.amount || 0) / 100, 0);
+  const calculatedBalance = Math.max(0, totalInflow - totalOutflow);
+
+  // 5. Build clean, verified transactions array
+  const cleanTransactions: any[] = [];
+
+  for (const t of liveInflows) {
+    cleanTransactions.push({
+      id: `wtx-paystack-${t.id}`,
+      type: 'credit',
+      category: t.channel === 'dedicated_nuban' ? 'dva_bank_deposit' : 'card_topup',
+      amount: (t.amount || 0) / 100,
+      fee: (t.fees || 0) / 100,
+      reference: t.reference,
+      description: t.channel === 'dedicated_nuban'
+        ? `Live Bank Transfer via Dedicated NUBAN (${t.authorization?.bank || 'Wema Bank NIP'})`
+        : `Online Wallet Top-Up via Paystack Checkout`,
+      timestamp: t.paid_at || t.created_at,
+      balanceAfter: (t.amount || 0) / 100,
+      initiatedBy: t.customer?.first_name ? `${t.customer.first_name} ${t.customer.last_name || ''}`.trim() : 'Bank Transfer',
+      channel: t.channel,
+      status: 'success'
+    });
+  }
+
+  for (const t of liveOutflows) {
+    cleanTransactions.push({
+      id: `wtx-trf-${t.id}`,
+      type: 'debit',
+      category: 'expense_payout',
+      amount: (t.amount || 0) / 100,
+      reference: t.reference || t.transfer_code,
+      description: t.reason || `Disbursement via Paystack Transfers`,
+      timestamp: t.createdAt,
+      balanceAfter: 0,
+      initiatedBy: 'Finance / Disburse API',
+      recipientName: t.recipient?.name || 'Bank Recipient',
+      recipientBank: t.recipient?.details?.bank_name,
+      recipientAccountNumber: t.recipient?.details?.account_number,
+      channel: 'paystack_transfer',
+      status: t.status
+    });
+  }
+
+  cleanTransactions.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  // In live mode, update db.wallet strictly with verified numbers
+  db.wallet.balance = calculatedBalance;
+  db.wallet.transactions = cleanTransactions;
+  db.wallet.totalInflow = totalInflow;
+  db.wallet.totalOutflow = totalOutflow;
+  db.wallet.lastSyncedAt = new Date().toISOString();
+  db.wallet.paystackLiveBalance = paystackLiveBalance;
+  
+  if (!db.wallet.virtualAccount || db.wallet.virtualAccount.accountNumber !== '9817707007') {
+    db.wallet.virtualAccount = defaultWallet.virtualAccount;
+  }
+
+  saveDatabase(db);
+  return db.wallet;
+}
+
+app.post('/api/wallet/reconcile', async (_req: Request, res: Response) => {
+  try {
+    const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
+    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
+      const reconciled = await reconcileLivePaystackWallet(secretKey);
+      return res.json({
+        success: true,
+        message: 'Wallet successfully reconciled with live Paystack transactions.',
+        data: reconciled
+      });
     }
 
     res.json({
       success: true,
-      data: {
-        ...db.wallet,
-        paystackLiveBalance,
-      }
+      message: 'Running in sandbox mode. Ledger preserved.',
+      data: db.wallet || defaultWallet
+    });
+  } catch (error: any) {
+    console.error('Wallet reconciliation error:', error);
+    res.status(500).json({ success: false, message: 'Reconciliation failed: ' + error.message });
+  }
+});
+
+app.get('/api/wallet/summary', async (_req: Request, res: Response) => {
+  try {
+    if (!db.wallet) db.wallet = defaultWallet;
+
+    const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
+    if (secretKey && secretKey.startsWith('sk_live_') && !secretKey.includes('sample')) {
+      const reconciled = await reconcileLivePaystackWallet(secretKey);
+      return res.json({ success: true, data: reconciled });
+    }
+
+    res.json({
+      success: true,
+      data: db.wallet
     });
   } catch (error: any) {
     console.error('Wallet summary error:', error);

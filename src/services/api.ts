@@ -572,6 +572,12 @@ class ApiService {
       body: JSON.stringify({ limit }),
     });
   }
+
+  async reconcileWallet(): Promise<ExpenseAndBudgetWallet | null> {
+    return this.request<ExpenseAndBudgetWallet>('/wallet/reconcile', {
+      method: 'POST',
+    });
+  }
 }
 
 export const apiService = new ApiService();
