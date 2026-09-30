@@ -46,7 +46,10 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
   const [selectedWalletTx, setSelectedWalletTx] = useState<WalletTransaction | null>(null);
 
   const isSuperAdmin = currentUser?.role === 'super_admin';
-  const showBudgetCardToUser = isSuperAdmin || (settings.showBudgetToStaff !== false);
+  const isFinance = currentUser?.role === 'finance';
+  const canApproveExpenses = isSuperAdmin || isFinance;
+  const canManageBudget = isSuperAdmin || isFinance;
+  const showBudgetCardToUser = canManageBudget || (settings.showBudgetToStaff !== false);
 
   const effectiveSearch = globalSearch || tableSearch;
 
@@ -413,7 +416,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                 <span className="font-label-md text-label-md text-secondary uppercase tracking-wider text-[11px]">
                   Approved Monthly Budget
                 </span>
-                {isSuperAdmin && (
+                {canManageBudget && (
                   <div className="flex items-center gap-2 pt-0.5">
                     <button
                       onClick={() => setIsEditingBudget(!isEditingBudget)}
@@ -779,7 +782,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
 
                       {/* Governance Decision (Approve / Reject) */}
                       <td className="px-stack-md py-3 align-top text-right whitespace-nowrap">
-                        {isSuperAdmin ? (
+                        {canApproveExpenses ? (
                           <div className="flex items-center justify-end gap-1.5">
                             <button
                               type="button"

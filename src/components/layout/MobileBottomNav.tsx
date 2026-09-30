@@ -8,30 +8,48 @@ interface MobileBottomNavProps {
 
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenMenu }) => {
   const { currentUser } = useCRM();
-  const isStudent = currentUser?.role === 'student';
-
-  const navItems = [
-    {
-      label: 'Home',
-      to: isStudent ? '/student/dashboard' : '/',
-      icon: 'dashboard',
-    },
-    {
-      label: 'Clock-In',
-      to: '/attendance',
-      icon: 'schedule',
-    },
-    {
-      label: 'LMS',
-      to: isStudent ? '/student/courses' : '/courses',
-      icon: 'local_library',
-    },
-    {
-      label: isStudent ? 'Mentorship' : 'Leads',
-      to: isStudent ? '/student/mentor' : '/leads',
-      icon: isStudent ? 'supervised_user_circle' : 'person_search',
-    },
-  ];
+  const navItems = React.useMemo(() => {
+    const role = currentUser?.role;
+    if (role === 'student') {
+      return [
+        { label: 'Portal', to: '/student/dashboard', icon: 'dashboard' },
+        { label: 'LMS', to: '/student/courses', icon: 'local_library' },
+        { label: 'Faculty', to: '/student/mentor', icon: 'supervised_user_circle' },
+        { label: 'Billing', to: '/student/billing', icon: 'credit_card' },
+      ];
+    }
+    if (role === 'finance') {
+      return [
+        { label: 'Expenses', to: '/expenses', icon: 'account_balance_wallet' },
+        { label: 'Scholars', to: '/students', icon: 'school' },
+        { label: 'Clock-In', to: '/attendance', icon: 'schedule' },
+        { label: 'Tickets', to: '/tickets', icon: 'confirmation_number' },
+      ];
+    }
+    if (role === 'mentor') {
+      return [
+        { label: 'Faculty', to: '/mentors', icon: 'diversity_3' },
+        { label: 'Scholars', to: '/students', icon: 'school' },
+        { label: 'Clock-In', to: '/attendance', icon: 'schedule' },
+        { label: 'Tickets', to: '/tickets', icon: 'confirmation_number' },
+      ];
+    }
+    if (role === 'admissions') {
+      return [
+        { label: 'Leads', to: '/leads', icon: 'person_search' },
+        { label: 'Scholars', to: '/students', icon: 'school' },
+        { label: 'Courses', to: '/courses', icon: 'local_library' },
+        { label: 'Clock-In', to: '/attendance', icon: 'schedule' },
+      ];
+    }
+    // super_admin & default
+    return [
+      { label: 'Executive', to: '/reports', icon: 'monitoring' },
+      { label: 'Leads', to: '/leads', icon: 'person_search' },
+      { label: 'Scholars', to: '/students', icon: 'school' },
+      { label: 'Expenses', to: '/expenses', icon: 'account_balance_wallet' },
+    ];
+  }, [currentUser?.role]);
 
   return (
     <nav 

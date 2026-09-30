@@ -367,17 +367,53 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
   });
 });
 
+// ----------------------------------------------------
+// Data Sanitization Helpers for Security
+// ----------------------------------------------------
+const sanitizeSettings = (settings: any) => {
+  if (!settings) return settings;
+  const copy = { ...settings };
+  if (copy.smtp) {
+    copy.smtp = {
+      ...copy.smtp,
+      pass: copy.smtp.pass ? '••••••••••••' : copy.smtp.pass,
+    };
+  }
+  if (copy.smtpPassword) {
+    copy.smtpPassword = '••••••••••••';
+  }
+  if (copy.paystackSecretKey) {
+    const key = copy.paystackSecretKey;
+    copy.paystackSecretKey = key.length > 8 ? `${key.slice(0, 7)}••••••••${key.slice(-4)}` : '••••••••';
+  }
+  return copy;
+};
+
+const sanitizeDbForClient = (database: DatabaseSchema) => {
+  return {
+    ...database,
+    settings: sanitizeSettings(database.settings),
+    staffUsers: (database.staffUsers || []).map(({ password, ...u }: any) => u),
+    mentors: (database.mentors || []).map(({ password, ...m }: any) => m),
+    students: (database.students || []).map(({ password, ...s }: any) => s),
+  };
+};
+
 app.get('/api/bootstrap', (req: Request, res: Response) => {
   res.json({
     success: true,
-    data: db,
+    data: sanitizeDbForClient(db),
   });
 });
 
 app.post('/api/reset', (req: Request, res: Response) => {
+  const callerRole = (req.headers['x-user-role'] as string) || req.body?.callerRole;
+  if (callerRole && callerRole !== 'super_admin') {
+    return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin can reset the database.' });
+  }
   db = getInitialDatabase();
   saveDatabase(db);
-  res.json({ success: true, message: 'All CRM database records restored to Nigerian demo seed data.', data: db });
+  res.json({ success: true, message: 'All CRM database records restored to Nigerian demo seed data.', data: sanitizeDbForClient(db) });
 });
 
 // ----------------------------------------------------
@@ -1937,7 +1973,8 @@ app.post('/api/leads/:id/convert', (req: Request, res: Response) => {
 // Students Endpoints
 // ----------------------------------------------------
 app.get('/api/students', (req: Request, res: Response) => {
-  res.json({ success: true, data: db.students });
+  const sanitized = (db.students || []).map(({ password, ...s }: any) => s);
+  res.json({ success: true, data: sanitized });
 });
 
 app.post('/api/students', (req: Request, res: Response) => {
@@ -1992,7 +2029,8 @@ app.post('/api/students/:id/payment-reminder', (req: Request, res: Response) => 
 // Mentors Endpoints
 // ----------------------------------------------------
 app.get('/api/mentors', (req: Request, res: Response) => {
-  res.json({ success: true, data: db.mentors });
+  const sanitized = (db.mentors || []).map(({ password, ...m }: any) => m);
+  res.json({ success: true, data: sanitized });
 });
 
 app.post('/api/mentors', (req: Request, res: Response) => {
@@ -2413,7 +2451,8 @@ app.post('/api/students/:id/issue-certificate', (req: Request, res: Response) =>
 // Staff & Settings Endpoints
 // ----------------------------------------------------
 app.get('/api/staff', (req: Request, res: Response) => {
-  res.json({ success: true, data: db.staffUsers });
+  const sanitizedStaff = (db.staffUsers || []).map(({ password, ...u }: any) => u);
+  res.json({ success: true, data: sanitizedStaff });
 });
 
 app.post('/api/staff', (req: Request, res: Response) => {
@@ -2437,13 +2476,33 @@ app.patch('/api/staff/:id', (req: Request, res: Response) => {
 });
 
 app.get('/api/settings', (req: Request, res: Response) => {
-  res.json({ success: true, data: db.settings });
+  res.json({ success: true, data: sanitizeSettings(db.settings) });
 });
 
 app.put('/api/settings', (req: Request, res: Response) => {
-  db.settings = { ...db.settings, ...req.body };
+  const callerRole = (req.headers['x-user-role'] as string) || req.body?.callerRole;
+  if (callerRole && callerRole !== 'super_admin') {
+    return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin can modify system settings.' });
+  }
+
+  const incoming = { ...req.body };
+  // Preserve real secrets if incoming payload has masked bullets or is empty
+  if (!incoming.paystackSecretKey || incoming.paystackSecretKey.includes('••••')) {
+    incoming.paystackSecretKey = db.settings.paystackSecretKey;
+  }
+  if (!incoming.smtpPassword || incoming.smtpPassword.includes('••••')) {
+    incoming.smtpPassword = db.settings.smtpPassword;
+  }
+  if (incoming.smtp) {
+    incoming.smtp = {
+      ...incoming.smtp,
+      pass: (!incoming.smtp.pass || incoming.smtp.pass.includes('••••')) ? db.settings.smtp?.pass : incoming.smtp.pass,
+    };
+  }
+
+  db.settings = { ...db.settings, ...incoming };
   saveDatabase(db);
-  res.json({ success: true, data: db.settings });
+  res.json({ success: true, data: sanitizeSettings(db.settings) });
 });
 
 // ----------------------------------------------------
@@ -2736,6 +2795,11 @@ app.get('/api/paystack/verify/:reference', async (req: Request, res: Response) =
 
 app.post('/api/paystack/disburse-mentor', async (req: Request, res: Response) => {
   try {
+    const callerRole = (req.headers['x-user-role'] as string) || req.body?.callerRole;
+    if (callerRole && callerRole !== 'super_admin' && callerRole !== 'finance') {
+      return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin and Finance roles can authorize payouts.' });
+    }
+
     const { mentorId, amount, reason } = req.body;
     const mentor = db.mentors.find(m => m.id === mentorId);
 
@@ -3196,6 +3260,11 @@ app.post('/api/wallet/topup/verify', async (req: Request, res: Response) => {
 
 app.post('/api/wallet/disburse-expense', async (req: Request, res: Response) => {
   try {
+    const callerRole = (req.headers['x-user-role'] as string) || req.body?.callerRole;
+    if (callerRole && callerRole !== 'super_admin' && callerRole !== 'finance') {
+      return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin and Finance roles can authorize expense disbursements.' });
+    }
+
     const { expenseId, bankCode, bankName, accountNumber, accountName, reason } = req.body;
     const expense = db.expenses.find(e => e.id === expenseId);
 

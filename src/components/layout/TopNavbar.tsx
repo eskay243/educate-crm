@@ -100,46 +100,61 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
 
         {/* Actions & Profile */}
         <div className="flex items-center gap-3">
-          {/* Quick Record Creator */}
-          <button
-            onClick={() => openModal('create-hub')}
-            className="hidden sm:flex items-center gap-1 px-3 h-8 rounded bg-primary text-on-primary font-label-md text-xs font-semibold hover:bg-primary-container transition-colors shadow-xs"
-          >
-            <span className="material-symbols-outlined text-[16px]">add</span>
-            <span>New Record</span>
-          </button>
-
-          {/* Real-Time Live Clock-In Pill */}
-          {activeAttendanceSession ? (
-            <div 
-              onClick={() => openModal('clock-out')}
-              className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#ecfdf5] border border-[#a7f3d0] text-[#065f46] text-xs font-semibold cursor-pointer hover:bg-[#d1fae5] transition-all"
-              title="Click to Clock Out"
-            >
-              <span className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse"></span>
-              <span className="capitalize">{activeAttendanceSession.workMode}</span>
-              <span className="font-data-tabular font-bold border-l border-[#a7f3d0] pl-1.5">{elapsedText}</span>
-            </div>
-          ) : (
+          {/* Quick Record Creator (Restricted to non-students and non-mentors) */}
+          {currentUser && currentUser.role !== 'student' && currentUser.role !== 'mentor' && (
             <button
-              onClick={() => openModal('clock-in')}
-              className="h-8 px-2.5 sm:px-3 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-primary/20"
-              title="Clock In for Shift"
+              onClick={() => openModal('create-hub')}
+              className="hidden sm:flex items-center gap-1 px-3 h-8 rounded bg-primary text-on-primary font-label-md text-xs font-semibold hover:bg-primary-container transition-colors shadow-xs"
             >
-              <span className="material-symbols-outlined text-[16px]">timer</span>
-              <span className="hidden sm:inline">Clock In</span>
+              <span className="material-symbols-outlined text-[16px]">add</span>
+              <span>New Record</span>
             </button>
           )}
 
-          {/* Help Center Quick Link */}
-          <button
-            onClick={() => navigate('/settings')}
-            className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded transition-colors"
-            title="Institutional Documentation & Audit Settings"
-            aria-label="Settings"
-          >
-            <span className="material-symbols-outlined text-[20px]">help_outline</span>
-          </button>
+          {/* Real-Time Live Clock-In Pill (Staff / Mentors only, not students) */}
+          {currentUser && currentUser.role !== 'student' && (
+            activeAttendanceSession ? (
+              <div 
+                onClick={() => openModal('clock-out')}
+                className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#ecfdf5] border border-[#a7f3d0] text-[#065f46] text-xs font-semibold cursor-pointer hover:bg-[#d1fae5] transition-all"
+                title="Click to Clock Out"
+              >
+                <span className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse"></span>
+                <span className="capitalize">{activeAttendanceSession.workMode}</span>
+                <span className="font-data-tabular font-bold border-l border-[#a7f3d0] pl-1.5">{elapsedText}</span>
+              </div>
+            ) : (
+              <button
+                onClick={() => openModal('clock-in')}
+                className="h-8 px-2.5 sm:px-3 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-primary/20"
+                title="Clock In for Shift"
+              >
+                <span className="material-symbols-outlined text-[16px]">timer</span>
+                <span className="hidden sm:inline">Clock In</span>
+              </button>
+            )
+          )}
+
+          {/* Help Center / Settings Quick Link */}
+          {currentUser?.role === 'super_admin' ? (
+            <button
+              onClick={() => navigate('/settings')}
+              className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded transition-colors"
+              title="Institutional Documentation & Audit Settings"
+              aria-label="Settings"
+            >
+              <span className="material-symbols-outlined text-[20px]">settings</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate('/tickets')}
+              className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded transition-colors"
+              title="Support Desk & Feedback Tickets"
+              aria-label="Support Tickets"
+            >
+              <span className="material-symbols-outlined text-[20px]">help_outline</span>
+            </button>
+          )}
 
           {/* Notifications Trigger */}
           <button 

@@ -27,9 +27,23 @@ const API_BASE_URL = '/api';
 class ApiService {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T | null> {
     try {
+      const authHeaders: Record<string, string> = {};
+      try {
+        const authUserStr = typeof localStorage !== 'undefined' ? localStorage.getItem('nexus_auth') : null;
+        if (authUserStr) {
+          const authUser = JSON.parse(authUserStr);
+          if (authUser?.role) authHeaders['x-user-role'] = authUser.role;
+          if (authUser?.email) authHeaders['x-user-email'] = authUser.email;
+          if (authUser?.id) authHeaders['x-user-id'] = authUser.id;
+        }
+      } catch {
+        // Ignore JSON/localStorage parse issues
+      }
+
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         headers: {
           'Content-Type': 'application/json',
+          ...authHeaders,
           ...options?.headers,
         },
         ...options,

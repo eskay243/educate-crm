@@ -32,25 +32,31 @@ export const MentorManagementPage: React.FC = () => {
   const isFinance = currentUser?.role === 'finance';
 
   // Find current mentor profile if logged in as mentor
-  const myMentorProfile = mentors.find(
-    m => m.id === currentUser?.mentorId || m.name === currentUser?.name || m.email === currentUser?.email
-  ) || mentors[0];
+  const myMentorProfile = isMentor
+    ? (mentors.find(
+        m => m.id === currentUser?.mentorId || m.name === currentUser?.name || m.email === currentUser?.email
+      ) || null)
+    : null;
 
   // Mentors are only allowed to see mentors that they share a course, student, or department with
   const accessibleMentors = useMemo(() => {
     if (!isMentor) return mentors;
 
     // Get courses taught by this mentor or programs taken by their students
-    const myStudents = students.filter(s => s.mentorId === myMentorProfile?.id || s.mentorName === myMentorProfile?.name);
+    const myStudents = myMentorProfile 
+      ? students.filter(s => s.mentorId === myMentorProfile.id || s.mentorName === myMentorProfile.name)
+      : [];
     const myStudentPrograms = new Set(myStudents.map(s => s.program));
-    const myCourses = courses.filter(c => c.leadInstructor === myMentorProfile?.name || myStudentPrograms.has(c.title));
+    const myCourses = myMentorProfile
+      ? courses.filter(c => c.leadInstructor === myMentorProfile.name || myStudentPrograms.has(c.title))
+      : [];
     const sharedInstructors = new Set(myCourses.map(c => c.leadInstructor));
 
     return mentors.filter(m => {
       // 1. The mentor themselves
-      if (m.id === myMentorProfile?.id) return true;
+      if (myMentorProfile && m.id === myMentorProfile.id) return true;
       // 2. Mentors in the same department
-      if (m.department === myMentorProfile?.department) return true;
+      if (myMentorProfile?.department && m.department === myMentorProfile.department) return true;
       // 3. Mentors who share a course or student
       if (sharedInstructors.has(m.name)) return true;
       return false;
@@ -150,7 +156,7 @@ export const MentorManagementPage: React.FC = () => {
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => {
-              setSelectedMentorForBookingId(isMentor ? myMentorProfile?.id : null);
+              setSelectedMentorForBookingId(isMentor ? (myMentorProfile?.id || null) : null);
               openModal('book-session');
             }}
             className="h-10 px-4 bg-secondary-container text-primary rounded font-label-md text-label-md font-bold hover:bg-surface-container-high transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
@@ -339,8 +345,12 @@ export const MentorManagementPage: React.FC = () => {
                   </thead>
                   <tbody className="font-data-tabular text-on-surface divide-y divide-outline-variant">
                     {filteredMentors.map((mentor, index) => {
-                      const isSelf = mentor.id === myMentorProfile?.id;
-                      const canViewFinancials = !isMentor || isSelf;
+                      const isSelf = Boolean(myMentorProfile && mentor.id === myMentorProfile.id);
+                      const canViewFinancials = isSuperAdmin || isFinance || isSelf;
+                      const canViewFullBanking = isSuperAdmin || isFinance || isSelf;
+                      const formattedAccount = mentor.accountNumber
+                        ? (canViewFullBanking ? mentor.accountNumber : `••••${mentor.accountNumber.slice(-4)}`)
+                        : 'N/A';
 
                       return (
                         <tr 
@@ -366,7 +376,7 @@ export const MentorManagementPage: React.FC = () => {
                                   )}
                                 </div>
                                 <p className="text-secondary text-[11px]">
-                                  {mentor.email} {mentor.bankName ? `• ${mentor.bankName} (${mentor.accountNumber || 'N/A'})` : ''}
+                                  {mentor.email} {mentor.bankName ? `• ${mentor.bankName} (${formattedAccount})` : ''}
                                 </p>
                               </div>
                             </div>
