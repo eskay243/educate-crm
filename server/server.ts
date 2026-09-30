@@ -300,6 +300,73 @@ app.get('/api/health', (req: Request, res: Response) => {
   res.json({ status: 'healthy', version: '3.2', timestamp: new Date().toISOString() });
 });
 
+// ----------------------------------------------------
+// Authentication Endpoints
+// ----------------------------------------------------
+app.post('/api/auth/login', (req: Request, res: Response) => {
+  const { email, password, role } = req.body;
+  if (!password || typeof password !== 'string' || !password.trim()) {
+    return res.status(400).json({ success: false, message: 'Password is required' });
+  }
+
+  const cleanEmail = email ? email.trim().toLowerCase() : '';
+  let user: any = null;
+
+  if (cleanEmail) {
+    user = db.staffUsers?.find((u: any) => u.email.toLowerCase() === cleanEmail);
+    if (!user) {
+      const mentor = db.mentors?.find((m: any) => m.email.toLowerCase() === cleanEmail);
+      if (mentor) {
+        user = {
+          id: mentor.id,
+          name: mentor.name,
+          email: mentor.email,
+          role: 'mentor',
+          roleTitle: mentor.role || 'Faculty Mentor',
+          mentorId: mentor.id,
+          department: mentor.department,
+          password: mentor.password,
+        };
+      }
+    }
+    if (!user) {
+      const student = db.students?.find((s: any) => s.email.toLowerCase() === cleanEmail);
+      if (student) {
+        user = {
+          id: student.id,
+          name: student.name,
+          email: student.email,
+          role: 'student',
+          roleTitle: 'Enrolled Scholar / Student',
+          studentId: student.id,
+          password: student.password,
+        };
+      }
+    }
+  }
+
+  if (!user && role) {
+    user = db.staffUsers?.find((u: any) => u.role === role);
+  }
+
+  if (!user) {
+    return res.status(401).json({ success: false, message: 'No registered account found with provided credentials' });
+  }
+
+  const expectedPassword = user.password || 'password123';
+  if (password.trim() !== expectedPassword.trim()) {
+    return res.status(401).json({ success: false, message: 'Invalid password. Please check your credentials.' });
+  }
+
+  // Sanitize user (strip password)
+  const { password: _, ...sanitizedUser } = user;
+  res.json({
+    success: true,
+    user: sanitizedUser,
+    message: 'Authentication successful',
+  });
+});
+
 app.get('/api/bootstrap', (req: Request, res: Response) => {
   res.json({
     success: true,

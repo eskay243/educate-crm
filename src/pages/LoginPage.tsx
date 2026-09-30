@@ -54,6 +54,8 @@ export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState<string>(queryEmail);
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Sync state if query params change
   useEffect(() => {
@@ -68,6 +70,7 @@ export const LoginPage: React.FC = () => {
   // Intelligent auto-detection of role based on email input
   const handleEmailChange = (val: string) => {
     setEmail(val);
+    if (errorMessage) setErrorMessage('');
     const norm = val.trim().toLowerCase();
     if (!norm) return;
 
@@ -102,11 +105,29 @@ export const LoginPage: React.FC = () => {
 
   const from = (location.state as any)?.from?.pathname || '/';
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    login(selectedRole, email);
-    const target = selectedRole === 'student' ? '/student/dashboard' : (from === '/' ? '/' : from);
-    navigate(target, { replace: true });
+    setErrorMessage('');
+
+    if (!password) {
+      setErrorMessage('Please enter your account password.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await login(selectedRole, email, password);
+      if (!result.success) {
+        setErrorMessage(result.message || 'Invalid credentials. Please verify your email and password.');
+        setIsSubmitting(false);
+        return;
+      }
+      const target = selectedRole === 'student' ? '/student/dashboard' : (from === '/' ? '/' : from);
+      navigate(target, { replace: true });
+    } catch (err: any) {
+      setErrorMessage(err.message || 'An error occurred during authentication.');
+      setIsSubmitting(false);
+    }
   };
 
   const isRoleSpecifiedInUrl = !!queryRole;
@@ -141,8 +162,16 @@ export const LoginPage: React.FC = () => {
             </p>
           </div>
 
+          {/* Error Message Box */}
+          {errorMessage && (
+            <div className="p-3.5 bg-[#FEE2E2] border border-error/30 rounded-xl flex items-center gap-2.5 text-xs text-[#991B1B] animate-in fade-in duration-200">
+              <span className="material-symbols-outlined text-[#991B1B] text-[20px] shrink-0">error</span>
+              <span className="font-semibold leading-relaxed">{errorMessage}</span>
+            </div>
+          )}
+
           {/* Invitation / Role Specific Welcome Notice if routed with parameters */}
-          {(queryRole || queryEmail) && (
+          {(queryRole || queryEmail) && !errorMessage && (
             <div className="p-3 bg-secondary-container/30 border border-secondary-container rounded-lg flex items-center gap-2.5 text-xs text-on-surface animate-in fade-in duration-200">
               <span className="material-symbols-outlined text-primary text-[18px]">verified_user</span>
               <div className="leading-tight">
@@ -207,7 +236,10 @@ export const LoginPage: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
+                  onChange={e => {
+                    setPassword(e.target.value);
+                    if (errorMessage) setErrorMessage('');
+                  }}
                   placeholder="Enter your account password"
                   className="w-full h-11 pl-9 pr-10 rounded bg-surface border border-outline-variant text-sm font-body-md focus:border-primary outline-none"
                 />
@@ -226,10 +258,17 @@ export const LoginPage: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full h-11 bg-primary text-on-primary rounded font-label-md text-xs font-bold hover:bg-primary-container transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+              disabled={isSubmitting}
+              className="w-full h-11 bg-primary text-on-primary rounded font-label-md text-xs font-bold hover:bg-primary-container transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
             >
-              <span>Sign In to {ROLE_SHORT_LABELS[selectedRole]} Portal</span>
-              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+              {isSubmitting ? (
+                <span>Authenticating...</span>
+              ) : (
+                <>
+                  <span>Sign In to {ROLE_SHORT_LABELS[selectedRole]} Portal</span>
+                  <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                </>
+              )}
             </button>
 
             {/* Mobile PWA Quick Install Action */}

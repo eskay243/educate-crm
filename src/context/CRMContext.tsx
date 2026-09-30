@@ -153,7 +153,7 @@ interface CRMContextType {
   calculatePerformanceTier: (score: number) => 'Exceeding' | 'On Track' | 'Needs Support' | 'At Risk';
   
   // Auth actions
-  login: (role: UserRole, email?: string) => void;
+  login: (role: UserRole, email?: string, password?: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   hasPermission: (requiredRole: UserRole | UserRole[]) => boolean;
   isSuperAdmin: boolean;
@@ -282,8 +282,16 @@ export const defaultWalletState: ExpenseAndBudgetWallet = {
 
 export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
+    const isExplicitlyLoggedOut = localStorage.getItem('nexus_logged_out') === 'true';
+    if (isExplicitlyLoggedOut) return null;
     const saved = localStorage.getItem(STORAGE_KEYS.AUTH);
-    return saved ? JSON.parse(saved) : defaultAuthUser;
+    if (!saved) return null;
+    try {
+      return JSON.parse(saved);
+    } catch (e) {
+      console.error('Failed to parse saved auth state:', e);
+      return null;
+    }
   });
 
   const [staffUsers, setStaffUsers] = useState<AuthUser[]>(() => {
@@ -588,11 +596,15 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return sessionStorage.getItem('nexus_super_admin_session') === 'true';
   });
 
-  const isSuperAdmin = currentUser?.role === 'super_admin' || isSuperAdminSession;
+  const isSuperAdmin = currentUser ? (currentUser.role === 'super_admin' || isSuperAdminSession) : false;
   const isSimulatingRole = isSuperAdmin && currentUser?.role !== 'super_admin';
 
   // Auth actions
-  const login = (role: UserRole, email?: string) => {
+  const login = async (role: UserRole, email?: string, password?: string): Promise<{ success: boolean; message?: string }> => {
+    if (!password || !password.trim()) {
+      return { success: false, message: 'Password is required to authenticate.' };
+    }
+
     let matched: AuthUser | undefined;
 
     if (email && email.trim()) {
@@ -612,6 +624,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             roleTitle: mentor.role || 'Faculty Mentor',
             mentorId: mentor.id,
             department: mentor.department,
+            password: mentor.password,
           };
         }
       }
@@ -627,6 +640,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             role: 'student',
             roleTitle: 'Enrolled Scholar / Student',
             studentId: student.id,
+            password: student.password,
           };
         }
       }
@@ -637,17 +651,25 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
 
-    // If still not matched by email, match by specified role
+    // If still not matched by email, match by specified role in staff/demo
     if (!matched) {
-      matched = staffUsers.find(u => u.role === role) || demoUsers.find(u => u.role === role) || {
-        id: `user-${role}`,
-        name: role === 'super_admin' ? 'Abiola Adefowope' : role === 'student' ? 'Enrolled Student' : role === 'admissions' ? 'Admissions Officer' : role === 'mentor' ? 'Faculty Mentor' : 'Finance Officer',
-        email: email || (role === 'super_admin' ? 'abiola.adefowope@codelab.institute' : `${role}@codelab.institute`),
-        role,
-        roleTitle: role === 'super_admin' ? 'Managing Director & Super Admin' : role === 'student' ? 'Enrolled Scholar / Student' : role === 'admissions' ? 'Head of Admissions' : role === 'mentor' ? 'Principal Faculty Mentor' : 'Chief Financial Officer',
-        mentorId: role === 'mentor' ? 'men-1' : undefined,
-      };
+      matched = staffUsers.find(u => u.role === role) || demoUsers.find(u => u.role === role);
     }
+
+    if (!matched) {
+      return { success: false, message: 'No registered institutional account found matching the provided details.' };
+    }
+
+    // Credential Verification:
+    // Determine the expected password for this account.
+    // If the account has an explicit password set, check it; otherwise fallback to default initial password 'password123'
+    const expectedPassword = matched.password || 'password123';
+    if (password.trim() !== expectedPassword.trim()) {
+      return { success: false, message: 'Invalid password. Please check your credentials and try again.' };
+    }
+
+    // Clear explicit logout flag
+    localStorage.removeItem('nexus_logged_out');
 
     // Set or clear super admin session flag based on authenticated account
     if (matched.role === 'super_admin') {
@@ -666,6 +688,8 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       type: 'system',
       user: matched.name,
     });
+
+    return { success: true };
   };
 
   const switchRole = (newRole: UserRole) => {
@@ -749,6 +773,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     sessionStorage.removeItem('nexus_super_admin_session');
     setIsSuperAdminSession(false);
     localStorage.removeItem(STORAGE_KEYS.AUTH);
+    localStorage.setItem('nexus_logged_out', 'true');
     showToast('Signed Out', 'You have been signed out of the portal.', 'info');
     logActivity({
       title: 'User Signed Out',
@@ -767,8 +792,19 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Check if custom role has permission for these modules
     const matchedRole = customRoles.find(r => r.id === currentUser.role);
     if (matchedRole && matchedRole.allowedModules) {
+      const roleModuleMapping: Record<string, string[]> = {
+        admissions: ['leads', 'courses', 'students'],
+        finance: ['expenses', 'students', 'invoices'],
+        mentor: ['students', 'attendance', 'sessions'],
+        student: ['lms', 'student_portal'],
+      };
+
       for (const role of rolesArray) {
-        if (matchedRole.allowedModules.includes(role)) return true;
+        if (matchedRole.allowedModules.includes(role as any)) return true;
+        const associatedModules = roleModuleMapping[role] || [];
+        if (associatedModules.some(m => matchedRole.allowedModules.includes(m as any))) {
+          return true;
+        }
       }
     }
     return false;

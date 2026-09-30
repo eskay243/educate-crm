@@ -164,6 +164,7 @@ export interface Student {
   name: string;
   email: string;
   phone: string;
+  password?: string;
   avatarUrl?: string;
   program: string;
   mentorId?: string;
@@ -201,6 +202,7 @@ export interface Mentor {
   name: string;
   email: string;
   phone: string;
+  password?: string;
   avatarUrl?: string;
   role: string;
   department: string;

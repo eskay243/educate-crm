@@ -31,3 +31,4 @@ server/backups/*.json
 *.njsproj
 *.sln
 *.sw?
+.agents/

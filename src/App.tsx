@@ -27,10 +27,25 @@ import { OfflineIndicator } from './components/common/OfflineIndicator';
 
 const HomeRoute: React.FC = () => {
   const { currentUser } = useCRM();
-  if (currentUser?.role === 'student') {
+  if (!currentUser) {
+    return <Navigate to="/login" replace />;
+  }
+  if (currentUser.role === 'student') {
     return <Navigate to="/student/dashboard" replace />;
   }
-  return <ExecutiveReportPage />;
+  if (currentUser.role === 'admissions') {
+    return <Navigate to="/leads" replace />;
+  }
+  if (currentUser.role === 'finance') {
+    return <Navigate to="/expenses" replace />;
+  }
+  if (currentUser.role === 'mentor') {
+    return <Navigate to="/mentors" replace />;
+  }
+  if (currentUser.role === 'super_admin') {
+    return <ExecutiveReportPage />;
+  }
+  return <Navigate to="/tickets" replace />;
 };
 
 export const App: React.FC = () => {
@@ -52,7 +67,14 @@ export const App: React.FC = () => {
             }
           >
             <Route index element={<HomeRoute />} />
-            <Route path="reports" element={<HomeRoute />} />
+            <Route 
+              path="reports" 
+              element={
+                <ProtectedRoute allowedRoles={['super_admin']}>
+                  <ExecutiveReportPage />
+                </ProtectedRoute>
+              } 
+            />
             
             <Route
               path="courses"
