@@ -20,11 +20,11 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 shadow-lg text-xs space-y-1.5 font-sans z-50 min-w-[210px]">
         <p className="font-bold text-on-surface border-b border-outline-variant/60 pb-1">Cohort Batch: {label}</p>
         <div className="space-y-1 font-data-tabular">
-          <div className="flex justify-between items-center text-[#00236f]">
+          <div className="flex justify-between items-center text-primary">
             <span>Admitted Capacity:</span>
             <strong className="font-bold">{enrolled}</strong>
           </div>
-          <div className="flex justify-between items-center text-[#10b981]">
+          <div className="flex justify-between items-center text-sea-green">
             <span>Active Enrolled Students:</span>
             <strong className="font-bold">{activeStudents}</strong>
           </div>
@@ -73,23 +73,23 @@ export const CohortProgressionAreaChart: React.FC = () => {
         <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
           <defs>
             <linearGradient id="colorEnrolled" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#00236f" stopOpacity={0.35} />
-              <stop offset="95%" stopColor="#00236f" stopOpacity={0.0} />
+              <stop offset="5%" stopColor="#1872F5" stopOpacity={0.35} />
+              <stop offset="95%" stopColor="#1872F5" stopOpacity={0.0} />
             </linearGradient>
             <linearGradient id="colorActive" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
-              <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+              <stop offset="5%" stopColor="#41B57A" stopOpacity={0.35} />
+              <stop offset="95%" stopColor="#41B57A" stopOpacity={0.0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#D9E6E8" vertical={false} />
           <XAxis 
             dataKey="cohort" 
-            tick={{ fontSize: 11, fill: '#64748b' }} 
-            axisLine={{ stroke: '#cbd5e1' }}
+            tick={{ fontSize: 11, fill: '#414754' }} 
+            axisLine={{ stroke: '#D9E6E8' }}
             tickLine={false}
           />
           <YAxis 
-            tick={{ fontSize: 10, fill: '#64748b' }} 
+            tick={{ fontSize: 10, fill: '#414754' }} 
             axisLine={false}
             tickLine={false}
           />
@@ -105,7 +105,7 @@ export const CohortProgressionAreaChart: React.FC = () => {
           <Area 
             type="monotone" 
             dataKey="enrolled" 
-            stroke="#00236f" 
+            stroke="#1872F5" 
             strokeWidth={2}
             fillOpacity={1} 
             fill="url(#colorEnrolled)" 

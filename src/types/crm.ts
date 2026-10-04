@@ -1,4 +1,4 @@
-export type BuiltInRole = 'super_admin' | 'admissions' | 'mentor' | 'finance' | 'student';
+export type BuiltInRole = 'super_admin' | 'program_officer' | 'admissions' | 'mentor' | 'finance' | 'student';
 export type UserRole = BuiltInRole | string;
 
 export interface RoleCapabilities {
@@ -13,6 +13,9 @@ export interface RoleCapabilities {
   canManageSettings: boolean;
   canManageAttendance: boolean;
   canSubmitReports: boolean;
+  canScheduleClasses?: boolean;
+  canApproveTopics?: boolean;
+  canManageUsers?: boolean;
 }
 
 export interface CustomRoleDefinition {
@@ -73,8 +76,53 @@ export interface AuthUser {
   password?: string;
   avatarUrl?: string;
   department?: string;
+  phone?: string;
+  bio?: string;
+
+  // Personal Settlement Bank KYC (NUBAN)
+  bankName?: string;
+  bankCode?: string;
+  accountNumber?: string;
+  accountName?: string;
+  isBankVerified?: boolean;
+  bvn?: string;
+
+  // Nigerian Standard Tier 2/3 KYC (CBN CDD Compliance)
+  idType?: 'NIN' | 'BVN' | 'Driver License' | 'Voter Card' | 'International Passport';
+  idNumber?: string;
+  isIdVerified?: boolean;
+  idDocumentUrl?: string;
+  idDocumentName?: string;
+  dateOfBirth?: string;
+  gender?: 'Male' | 'Female' | 'Other';
+  nationality?: string;
+  stateOfOrigin?: string;
+  lga?: string;
+
+  // Residential Address & Proof of Residence
+  residentialAddress?: string;
+  city?: string;
+  stateOfResidence?: string;
+  proofOfAddressUrl?: string;
+  proofOfAddressName?: string;
+
+  // Next of Kin / Emergency Guarantor
+  nextOfKinName?: string;
+  nextOfKinRelationship?: string;
+  nextOfKinPhone?: string;
+  nextOfKinAddress?: string;
+
+  // Compliance Tracking
+  kycTier?: 'Tier 1' | 'Tier 2' | 'Tier 3';
+  kycStatus?: 'Verified' | 'Pending Review' | 'Incomplete';
+  kycSubmittedAt?: string;
+
   mentorId?: string; // Links to mentor profile if role is 'mentor'
   studentId?: string; // Links to student record if role is 'student'
+  isActive?: boolean; // Defaults to true; false = deactivated / suspended
+  status?: 'Active' | 'Deactivated';
+  deactivatedAt?: string;
+  deactivatedReason?: string;
 }
 
 export type LeadStatus = 'Qualified' | 'Negotiation' | 'Discovery' | 'Overdue' | 'Contacted' | 'New' | 'Converted' | 'Lost';
@@ -99,7 +147,7 @@ export interface Lead {
   dealValue?: number;
 }
 
-export type StudentStatus = 'Active' | 'Pending' | 'Completed' | 'Paused';
+export type StudentStatus = 'Active' | 'Pending' | 'Completed' | 'Paused' | 'Deactivated';
 export type TuitionStatus = 'Paid' | 'Partial' | 'Overdue';
 
 export interface EnrolledCourse {
@@ -129,6 +177,30 @@ export interface LMSLesson {
   videoUrl?: string;
   contentMarkdown?: string;
   resources?: { title: string; url: string }[];
+  learningObjectives?: string[];
+  // Outline Teaching & PO Approval Lifecycle
+  completedByMentor?: boolean;
+  completedByMentorName?: string;
+  completedByMentorAt?: string;
+  completionNotes?: string;
+  approvedByProgramOfficer?: boolean;
+  approvedByProgramOfficerName?: string;
+  approvedAt?: string;
+  approvalStatus?: 'Not Started' | 'Taught (Pending PO Approval)' | 'Approved & Published';
+  dayNumber?: number;
+  practicalLabTask?: string;
+  submissionRequired?: boolean;
+}
+
+export type CourseDurationTrack = '30-Day Sprint' | '60-Day Practitioner' | '90-Day Diploma' | '120-Day Enterprise';
+
+export interface LearningGuideline {
+  prerequisites?: string[];
+  competencyOutcome: string;
+  expectedDeliverables: string[];
+  dayRange?: string; // e.g. "Days 1 - 15"
+  theoryHours?: number;
+  practicalHours?: number;
 }
 
 export interface LMSModule {
@@ -138,6 +210,13 @@ export interface LMSModule {
   description: string;
   order: number;
   lessons: LMSLesson[];
+  durationTrack?: CourseDurationTrack;
+  durationDays?: number; // 30, 60, 90, 120
+  nsqfLevel?: string; // e.g. "NSQF Level 4"
+  nitdaStandardCode?: string; // e.g. "NITDA-SWE-MOD-01"
+  theoryHours?: number;
+  practicalHours?: number;
+  learningGuideline?: LearningGuideline;
 }
 
 export interface StudentAssignmentSubmission {
@@ -170,6 +249,7 @@ export interface Student {
   mentorId?: string;
   mentorName: string;
   status: StudentStatus;
+  isActive?: boolean;
   attendanceRate: number;
   tuitionStatus: TuitionStatus;
   cohort: string;
@@ -193,7 +273,7 @@ export interface Student {
   certificateIssuedAt?: string;
 }
 
-export type MentorStatus = 'Active' | 'Available' | 'On Leave';
+export type MentorStatus = 'Active' | 'Available' | 'On Leave' | 'Deactivated';
 export type PayoutStatus = 'Completed' | 'Processing' | 'Pending';
 
 export interface Mentor {
@@ -223,6 +303,9 @@ export interface Mentor {
   totalEarned?: number;
   payoutStatus: PayoutStatus;
   status: MentorStatus;
+  isActive?: boolean;
+  lecturedHours?: number; // Cumulative hours of classes & coaching delivered to students
+  minimumRequiredHours?: number; // Minimum lectured hours required before eligible for payouts (default: 20)
   joinedDate: string;
   bio?: string;
   bankName?: string;
@@ -233,6 +316,18 @@ export interface Mentor {
   isAccountVerified?: boolean;
   accountVerificationSource?: string;
   accountVerifiedAt?: string;
+  officeHours?: MentorAvailabilitySlot[];
+}
+
+export interface MentorAvailabilitySlot {
+  id: string;
+  dayOfWeek: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
+  startTime: string; // e.g. "14:00"
+  endTime: string;   // e.g. "17:00"
+  slotDurationMinutes: number; // e.g. 30
+  meetingLink?: string; // e.g. "https://meet.google.com/nex-codelab-1on1"
+  locationType: 'Google Meet (Online)' | 'Zoom' | 'Campus Hub Lab';
+  isActive: boolean;
 }
 
 // ----------------------------------------------------
@@ -370,6 +465,8 @@ export interface CourseProgram {
   category: string;
   description: string;
   durationWeeks: number;
+  durationDays?: number; // 30, 60, 90, 120
+  durationTrack?: CourseDurationTrack;
   tuitionFee: number;
   syllabusModules: string[];
   leadInstructor: string;
@@ -377,6 +474,11 @@ export interface CourseProgram {
   status: 'Active' | 'Draft';
   rating: number;
   minimumRequiredHours?: number; // Minimum learning session attendance hours required for graduation
+  nsqfLevel?: string; // e.g. "NSQF Level 4 (National Vocational Certificate)"
+  nitdaTrack?: string; // e.g. "NITDA Digital Skills Initiative (Software Engineering)"
+  theoryHours?: number; // e.g. 25h (30% Theory)
+  practicalHours?: number; // e.g. 60h (70% Practical Hands-on Labs)
+  learningGuidelinesSummary?: string;
 }
 
 export interface Cohort {
@@ -434,6 +536,8 @@ export interface MentorshipSession {
   durationHours: number;
   topic: string;
   notes?: string;
+  meetingLink?: string;
+  locationType?: string;
   status: 'Scheduled' | 'Completed' | 'Cancelled';
   compensationAmount: number;
   studentAttendance?: 'Attended' | 'Absent' | 'Pending';
@@ -550,6 +654,7 @@ export interface OrganizationSettings {
   paystackLiveMode?: boolean;
   enabledModules?: EnabledModules;
   defaultMinimumLearningHours?: number; // Default 40 hours
+  mentorMinimumLecturedHours?: number; // Default 20 hours
   campusLocationsList?: CampusLocation[];
   customRoles?: CustomRoleDefinition[];
   expenseWallet?: ExpenseAndBudgetWallet;
@@ -637,6 +742,39 @@ export interface ToastMessage {
   duration?: number;
 }
 
+export interface TimetableAttendanceRecord {
+  studentId: string;
+  studentName: string;
+  studentCode?: string;
+  status: 'Attended' | 'Absent';
+  markedAt?: string;
+  hoursCredited?: number;
+}
+
+export interface TimetableSlot {
+  id: string;
+  courseId: string;
+  courseTitle: string;
+  cohortId: string;
+  cohortName: string;
+  mentorId: string;
+  mentorName: string;
+  topic: string;
+  dayOfWeek: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
+  date: string; // YYYY-MM-DD
+  startTime: string; // e.g. "10:00 AM"
+  endTime: string; // e.g. "12:00 PM"
+  durationHours: number; // e.g. 2
+  venue: string; // e.g. "Lagos Hub Lab 1 / Google Meet"
+  meetingLink?: string;
+  status: 'Scheduled' | 'In Progress' | 'Completed' | 'Cancelled';
+  attendanceMarked: boolean;
+  attendanceRecords?: TimetableAttendanceRecord[];
+  createdAt: string;
+  createdBy: string;
+  notes?: string;
+}
+
 export type ModalType = 
   | 'create-hub' 
   | 'recruit-mentor' 
@@ -663,7 +801,38 @@ export type ModalType =
   | 'top-up-wallet'
   | 'disburse-expense'
   | 'disburse-mentor'
+  | 'schedule-class'
+  | 'take-attendance'
+  | 'course-outline'
+  | 'reset-user-password'
+  | 'request-payout'
   | null;
+
+export interface MentorPayoutRequest {
+  id: string;
+  mentorId: string;
+  mentorName: string;
+  mentorEmail: string;
+  amount: number;
+  lecturedHours: number;
+  minimumRequiredHours: number;
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+  bankCode?: string;
+  status: 'Pending' | 'Approved' | 'Disbursed' | 'Rejected';
+  whtRatePercent?: number;
+  whtDeductedAmount?: number;
+  netDisbursedAmount?: number;
+  voucherNumber?: string;
+  requestedAt: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+  disbursedAt?: string;
+  disburseReference?: string;
+  rejectionReason?: string;
+  notes?: string;
+}
 
 
 

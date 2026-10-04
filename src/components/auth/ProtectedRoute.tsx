@@ -10,14 +10,17 @@ export interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles, requiredModule }) => {
-  const { currentUser, hasPermission, isModuleEnabled, isSuperAdmin, switchRole } = useCRM();
+  const { currentUser, hasPermission, hasModulePermission, isModuleEnabled, isSuperAdmin, switchRole } = useCRM();
   const location = useLocation();
 
   if (!currentUser) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (allowedRoles && allowedRoles.length > 0 && !hasPermission(allowedRoles)) {
+  const roleRestricted = allowedRoles && allowedRoles.length > 0 && !hasPermission(allowedRoles);
+  const moduleRestricted = requiredModule && !hasModulePermission(requiredModule);
+
+  if (roleRestricted || moduleRestricted) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-200">
         <div className="w-16 h-16 rounded-full bg-error-container/30 text-error flex items-center justify-center mb-4 border border-error/20">

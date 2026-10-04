@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useCRM } from '../../context/CRMContext';
 import { LMSLesson, LMSModule } from '../../types/crm';
 
@@ -11,7 +12,8 @@ export const StudentCoursesPage: React.FC = () => {
     assignments, 
     openModal,
     settings,
-    showToast 
+    showToast,
+    timetables,
   } = useCRM();
 
   const student = currentStudentProfile || {
@@ -33,12 +35,26 @@ export const StudentCoursesPage: React.FC = () => {
   const [activeModuleId, setActiveModuleId] = useState<string>(modules[0]?.id || 'mod-1');
   const [activeLessonId, setActiveLessonId] = useState<string>(modules[0]?.lessons[0]?.id || 'les-1-1');
   const [activeTab, setActiveTab] = useState<'content' | 'assignment' | 'resources'>('content');
+  const [showTimetableModal, setShowTimetableModal] = useState(false);
 
   // Assignment submission form
   const [githubUrl, setGithubUrl] = useState('');
   const [liveUrl, setLiveUrl] = useState('');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const cohortTimetable = useMemo(() => {
+    if (!timetables) return [];
+    return timetables.filter(slot => {
+      const studentCohort = (student as any).cohort || '';
+      const matchCohort = studentCohort && slot.cohortName.toLowerCase().includes(studentCohort.toLowerCase());
+      const matchCourse = student.program && (
+        slot.courseTitle.toLowerCase().includes(student.program.toLowerCase()) ||
+        student.program.toLowerCase().includes(slot.courseTitle.toLowerCase())
+      );
+      return matchCohort || matchCourse;
+    });
+  }, [timetables, student]);
 
   const activeModule = modules.find(m => m.id === activeModuleId) || modules[0];
   const activeLesson: LMSLesson | undefined = activeModule?.lessons.find(l => l.id === activeLessonId) || activeModule?.lessons[0];
@@ -112,6 +128,15 @@ export const StudentCoursesPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={() => setShowTimetableModal(true)}
+            className="px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs bg-primary text-on-primary hover:bg-primary/90 cursor-pointer"
+            title="View Cohort Timetable & Scheduled Lectures"
+          >
+            <span className="material-symbols-outlined text-[18px]">calendar_month</span>
+            <span>Class Timetable ({cohortTimetable.length})</span>
+          </button>
+
           <button
             onClick={() => openModal('view-certificate')}
             className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer ${
@@ -204,10 +229,20 @@ export const StudentCoursesPage: React.FC = () => {
 
                           <div className="flex-1 truncate">
                             <div className="truncate text-on-surface">{lesson.title}</div>
-                            <div className="text-[11px] text-on-surface-variant mt-0.5 flex items-center gap-2">
+                            <div className="text-[11px] text-on-surface-variant mt-0.5 flex items-center gap-1.5 flex-wrap">
                               <span>{lesson.durationMinutes} mins</span>
                               <span>&bull;</span>
                               <span className="capitalize">{lesson.type}</span>
+                              {lesson.approvalStatus === 'Approved & Published' && (
+                                <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[9px] font-bold">
+                                  Approved
+                                </span>
+                              )}
+                              {lesson.approvalStatus === 'Taught (Pending PO Approval)' && (
+                                <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[9px] font-bold">
+                                  Taught
+                                </span>
+                              )}
                             </div>
                           </div>
                         </button>
@@ -227,12 +262,23 @@ export const StudentCoursesPage: React.FC = () => {
               {/* Lesson Top Bar */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-outline-variant pb-4">
                 <div>
-                  <div className="flex items-center gap-2 text-xs text-primary font-bold mb-1">
+                  <div className="flex items-center gap-2 text-xs text-primary font-bold mb-1 flex-wrap">
                     <span className="uppercase tracking-wider">Module {activeModule?.order}</span>
                     <span>&bull;</span>
                     <span className="capitalize">{activeLesson.type} Lecture</span>
                     <span>&bull;</span>
                     <span>{activeLesson.durationMinutes} mins</span>
+                    {activeLesson.approvedByProgramOfficer && (
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[13px]">verified</span>
+                        <span>PO Approved</span>
+                      </span>
+                    )}
+                    {activeLesson.completedByMentor && !activeLesson.approvedByProgramOfficer && (
+                      <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold border border-amber-200">
+                        Taught by Faculty
+                      </span>
+                    )}
                   </div>
                   <h2 className="text-xl md:text-2xl font-extrabold text-on-surface">{activeLesson.title}</h2>
                 </div>
@@ -252,6 +298,39 @@ export const StudentCoursesPage: React.FC = () => {
                   <span>{isCompleted ? 'Completed' : 'Mark Complete'}</span>
                 </button>
               </div>
+
+              {/* NBTE / NITDA Learning Guideline Card for Active Module */}
+              {activeModule?.learningGuideline && (
+                <div className="p-4 rounded-xl bg-surface border border-outline-variant text-xs space-y-2.5 shadow-xs">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="font-bold text-primary flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
+                      <span className="material-symbols-outlined text-[16px]">verified</span>
+                      <span>NBTE / NITDA Learning Guideline &bull; {activeModule.learningGuideline.dayRange || 'Pacing Schedule'}</span>
+                    </span>
+                    <Link
+                      to="/student/mentor"
+                      className="px-2.5 py-1 rounded bg-primary/10 text-primary hover:bg-primary/20 font-bold text-[11px] flex items-center gap-1 transition-colors"
+                      title="Book 1-on-1 office hours coaching with your faculty mentor"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">support_agent</span>
+                      <span>Book Mentor Office Hours</span>
+                    </Link>
+                  </div>
+                  <p className="text-secondary leading-relaxed">
+                    <strong className="text-on-surface">Target Competency:</strong> {activeModule.learningGuideline.competencyOutcome}
+                  </p>
+                  {activeModule.learningGuideline.expectedDeliverables && (
+                    <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-outline-variant/40">
+                      <span className="text-[11px] text-secondary font-medium">Expected Deliverables:</span>
+                      {activeModule.learningGuideline.expectedDeliverables.map((deliv, idx) => (
+                        <span key={idx} className="px-2 py-0.5 rounded bg-surface-container text-on-surface text-[10px] font-medium border border-outline-variant/60">
+                          ✓ {deliv}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Classroom Tabs */}
               <div className="flex items-center gap-2 border-b border-outline-variant">
@@ -474,6 +553,103 @@ export const StudentCoursesPage: React.FC = () => {
           )}
         </div>
       </div>
+      {/* Cohort Timetable Modal */}
+      {showTimetableModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-inverse-surface/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div 
+            className="w-full max-w-2xl bg-surface border border-outline rounded-xl shadow-modal overflow-hidden flex flex-col max-h-[85vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-5 bg-crisp-black text-white flex justify-between items-center border-b border-outline">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[24px]">calendar_month</span>
+                </div>
+                <div>
+                  <h3 className="font-headline-sm text-base font-bold">Class Timetable &amp; Lecture Schedule</h3>
+                  <p className="text-xs text-white/80">Scheduled live classes for your cohort</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowTimetableModal(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 overflow-y-auto">
+              {cohortTimetable.length === 0 ? (
+                <div className="p-8 text-center text-secondary text-xs">
+                  <span className="material-symbols-outlined text-3xl opacity-40 mb-2 block">event_available</span>
+                  No timetable slots scheduled yet for your cohort. The Program Officer will update your schedule soon.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {cohortTimetable.map(slot => (
+                    <div key={slot.id} className="p-4 rounded-xl bg-surface border border-outline-variant hover:border-primary/50 transition-all space-y-2.5">
+                      <div className="flex justify-between items-start gap-1">
+                        <span className="px-2 py-0.5 rounded bg-primary-container/30 text-primary text-[11px] font-bold">
+                          {slot.dayOfWeek} • {slot.startTime} - {slot.endTime}
+                        </span>
+                        {slot.attendanceMarked ? (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                            Attended
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                            Upcoming
+                          </span>
+                        )}
+                      </div>
+
+                      <div>
+                        <h4 className="font-bold text-sm text-on-surface line-clamp-1">{slot.topic}</h4>
+                        <p className="text-xs text-secondary mt-0.5">{slot.courseTitle}</p>
+                      </div>
+
+                      <div className="pt-2 border-t border-outline-variant/40 space-y-1 text-xs">
+                        <div className="flex items-center gap-1.5 text-secondary">
+                          <span className="material-symbols-outlined text-[15px] text-primary">person</span>
+                          <span>Faculty: <strong className="text-on-surface">{slot.mentorName}</strong></span>
+                        </div>
+
+                        {slot.meetingLink ? (
+                          <div className="pt-1">
+                            <a
+                              href={slot.meetingLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="h-8 px-3 rounded-lg bg-primary text-on-primary hover:bg-primary/90 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs w-full"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">videocam</span>
+                              <span>Join Live Lecture Room</span>
+                            </a>
+                          </div>
+                        ) : slot.venue ? (
+                          <div className="flex items-center gap-1.5 text-secondary">
+                            <span className="material-symbols-outlined text-[15px] text-secondary">location_on</span>
+                            <span className="line-clamp-1">{slot.venue}</span>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 bg-surface-bright border-t border-outline-variant flex justify-end">
+              <button
+                onClick={() => setShowTimetableModal(false)}
+                className="h-9 px-4 rounded-lg bg-surface border border-outline-variant hover:bg-surface-container text-xs font-bold transition-colors cursor-pointer"
+              >
+                Close Timetable
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

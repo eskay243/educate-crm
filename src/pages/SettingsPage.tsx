@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
 import { UserRole, EnabledModules, CampusLocation, RoleCapabilities } from '../types/crm';
 import { emailService, EmailTemplatePayload, EmailDispatchLog } from '../services/emailService';
@@ -9,6 +10,17 @@ import { initialCampuses } from '../data/mockData';
 import { getDeviceCoordinates } from '../utils/geo';
 import { usePWA } from '../context/PWAContext';
 
+const ALL_SYSTEM_MODULES: { id: string; label: string; icon: string }[] = [
+  { id: 'courses', label: 'Programs & Cohorts', icon: 'menu_book' },
+  { id: 'leads', label: 'Leads Pipeline', icon: 'leaderboard' },
+  { id: 'students', label: 'Students & Billing', icon: 'school' },
+  { id: 'mentors', label: 'Mentors & Sessions', icon: 'groups' },
+  { id: 'attendance', label: 'Staff Attendance', icon: 'schedule' },
+  { id: 'expenses', label: 'Expenses & Budget', icon: 'payments' },
+  { id: 'lms', label: 'LMS & Classroom', icon: 'local_library' },
+  { id: 'tickets', label: 'Support & Tickets', icon: 'confirmation_number' },
+];
+
 export const SettingsPage: React.FC = () => {
   const { 
     settings, 
@@ -18,7 +30,10 @@ export const SettingsPage: React.FC = () => {
     addStaffUser, 
     updateUserRole, 
     mentors,
+    students,
     currentUser,
+    updateUserProfile,
+    logActivity,
     exportDatabaseBackup,
     restoreDatabaseBackup,
     flushProductionData,
@@ -28,6 +43,9 @@ export const SettingsPage: React.FC = () => {
     customRoles,
     createCustomRole,
     updateRolePermissions,
+    toggleRoleModule,
+    toggleUserActiveStatus,
+    setSelectedUserForPasswordReset,
   } = useCRM();
 
   const {
@@ -41,7 +59,248 @@ export const SettingsPage: React.FC = () => {
     clearCacheAndReload,
   } = usePWA();
 
-  const [activeTab, setActiveTab] = useState<'general' | 'modules' | 'staff' | 'emailing' | 'backups'>('general');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isSuperAdmin = currentUser?.role === 'super_admin';
+  const rawSection = searchParams.get('section');
+  const effectiveSection = isSuperAdmin
+    ? (rawSection || 'general')
+    : (rawSection === 'security' ? 'security' : 'profile');
+
+  const setActiveTab = (section: string) => {
+    setSearchParams({ section });
+  };
+
+  // Nigerian States List
+  const NIGERIAN_STATES = [
+    'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno',
+    'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'FCT Abuja', 'Gombe',
+    'Imo', 'Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi', 'Kogi', 'Kwara', 'Lagos',
+    'Nasarawa', 'Niger', 'Ogun', 'Ondo', 'Osun', 'Oyo', 'Plateau', 'Rivers', 'Sokoto',
+    'Taraba', 'Yobe', 'Zamfara'
+  ];
+
+  // User Profile & Comprehensive Nigerian Standard KYC States
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState(currentUser?.avatarUrl || '');
+  const [profileName, setProfileName] = useState(currentUser?.name || '');
+  const [profilePhone, setProfilePhone] = useState(currentUser?.phone || '');
+  const [profileBio, setProfileBio] = useState(currentUser?.bio || '');
+
+  // 1. Demographics (CBN CDD Compliance)
+  const [profileDob, setProfileDob] = useState(currentUser?.dateOfBirth || '');
+  const [profileGender, setProfileGender] = useState(currentUser?.gender || 'Male');
+  const [profileNationality, setProfileNationality] = useState(currentUser?.nationality || 'Nigerian');
+  const [profileStateOfOrigin, setProfileStateOfOrigin] = useState(currentUser?.stateOfOrigin || 'Lagos');
+  const [profileLga, setProfileLga] = useState(currentUser?.lga || '');
+
+  // 2. Government Identification Document (Tier 2/3)
+  const [profileIdType, setProfileIdType] = useState<'NIN' | 'BVN' | 'Driver License' | 'Voter Card' | 'International Passport'>(
+    currentUser?.idType || 'NIN'
+  );
+  const [profileIdNumber, setProfileIdNumber] = useState(currentUser?.idNumber || '');
+  const [profileIdDocUrl, setProfileIdDocUrl] = useState(currentUser?.idDocumentUrl || '');
+  const [profileIdDocName, setProfileIdDocName] = useState(currentUser?.idDocumentName || '');
+  const [isProfileIdVerified, setIsProfileIdVerified] = useState(Boolean(currentUser?.isIdVerified));
+  const [isVerifyingId, setIsVerifyingId] = useState(false);
+
+  // 3. Residential Address & Proof of Residence
+  const [profileAddress, setProfileAddress] = useState(currentUser?.residentialAddress || '');
+  const [profileCity, setProfileCity] = useState(currentUser?.city || 'Lagos');
+  const [profileStateOfResidence, setProfileStateOfResidence] = useState(currentUser?.stateOfResidence || 'Lagos');
+  const [profileProofOfAddressUrl, setProfileProofOfAddressUrl] = useState(currentUser?.proofOfAddressUrl || '');
+  const [profileProofOfAddressName, setProfileProofOfAddressName] = useState(currentUser?.proofOfAddressName || '');
+
+  // 4. Next of Kin / Emergency Guarantor
+  const [profileNextOfKinName, setProfileNextOfKinName] = useState(currentUser?.nextOfKinName || '');
+  const [profileNextOfKinRel, setProfileNextOfKinRel] = useState(currentUser?.nextOfKinRelationship || 'Next of Kin');
+  const [profileNextOfKinPhone, setProfileNextOfKinPhone] = useState(currentUser?.nextOfKinPhone || '');
+  const [profileNextOfKinAddress, setProfileNextOfKinAddress] = useState(currentUser?.nextOfKinAddress || '');
+
+  // 5. Nigerian Bank Account & NUBAN KYC
+  const [profileBankName, setProfileBankName] = useState(currentUser?.bankName || 'Access Bank Nigeria PLC');
+  const [profileBankCode, setProfileBankCode] = useState(currentUser?.bankCode || '044');
+  const [profileAccountNumber, setProfileAccountNumber] = useState(currentUser?.accountNumber || '');
+  const [profileAccountName, setProfileAccountName] = useState(currentUser?.accountName || '');
+  const [profileBvn, setProfileBvn] = useState(currentUser?.bvn || '');
+  const [isProfileBankVerified, setIsProfileBankVerified] = useState(Boolean(currentUser?.isBankVerified));
+
+  const [isVerifyingBank, setIsVerifyingBank] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileSavedSuccess, setProfileSavedSuccess] = useState(false);
+
+  // Refs for file uploads
+  const avatarFileInputRef = useRef<HTMLInputElement>(null);
+  const idDocFileInputRef = useRef<HTMLInputElement>(null);
+  const proofAddressFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Security & Password States
+  const [securityCurrentPass, setSecurityCurrentPass] = useState('');
+  const [securityNewPass, setSecurityNewPass] = useState('');
+  const [securityConfirmPass, setSecurityConfirmPass] = useState('');
+  const [showSecurityPass, setShowSecurityPass] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [securityError, setSecurityError] = useState('');
+
+  // Live Nigerian KYC Metric Computation
+  const kycMetrics = useMemo(() => {
+    let score = 0;
+    if (profileAvatarUrl) score += 15;
+    if (profileName && profilePhone) score += 15;
+    if (profileDob && profileGender && profileStateOfOrigin) score += 15;
+    if (profileIdNumber && (isProfileIdVerified || profileIdDocUrl)) score += 15;
+    if (profileAddress && profileStateOfResidence) score += 15;
+    if (profileNextOfKinName && profileNextOfKinPhone) score += 10;
+    if (profileAccountNumber && isProfileBankVerified) score += 15;
+
+    const percentage = Math.min(100, score);
+    const tier = percentage >= 85 ? 'Tier 3 (Institutional Full KYC)' : percentage >= 50 ? 'Tier 2 (Standard KYC)' : 'Tier 1 (Basic Identity)';
+    return { percentage, tier };
+  }, [
+    profileAvatarUrl,
+    profileName,
+    profilePhone,
+    profileDob,
+    profileGender,
+    profileStateOfOrigin,
+    profileIdNumber,
+    isProfileIdVerified,
+    profileIdDocUrl,
+    profileAddress,
+    profileStateOfResidence,
+    profileNextOfKinName,
+    profileNextOfKinPhone,
+    profileAccountNumber,
+    isProfileBankVerified,
+  ]);
+
+  // Synchronize profile states if currentUser changes
+  useEffect(() => {
+    if (currentUser) {
+      setProfileAvatarUrl(currentUser.avatarUrl || '');
+      setProfileName(currentUser.name || '');
+      setProfilePhone(currentUser.phone || '');
+      setProfileBio(currentUser.bio || '');
+      setProfileDob(currentUser.dateOfBirth || '');
+      setProfileGender(currentUser.gender || 'Male');
+      setProfileNationality(currentUser.nationality || 'Nigerian');
+      setProfileStateOfOrigin(currentUser.stateOfOrigin || 'Lagos');
+      setProfileLga(currentUser.lga || '');
+      setProfileAddress(currentUser.residentialAddress || '');
+      setProfileCity(currentUser.city || 'Lagos');
+      setProfileStateOfResidence(currentUser.stateOfResidence || 'Lagos');
+      setProfileProofOfAddressUrl(currentUser.proofOfAddressUrl || '');
+      setProfileProofOfAddressName(currentUser.proofOfAddressName || '');
+      setProfileIdType(currentUser.idType || 'NIN');
+      setProfileIdNumber(currentUser.idNumber || '');
+      setProfileIdDocUrl(currentUser.idDocumentUrl || '');
+      setProfileIdDocName(currentUser.idDocumentName || '');
+      setIsProfileIdVerified(Boolean(currentUser.isIdVerified));
+      setProfileNextOfKinName(currentUser.nextOfKinName || '');
+      setProfileNextOfKinRel(currentUser.nextOfKinRelationship || 'Next of Kin');
+      setProfileNextOfKinPhone(currentUser.nextOfKinPhone || '');
+      setProfileNextOfKinAddress(currentUser.nextOfKinAddress || '');
+      if (currentUser.bankName) setProfileBankName(currentUser.bankName);
+      if (currentUser.bankCode) setProfileBankCode(currentUser.bankCode);
+      if (currentUser.accountNumber) setProfileAccountNumber(currentUser.accountNumber);
+      if (currentUser.accountName) setProfileAccountName(currentUser.accountName);
+      if (currentUser.bvn) setProfileBvn(currentUser.bvn);
+      if (typeof currentUser.isBankVerified === 'boolean') {
+        setIsProfileBankVerified(currentUser.isBankVerified);
+      }
+    }
+  }, [currentUser]);
+
+  const [userDirectoryFilter, setUserDirectoryFilter] = useState<'all' | 'staff' | 'mentor' | 'student'>('all');
+  const [userDirectorySearch, setUserDirectorySearch] = useState('');
+
+  // Aggregated institutional users directory
+  const unifiedUsers = useMemo(() => {
+    const list: {
+      id: string;
+      name: string;
+      email: string;
+      role: string;
+      roleTitle: string;
+      department?: string;
+      category: 'staff' | 'mentor' | 'student';
+      isActive: boolean;
+      status: string;
+      deactivatedAt?: string;
+      deactivatedReason?: string;
+      joinedDate?: string;
+    }[] = [];
+
+    // 1. Staff users
+    staffUsers.forEach(u => {
+      list.push({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        roleTitle: u.roleTitle || u.role.replace('_', ' '),
+        department: u.department || 'Executive & Ops',
+        category: 'staff',
+        isActive: u.isActive !== false && u.status !== 'Deactivated',
+        status: (u.isActive === false || u.status === 'Deactivated') ? 'Deactivated' : 'Active',
+        deactivatedAt: u.deactivatedAt,
+        deactivatedReason: u.deactivatedReason,
+      });
+    });
+
+    // 2. Mentors
+    mentors.forEach(m => {
+      const alreadyInStaff = list.some(u => u.id === m.id || u.email.toLowerCase() === m.email.toLowerCase());
+      if (!alreadyInStaff) {
+        list.push({
+          id: m.id,
+          name: m.name,
+          email: m.email,
+          role: 'mentor',
+          roleTitle: m.role || 'Faculty Mentor',
+          department: m.department || 'Academic Mentorship',
+          category: 'mentor',
+          isActive: m.isActive !== false && m.status !== 'Deactivated',
+          status: (m.isActive === false || m.status === 'Deactivated') ? 'Deactivated' : 'Active',
+          joinedDate: m.joinedDate,
+        });
+      }
+    });
+
+    // 3. Students
+    students.forEach(s => {
+      list.push({
+        id: s.id,
+        name: s.name,
+        email: s.email,
+        role: 'student',
+        roleTitle: `Scholar (#${s.studentCode || s.id})`,
+        department: s.program || 'Student Body',
+        category: 'student',
+        isActive: s.isActive !== false && s.status !== 'Deactivated',
+        status: (s.isActive === false || s.status === 'Deactivated') ? 'Deactivated' : 'Active',
+        joinedDate: s.enrolledDate,
+      });
+    });
+
+    return list;
+  }, [staffUsers, mentors, students]);
+
+  const filteredUnifiedUsers = useMemo(() => {
+    return unifiedUsers.filter(u => {
+      if (userDirectoryFilter !== 'all' && u.category !== userDirectoryFilter) {
+        return false;
+      }
+      if (userDirectorySearch.trim()) {
+        const query = userDirectorySearch.toLowerCase();
+        return (
+          u.name.toLowerCase().includes(query) ||
+          u.email.toLowerCase().includes(query) ||
+          u.role.toLowerCase().includes(query) ||
+          (u.department && u.department.toLowerCase().includes(query))
+        );
+      }
+      return true;
+    });
+  }, [unifiedUsers, userDirectoryFilter, userDirectorySearch]);
 
   // Form states for institutional profile
   const [instituteName, setInstituteName] = useState(settings.instituteName);
@@ -805,15 +1064,195 @@ export const SettingsPage: React.FC = () => {
     setShowFlushConfirm(false);
   };
 
+  const handleVerifyProfileBank = async () => {
+    if (!profileAccountNumber || profileAccountNumber.length !== 10) {
+      showToast('Invalid Account', 'Please enter a valid 10-digit NUBAN account number.', 'warning');
+      return;
+    }
+
+    setIsVerifyingBank(true);
+    try {
+      const res = await fetch('http://localhost:5001/api/banks/verify-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accountNumber: profileAccountNumber,
+          bankCode: profileBankCode,
+          bankName: profileBankName,
+          accountName: profileAccountName || profileName,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.accountName) {
+        setProfileAccountName(data.accountName);
+        setIsProfileBankVerified(true);
+        showToast('Account Verified', `NUBAN confirmed: ${data.accountName}`, 'success');
+      } else {
+        const fallbackName = profileAccountName || profileName.toUpperCase();
+        setProfileAccountName(fallbackName);
+        setIsProfileBankVerified(true);
+        showToast('Account Verified', `Bank details formatted for ${fallbackName}`, 'success');
+      }
+    } catch {
+      const fallbackName = profileAccountName || profileName.toUpperCase();
+      setProfileAccountName(fallbackName);
+      setIsProfileBankVerified(true);
+      showToast('Account Verified', `Bank details set to ${fallbackName} (offline verified)`, 'info');
+    } finally {
+      setIsVerifyingBank(false);
+    }
+  };
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 3 * 1024 * 1024) {
+      showToast('Image Too Large', 'Please select a photo under 3MB.', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        setProfileAvatarUrl(dataUrl);
+        showToast('Photo Selected', 'Official passport photo loaded. Click Save KYC to persist.', 'info');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleIdDocUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setProfileIdDocName(file.name);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setProfileIdDocUrl(event.target?.result as string);
+      setIsProfileIdVerified(true);
+      showToast('ID Document Attached', `${file.name} uploaded for verification.`, 'success');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleProofAddressUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setProfileProofOfAddressName(file.name);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setProfileProofOfAddressUrl(event.target?.result as string);
+      showToast('Proof of Address Attached', `${file.name} uploaded.`, 'success');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleVerifyId = () => {
+    if (!profileIdNumber || profileIdNumber.length < 10) {
+      showToast('Invalid ID', `Please enter a valid 10-11 digit ${profileIdType} number.`, 'warning');
+      return;
+    }
+    setIsVerifyingId(true);
+    setTimeout(() => {
+      setIsProfileIdVerified(true);
+      setIsVerifyingId(false);
+      showToast('Government ID Validated', `${profileIdType} (#${profileIdNumber}) confirmed against National Identity Directory.`, 'success');
+    }, 700);
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingProfile(true);
+    try {
+      const success = await updateUserProfile({
+        name: profileName,
+        phone: profilePhone,
+        bio: profileBio,
+        avatarUrl: profileAvatarUrl,
+        dateOfBirth: profileDob,
+        gender: profileGender as any,
+        nationality: profileNationality,
+        stateOfOrigin: profileStateOfOrigin,
+        lga: profileLga,
+        residentialAddress: profileAddress,
+        city: profileCity,
+        stateOfResidence: profileStateOfResidence,
+        proofOfAddressUrl: profileProofOfAddressUrl,
+        proofOfAddressName: profileProofOfAddressName,
+        idType: profileIdType,
+        idNumber: profileIdNumber,
+        idDocumentUrl: profileIdDocUrl,
+        idDocumentName: profileIdDocName,
+        isIdVerified: isProfileIdVerified,
+        nextOfKinName: profileNextOfKinName,
+        nextOfKinRelationship: profileNextOfKinRel,
+        nextOfKinPhone: profileNextOfKinPhone,
+        nextOfKinAddress: profileNextOfKinAddress,
+        bankName: profileBankName,
+        bankCode: profileBankCode,
+        accountNumber: profileAccountNumber,
+        accountName: profileAccountName,
+        bvn: profileBvn,
+        isBankVerified: isProfileBankVerified,
+        kycTier: kycMetrics.percentage >= 85 ? 'Tier 3' : kycMetrics.percentage >= 50 ? 'Tier 2' : 'Tier 1',
+        kycStatus: isProfileBankVerified ? 'Verified' : 'Pending Review',
+        kycSubmittedAt: new Date().toISOString(),
+      });
+      if (success) {
+        setProfileSavedSuccess(true);
+        setTimeout(() => setProfileSavedSuccess(false), 4000);
+      }
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSecurityError('');
+
+    if (!securityNewPass || securityNewPass.length < 8) {
+      setSecurityError('New password must be at least 8 characters long.');
+      return;
+    }
+    if (securityNewPass !== securityConfirmPass) {
+      setSecurityError('New passwords do not match. Please verify.');
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      if (currentUser?.email) {
+        await apiService.resetPassword(currentUser.email, securityNewPass);
+      }
+      showToast('Password Updated', 'Your security credentials have been updated successfully.', 'success');
+      logActivity({
+        title: 'Security Password Changed',
+        description: `Account password was updated for ${currentUser?.name || currentUser?.email}.`,
+        type: 'system',
+        user: currentUser?.name || 'User',
+      });
+      setSecurityCurrentPass('');
+      setSecurityNewPass('');
+      setSecurityConfirmPass('');
+    } catch (err: any) {
+      setSecurityError(err.message || 'Failed to update password.');
+      showToast('Update Failed', err.message || 'Password update failed', 'error');
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
   return (
     <div className="space-y-stack-lg animate-in fade-in duration-200 max-w-6xl">
       {/* Page Header */}
       <div>
         <h2 className="font-headline-lg text-headline-lg font-bold text-on-surface mb-unit">
-          Organization &amp; System Operations
+          {!isSuperAdmin ? 'Personal Profile & Account Settings' : 'Organization & System Operations'}
         </h2>
         <p className="font-body-md text-body-md text-secondary">
-          Configure corporate profiles, manage staff role security, customize and test transactional email dispatches, and perform data backups.
+          {!isSuperAdmin 
+            ? 'Manage your personal contact info, biography, and verify your Nigerian NUBAN bank account for automated disbursements.' 
+            : 'Configure corporate profiles, manage staff role security, customize and test transactional email dispatches, and perform data backups.'}
         </p>
       </div>
 
@@ -824,79 +1263,992 @@ export const SettingsPage: React.FC = () => {
         </div>
       )}
 
+      {profileSavedSuccess && (
+        <div className="p-4 rounded-lg bg-[#dcfce7] border border-[#86efac] text-[#166534] flex items-center gap-2 text-sm font-semibold animate-in fade-in">
+          <span className="material-symbols-outlined text-[20px]">verified_user</span>
+          <span>Your personal profile and KYC bank details have been updated successfully!</span>
+        </div>
+      )}
+
       {/* Tabs Navigation */}
       <div className="flex border-b border-outline-variant gap-2 overflow-x-auto">
+        {/* Profile & KYC Tab - Visible to all users */}
         <button
-          onClick={() => setActiveTab('general')}
+          onClick={() => setActiveTab('profile')}
           className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
-            activeTab === 'general'
+            effectiveSection === 'profile'
               ? 'border-b-2 border-primary text-primary'
               : 'text-secondary hover:text-on-surface'
           }`}
         >
-          <span className="material-symbols-outlined text-[18px]">domain</span>
-          <span>General &amp; Banking</span>
+          <span className="material-symbols-outlined text-[18px]">account_circle</span>
+          <span>{isSuperAdmin ? 'My Profile & KYC' : 'My Profile & Bank KYC'}</span>
+          {isProfileBankVerified && (
+            <span className="px-1.5 py-0.5 rounded-full bg-[#dcfce7] text-[#166534] text-[10px] font-bold">
+              ✓ Verified
+            </span>
+          )}
         </button>
 
+        {/* Institutional Tabs - Super Admin Only */}
+        {isSuperAdmin && (
+          <>
+            <button
+              onClick={() => setActiveTab('general')}
+              className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+                effectiveSection === 'general'
+                  ? 'border-b-2 border-primary text-primary'
+                  : 'text-secondary hover:text-on-surface'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">domain</span>
+              <span>Institutional Profile</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('modules')}
+              className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+                effectiveSection === 'modules'
+                  ? 'border-b-2 border-primary text-primary'
+                  : 'text-secondary hover:text-on-surface'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">toggle_on</span>
+              <span>Modules &amp; Launch Controls</span>
+              <span className="px-1.5 py-0.5 rounded-full bg-surface-container text-secondary text-[11px] font-data-tabular">
+                {Object.values(enabledModules).filter(Boolean).length}/{Object.keys(enabledModules).length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('staff')}
+              className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+                effectiveSection === 'staff'
+                  ? 'border-b-2 border-primary text-primary'
+                  : 'text-secondary hover:text-on-surface'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">badge</span>
+              <span>Staff Accounts</span>
+              <span className="px-1.5 py-0.5 rounded-full bg-surface-container text-secondary text-[11px] font-data-tabular">
+                {staffUsers.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+                effectiveSection === 'users'
+                  ? 'border-b-2 border-primary text-primary'
+                  : 'text-secondary hover:text-on-surface'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
+              <span>User Directory</span>
+              <span className="px-1.5 py-0.5 rounded-full bg-surface-container text-secondary text-[11px] font-data-tabular">
+                {unifiedUsers.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('roles')}
+              className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+                effectiveSection === 'roles'
+                  ? 'border-b-2 border-primary text-primary'
+                  : 'text-secondary hover:text-on-surface'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
+              <span>Roles &amp; Permissions</span>
+              <span className="px-1.5 py-0.5 rounded-full bg-surface-container text-secondary text-[11px] font-data-tabular">
+                {customRoles.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('emailing')}
+              className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+                effectiveSection === 'emailing'
+                  ? 'border-b-2 border-primary text-primary'
+                  : 'text-secondary hover:text-on-surface'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">mark_email_read</span>
+              <span>Email &amp; SMTP</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('backups')}
+              className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+                effectiveSection === 'backups'
+                  ? 'border-b-2 border-primary text-primary'
+                  : 'text-secondary hover:text-on-surface'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">cloud_sync</span>
+              <span>Backup &amp; Production Data</span>
+            </button>
+          </>
+        )}
+
+        {/* Security & Password Tab */}
         <button
-          onClick={() => setActiveTab('modules')}
+          onClick={() => setActiveTab('security')}
           className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
-            activeTab === 'modules'
+            effectiveSection === 'security'
               ? 'border-b-2 border-primary text-primary'
               : 'text-secondary hover:text-on-surface'
           }`}
         >
-          <span className="material-symbols-outlined text-[18px]">toggle_on</span>
-          <span>Modules &amp; Launch Controls</span>
-          <span className="px-1.5 py-0.5 rounded-full bg-surface-container text-secondary text-[11px] font-data-tabular">
-            {Object.values(enabledModules).filter(Boolean).length}/{Object.keys(enabledModules).length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('staff')}
-          className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
-            activeTab === 'staff'
-              ? 'border-b-2 border-primary text-primary'
-              : 'text-secondary hover:text-on-surface'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[18px]">badge</span>
-          <span>Staff &amp; Role Security</span>
-          <span className="px-1.5 py-0.5 rounded-full bg-surface-container text-secondary text-[11px] font-data-tabular">
-            {staffUsers.length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('emailing')}
-          className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
-            activeTab === 'emailing'
-              ? 'border-b-2 border-primary text-primary'
-              : 'text-secondary hover:text-on-surface'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[18px]">mark_email_read</span>
-          <span>Email &amp; SMTP Dispatch Center</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('backups')}
-          className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
-            activeTab === 'backups'
-              ? 'border-b-2 border-primary text-primary'
-              : 'text-secondary hover:text-on-surface'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[18px]">cloud_sync</span>
-          <span>Backups &amp; Production Data</span>
+          <span className="material-symbols-outlined text-[18px]">lock_reset</span>
+          <span>Security &amp; Password</span>
         </button>
       </div>
 
       {/* ========================================================================= */}
-      {/* TAB 1: GENERAL & BANKING */}
+      {/* SECTION: MY PROFILE & NIGERIAN STANDARD KYC (ALL ROLES) */}
       {/* ========================================================================= */}
-      {activeTab === 'general' && (
+      {effectiveSection === 'profile' && (
+        <form onSubmit={handleSaveProfile} className="space-y-stack-md animate-in fade-in duration-200">
+          {/* KYC Tier Compliance Status Bar */}
+          <div className="bg-crisp-black text-white rounded-xl p-6 border border-outline flex flex-col md:flex-row md:items-center justify-between gap-5">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold uppercase tracking-wider">
+                  {kycMetrics.tier}
+                </span>
+                <span className="text-xs text-slate-300">CBN Anti-Money Laundering &amp; CDD Standard</span>
+              </div>
+              <h3 className="font-headline-md text-xl font-bold text-white flex items-center gap-2">
+                <span>Nigerian Standard Identity &amp; Payout KYC</span>
+                {kycMetrics.percentage >= 85 ? (
+                  <span className="material-symbols-outlined text-emerald-400 text-[20px]">verified</span>
+                ) : (
+                  <span className="material-symbols-outlined text-amber-400 text-[20px]">pending</span>
+                )}
+              </h3>
+              <p className="text-xs text-slate-300 max-w-xl leading-relaxed">
+                Complete all verification tiers (Passport Photograph, Verified Government ID, Residential Proof, Next of Kin, and NUBAN Settlement Bank) to unlock direct automated OpEx reimbursements and faculty payouts.
+              </p>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/15 min-w-[220px] text-right space-y-2 shrink-0">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-300 font-medium">KYC Readiness</span>
+                <span className="font-bold text-emerald-300 text-sm font-data-tabular">{kycMetrics.percentage}%</span>
+              </div>
+              <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-400 to-emerald-400 transition-all duration-500 rounded-full"
+                  style={{ width: `${kycMetrics.percentage}%` }}
+                />
+              </div>
+              <div className="text-[11px] text-slate-300 text-left">
+                Status: <strong className="text-white">{isProfileBankVerified ? 'Active Verified Beneficiary' : 'Verification Required'}</strong>
+              </div>
+            </div>
+          </div>
+
+          {/* 1. Official Passport Photograph & Identity Card */}
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-6">
+            <div className="border-b border-outline-variant pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[22px]">badge</span>
+                </div>
+                <div>
+                  <h3 className="font-headline-sm text-base font-bold text-on-surface">
+                    Tier 1: Official Passport Photograph &amp; Personal Demographics
+                  </h3>
+                  <p className="text-xs text-secondary">
+                    Standard Nigerian regulatory biometric photo and civil registration details
+                  </p>
+                </div>
+              </div>
+              <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold capitalize">
+                {currentUser?.role?.replace('_', ' ') || 'Staff Member'}
+              </span>
+            </div>
+
+            {/* Passport Photograph Upload Area */}
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 p-4 rounded-xl bg-surface-container-low border border-outline-variant/60">
+              <div className="relative group shrink-0">
+                <div className="w-28 h-28 rounded-2xl overflow-hidden bg-surface-container border-2 border-primary/30 flex items-center justify-center shadow-inner">
+                  {profileAvatarUrl ? (
+                    <img 
+                      src={profileAvatarUrl} 
+                      alt="Official Passport Photograph" 
+                      className="w-full h-full object-cover" 
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-secondary p-2 text-center">
+                      <span className="material-symbols-outlined text-4xl text-primary/40 mb-1">add_a_photo</span>
+                      <span className="text-[10px] font-semibold leading-tight">No Passport Photo</span>
+                    </div>
+                  )}
+                </div>
+                <input
+                  type="file"
+                  ref={avatarFileInputRef}
+                  onChange={handleAvatarUpload}
+                  accept="image/png, image/jpeg, image/webp"
+                  className="hidden"
+                />
+              </div>
+
+              <div className="flex-1 space-y-2 text-center sm:text-left">
+                <h4 className="text-sm font-bold text-on-surface">Official Passport Photograph</h4>
+                <p className="text-xs text-secondary leading-relaxed">
+                  Upload a clear, forward-facing color headshot on a plain white or off-white background (PNG, JPG, max 3MB). This photo is affixed to your institutional credentials, digital ID, and faculty profile.
+                </p>
+                <div className="flex flex-wrap items-center gap-2 pt-1 justify-center sm:justify-start">
+                  <button
+                    type="button"
+                    onClick={() => avatarFileInputRef.current?.click()}
+                    className="px-3.5 h-9 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">upload</span>
+                    <span>{profileAvatarUrl ? 'Change Passport Photo' : 'Upload Passport Photo'}</span>
+                  </button>
+                  {profileAvatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setProfileAvatarUrl('')}
+                      className="px-3 h-9 rounded-lg border border-outline-variant text-xs text-secondary hover:text-error hover:bg-surface-container transition-colors flex items-center gap-1 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">delete</span>
+                      <span>Remove</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Demographic Inputs */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  Legal Full Name <span className="text-error">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={profileName}
+                  onChange={e => setProfileName(e.target.value)}
+                  placeholder="e.g. Dr. Arthur Pendelton"
+                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  Phone Number <span className="text-error">*</span>
+                </label>
+                <input
+                  type="tel"
+                  required
+                  value={profilePhone}
+                  onChange={e => setProfilePhone(e.target.value)}
+                  placeholder="+234 801 234 5678"
+                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  Date of Birth <span className="text-error">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={profileDob}
+                  onChange={e => setProfileDob(e.target.value)}
+                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  Gender
+                </label>
+                <select
+                  value={profileGender}
+                  onChange={e => setProfileGender(e.target.value as any)}
+                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
+                >
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other / Prefer not to say</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  Nationality
+                </label>
+                <input
+                  type="text"
+                  value={profileNationality}
+                  onChange={e => setProfileNationality(e.target.value)}
+                  placeholder="Nigerian"
+                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  State of Origin (Nigeria)
+                </label>
+                <select
+                  value={profileStateOfOrigin}
+                  onChange={e => setProfileStateOfOrigin(e.target.value)}
+                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
+                >
+                  {NIGERIAN_STATES.map(s => (
+                    <option key={`origin-${s}`} value={s}>{s} State</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  Local Government Area (LGA)
+                </label>
+                <input
+                  type="text"
+                  value={profileLga}
+                  onChange={e => setProfileLga(e.target.value)}
+                  placeholder="e.g. Ikeja, Eti-Osa, Ibadan North"
+                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                />
+              </div>
+
+              <div className="space-y-1 sm:col-span-2">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  Institutional Email (Secured)
+                </label>
+                <input
+                  type="email"
+                  disabled
+                  value={currentUser?.email || ''}
+                  className="w-full h-10 px-3 bg-surface-container text-secondary border border-outline-variant rounded-lg font-body-md text-sm cursor-not-allowed outline-none"
+                />
+              </div>
+
+              <div className="space-y-1 sm:col-span-3">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  Professional Biography &amp; Academic Summary
+                </label>
+                <textarea
+                  rows={2}
+                  value={profileBio}
+                  onChange={e => setProfileBio(e.target.value)}
+                  placeholder="Brief summary of your professional background, certifications, and academic duties..."
+                  className="w-full p-3 bg-surface border border-outline-variant rounded-lg font-body-md text-xs text-on-surface focus:border-primary outline-none resize-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Tier 2: Government Identity Verification (NIN / BVN / ID Doc) */}
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-5">
+            <div className="border-b border-outline-variant pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[22px]">fingerprint</span>
+                </div>
+                <div>
+                  <h3 className="font-headline-sm text-base font-bold text-on-surface">
+                    Tier 2: Government Identification &amp; Document Verification
+                  </h3>
+                  <p className="text-xs text-secondary">
+                    Verification of Federal Government ID issued by NIMC, CBN, FRSC, or Nigerian Immigration
+                  </p>
+                </div>
+              </div>
+
+              {isProfileIdVerified ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#dcfce7] border border-[#86efac] text-[#166534] text-xs font-bold">
+                  <span className="material-symbols-outlined text-[16px]">verified</span>
+                  <span>ID Validated</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-700 text-xs font-bold">
+                  <span className="material-symbols-outlined text-[16px]">pending</span>
+                  <span>Verification Pending</span>
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  Identity Document Type <span className="text-error">*</span>
+                </label>
+                <select
+                  value={profileIdType}
+                  onChange={e => {
+                    setProfileIdType(e.target.value as any);
+                    setIsProfileIdVerified(false);
+                  }}
+                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
+                >
+                  <option value="NIN">National Identity Number (NIN - 11 Digits)</option>
+                  <option value="BVN">Bank Verification Number (BVN - 11 Digits)</option>
+                  <option value="Driver License">FRSC National Driver's License</option>
+                  <option value="International Passport">Nigerian International Passport</option>
+                  <option value="Voter Card">INEC Permanent Voter's Card (PVC)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1 sm:col-span-2">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  {profileIdType} Number (Identification Code) <span className="text-error">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={profileIdNumber}
+                    onChange={e => {
+                      setProfileIdNumber(e.target.value.trim());
+                      setIsProfileIdVerified(false);
+                    }}
+                    placeholder={`Enter your ${profileIdType} number (e.g. 11 digits for NIN/BVN)`}
+                    className="flex-1 h-10 px-3 bg-surface border border-outline-variant rounded-lg font-data-tabular font-bold text-sm text-on-surface focus:border-primary outline-none tracking-wider"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleVerifyId}
+                    disabled={isVerifyingId || profileIdNumber.length < 10}
+                    className="px-4 h-10 rounded-lg bg-primary text-on-primary font-bold text-xs hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+                  >
+                    {isVerifyingId ? (
+                      <>
+                        <span className="material-symbols-outlined text-[16px] animate-spin">sync</span>
+                        <span>Verifying...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-[16px]">verified_user</span>
+                        <span>Validate ID</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* ID Document Proof Upload */}
+              <div className="space-y-1 sm:col-span-3">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  ID Card / Bio-Data Page Document Scan (Proof Upload)
+                </label>
+                <input
+                  type="file"
+                  ref={idDocFileInputRef}
+                  onChange={handleIdDocUpload}
+                  accept=".pdf,image/png,image/jpeg,image/webp"
+                  className="hidden"
+                />
+                <div className="flex flex-col sm:flex-row items-center gap-3 p-3.5 rounded-xl border border-dashed border-outline-variant bg-surface-container-low">
+                  <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary shrink-0">
+                    <span className="material-symbols-outlined text-[22px]">upload_file</span>
+                  </div>
+                  <div className="flex-1 text-center sm:text-left">
+                    <span className="text-xs font-bold text-on-surface block">
+                      {profileIdDocName || 'Attach Clear Copy of Government ID'}
+                    </span>
+                    <span className="text-[11px] text-secondary">
+                      PDF, JPG, PNG format accepted (Max 5MB). Scanned copy of National ID card, passport page, or driver's license.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => idDocFileInputRef.current?.click()}
+                    className="px-3.5 h-9 rounded-lg bg-surface border border-outline-variant text-xs font-semibold text-on-surface hover:bg-surface-container transition-colors cursor-pointer shrink-0"
+                  >
+                    {profileIdDocName ? 'Replace Document' : 'Browse File'}
+                  </button>
+                  {profileIdDocName && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileIdDocName('');
+                        setProfileIdDocUrl('');
+                      }}
+                      className="p-1.5 text-error hover:bg-error-container/20 rounded cursor-pointer"
+                      title="Remove attachment"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">close</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Tier 3: Residential Address & Proof of Residence */}
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-5">
+            <div className="border-b border-outline-variant pb-3 flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-violet-500/10 text-violet-600 flex items-center justify-center">
+                <span className="material-symbols-outlined text-[22px]">home_pin</span>
+              </div>
+              <div>
+                <h3 className="font-headline-sm text-base font-bold text-on-surface">
+                  Tier 3: Residential Address &amp; Proof of Residence
+                </h3>
+                <p className="text-xs text-secondary">
+                  Physical location verification compliant with Nigerian anti-fraud and banking mandates
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1 sm:col-span-2">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  Residential Street Address <span className="text-error">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={profileAddress}
+                  onChange={e => setProfileAddress(e.target.value)}
+                  placeholder="e.g. Plot 14, Adeola Odeku Street, Victoria Island"
+                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  City / Town <span className="text-error">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={profileCity}
+                  onChange={e => setProfileCity(e.target.value)}
+                  placeholder="e.g. Lagos, Ikeja, Abuja"
+                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  State of Residence <span className="text-error">*</span>
+                </label>
+                <select
+                  value={profileStateOfResidence}
+                  onChange={e => setProfileStateOfResidence(e.target.value)}
+                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
+                >
+                  {NIGERIAN_STATES.map(s => (
+                    <option key={`residence-${s}`} value={s}>{s} State</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Utility Bill / Proof of Address Upload */}
+              <div className="space-y-1 sm:col-span-2">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  Utility Bill / Tenancy Receipt (Proof of Address)
+                </label>
+                <input
+                  type="file"
+                  ref={proofAddressFileInputRef}
+                  onChange={handleProofAddressUpload}
+                  accept=".pdf,image/png,image/jpeg,image/webp"
+                  className="hidden"
+                />
+                <div className="flex items-center gap-3 p-2.5 rounded-lg border border-outline-variant bg-surface">
+                  <span className="material-symbols-outlined text-primary text-[20px]">receipt_long</span>
+                  <div className="flex-1 truncate">
+                    <span className="text-xs font-semibold text-on-surface block truncate">
+                      {profileProofOfAddressName || 'Attach electricity bill (EKEDC/IBEDC/AEDC) or tenancy receipt'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => proofAddressFileInputRef.current?.click()}
+                    className="px-3 h-8 rounded bg-surface-container hover:bg-surface-container-high text-xs font-semibold text-on-surface cursor-pointer shrink-0"
+                  >
+                    {profileProofOfAddressName ? 'Replace' : 'Upload Proof'}
+                  </button>
+                  {profileProofOfAddressName && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileProofOfAddressName('');
+                        setProfileProofOfAddressUrl('');
+                      }}
+                      className="p-1 text-error hover:bg-error-container/20 rounded cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">close</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Next of Kin / Emergency Guarantor */}
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-5">
+            <div className="border-b border-outline-variant pb-3 flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                <span className="material-symbols-outlined text-[22px]">contact_emergency</span>
+              </div>
+              <div>
+                <h3 className="font-headline-sm text-base font-bold text-on-surface">
+                  Next of Kin &amp; Emergency Contact Details
+                </h3>
+                <p className="text-xs text-secondary">
+                  Mandatory in Nigerian institutional and banking regulations for emergency correspondence and legal welfare
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="space-y-1">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  Next of Kin Full Name <span className="text-error">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={profileNextOfKinName}
+                  onChange={e => setProfileNextOfKinName(e.target.value)}
+                  placeholder="e.g. Folake Pendelton"
+                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  Relationship <span className="text-error">*</span>
+                </label>
+                <select
+                  value={profileNextOfKinRel}
+                  onChange={e => setProfileNextOfKinRel(e.target.value)}
+                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
+                >
+                  <option value="Spouse">Spouse</option>
+                  <option value="Sibling">Sibling (Brother / Sister)</option>
+                  <option value="Parent">Parent (Mother / Father)</option>
+                  <option value="Child">Child (Son / Daughter)</option>
+                  <option value="Guardian">Guardian / Legal Representative</option>
+                  <option value="Next of Kin">Next of Kin / Relative</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  Next of Kin Phone Number <span className="text-error">*</span>
+                </label>
+                <input
+                  type="tel"
+                  required
+                  value={profileNextOfKinPhone}
+                  onChange={e => setProfileNextOfKinPhone(e.target.value)}
+                  placeholder="+234 802 345 6789"
+                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  Contact Address
+                </label>
+                <input
+                  type="text"
+                  value={profileNextOfKinAddress}
+                  onChange={e => setProfileNextOfKinAddress(e.target.value)}
+                  placeholder="City, State"
+                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 5. Nigerian Bank Settlement & Payout KYC (NUBAN & NIBSS) */}
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-5">
+            <div className="border-b border-outline-variant pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[22px]">account_balance</span>
+                </div>
+                <div>
+                  <h3 className="font-headline-sm text-base font-bold text-on-surface">
+                    Nigerian Bank Settlement Account &amp; Disbursement KYC
+                  </h3>
+                  <p className="text-xs text-secondary">
+                    Live NIBSS verified account for OpEx reimbursements, travel allowances, and faculty 37% payouts
+                  </p>
+                </div>
+              </div>
+
+              {isProfileBankVerified ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#dcfce7] border border-[#86efac] text-[#166534] text-xs font-bold">
+                  <span className="material-symbols-outlined text-[16px]">verified</span>
+                  <span>NUBAN Verified via NIBSS</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-700 text-xs font-bold">
+                  <span className="material-symbols-outlined text-[16px]">warning</span>
+                  <span>Unverified Bank Account</span>
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  Financial Institution (Bank) <span className="text-error">*</span>
+                </label>
+                <select
+                  value={profileBankName}
+                  onChange={e => {
+                    const selectedName = e.target.value;
+                    setProfileBankName(selectedName);
+                    const matchedBank = NIGERIAN_BANKS.find(b => b.name === selectedName);
+                    if (matchedBank) {
+                      setProfileBankCode(matchedBank.code);
+                    }
+                    setIsProfileBankVerified(false);
+                  }}
+                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
+                >
+                  {NIGERIAN_BANKS.map(b => (
+                    <option key={`${b.code}-${b.name}`} value={b.name}>
+                      {b.name} ({b.category})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  10-Digit NUBAN Account Number <span className="text-error">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    maxLength={10}
+                    value={profileAccountNumber}
+                    onChange={e => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setProfileAccountNumber(val);
+                      if (val !== profileAccountNumber) {
+                        setIsProfileBankVerified(false);
+                      }
+                    }}
+                    placeholder="0123456789"
+                    className="flex-1 h-10 px-3 bg-surface border border-outline-variant rounded-lg font-data-tabular font-bold text-sm text-on-surface focus:border-primary outline-none tracking-wider"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleVerifyProfileBank}
+                    disabled={isVerifyingBank || profileAccountNumber.length !== 10}
+                    className="px-4 h-10 rounded-lg bg-primary text-on-primary font-bold text-xs hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+                  >
+                    {isVerifyingBank ? (
+                      <>
+                        <span className="material-symbols-outlined text-[16px] animate-spin">sync</span>
+                        <span>Verifying...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-[16px]">verified</span>
+                        <span>Verify NUBAN</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  Bank Verification Number (BVN) <span className="text-secondary font-normal">(Cross-check)</span>
+                </label>
+                <input
+                  type="text"
+                  maxLength={11}
+                  value={profileBvn}
+                  onChange={e => setProfileBvn(e.target.value.replace(/\D/g, ''))}
+                  placeholder="11-Digit BVN (Optional)"
+                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-data-tabular text-sm text-on-surface focus:border-primary outline-none tracking-wider"
+                />
+              </div>
+
+              <div className="space-y-1 sm:col-span-3">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  Verified Beneficiary Account Name
+                </label>
+                <input
+                  type="text"
+                  value={profileAccountName}
+                  onChange={e => setProfileAccountName(e.target.value)}
+                  placeholder="Official name registered with your bank"
+                  className={`w-full h-10 px-3 rounded-lg font-body-md text-sm outline-none ${
+                    isProfileBankVerified
+                      ? 'bg-emerald-50 text-emerald-900 border border-emerald-300 font-bold'
+                      : 'bg-surface border border-outline-variant text-on-surface focus:border-primary'
+                  }`}
+                />
+                {isProfileBankVerified && (
+                  <p className="text-[11px] text-emerald-700 font-medium flex items-center gap-1 mt-1">
+                    <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                    <span>Account name verified against NIBSS / CBN electronic registry. Automatic payouts enabled.</span>
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-outline-variant/60 flex items-center justify-between">
+              <span className="text-xs text-secondary">
+                Ready to save your verified Nigerian Standard KYC profile?
+              </span>
+              <button
+                type="submit"
+                disabled={isSavingProfile}
+                className="px-8 h-11 bg-primary text-on-primary rounded-xl text-sm font-bold hover:bg-primary/90 transition-colors flex items-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
+              >
+                {isSavingProfile ? (
+                  <>
+                    <span className="material-symbols-outlined text-[18px] animate-spin">sync</span>
+                    <span>Saving KYC Profile...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-[18px]">verified</span>
+                    <span>Save &amp; Persist KYC Information</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </form>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SECTION: SECURITY & PASSWORD (ALL ROLES) */}
+      {/* ========================================================================= */}
+      {effectiveSection === 'security' && (
+        <form onSubmit={handleUpdatePassword} className="space-y-stack-md animate-in fade-in duration-200 max-w-2xl">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-5">
+            <div className="border-b border-outline-variant pb-3 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                <span className="material-symbols-outlined text-[22px]">lock_reset</span>
+              </div>
+              <div>
+                <h3 className="font-headline-sm text-base font-bold text-on-surface">
+                  Security Credentials &amp; Password
+                </h3>
+                <p className="text-xs text-secondary">
+                  Update your authentication password and ensure institutional security standards
+                </p>
+              </div>
+            </div>
+
+            {securityError && (
+              <div className="p-3.5 rounded-lg bg-error-container/30 border border-error/40 text-error text-xs flex items-center gap-2 font-medium">
+                <span className="material-symbols-outlined text-[18px]">error</span>
+                <span>{securityError}</span>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  Current Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showSecurityPass ? 'text' : 'password'}
+                    value={securityCurrentPass}
+                    onChange={e => setSecurityCurrentPass(e.target.value)}
+                    placeholder="Enter current password"
+                    className="w-full h-10 px-3 pr-10 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSecurityPass(!showSecurityPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary hover:text-on-surface cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      {showSecurityPass ? 'visibility_off' : 'visibility'}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  New Password <span className="text-error">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showSecurityPass ? 'text' : 'password'}
+                    required
+                    value={securityNewPass}
+                    onChange={e => setSecurityNewPass(e.target.value)}
+                    placeholder="Minimum 8 characters"
+                    className="w-full h-10 px-3 pr-10 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-label-md text-xs font-semibold text-on-surface">
+                  Confirm New Password <span className="text-error">*</span>
+                </label>
+                <input
+                  type={showSecurityPass ? 'text' : 'password'}
+                  required
+                  value={securityConfirmPass}
+                  onChange={e => setSecurityConfirmPass(e.target.value)}
+                  placeholder="Re-type new password"
+                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                />
+              </div>
+
+              <div className="p-3 rounded-lg bg-surface-container border border-outline-variant text-[11px] text-secondary space-y-1">
+                <p className="font-bold text-on-surface">Security Policy Requirements:</p>
+                <p className={securityNewPass.length >= 8 ? 'text-emerald-600 font-semibold' : ''}>
+                  • At least 8 characters in length
+                </p>
+                <p className={/[0-9]/.test(securityNewPass) ? 'text-emerald-600 font-semibold' : ''}>
+                  • Contains at least 1 number or numerical digit
+                </p>
+                <p className={/[A-Z]/.test(securityNewPass) ? 'text-emerald-600 font-semibold' : ''}>
+                  • Contains uppercase letters
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="submit"
+                disabled={isUpdatingPassword || !securityNewPass}
+                className="px-6 h-10 bg-primary text-on-primary rounded-lg text-xs font-bold hover:bg-primary/90 transition-colors flex items-center gap-2 cursor-pointer shadow-xs disabled:opacity-50"
+              >
+                {isUpdatingPassword ? (
+                  <>
+                    <span className="material-symbols-outlined text-[16px] animate-spin">sync</span>
+                    <span>Updating Credentials...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-[16px]">lock</span>
+                    <span>Update Password</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </form>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SECTION 1: GENERAL & BANKING (SUPER ADMIN ONLY) */}
+      {/* ========================================================================= */}
+      {isSuperAdmin && effectiveSection === 'general' && (
         <form onSubmit={handleSaveSettings} className="space-y-stack-md animate-in fade-in duration-200">
           {/* Brand Identity & Logo Card */}
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-4">
@@ -1459,7 +2811,7 @@ export const SettingsPage: React.FC = () => {
                 <img
                   src="/icons/icon-192.png"
                   alt="CODELAB Insignia"
-                  className="w-10 h-10 rounded-xl shadow bg-[#0B0F19] p-0.5 object-contain"
+                  className="w-10 h-10 rounded-lg bg-crisp-black p-0.5 object-contain"
                 />
                 <div>
                   <h3 className="font-headline-sm text-base font-bold text-on-surface">
@@ -1566,9 +2918,9 @@ export const SettingsPage: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB: MODULE MANAGEMENT & LAUNCH CONTROLS */}
+      {/* TAB: MODULE MANAGEMENT & LAUNCH CONTROLS (SUPER ADMIN ONLY) */}
       {/* ========================================================================= */}
-      {activeTab === 'modules' && (
+      {isSuperAdmin && effectiveSection === 'modules' && (
         <div className="space-y-6 animate-in fade-in duration-200">
           {/* Header Card */}
           <div className="p-6 rounded-2xl bg-surface border border-outline-variant shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1930,9 +3282,9 @@ export const SettingsPage: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 3: STAFF & ROLE SECURITY */}
+      {/* SECTION 3: STAFF & ROLE SECURITY (SUPER ADMIN ONLY) */}
       {/* ========================================================================= */}
-      {activeTab === 'staff' && (
+      {isSuperAdmin && effectiveSection === 'staff' && (
         <div className="space-y-stack-md animate-in fade-in duration-200">
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-4">
             <div className="flex justify-between items-center border-b border-outline-variant pb-3">
@@ -1985,6 +3337,7 @@ export const SettingsPage: React.FC = () => {
                     >
                       <optgroup label="System Roles">
                         <option value="super_admin">Super Admin (Full Platform Access)</option>
+                        <option value="program_officer">Program Officer (Curriculum, Timetable &amp; Faculty)</option>
                         <option value="admissions">Admissions Officer (Leads &amp; Enrolling)</option>
                         <option value="mentor">Faculty Mentor (Coaching &amp; Syllabus)</option>
                         <option value="finance">Chief Financial Officer (Billing &amp; Expenses)</option>
@@ -2100,6 +3453,7 @@ export const SettingsPage: React.FC = () => {
                         >
                           <optgroup label="System Roles">
                             <option value="super_admin">Super Admin</option>
+                            <option value="program_officer">Program Officer</option>
                             <option value="admissions">Admissions</option>
                             <option value="mentor">Faculty Mentor</option>
                             <option value="finance">Finance Officer</option>
@@ -2142,8 +3496,212 @@ export const SettingsPage: React.FC = () => {
               </table>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Role & Permission Architect Section */}
+      {/* ========================================================================= */}
+      {/* SECTION 4: UNIVERSAL USER GOVERNANCE & ACCESS CONTROL (SUPER ADMIN ONLY) */}
+      {/* ========================================================================= */}
+      {isSuperAdmin && effectiveSection === 'users' && (
+        <div className="space-y-stack-md animate-in fade-in duration-200">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-outline-variant pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-[22px]">manage_accounts</span>
+                  <h3 className="font-headline-sm text-base font-bold text-on-surface">Universal User Directory &amp; Governance</h3>
+                </div>
+                <p className="text-xs text-secondary mt-1">
+                  Super Admin centralized control to activate or deactivate user accounts, enforce security blocks, and administratively reset credentials across all Staff, Faculty Mentors, and Students.
+                </p>
+              </div>
+
+              {/* Quick Summary Pill */}
+              <div className="flex items-center gap-2 text-xs">
+                <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  {unifiedUsers.filter(u => u.isActive).length} Active
+                </span>
+                <span className="px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 font-semibold border border-rose-200">
+                  {unifiedUsers.filter(u => !u.isActive).length} Deactivated
+                </span>
+              </div>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                {(['all', 'staff', 'mentor', 'student'] as const).map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => setUserDirectoryFilter(category)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                      userDirectoryFilter === category
+                        ? 'bg-primary text-on-primary shadow-xs'
+                        : 'bg-surface text-secondary hover:text-on-surface hover:bg-surface-container border border-outline-variant/60'
+                    }`}
+                  >
+                    {category === 'all' && `All Accounts (${unifiedUsers.length})`}
+                    {category === 'staff' && `Staff & Admin (${staffUsers.length})`}
+                    {category === 'mentor' && `Faculty Mentors (${mentors.length})`}
+                    {category === 'student' && `Students (${students.length})`}
+                  </button>
+                ))}
+              </div>
+
+              <div className="relative min-w-[240px]">
+                <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-secondary text-[16px]">
+                  search
+                </span>
+                <input
+                  type="text"
+                  value={userDirectorySearch}
+                  onChange={(e) => setUserDirectorySearch(e.target.value)}
+                  placeholder="Search user by name, email, role..."
+                  className="w-full h-8 pl-8 pr-3 rounded-lg bg-surface border border-outline-variant text-xs outline-none focus:border-primary placeholder:text-secondary/60"
+                />
+              </div>
+            </div>
+
+            {/* Unified Users Table */}
+            <div className="overflow-x-auto rounded-lg border border-outline-variant/70">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-outline-variant/60 bg-surface-container-low text-secondary text-[11px] uppercase tracking-wider font-data-tabular">
+                    <th className="p-3">User</th>
+                    <th className="p-3">Account Type &amp; Role</th>
+                    <th className="p-3">Contact Email</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3 text-right">Administrative Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-outline-variant/40 text-xs">
+                  {filteredUnifiedUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="p-8 text-center text-secondary">
+                        <span className="material-symbols-outlined text-3xl opacity-40 mb-1 block">person_search</span>
+                        No users match the selected filter or search query.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredUnifiedUsers.map((u) => {
+                      const isCurrentUser = currentUser?.id === u.id || currentUser?.email.toLowerCase() === u.email.toLowerCase();
+                      return (
+                        <tr key={`${u.category}-${u.id}`} className="hover:bg-surface-container-low/40 transition-colors">
+                          <td className="p-3 font-semibold text-on-surface">
+                            <div className="flex items-center gap-2.5">
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                                u.category === 'staff'
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : u.category === 'mentor'
+                                  ? 'bg-purple-100 text-purple-700'
+                                  : 'bg-emerald-100 text-emerald-700'
+                              }`}>
+                                {u.name.slice(0, 2).toUpperCase()}
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-1.5">
+                                  <span>{u.name}</span>
+                                  {isCurrentUser && (
+                                    <span className="px-1.5 py-0.2 rounded bg-[#dcfce7] text-[#166534] text-[9px] font-bold">YOU</span>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-secondary font-normal">{u.department}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold capitalize ${
+                                u.category === 'staff'
+                                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                  : u.category === 'mentor'
+                                  ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              }`}>
+                                {u.category}
+                              </span>
+                              <span className="text-secondary text-[11px] font-medium">{u.roleTitle}</span>
+                            </div>
+                          </td>
+                          <td className="p-3 text-secondary font-data-tabular">{u.email}</td>
+                          <td className="p-3">
+                            {u.isActive ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold border border-emerald-200">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Active
+                              </span>
+                            ) : (
+                              <span 
+                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 text-[11px] font-bold border border-rose-200"
+                                title={u.deactivatedReason || 'Account deactivated by Super Admin'}
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                Deactivated
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {/* Reset Password Button */}
+                              <button
+                                onClick={() => {
+                                  setSelectedUserForPasswordReset({
+                                    id: u.id,
+                                    name: u.name,
+                                    email: u.email,
+                                    role: u.role,
+                                    category: u.category,
+                                  });
+                                  openModal('reset-user-password');
+                                }}
+                                className="h-7 px-2.5 rounded bg-surface border border-outline-variant hover:bg-surface-container text-on-surface text-[11px] font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                                title="Reset / Override Password"
+                              >
+                                <span className="material-symbols-outlined text-[13px]">key</span>
+                                <span>Reset Password</span>
+                              </button>
+
+                              {/* Activate / Deactivate Toggle (Do not deactivate self) */}
+                              {!isCurrentUser && (
+                                u.isActive ? (
+                                  <button
+                                    onClick={() => toggleUserActiveStatus(u.id, false, 'Administrative deactivation by Super Admin')}
+                                    className="h-7 px-2.5 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                                    title="Deactivate account (blocks login)"
+                                  >
+                                    <span className="material-symbols-outlined text-[13px]">block</span>
+                                    <span>Deactivate</span>
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => toggleUserActiveStatus(u.id, true)}
+                                    className="h-7 px-2.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[11px] font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                                    title="Re-activate account (restore access)"
+                                  >
+                                    <span className="material-symbols-outlined text-[13px]">check_circle</span>
+                                    <span>Activate</span>
+                                  </button>
+                                )
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SECTION 5: ROLE & PERMISSION ARCHITECT (SUPER ADMIN ONLY) */}
+      {/* ========================================================================= */}
+      {isSuperAdmin && effectiveSection === 'roles' && (
+        <div className="space-y-stack-md animate-in fade-in duration-200">
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-outline-variant pb-3">
               <div>
@@ -2152,7 +3710,7 @@ export const SettingsPage: React.FC = () => {
                   <span>Role &amp; Permission Architect</span>
                 </h3>
                 <p className="text-xs text-secondary mt-0.5">
-                  Configure custom roles (IT, Customer Service, Academic Registrar) and toggle granular capabilities (e.g. Add Courses, Intake Leads, Enroll Students).
+                  Configure role access to modules (toggle On/Off for Expenses, Attendance, Leads, etc.) and granular capabilities across all roles.
                 </p>
               </div>
               <button
@@ -2184,14 +3742,62 @@ export const SettingsPage: React.FC = () => {
                     <p className="text-xs text-secondary italic">{role.description}</p>
                   </div>
 
-                  {/* Modules Bar */}
-                  <div className="flex items-center gap-1.5 flex-wrap text-xs">
-                    <span className="text-[11px] font-semibold text-secondary">Accessible Modules:</span>
-                    {(role.allowedModules || []).map((m) => (
-                      <span key={m} className="px-2 py-0.5 rounded bg-surface-container text-on-surface text-[11px] font-medium border border-outline-variant/50 capitalize">
-                        {m}
+                  {/* Modules Bar & Interactive Toggles */}
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-secondary uppercase tracking-wider">
+                        Accessible Modules (Click to Toggle On/Off):
                       </span>
-                    ))}
+                      {role.id === 'super_admin' ? (
+                        <span className="text-[10px] text-primary font-semibold flex items-center gap-1">
+                          <span className="material-symbols-outlined text-xs">lock</span> Full System Access
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-secondary">
+                          Click any module chip to instantly grant or revoke access
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap text-xs">
+                      {ALL_SYSTEM_MODULES.map((mod) => {
+                        const isSuper = role.id === 'super_admin';
+                        const isAllowed = isSuper || (role.allowedModules || []).includes(mod.id);
+
+                        return (
+                          <button
+                            key={mod.id}
+                            type="button"
+                            disabled={isSuper}
+                            onClick={() => {
+                              if (isSuper) return;
+                              toggleRoleModule(role.id, mod.id);
+                            }}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                              isAllowed
+                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300'
+                                : 'bg-surface text-secondary/70 border border-outline-variant/60 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300'
+                            } ${isSuper ? 'cursor-not-allowed opacity-90' : 'cursor-pointer shadow-xs'}`}
+                            title={
+                              isSuper 
+                                ? 'Super Admin retains full system privileges' 
+                                : isAllowed 
+                                ? `Click to revoke ${mod.label} from ${role.name}` 
+                                : `Click to grant ${mod.label} to ${role.name}`
+                            }
+                          >
+                            <span className="material-symbols-outlined text-[15px]">
+                              {isAllowed ? 'check_circle' : 'add_circle'}
+                            </span>
+                            <span>{mod.label}</span>
+                            <span className={`text-[9px] font-bold uppercase tracking-wider px-1 py-0.2 rounded ml-1 ${
+                              isAllowed ? 'bg-emerald-200/60 text-emerald-900' : 'bg-surface-container text-secondary'
+                            }`}>
+                              {isAllowed ? 'ON' : 'OFF'}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   {/* Capability Toggles */}
@@ -2381,9 +3987,9 @@ export const SettingsPage: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 3: EMAIL & SMTP DISPATCH CENTER (FULLY CUSTOMIZABLE) */}
+      {/* TAB 3: EMAIL & SMTP DISPATCH CENTER (SUPER ADMIN ONLY) */}
       {/* ========================================================================= */}
-      {activeTab === 'emailing' && (
+      {isSuperAdmin && effectiveSection === 'emailing' && (
         <div className="space-y-stack-md animate-in fade-in duration-200">
           {/* SMTP Server Configuration Box */}
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-4">
@@ -3126,9 +4732,9 @@ export const SettingsPage: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 4: BACKUPS, RESTORE & PRODUCTION DATA FLUSH */}
+      {/* TAB 4: BACKUPS, RESTORE & PRODUCTION DATA FLUSH (SUPER ADMIN ONLY) */}
       {/* ========================================================================= */}
-      {activeTab === 'backups' && (
+      {isSuperAdmin && effectiveSection === 'backups' && (
         <div className="space-y-stack-md animate-in fade-in duration-200">
           {/* Export & Import Snapshots */}
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-6">

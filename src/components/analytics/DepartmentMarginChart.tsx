@@ -128,8 +128,8 @@ export const DepartmentMarginChart: React.FC = () => {
               return value;
             }}
           />
-          <Bar dataKey="revenue" fill="#00236f" radius={[0, 4, 4, 0]} maxBarSize={20} />
-          <Bar dataKey="honorariumsAndCosts" fill="#64748b" radius={[0, 4, 4, 0]} maxBarSize={20} />
+          <Bar dataKey="revenue" fill="#1872F5" radius={[0, 4, 4, 0]} maxBarSize={20} />
+          <Bar dataKey="honorariumsAndCosts" fill="#D9E6E8" radius={[0, 4, 4, 0]} maxBarSize={20} />
         </BarChart>
       </ResponsiveContainer>
     </div>

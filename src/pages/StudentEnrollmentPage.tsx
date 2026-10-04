@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useCRM, formatNaira } from '../context/CRMContext';
 import { PerformanceMeter } from '../components/common/PerformanceMeter';
+import { CrispStatusBadge } from '../components/common/CrispStatusBadge';
 
 export interface StudentEnrollmentPageProps {}
 
@@ -468,29 +469,13 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                             </td>
 
                             <td className="p-3">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                                student.tuitionStatus === 'Paid'
-                                  ? 'bg-emerald-500/15 text-emerald-700'
-                                  : student.tuitionStatus === 'Partial'
-                                  ? 'bg-amber-500/15 text-amber-700'
-                                  : 'bg-rose-500/15 text-rose-700'
-                              }`}>
-                                {student.tuitionStatus || (balance <= 0 ? 'Paid' : 'Partial')}
-                              </span>
+                              <CrispStatusBadge status={student.tuitionStatus || (balance <= 0 ? 'Paid' : 'Partial')} />
                             </td>
                           </>
                         )}
 
                         <td className="p-3">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                            student.status === 'Active'
-                              ? 'bg-emerald-500/15 text-emerald-700'
-                              : student.status === 'Completed'
-                              ? 'bg-blue-500/15 text-blue-700'
-                              : 'bg-amber-500/15 text-amber-700'
-                          }`}>
-                            {student.status}
-                          </span>
+                          <CrispStatusBadge status={student.status} />
                         </td>
 
                         <td className="p-3 pr-4 text-right">

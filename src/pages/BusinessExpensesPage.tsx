@@ -4,6 +4,7 @@ import { Expense, ExpenseStatus, WalletTransaction } from '../types/crm';
 import { RejectExpenseModal } from '../components/modals/RejectExpenseModal';
 import { ViewExpenseModal } from '../components/modals/ViewExpenseModal';
 import { WalletTransactionDetailsModal } from '../components/modals/WalletTransactionDetailsModal';
+import { CrispStatusBadge } from '../components/common/CrispStatusBadge';
 
 export interface BusinessExpensesPageProps {}
 
@@ -145,22 +146,6 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
     rejectExpense(id, reason);
   };
 
-  const getStatusBadge = (status: ExpenseStatus) => {
-    switch (status) {
-      case 'Approved':
-      case 'Paid':
-        return 'bg-[#DCFCE7] text-[#166534] border border-[#166534]/20';
-      case 'Awaiting Approval':
-      case 'Pending':
-      case 'In Review':
-        return 'bg-[#FEF9C3] text-[#854D0E] border border-[#854D0E]/20';
-      case 'Rejected':
-      case 'Flagged':
-        return 'bg-[#FEE2E2] text-[#991B1B] border border-[#991B1B]/20';
-      default:
-        return 'bg-surface-container text-secondary';
-    }
-  };
 
   return (
     <div className="space-y-stack-lg animate-in fade-in duration-200">
@@ -181,7 +166,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
           <button 
             onClick={reconcileWalletWithPaystack}
             disabled={isSyncingWallet}
-            className="h-10 px-3.5 bg-blue-600/90 hover:bg-blue-600 text-white font-label-md text-label-md font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer disabled:opacity-50"
+            className="btn-secondary h-10 px-3.5 text-xs disabled:opacity-50"
             title="Force real-time reconciliation with live Paystack account"
           >
             <span className={`material-symbols-outlined text-[18px] ${isSyncingWallet ? 'animate-spin' : ''}`}>sync</span>
@@ -189,21 +174,21 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
           </button>
           <button 
             onClick={() => openModal('top-up-wallet')}
-            className="h-10 px-4 bg-[#166534] hover:bg-[#15803d] text-white font-label-md text-label-md font-bold rounded-lg flex items-center gap-2 transition-colors shadow-xs cursor-pointer"
+            className="btn-primary h-10 px-4 text-xs"
           >
             <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span>
             <span>+ Fund Expense Wallet</span>
           </button>
           <button 
             onClick={() => openModal('export-report')}
-            className="h-10 px-3.5 bg-surface-container-lowest border border-outline-variant text-on-surface font-label-md text-label-md font-semibold rounded-lg flex items-center gap-1.5 hover:bg-surface-container-low transition-colors shadow-xs cursor-pointer"
+            className="btn-secondary h-10 px-3.5 text-xs"
           >
             <span className="material-symbols-outlined text-[18px]">download</span>
             <span>Export CSV</span>
           </button>
           <button 
             onClick={() => openModal('log-expense')}
-            className="h-10 px-4 bg-primary text-on-primary font-label-md text-label-md font-bold rounded-lg flex items-center gap-2 hover:bg-primary/90 transition-colors shadow-xs cursor-pointer"
+            className="btn-primary h-10 px-4 text-xs"
           >
             <span className="material-symbols-outlined text-[20px]">add_card</span>
             <span>+ Request OpEx Requisition</span>
@@ -212,8 +197,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
       </div>
 
       {/* Operational Expense & Budget Wallet Hero Card */}
-      <div className="bg-gradient-to-br from-[#00174a] via-[#00236f] to-[#04328c] text-white rounded-2xl p-6 shadow-md border border-blue-900/40 relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-96 h-96 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="bg-crisp-black text-white rounded-xl p-6 border border-[#D9E6E8]/20 relative overflow-hidden">
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
           {/* Left Column: Wallet Liquid Balance */}
           <div className="lg:col-span-6 space-y-3">
@@ -255,7 +239,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
               <button
                 type="button"
                 onClick={() => openModal('top-up-wallet')}
-                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                className="btn-primary text-xs h-9 px-3.5"
               >
                 <span className="material-symbols-outlined text-[16px]">add_card</span>
                 <span>Top Up Wallet</span>
@@ -543,13 +527,13 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
             onClick={() => setActiveLedgerView('wallet_ledger')}
             className={`pb-3 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-2 cursor-pointer ${
               activeLedgerView === 'wallet_ledger'
-                ? 'border-[#166534] text-[#166534]'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-secondary hover:text-on-surface'
             }`}
           >
             <span className="material-symbols-outlined text-[17px]">account_balance_wallet</span>
             <span>Wallet Transactions &amp; Audit Trail ({wallet?.transactions?.length || 0})</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-data-tabular">
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-sea-green-light text-sea-green font-data-tabular">
               {formatNaira(wallet?.balance || 0)}
             </span>
           </button>
@@ -571,16 +555,16 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                   <button
                     key={tab.id}
                     onClick={() => setSelectedStatus(tab.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                       selectedStatus === tab.id
-                        ? 'bg-primary text-on-primary shadow-xs'
-                        : 'bg-surface border border-outline-variant text-secondary hover:text-on-surface hover:bg-surface-container'
+                        ? 'bg-primary text-white'
+                        : 'bg-surface border border-outline text-secondary hover:text-crisp-black hover:bg-canvas'
                     }`}
                   >
                     <span>{tab.label}</span>
                     {tab.count !== undefined && tab.count > 0 && (
                       <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                        selectedStatus === tab.id ? 'bg-white text-primary' : 'bg-[#FEF9C3] text-[#854D0E]'
+                        selectedStatus === tab.id ? 'bg-white text-primary' : 'bg-lemon-curry-light text-lemon-curry'
                       }`}>
                         {tab.count}
                       </span>
@@ -774,10 +758,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
 
                       {/* Status */}
                       <td className="px-stack-md py-3 align-top whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${getStatusBadge(expense.status)}`}>
-                          <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                          <span>{expense.status}</span>
-                        </span>
+                        <CrispStatusBadge status={expense.status} />
                       </td>
 
                       {/* Governance Decision (Approve / Reject) */}

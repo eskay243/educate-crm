@@ -32,7 +32,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
     <div className={`flex items-center gap-3 select-none ${className}`}>
       {/* Emblem / Logo Icon */}
       <div 
-        className={`${currentDim.box} rounded-xl bg-gradient-to-br from-primary to-primary-container flex items-center justify-center text-white shrink-0 shadow-sm border border-primary/20 overflow-hidden relative group`}
+        className={`${currentDim.box} rounded-lg bg-primary flex items-center justify-center text-white shrink-0 border border-primary overflow-hidden relative group`}
         title="CODELAB EDUCARE LTD"
       >
         {logoUrl && !imgError ? (

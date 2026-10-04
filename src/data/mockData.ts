@@ -17,7 +17,9 @@ import {
   CampusLocation,
   StudentPerformanceReport,
   CustomRoleDefinition,
-  SupportTicket
+  SupportTicket,
+  TimetableSlot,
+  MentorPayoutRequest
 } from '../types/crm';
 
 export const initialCampuses: CampusLocation[] = [
@@ -81,11 +83,254 @@ export const initialStudentPerformanceReports: StudentPerformanceReport[] = [
 ];
 
 export const initialLeads: Lead[] = [];
-export const initialStudents: Student[] = [];
-export const initialMentors: Mentor[] = [];
+
+export const initialCourses: CourseProgram[] = [
+  {
+    id: 'course-se-01',
+    code: 'CSE-101',
+    title: 'Full-Stack Software Engineering',
+    category: 'Software Engineering',
+    description: 'Comprehensive software engineering bootcamp covering modern frontend, backend microservices, DevOps, and cloud deployment.',
+    durationWeeks: 9,
+    durationDays: 60,
+    durationTrack: '60-Day Practitioner',
+    tuitionFee: 350000,
+    syllabusModules: ['mod-1', 'mod-2', 'mod-3'],
+    leadInstructor: 'Dr. Chidi Okeke',
+    enrolledCount: 1,
+    status: 'Active',
+    rating: 4.9,
+    minimumRequiredHours: 40,
+    nsqfLevel: 'NSQF Level 4 (National Vocational Certificate)',
+    nitdaTrack: 'NITDA 3MTT / NDLEP Software Engineering Track',
+    theoryHours: 25,
+    practicalHours: 60,
+    learningGuidelinesSummary: 'Covers full development lifecycle from TypeScript architecture to Dockerized Linux VPS microservices. Requires 70% practical lab completion.',
+  },
+  {
+    id: 'course-fe-02',
+    code: 'CFE-201',
+    title: 'Frontend React & TypeScript Sprint',
+    category: 'Software Engineering',
+    description: 'Fast-track intensive sprint for developing accessible, reactive user interfaces with React 19, Tailwind CSS, and REST API consumption.',
+    durationWeeks: 4,
+    durationDays: 30,
+    durationTrack: '30-Day Sprint',
+    tuitionFee: 180000,
+    syllabusModules: ['mod-fe-1', 'mod-fe-2'],
+    leadInstructor: 'Engr. Damilola Adeyemi',
+    enrolledCount: 4,
+    status: 'Active',
+    rating: 4.8,
+    minimumRequiredHours: 25,
+    nsqfLevel: 'NSQF Level 3 (Junior Web Practitioner)',
+    nitdaTrack: 'NITDA Digital Skills Initiative (Frontend Track)',
+    theoryHours: 12,
+    practicalHours: 36,
+    learningGuidelinesSummary: '30-Day accelerated program focusing on high-speed UI prototyping, state architecture, and verifiable GitHub project portfolio.',
+  },
+  {
+    id: 'course-da-03',
+    code: 'CDA-301',
+    title: 'Data Analytics & Python Intelligence',
+    category: 'Data Science & Analytics',
+    description: 'Practical data analytics with Python, Pandas, SQL databases, PowerBI interactive reporting, and statistical modeling.',
+    durationWeeks: 9,
+    durationDays: 60,
+    durationTrack: '60-Day Practitioner',
+    tuitionFee: 320000,
+    syllabusModules: ['mod-da-1', 'mod-da-2'],
+    leadInstructor: 'Dr. Amina Yusuf',
+    enrolledCount: 6,
+    status: 'Active',
+    rating: 4.9,
+    minimumRequiredHours: 35,
+    nsqfLevel: 'NSQF Level 4 (Data Analyst Practitioner)',
+    nitdaTrack: 'NITDA National Data & AI Framework',
+    theoryHours: 20,
+    practicalHours: 50,
+    learningGuidelinesSummary: '60-Day practitioner syllabus with emphasis on real Nigerian market datasets, financial time-series analysis, and executive dashboards.',
+  }
+];
+
+export const initialCohorts: Cohort[] = [
+  {
+    id: 'coh-2026-01',
+    cohortCode: 'COH-ALPHA-26',
+    name: 'Cohort Alpha 2026',
+    programId: 'course-se-01',
+    programName: 'Full-Stack Software Engineering',
+    startDate: '2026-02-01',
+    endDate: '2026-05-30',
+    maxCapacity: 30,
+    enrolledCount: 1,
+    instructorName: 'Dr. Chidi Okeke',
+    status: 'In Progress',
+  }
+];
+
+export const initialMentors: Mentor[] = [
+  {
+    id: 'user-mentor-demo',
+    mentorCode: 'MEN-001',
+    name: 'Dr. Chidi Okeke',
+    email: 'chidi.okeke@codelab.institute',
+    phone: '+234 802 345 6789',
+    role: 'Lead Engineering Faculty',
+    department: 'Engineering Mentorship',
+    expertise: ['TypeScript', 'Node.js', 'PostgreSQL', 'Cloud Infrastructure'],
+    courses: ['Full-Stack Software Engineering'],
+    maxCapacity: 25,
+    activeMentees: 8,
+    rating: 4.9,
+    sessionsCount: 16,
+    commissionRate: 37,
+    assignedEnrollmentsCount: 8,
+    pendingPayout: 185000,
+    paidPayout: 540000,
+    totalEarned: 725000,
+    payoutStatus: 'Pending',
+    status: 'Active',
+    isActive: true,
+    lecturedHours: 24,
+    minimumRequiredHours: 20,
+    joinedDate: '2026-01-15',
+    bio: 'Senior Software Architect and Tech Educator with over a decade of industry experience in scalable distributed systems.',
+    bankName: 'Access Bank',
+    accountNumber: '0123456789',
+    accountName: 'Chidi Okeke',
+    officeHours: [
+      {
+        id: 'slot-1',
+        dayOfWeek: 'Tuesday',
+        startTime: '14:00',
+        endTime: '17:00',
+        slotDurationMinutes: 30,
+        meetingLink: 'https://meet.google.com/nex-codelab-1on1',
+        locationType: 'Google Meet (Online)',
+        isActive: true,
+      },
+      {
+        id: 'slot-2',
+        dayOfWeek: 'Thursday',
+        startTime: '10:00',
+        endTime: '13:00',
+        slotDurationMinutes: 30,
+        meetingLink: 'https://meet.google.com/nex-codelab-1on1',
+        locationType: 'Google Meet (Online)',
+        isActive: true,
+      },
+      {
+        id: 'slot-3',
+        dayOfWeek: 'Friday',
+        startTime: '15:00',
+        endTime: '17:00',
+        slotDurationMinutes: 45,
+        meetingLink: 'https://meet.google.com/nex-codelab-lab',
+        locationType: 'Campus Hub Lab',
+        isActive: true,
+      },
+    ],
+  }
+];
+
+export const initialStudents: Student[] = [
+  {
+    id: 'stu-demo-001',
+    studentCode: 'STU-8492',
+    name: 'Adebayo Adeleke',
+    email: 'student@codelab.institute',
+    phone: '+234 809 111 2233',
+    program: 'Full-Stack Software Engineering',
+    cohort: 'Cohort Alpha 2026',
+    mentorId: 'user-mentor-demo',
+    mentorName: 'Dr. Chidi Okeke',
+    status: 'Active',
+    isActive: true,
+    attendanceRate: 95,
+    tuitionStatus: 'Paid',
+    enrolledDate: '2026-02-01',
+    totalFees: 350000,
+    outstandingBalance: 0,
+    tuitionAmount: 350000,
+    paidAmount: 350000,
+    courses: [
+      {
+        id: 'course-se-01',
+        code: 'CSE-101',
+        name: 'Full-Stack Software Engineering',
+        semester: 'Semester 1 2026',
+        instructor: 'Dr. Chidi Okeke',
+        fee: 350000,
+        billedDate: '2026-02-01',
+      }
+    ],
+    installments: [],
+    progressPercent: 45,
+    attendedLearningHours: 24,
+    minimumRequiredHours: 40,
+  }
+];
+
+export const initialTimetables: TimetableSlot[] = [
+  {
+    id: 'slot-001',
+    courseId: 'course-se-01',
+    courseTitle: 'Full-Stack Software Engineering',
+    cohortId: 'coh-2026-01',
+    cohortName: 'Cohort Alpha 2026',
+    topic: '1.1 Deep Dive: TypeScript Generics & Strict Typing Systems',
+    mentorId: 'user-mentor-demo',
+    mentorName: 'Dr. Chidi Okeke',
+    dayOfWeek: 'Friday',
+    date: '2026-09-12',
+    startTime: '10:00 AM',
+    endTime: '12:00 PM',
+    durationHours: 2,
+    venue: 'Victoria Island Hub - Lab A',
+    meetingLink: 'https://meet.google.com/abc-defg-hij',
+    status: 'Completed',
+    attendanceMarked: true,
+    attendanceRecords: [
+      {
+        studentId: 'stu-demo-001',
+        studentName: 'Adebayo Adeleke',
+        studentCode: 'STU-8492',
+        status: 'Attended',
+        hoursCredited: 2,
+        markedAt: '2026-09-12T12:05:00Z',
+      }
+    ],
+    notes: 'Covered generics, union discrimination, and AST validators.',
+    createdBy: 'Bolanle Nnamdi',
+    createdAt: '2026-09-10T09:00:00Z',
+  },
+  {
+    id: 'slot-002',
+    courseId: 'course-se-01',
+    courseTitle: 'Full-Stack Software Engineering',
+    cohortId: 'coh-2026-01',
+    cohortName: 'Cohort Alpha 2026',
+    topic: '1.2 State Architecture: TanStack Query & Optimistic Mutations',
+    mentorId: 'user-mentor-demo',
+    mentorName: 'Dr. Chidi Okeke',
+    dayOfWeek: 'Tuesday',
+    date: '2026-09-15',
+    startTime: '02:00 PM',
+    endTime: '04:00 PM',
+    durationHours: 2,
+    venue: 'Google Meet Virtual Classroom',
+    meetingLink: 'https://meet.google.com/xyz-uvwx-rst',
+    status: 'Scheduled',
+    attendanceMarked: false,
+    attendanceRecords: [],
+    notes: 'Live coding session with optimistic rollbacks.',
+    createdBy: 'Bolanle Nnamdi',
+    createdAt: '2026-09-11T10:00:00Z',
+  }
+];
+
 export const initialExpenses: Expense[] = [];
-export const initialCourses: CourseProgram[] = [];
-export const initialCohorts: Cohort[] = [];
 export const initialInvoices: Invoice[] = [];
 export const initialSessions: MentorshipSession[] = [];
 export const initialAttendance: AttendanceRecord[] = [];
@@ -155,6 +400,7 @@ export const initialSettings: OrganizationSettings = {
     expenses: true,
   },
   defaultMinimumLearningHours: 40,
+  mentorMinimumLecturedHours: 20,
   campusLocationsList: initialCampuses,
 };
 
@@ -165,6 +411,20 @@ export const initialLMSModules: LMSModule[] = [
     title: 'Module 1: Enterprise Web Architecture & Modern Frontend',
     description: 'Master TypeScript, modern component architecture, state machines, and responsive layouts.',
     order: 1,
+    durationTrack: '60-Day Practitioner',
+    durationDays: 60,
+    nsqfLevel: 'NSQF Level 4',
+    nitdaStandardCode: 'NITDA-SWE-MOD-01',
+    theoryHours: 8,
+    practicalHours: 20,
+    learningGuideline: {
+      prerequisites: ['Basic HTML/CSS & Modern JavaScript (ES6+)', 'Git Version Control Basics'],
+      competencyOutcome: 'Architect and deploy reactive component trees with strict TypeScript contracts and server cache state.',
+      expectedDeliverables: ['WCAG AA Accessible Data Table GitHub Repository', 'Live Vercel Staging Deployment with Automated Lighthouse Score > 90'],
+      dayRange: 'Days 1 - 20 (Weeks 1 - 3)',
+      theoryHours: 8,
+      practicalHours: 20,
+    },
     lessons: [
       {
         id: 'les-1-1',
@@ -172,6 +432,7 @@ export const initialLMSModules: LMSModule[] = [
         title: '1.1 Deep Dive: TypeScript Generics & Strict Typing Systems',
         durationMinutes: 45,
         type: 'video',
+        dayNumber: 3,
         videoUrl: 'https://www.youtube.com/embed/BCg4U1FzODs',
         contentMarkdown: `### Learning Objectives
 - Master TypeScript strict compilation flags and type narrowing.
@@ -185,7 +446,14 @@ export const initialLMSModules: LMSModule[] = [
         resources: [
           { title: 'TypeScript 5 Handbook', url: 'https://www.typescriptlang.org/docs/' },
           { title: 'Clean Code in TypeScript', url: 'https://github.com/labs/ts-patterns' }
-        ]
+        ],
+        approvalStatus: 'Approved & Published',
+        completedByMentor: true,
+        completedByMentorName: 'Dr. Chidi Okeke',
+        completedByMentorAt: '2026-09-12T12:05:00Z',
+        approvedByProgramOfficer: true,
+        approvedByProgramOfficerName: 'Bolanle Nnamdi',
+        approvedAt: '2026-09-12T14:30:00Z',
       },
       {
         id: 'les-1-2',
@@ -193,6 +461,7 @@ export const initialLMSModules: LMSModule[] = [
         title: '1.2 State Architecture: TanStack Query & Optimistic Mutations',
         durationMinutes: 50,
         type: 'reading',
+        dayNumber: 8,
         contentMarkdown: `### Enterprise State Management Patterns
 Managing server cache versus transient client UI state is the cornerstone of responsive web applications.
 
@@ -202,7 +471,13 @@ Managing server cache versus transient client UI state is the cornerstone of res
 - **Deduplication**: Prevent redundant roundtrips across deeply nested component hierarchies.`,
         resources: [
           { title: 'TanStack Query v5 Docs', url: 'https://tanstack.com/query/latest' }
-        ]
+        ],
+        approvalStatus: 'Taught (Pending PO Approval)',
+        completedByMentor: true,
+        completedByMentorName: 'Dr. Chidi Okeke',
+        completedByMentorAt: '2026-09-15T16:00:00Z',
+        completionNotes: 'Covered React Query cache keys and mutation rollback strategies.',
+        approvedByProgramOfficer: false,
       },
       {
         id: 'les-1-3',
@@ -210,6 +485,9 @@ Managing server cache versus transient client UI state is the cornerstone of res
         title: '1.3 Hands-On Lab: Build an Accessible Interactive Dashboard Table',
         durationMinutes: 90,
         type: 'lab',
+        dayNumber: 15,
+        submissionRequired: true,
+        practicalLabTask: 'Accessible Table with WCAG 2.2 AA Keyboard Navigation & CSV Export',
         contentMarkdown: `### Lab Deliverables
 You will build a full-featured data table component featuring:
 - Server-side pagination and debounce searching
@@ -219,7 +497,10 @@ You will build a full-featured data table component featuring:
 Submit your GitHub repository link and deployed Vercel/Netlify staging URL below.`,
         resources: [
           { title: 'W3C ARIA Table Guidelines', url: 'https://www.w3.org/WAI/ARIA/apg/patterns/table/' }
-        ]
+        ],
+        approvalStatus: 'Not Started',
+        completedByMentor: false,
+        approvedByProgramOfficer: false,
       }
     ]
   },
@@ -229,6 +510,20 @@ Submit your GitHub repository link and deployed Vercel/Netlify staging URL below
     title: 'Module 2: Scalable Backend Services & API Security',
     description: 'Design robust microservices with Node.js, Express, PostgreSQL, and secure auth tokens.',
     order: 2,
+    durationTrack: '60-Day Practitioner',
+    durationDays: 60,
+    nsqfLevel: 'NSQF Level 4',
+    nitdaStandardCode: 'NITDA-SWE-MOD-02',
+    theoryHours: 10,
+    practicalHours: 22,
+    learningGuideline: {
+      prerequisites: ['Module 1 Frontend Architecture', 'Relational DB Fundamentals'],
+      competencyOutcome: 'Design ACID-compliant relational schemas and integrate secure fintech payment gateways.',
+      expectedDeliverables: ['Distributed Transaction Microservice Repo', 'Tested Paystack Webhook Handler with HMAC-SHA512 verification'],
+      dayRange: 'Days 21 - 42 (Weeks 4 - 6)',
+      theoryHours: 10,
+      practicalHours: 22,
+    },
     lessons: [
       {
         id: 'les-2-1',
@@ -236,6 +531,7 @@ Submit your GitHub repository link and deployed Vercel/Netlify staging URL below
         title: '2.1 Relational Schema Modeling & Query Optimization in PostgreSQL',
         durationMinutes: 60,
         type: 'video',
+        dayNumber: 24,
         videoUrl: 'https://www.youtube.com/embed/qw--VYLpxG4',
         contentMarkdown: `### Database Engineering in Fintech & Edtech
 Learn normalization (3NF), B-tree indexing strategies, foreign key cascades, and ACID transactions.`,
@@ -249,6 +545,9 @@ Learn normalization (3NF), B-tree indexing strategies, foreign key cascades, and
         title: '2.2 Payment Gateway Integration: Paystack API & Webhook Verification',
         durationMinutes: 65,
         type: 'lab',
+        dayNumber: 35,
+        submissionRequired: true,
+        practicalLabTask: 'Secure Paystack Payment Gateway & Idempotent Webhook Verification',
         contentMarkdown: `### Production Payment Processing
 Integrate Paystack Inline and Webhooks to handle card payments, bank transfers, and automated commission payouts.
 
@@ -268,6 +567,20 @@ Integrate Paystack Inline and Webhooks to handle card payments, bank transfers, 
     title: 'Module 3: Cloud Deployment, Docker & DevOps Automation',
     description: 'Deploy resilient containerized workloads to Linux VPS instances with Nginx reverse proxies and SSL certificates.',
     order: 3,
+    durationTrack: '60-Day Practitioner',
+    durationDays: 60,
+    nsqfLevel: 'NSQF Level 4',
+    nitdaStandardCode: 'NITDA-SWE-MOD-03',
+    theoryHours: 7,
+    practicalHours: 18,
+    learningGuideline: {
+      prerequisites: ['Module 2 Backend Microservices', 'Linux Shell Commands'],
+      competencyOutcome: 'Package full-stack applications in Docker multi-stage images and set up automated CI/CD pipelines.',
+      expectedDeliverables: ['Dockerfile & Docker-Compose Configuration', 'Live HTTPS Cloud Deployment with automated health checks'],
+      dayRange: 'Days 43 - 60 (Weeks 7 - 9)',
+      theoryHours: 7,
+      practicalHours: 18,
+    },
     lessons: [
       {
         id: 'les-3-1',
@@ -275,6 +588,7 @@ Integrate Paystack Inline and Webhooks to handle card payments, bank transfers, 
         title: '3.1 Containerization with Docker & Multi-Stage Production Builds',
         durationMinutes: 55,
         type: 'video',
+        dayNumber: 48,
         videoUrl: 'https://www.youtube.com/embed/gAkwW2tuIqE',
         contentMarkdown: `### Containerizing Full-Stack Applications
 Learn to write lean Dockerfiles, leverage caching layers, configure non-root user execution, and spin up multi-container compositions with Docker Compose.`,
@@ -288,11 +602,120 @@ Learn to write lean Dockerfiles, leverage caching layers, configure non-root use
         title: '3.2 Capstone Project Submission & Mentor Defense',
         durationMinutes: 120,
         type: 'lab',
+        dayNumber: 58,
+        submissionRequired: true,
+        practicalLabTask: 'Full-Stack Capstone Defense: End-to-End SaaS Platform',
         contentMarkdown: `### Capstone Project Defense
 Submit your production-ready SaaS application featuring real-time authentication, database persistence, payment integration, and cloud deployment. Your assigned mentor will review and schedule your 1-on-1 defense session.`,
         resources: [
           { title: 'Capstone Rubric & Evaluation Sheet', url: '#' }
         ]
+      }
+    ]
+  },
+  {
+    id: 'mod-fe-1',
+    courseTitle: 'Frontend React & TypeScript Sprint',
+    title: 'Module 1: Accelerated Component Prototyping & Styling',
+    description: 'Rapidly construct responsive interfaces using Tailwind CSS, semantic HTML5, and accessible component patterns.',
+    order: 1,
+    durationTrack: '30-Day Sprint',
+    durationDays: 30,
+    nsqfLevel: 'NSQF Level 3',
+    nitdaStandardCode: 'NITDA-FND-MOD-01',
+    theoryHours: 5,
+    practicalHours: 16,
+    learningGuideline: {
+      prerequisites: ['Basic HTML/CSS Knowledge', 'Text Editor & Terminal Navigation'],
+      competencyOutcome: 'Create responsive web apps adhering to modern layout standards, container queries, and mobile-first ergonomics.',
+      expectedDeliverables: ['Responsive E-Commerce Landing Page', 'Mobile Touch-Optimized Drawer Component'],
+      dayRange: 'Days 1 - 14 (Weeks 1 - 2)',
+      theoryHours: 5,
+      practicalHours: 16,
+    },
+    lessons: [
+      {
+        id: 'les-fe-1',
+        moduleId: 'mod-fe-1',
+        title: '1.1 Modern CSS Grid, Flexbox & Tailwind CSS v4 Layouts',
+        durationMinutes: 45,
+        type: 'video',
+        dayNumber: 3,
+        contentMarkdown: `### Rapid UI Development
+Master utility-first architecture, responsive breakpoints, container queries, and design token consistency.`,
+        approvalStatus: 'Approved & Published',
+        completedByMentor: true,
+        completedByMentorName: 'Engr. Damilola Adeyemi',
+        completedByMentorAt: '2026-09-20T10:00:00Z',
+        approvedByProgramOfficer: true,
+        approvedByProgramOfficerName: 'Bolanle Nnamdi',
+        approvedAt: '2026-09-20T14:00:00Z',
+      },
+      {
+        id: 'les-fe-2',
+        moduleId: 'mod-fe-1',
+        title: '1.2 Sprint Lab: Interactive Product Showcase with Live Filters',
+        durationMinutes: 75,
+        type: 'lab',
+        dayNumber: 10,
+        submissionRequired: true,
+        practicalLabTask: 'Responsive Product Showcase with Real-Time Search & Category Filters',
+        contentMarkdown: `### Sprint Lab 1
+Build an interactive e-commerce product catalog with client-side filter pills, dynamic search, and responsive mobile bottom sheets.`,
+        approvalStatus: 'Not Started',
+        completedByMentor: false,
+        approvedByProgramOfficer: false,
+      }
+    ]
+  },
+  {
+    id: 'mod-fe-2',
+    courseTitle: 'Frontend React & TypeScript Sprint',
+    title: 'Module 2: Async State, REST APIs & Capstone Showcase',
+    description: 'Fetch, mutate, and cache external REST API data, handle offline resilience, and deploy production builds.',
+    order: 2,
+    durationTrack: '30-Day Sprint',
+    durationDays: 30,
+    nsqfLevel: 'NSQF Level 3',
+    nitdaStandardCode: 'NITDA-FND-MOD-02',
+    theoryHours: 7,
+    practicalHours: 20,
+    learningGuideline: {
+      prerequisites: ['Module 1 Responsive Prototyping'],
+      competencyOutcome: 'Build zero-latency client data flows with debounce search, optimistic updates, and Netlify/Vercel deployment.',
+      expectedDeliverables: ['Interactive Multi-Step Form with Zod Validation', 'Final Sprint Capstone Portfolio Web App'],
+      dayRange: 'Days 15 - 30 (Weeks 3 - 4)',
+      theoryHours: 7,
+      practicalHours: 20,
+    },
+    lessons: [
+      {
+        id: 'les-fe-3',
+        moduleId: 'mod-fe-2',
+        title: '2.1 Async REST API Consumption & Error Boundaries',
+        durationMinutes: 50,
+        type: 'reading',
+        dayNumber: 18,
+        contentMarkdown: `### Resilient Client Architecture
+Implement graceful loading skeletons, retry backoffs, and accessible error boundary messages.`,
+        approvalStatus: 'Not Started',
+        completedByMentor: false,
+        approvedByProgramOfficer: false,
+      },
+      {
+        id: 'les-fe-4',
+        moduleId: 'mod-fe-2',
+        title: '2.2 Sprint Capstone: Deploy Verified Frontend Portfolio App',
+        durationMinutes: 90,
+        type: 'lab',
+        dayNumber: 28,
+        submissionRequired: true,
+        practicalLabTask: 'Deploy Verified Frontend Portfolio App with Custom Domain & CI/CD',
+        contentMarkdown: `### 30-Day Capstone
+Deliver a complete client-side application connected to a live public API, deployed to production with custom meta tags and PWA manifest.`,
+        approvalStatus: 'Not Started',
+        completedByMentor: false,
+        approvedByProgramOfficer: false,
       }
     ]
   }
@@ -315,6 +738,82 @@ export const initialAssignments: StudentAssignmentSubmission[] = [
     mentorFeedback: 'Outstanding work on keyboard event handling and focus management! Clean TypeScript interfaces throughout.',
     reviewedBy: 'Dr. Chidi Okeke',
     reviewedAt: '2026-09-09T10:15:00Z'
+  },
+  {
+    id: 'sub-002',
+    studentId: 'stu-demo-001',
+    studentName: 'Adebayo Adeleke',
+    courseTitle: 'Full-Stack Software Engineering',
+    moduleTitle: 'Module 2: RESTful Microservices & Database Engineering',
+    taskTitle: '2.4 Capstone Lab: Distributed Transaction Pipeline with Prisma & PostgreSQL',
+    githubUrl: 'https://github.com/adebayo-adeleke/distributed-transactions-lab',
+    liveUrl: 'https://transact-lab.onrender.com',
+    notes: 'Implemented ACID transaction isolation, idempotency keys, and automated rollback on insufficient funds.',
+    submittedAt: '2026-10-02T16:45:00Z',
+    status: 'Pending',
+  },
+  {
+    id: 'sub-003',
+    studentId: 'stu-demo-002',
+    studentName: 'Chiamaka Eze',
+    courseTitle: 'Full-Stack Software Engineering',
+    moduleTitle: 'Module 2: RESTful Microservices & Database Engineering',
+    taskTitle: '2.2 Lab: Secure JWT Authentication & RBAC Middleware',
+    githubUrl: 'https://github.com/chiamaka-eze/jwt-auth-lab',
+    notes: 'Need assistance with refresh token rotation and cookie expiration edge cases.',
+    submittedAt: '2026-10-03T11:20:00Z',
+    status: 'Needs Revision',
+    grade: 62,
+    mentorFeedback: 'Token generation is solid, but refresh tokens are currently stored in localStorage rather than httpOnly Secure cookies.',
+    reviewedBy: 'Dr. Chidi Okeke',
+    reviewedAt: '2026-10-03T18:00:00Z',
+  }
+];
+
+export const initialPayoutRequests: MentorPayoutRequest[] = [
+  {
+    id: 'pay-req-001',
+    mentorId: 'user-mentor-demo',
+    mentorName: 'Dr. Chidi Okeke',
+    mentorEmail: 'chidi.okeke@codelab.institute',
+    amount: 185000,
+    whtRatePercent: 5,
+    whtDeductedAmount: 9250,
+    netDisbursedAmount: 175750,
+    voucherNumber: 'VCHR-CDL-2026-0849',
+    lecturedHours: 24,
+    minimumRequiredHours: 20,
+    bankName: 'Access Bank',
+    accountNumber: '0123456789',
+    accountName: 'CHIDI OKEKE',
+    bankCode: '044',
+    status: 'Pending',
+    requestedAt: '2026-10-03T09:15:00Z',
+    notes: 'Q3 Tuition Commission Payout (37% share of enrolled mentees). Minimum lectured target of 20h reached.',
+  },
+  {
+    id: 'pay-req-002',
+    mentorId: 'user-mentor-demo',
+    mentorName: 'Dr. Chidi Okeke',
+    mentorEmail: 'chidi.okeke@codelab.institute',
+    amount: 270000,
+    whtRatePercent: 5,
+    whtDeductedAmount: 13500,
+    netDisbursedAmount: 256500,
+    voucherNumber: 'VCHR-CDL-2026-0512',
+    lecturedHours: 22,
+    minimumRequiredHours: 20,
+    bankName: 'Access Bank',
+    accountNumber: '0123456789',
+    accountName: 'CHIDI OKEKE',
+    bankCode: '044',
+    status: 'Disbursed',
+    requestedAt: '2026-09-01T11:00:00Z',
+    reviewedAt: '2026-09-01T15:20:00Z',
+    reviewedBy: 'Abiola Adefowope',
+    disbursedAt: '2026-09-01T15:30:00Z',
+    disburseReference: 'NIP-CDL-20260901-84920',
+    notes: 'Approved and disbursed via Paystack Institutional NIP settlement.',
   }
 ];
 
@@ -327,6 +826,19 @@ export const demoUsers: AuthUser[] = [
     roleTitle: 'Managing Director & Super Admin',
     department: 'Executive Board',
     password: 'password123',
+    isActive: true,
+    status: 'Active',
+  },
+  {
+    id: 'user-po-demo',
+    name: 'Bolanle Nnamdi',
+    email: 'program.officer@codelab.institute',
+    role: 'program_officer',
+    roleTitle: 'Academic Program Officer & Curriculum Lead',
+    department: 'Academic Affairs',
+    password: 'password123',
+    isActive: true,
+    status: 'Active',
   },
   {
     id: 'user-student-demo',
@@ -337,6 +849,8 @@ export const demoUsers: AuthUser[] = [
     department: 'School of Technology',
     password: 'password123',
     studentId: 'stu-demo-001',
+    isActive: true,
+    status: 'Active',
   },
   {
     id: 'user-mentor-demo',
@@ -346,6 +860,8 @@ export const demoUsers: AuthUser[] = [
     roleTitle: 'Lead Engineering Faculty & Senior Mentor',
     department: 'Engineering Mentorship',
     password: 'password123',
+    isActive: true,
+    status: 'Active',
   },
   {
     id: 'user-admissions-demo',
@@ -355,6 +871,8 @@ export const demoUsers: AuthUser[] = [
     roleTitle: 'Head of Admissions & Enrollments',
     department: 'Admissions Office',
     password: 'password123',
+    isActive: true,
+    status: 'Active',
   },
   {
     id: 'user-finance-demo',
@@ -364,6 +882,8 @@ export const demoUsers: AuthUser[] = [
     roleTitle: 'Bursar & Financial Controller',
     department: 'Bursary & Accounts',
     password: 'password123',
+    isActive: true,
+    status: 'Active',
   }
 ];
 
@@ -412,6 +932,33 @@ export const defaultRoleDefinitions: CustomRoleDefinition[] = [
       canManageSettings: true,
       canManageAttendance: true,
       canSubmitReports: true,
+      canScheduleClasses: true,
+      canApproveTopics: true,
+      canManageUsers: true,
+    }
+  },
+  {
+    id: 'program_officer',
+    name: 'Academic Program Officer',
+    description: 'Manages curriculum design, timetable scheduling, faculty assignment, and syllabus topic approvals.',
+    isSystem: true,
+    badgeColor: 'bg-indigo-500/10 text-indigo-700 border border-indigo-500/20',
+    allowedModules: ['reports', 'courses', 'students', 'mentors', 'attendance', 'tickets', 'lms'],
+    permissions: {
+      canAddCourses: true,
+      canAddCohorts: true,
+      canAddLeads: false,
+      canEnrollStudents: true,
+      canLogExpenses: false,
+      canApproveExpenses: false,
+      canIssueCertificates: true,
+      canViewBilling: false,
+      canManageSettings: false,
+      canManageAttendance: true,
+      canSubmitReports: true,
+      canScheduleClasses: true,
+      canApproveTopics: true,
+      canManageUsers: false,
     }
   },
   {

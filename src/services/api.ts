@@ -19,7 +19,9 @@ import {
   TicketComment,
   CustomRoleDefinition,
   ExpenseAndBudgetWallet,
-  VirtualAccountDetails
+  VirtualAccountDetails,
+  TimetableSlot,
+  MentorPayoutRequest
 } from '../types/crm';
 
 const API_BASE_URL = '/api';
@@ -29,7 +31,9 @@ class ApiService {
     try {
       const authHeaders: Record<string, string> = {};
       try {
-        const authUserStr = typeof localStorage !== 'undefined' ? localStorage.getItem('nexus_auth') : null;
+        const authUserStr = typeof localStorage !== 'undefined' 
+          ? (localStorage.getItem('nexus_clean_prod_auth_v1') || localStorage.getItem('nexus_auth')) 
+          : null;
         if (authUserStr) {
           const authUser = JSON.parse(authUserStr);
           if (authUser?.role) authHeaders['x-user-role'] = authUser.role;
@@ -323,6 +327,22 @@ class ApiService {
     });
   }
 
+  // User Authentication
+  async login(credentials: { email?: string; password: string; role?: string }): Promise<{ success: boolean; user?: AuthUser; message?: string; error?: string }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials),
+      });
+      const data = await response.json();
+      return data;
+    } catch (err: any) {
+      console.warn('[API Auth Fallback]:', err);
+      return { success: false, message: 'Could not connect to authentication server.' };
+    }
+  }
+
   // Staff Welcome Email & Password Setup
   async sendStaffWelcome(email: string, name: string, roleTitle: string, role?: string, html?: string) {
     return this.request<{ setupUrl: string; previewUrl?: string; isTestAccount: boolean; message: string }>('/auth/send-welcome', {
@@ -573,10 +593,10 @@ class ApiService {
     });
   }
 
-  async disburseMentorFromWallet(mentorId: string, amount: number, reason?: string) {
+  async disburseMentorFromWallet(mentorId: string, amount: number, reason?: string, payoutRequestId?: string) {
     return this.request<{ mentor: Mentor; transferRef: string; disburseAmount: number; walletBalance: number }>('/paystack/disburse-mentor', {
       method: 'POST',
-      body: JSON.stringify({ mentorId, amount, reason }),
+      body: JSON.stringify({ mentorId, amount, reason, payoutRequestId }),
     });
   }
 
@@ -590,6 +610,88 @@ class ApiService {
   async reconcileWallet(): Promise<ExpenseAndBudgetWallet | null> {
     return this.request<ExpenseAndBudgetWallet>('/wallet/reconcile', {
       method: 'POST',
+    });
+  }
+
+  // User Administration (Super Admin)
+  async toggleUserStatus(userId: string, isActive: boolean, reason?: string) {
+    return this.request<{ success: boolean; message: string; data: any; targetType: string }>(`/users/${userId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isActive, reason }),
+    });
+  }
+
+  async resetUserPassword(userId: string, newPassword: string) {
+    return this.request<{ success: boolean; message: string }>(`/users/${userId}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify({ newPassword }),
+    });
+  }
+
+  // Timetables & Class Scheduling
+  async getTimetables(params?: { mentorId?: string; courseId?: string; cohortId?: string }): Promise<TimetableSlot[] | null> {
+    const query = new URLSearchParams(params as Record<string, string>).toString();
+    return this.request<TimetableSlot[]>(`/timetables${query ? `?${query}` : ''}`);
+  }
+
+  async createTimetable(slot: Partial<TimetableSlot>): Promise<TimetableSlot | null> {
+    return this.request<TimetableSlot>('/timetables', {
+      method: 'POST',
+      body: JSON.stringify(slot),
+    });
+  }
+
+  async updateTimetable(id: string, slot: Partial<TimetableSlot>): Promise<TimetableSlot | null> {
+    return this.request<TimetableSlot>(`/timetables/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(slot),
+    });
+  }
+
+  async deleteTimetable(id: string) {
+    return this.request<{ success: boolean; message: string }>(`/timetables/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async submitClassAttendance(id: string, payload: { attendanceRecords: any[]; notes?: string }) {
+    return this.request<{ success: boolean; message: string; data: any }>(`/timetables/${id}/attendance`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // Course Outline Teaching & Program Officer Approval
+  async markTopicTaught(lessonId: string, payload: { mentorId: string; mentorName: string; notes?: string }) {
+    return this.request<{ success: boolean; message: string; data: any }>(`/lms/lessons/${lessonId}/mentor-complete`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async approveTopicByPO(lessonId: string, payload: { approvedBy: string; approvedByName: string; courseTitle?: string }) {
+    return this.request<{ success: boolean; message: string; data: any }>(`/lms/lessons/${lessonId}/po-approve`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // Mentor Payout Requests
+  async getPayoutRequests(): Promise<MentorPayoutRequest[] | null> {
+    return this.request<MentorPayoutRequest[]>('/payout-requests');
+  }
+
+  async createPayoutRequest(payload: { mentorId: string; amount: number; notes?: string }) {
+    return this.request<{ success: boolean; message?: string; data?: MentorPayoutRequest }>('/payout-requests', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updatePayoutRequest(id: string, updates: Partial<MentorPayoutRequest>) {
+    return this.request<{ success: boolean; data: MentorPayoutRequest }>(`/payout-requests/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
     });
   }
 }

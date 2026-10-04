@@ -27,6 +27,7 @@ export const LogExpenseModal: React.FC<LogExpenseModalProps> = ({ isOpen, onClos
   const [description, setDescription] = useState('');
   const [receiptFileName, setReceiptFileName] = useState<string>('');
   const [receiptUrl, setReceiptUrl] = useState<string>('');
+  const [useProfileKycBank, setUseProfileKycBank] = useState(Boolean(currentUser?.accountNumber));
 
   if (!isOpen) return null;
 
@@ -48,6 +49,9 @@ export const LogExpenseModal: React.FC<LogExpenseModalProps> = ({ isOpen, onClos
     e.preventDefault();
     if (!title || !amount) return;
 
+    const hasKyc = Boolean(currentUser?.accountNumber);
+    const shouldAttachKyc = useProfileKycBank && hasKyc && paymentMethod === 'Nigerian Bank Transfer';
+
     logExpense({
       title,
       category,
@@ -56,13 +60,17 @@ export const LogExpenseModal: React.FC<LogExpenseModalProps> = ({ isOpen, onClos
       department,
       paymentMethod,
       status: 'Awaiting Approval',
-      vendor: vendor || 'Corporate Vendor NG',
+      vendor: vendor || (shouldAttachKyc && currentUser?.name ? `${currentUser.name} (Reimbursement)` : 'Corporate Vendor NG'),
       requestedBy: currentUser?.name ? `${currentUser.name} (${currentUser.role.replace('_', ' ')})` : 'Admissions / Finance Officer',
       requesterEmail: currentUser?.email || 'admin@codelab.institute',
       receiptName: receiptFileName || (receiptUrl ? 'proforma_invoice.pdf' : undefined),
       receiptUrl: receiptUrl || undefined,
       description: description || undefined,
       urgency,
+      disbursementBankName: shouldAttachKyc && currentUser?.bankName ? currentUser.bankName : undefined,
+      disbursementBankCode: shouldAttachKyc && currentUser?.bankCode ? currentUser.bankCode : undefined,
+      disbursementAccountNumber: shouldAttachKyc && currentUser?.accountNumber ? currentUser.accountNumber : undefined,
+      disbursementAccountName: shouldAttachKyc && currentUser?.accountName ? currentUser.accountName : undefined,
     });
 
     onClose();
@@ -205,6 +213,40 @@ export const LogExpenseModal: React.FC<LogExpenseModalProps> = ({ isOpen, onClos
                 <option value="Corporate Debit Card">Corporate Debit Card</option>
               </select>
             </div>
+
+            {paymentMethod === 'Nigerian Bank Transfer' && currentUser?.accountNumber && (
+              <div className="sm:col-span-2 p-3 rounded-xl bg-emerald-50/80 border border-emerald-200 text-xs text-emerald-950 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[18px]">verified_user</span>
+                  </div>
+                  <div>
+                    <span className="font-bold text-emerald-900">Direct Reimbursement to Profile KYC Bank:</span>
+                    <p className="text-[11px] text-emerald-700">
+                      {currentUser.bankName} • <span className="font-mono font-bold tracking-wider">{currentUser.accountNumber}</span> ({currentUser.accountName || currentUser.name})
+                    </p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={useProfileKycBank}
+                    onChange={e => setUseProfileKycBank(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+            )}
+
+            {paymentMethod === 'Nigerian Bank Transfer' && !currentUser?.accountNumber && (
+              <div className="sm:col-span-2 p-3 rounded-xl bg-surface-container border border-outline-variant text-[11px] text-secondary flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px] text-amber-600">account_balance</span>
+                  <span>Want automatic reimbursement? Register &amp; verify your Nigerian bank in <strong>Settings &gt; My Profile &amp; KYC</strong>.</span>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-1 sm:col-span-2">
               <label className="font-label-md text-label-md text-secondary">Requisition Justification / Purpose</label>

@@ -6,7 +6,7 @@ import { UserRole } from '../types/crm';
 import { BrandLogo } from '../components/common/BrandLogo';
 import { usePWA } from '../context/PWAContext';
 
-const VALID_ROLES: UserRole[] = ['super_admin', 'student', 'admissions', 'mentor', 'finance'];
+const VALID_ROLES: UserRole[] = ['super_admin', 'student', 'admissions', 'mentor', 'finance', 'program_officer'];
 
 const ROLE_DISPLAY_NAMES: Record<UserRole, string> = {
   super_admin: 'Super Admin / Managing Director',
@@ -14,6 +14,7 @@ const ROLE_DISPLAY_NAMES: Record<UserRole, string> = {
   admissions: 'Admissions Officer',
   mentor: 'Faculty Mentor & Instructor',
   finance: 'Finance Officer & Bursar',
+  program_officer: 'Program Officer & Curriculum Lead',
 };
 
 const ROLE_SHORT_LABELS: Record<UserRole, string> = {
@@ -22,6 +23,7 @@ const ROLE_SHORT_LABELS: Record<UserRole, string> = {
   admissions: 'Admissions',
   mentor: 'Faculty Mentor',
   finance: 'Finance',
+  program_officer: 'Program Officer',
 };
 
 export const LoginPage: React.FC = () => {
@@ -74,6 +76,18 @@ export const LoginPage: React.FC = () => {
     const norm = val.trim().toLowerCase();
     if (!norm) return;
 
+    // 0. Super Admin Aliases
+    if (
+      norm === 'admin@codelab.institute' || 
+      norm === 'superadmin@codelab.institute' || 
+      norm === 'abiola.adefowope@codelab.institute' ||
+      norm.startsWith('superadmin') ||
+      norm === 'admin'
+    ) {
+      setSelectedRole('super_admin');
+      return;
+    }
+
     // 1. Check if matches a registered staff member
     const staffMatch = staffUsers?.find(u => u.email.toLowerCase() === norm);
     if (staffMatch?.role && VALID_ROLES.includes(staffMatch.role)) {
@@ -103,6 +117,13 @@ export const LoginPage: React.FC = () => {
     }
   };
 
+  const handleFillSuperAdminDemo = () => {
+    setSelectedRole('super_admin');
+    setEmail('abiola.adefowope@codelab.institute');
+    setPassword('password123');
+    setErrorMessage('');
+  };
+
   const from = (location.state as any)?.from?.pathname || '/';
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,7 +143,17 @@ export const LoginPage: React.FC = () => {
         setIsSubmitting(false);
         return;
       }
-      const target = selectedRole === 'student' ? '/student/dashboard' : (from === '/' ? '/' : from);
+      
+      const authenticatedRole = result.user?.role || selectedRole;
+      let target = from === '/' ? '/' : from;
+      if (from === '/') {
+        if (authenticatedRole === 'student') target = '/student/dashboard';
+        else if (authenticatedRole === 'program_officer') target = '/courses';
+        else if (authenticatedRole === 'admissions') target = '/leads';
+        else if (authenticatedRole === 'finance') target = '/expenses';
+        else if (authenticatedRole === 'mentor') target = '/mentors';
+        else target = '/';
+      }
       navigate(target, { replace: true });
     } catch (err: any) {
       setErrorMessage(err.message || 'An error occurred during authentication.');
@@ -133,21 +164,21 @@ export const LoginPage: React.FC = () => {
   const isRoleSpecifiedInUrl = !!queryRole;
 
   return (
-    <div className="min-h-screen w-screen flex flex-col justify-center items-center bg-surface-container-low p-4 sm:p-margin-page">
+    <div className="min-h-screen w-screen flex flex-col justify-center items-center bg-canvas p-4 sm:p-margin-page">
       <div className="w-full max-w-lg space-y-6">
         {/* Institution Brand Header */}
         <div className="text-center space-y-2 flex flex-col items-center">
           <BrandLogo size="lg" logoUrl={settings.logoUrl} className="justify-center" />
-          <h1 className="font-headline-lg text-xl font-bold text-on-surface tracking-tight mt-2">
+          <h1 className="font-headline-lg text-xl font-bold text-crisp-black tracking-tight mt-2">
             {settings.instituteName}
           </h1>
-          <p className="font-body-md text-xs text-secondary">
+          <p className="font-sans text-xs text-on-surface-variant">
             Enterprise Operations &amp; Academic Management Portal
           </p>
         </div>
 
         {/* Login Card */}
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-xl p-8 space-y-6">
+        <div className="bg-surface border border-border-subtle rounded-xl shadow-modal p-8 space-y-6">
           <div>
             <div className="flex items-center justify-between">
               <h2 className="font-headline-md text-base font-bold text-on-surface">Institutional Portal Sign In</h2>
@@ -196,9 +227,28 @@ export const LoginPage: React.FC = () => {
                 <option value="mentor">💼 Faculty Mentor &amp; Instructor</option>
                 <option value="admissions">📋 Admissions &amp; Enrollments Officer</option>
                 <option value="finance">💰 Finance &amp; Bursary Officer</option>
+                <option value="program_officer">📋 Program Officer &amp; Curriculum Lead</option>
                 <option value="super_admin">🛡️ Super Admin / Managing Director</option>
               </select>
             </div>
+
+            {selectedRole === 'super_admin' && (
+              <div className="p-2.5 bg-primary/5 border border-primary/20 rounded-lg flex items-center justify-between text-xs animate-in fade-in duration-150">
+                <div className="flex items-center gap-2 text-on-surface min-w-0">
+                  <span className="material-symbols-outlined text-primary text-[18px] shrink-0">admin_panel_settings</span>
+                  <div className="text-[11px] leading-tight truncate">
+                    <span className="font-semibold text-primary">Super Admin Identity:</span> <span className="font-mono text-on-surface">abiola.adefowope@codelab.institute</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleFillSuperAdminDemo}
+                  className="px-2.5 py-1 text-[11px] font-bold text-primary bg-primary/10 hover:bg-primary/20 rounded transition-colors shrink-0 cursor-pointer ml-2"
+                >
+                  Auto-fill
+                </button>
+              </div>
+            )}
 
             <div className="space-y-1">
               <label className="font-label-md text-xs text-secondary font-semibold">Institutional Email Address</label>

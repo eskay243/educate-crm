@@ -209,34 +209,34 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
             /* Printable Landscape Certificate */
             <div
               id="certificate-print-area"
-              className="relative w-full aspect-[1.414/1] min-h-[580px] sm:min-h-[640px] bg-[#fdfcf7] text-[#0f172a] p-8 sm:p-14 rounded-xl border-8 border-double border-[#00236f] shadow-2xl flex flex-col justify-between overflow-hidden print:w-full print:h-screen print:border-none print:rounded-none print:shadow-none print:p-12"
+              className="relative w-full aspect-[1.414/1] min-h-[580px] sm:min-h-[640px] bg-[#fdfcf7] text-[#1C293C] p-8 sm:p-14 rounded-xl border-8 border-double border-[#1872F5] shadow-2xl flex flex-col justify-between overflow-hidden print:w-full print:h-screen print:border-none print:rounded-none print:shadow-none print:p-12"
               style={{
                 backgroundImage:
-                  'radial-gradient(#00236f08 1.5px, transparent 1.5px), radial-gradient(#d9770608 1.5px, #fdfcf7 1.5px)',
+                  'radial-gradient(#1872F508 1.5px, transparent 1.5px), radial-gradient(#d9770608 1.5px, #fdfcf7 1.5px)',
                 backgroundSize: '24px 24px',
                 backgroundPosition: '0 0, 12px 12px',
               }}
             >
               {/* Guilloché Ornate Corner Ornaments */}
-              <div className="absolute top-3 left-3 w-16 h-16 border-t-4 border-l-4 border-[#00236f] pointer-events-none" />
-              <div className="absolute top-3 right-3 w-16 h-16 border-t-4 border-r-4 border-[#00236f] pointer-events-none" />
-              <div className="absolute bottom-3 left-3 w-16 h-16 border-b-4 border-l-4 border-[#00236f] pointer-events-none" />
-              <div className="absolute bottom-3 right-3 w-16 h-16 border-b-4 border-r-4 border-[#00236f] pointer-events-none" />
+              <div className="absolute top-3 left-3 w-16 h-16 border-t-4 border-l-4 border-[#1872F5] pointer-events-none" />
+              <div className="absolute top-3 right-3 w-16 h-16 border-t-4 border-r-4 border-[#1872F5] pointer-events-none" />
+              <div className="absolute bottom-3 left-3 w-16 h-16 border-b-4 border-l-4 border-[#1872F5] pointer-events-none" />
+              <div className="absolute bottom-3 right-3 w-16 h-16 border-b-4 border-r-4 border-[#1872F5] pointer-events-none" />
 
               {/* Watermark Crest */}
               <div className="absolute inset-0 flex items-center justify-center opacity-[0.035] pointer-events-none">
-                <span className="material-symbols-outlined text-[340px] text-[#00236f]">
+                <span className="material-symbols-outlined text-[340px] text-[#1872F5]">
                   school
                 </span>
               </div>
 
               {/* Certificate Header */}
               <div className="relative text-center z-10">
-                <div className="inline-flex items-center justify-center gap-2 px-4 py-1 rounded-full bg-[#00236f]/10 text-[#00236f] text-xs font-black uppercase tracking-[3px] mb-2 border border-[#00236f]/20">
+                <div className="inline-flex items-center justify-center gap-2 px-4 py-1 rounded-full bg-[#1872F5]/10 text-[#1872F5] text-xs font-black uppercase tracking-[3px] mb-2 border border-[#1872F5]/20">
                   <span className="material-symbols-outlined text-[14px]">stars</span>
                   CODELAB EDUCARE ACADEMIC SENATE
                 </div>
-                <h1 className="text-3xl sm:text-4xl font-black text-[#00236f] tracking-tight uppercase font-serif">
+                <h1 className="text-3xl sm:text-4xl font-black text-[#1872F5] tracking-tight uppercase font-serif">
                   Certificate of Completion
                 </h1>
                 <p className="text-xs sm:text-sm font-semibold tracking-[4px] uppercase text-[#d97706] mt-1">
@@ -252,7 +252,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
                 </p>
 
                 <div className="my-3">
-                  <h2 className="text-2xl sm:text-4xl font-extrabold text-[#0f172a] underline decoration-[#d97706] decoration-2 underline-offset-8 font-serif tracking-tight">
+                  <h2 className="text-2xl sm:text-4xl font-extrabold text-[#1C293C] underline decoration-[#d97706] decoration-2 underline-offset-8 font-serif tracking-tight">
                     {student.name}
                   </h2>
                   <p className="text-xs font-mono font-bold text-[#64748b] mt-2">
@@ -262,33 +262,33 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
 
                 <p className="text-xs sm:text-sm text-[#334155] leading-relaxed max-w-2xl mx-auto font-medium">
                   has successfully fulfilled all academic curriculum requirements, submitted production-grade engineering deliverables, and completed{' '}
-                  <strong className="text-[#00236f] font-bold">
+                  <strong className="text-[#1872F5] font-bold">
                     {attendedHours >= minHours ? attendedHours : minHours}+ verified hours
                   </strong>{' '}
                   of faculty-led mentorship and practical software engineering in
                 </p>
 
                 <div className="my-3">
-                  <span className="inline-block px-5 py-2 rounded-lg bg-[#00236f]/5 border border-[#00236f]/20 text-[#00236f] font-extrabold text-base sm:text-lg tracking-wide uppercase">
+                  <span className="inline-block px-5 py-2 rounded-lg bg-[#1872F5]/5 border border-[#1872F5]/20 text-[#1872F5] font-extrabold text-base sm:text-lg tracking-wide uppercase">
                     {student.program || 'Full-Stack Software Engineering'}
                   </span>
                 </div>
               </div>
 
               {/* Certificate Footer / Holographic Seal & Signatures */}
-              <div className="relative z-10 pt-4 border-t border-[#e2e8f0] flex items-end justify-between px-2 sm:px-8">
+              <div className="relative z-10 pt-4 border-t border-[#D9E6E8] flex items-end justify-between px-2 sm:px-8">
                 {/* Left Signature: Managing Director */}
                 <div className="text-center w-48 sm:w-56">
                   <div className="h-12 flex items-center justify-center">
-                    <span className="font-serif italic text-lg sm:text-xl font-bold text-[#00236f] tracking-wide">
+                    <span className="font-serif italic text-lg sm:text-xl font-bold text-[#1872F5] tracking-wide">
                       Abiola Adefowope
                     </span>
                   </div>
-                  <div className="w-full h-px bg-[#0f172a]/40 mb-1" />
-                  <p className="text-xs font-bold text-[#0f172a] uppercase tracking-wider">
+                  <div className="w-full h-px bg-[#1C293C]/40 mb-1" />
+                  <p className="text-xs font-bold text-[#1C293C] uppercase tracking-wider">
                     Abiola Adefowope
                   </p>
-                  <p className="text-[10px] text-[#64748b] font-medium">
+                  <p className="text-[10px] text-[#414754] font-medium">
                     Managing Director &amp; CEO
                   </p>
                 </div>
@@ -305,7 +305,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
                       </span>
                     </div>
                   </div>
-                  <p className="text-[9px] font-mono text-[#64748b] mt-1">
+                  <p className="text-[9px] font-mono text-[#414754] mt-1">
                     Serial: {certNumber}
                   </p>
                 </div>
@@ -313,15 +313,15 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
                 {/* Right Signature: Dean of Academic Affairs */}
                 <div className="text-center w-48 sm:w-56">
                   <div className="h-12 flex items-center justify-center">
-                    <span className="font-serif italic text-lg sm:text-xl font-bold text-[#00236f] tracking-wide">
+                    <span className="font-serif italic text-lg sm:text-xl font-bold text-[#1872F5] tracking-wide">
                       Dr. Arthur Pendelton
                     </span>
                   </div>
-                  <div className="w-full h-px bg-[#0f172a]/40 mb-1" />
-                  <p className="text-xs font-bold text-[#0f172a] uppercase tracking-wider">
+                  <div className="w-full h-px bg-[#1C293C]/40 mb-1" />
+                  <p className="text-xs font-bold text-[#1C293C] uppercase tracking-wider">
                     Dr. Arthur Pendelton
                   </p>
-                  <p className="text-[10px] text-[#64748b] font-medium">
+                  <p className="text-[10px] text-[#414754] font-medium">
                     Dean of Academic Affairs &amp; Faculty
                   </p>
                 </div>

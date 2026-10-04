@@ -10,6 +10,9 @@ import { ExecutiveReportPage } from './pages/ExecutiveReportPage';
 import { LeadManagementPage } from './pages/LeadManagementPage';
 import { StudentEnrollmentPage } from './pages/StudentEnrollmentPage';
 import { MentorManagementPage } from './pages/MentorManagementPage';
+import { MentorAvailabilityPage } from './pages/MentorAvailabilityPage';
+import { FacultyGradingPage } from './pages/FacultyGradingPage';
+import { CourseOutlinePage } from './pages/CourseOutlinePage';
 import { BusinessExpensesPage } from './pages/BusinessExpensesPage';
 import { CoursesCohortsPage } from './pages/CoursesCohortsPage';
 import { StaffAttendancePage } from './pages/StaffAttendancePage';
@@ -42,6 +45,9 @@ const HomeRoute: React.FC = () => {
   if (currentUser.role === 'mentor') {
     return <Navigate to="/mentors" replace />;
   }
+  if (currentUser.role === 'program_officer') {
+    return <Navigate to="/courses" replace />;
+  }
   if (currentUser.role === 'super_admin') {
     return <ExecutiveReportPage />;
   }
@@ -70,7 +76,7 @@ export const App: React.FC = () => {
             <Route 
               path="reports" 
               element={
-                <ProtectedRoute allowedRoles={['super_admin']}>
+                <ProtectedRoute allowedRoles={['super_admin', 'program_officer']}>
                   <ExecutiveReportPage />
                 </ProtectedRoute>
               } 
@@ -79,7 +85,7 @@ export const App: React.FC = () => {
             <Route
               path="courses"
               element={
-                <ProtectedRoute allowedRoles={['super_admin', 'admissions']} requiredModule="courses">
+                <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'program_officer']} requiredModule="courses">
                   <CoursesCohortsPage />
                 </ProtectedRoute>
               }
@@ -97,7 +103,7 @@ export const App: React.FC = () => {
             <Route
               path="students"
               element={
-                <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'mentor', 'finance']} requiredModule="students">
+                <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'mentor', 'finance', 'program_officer']} requiredModule="students">
                   <StudentEnrollmentPage />
                 </ProtectedRoute>
               }
@@ -106,8 +112,35 @@ export const App: React.FC = () => {
             <Route
               path="mentors"
               element={
-                <ProtectedRoute allowedRoles={['super_admin', 'mentor']} requiredModule="mentors">
+                <ProtectedRoute allowedRoles={['super_admin', 'mentor', 'program_officer']} requiredModule="mentors">
                   <MentorManagementPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="mentors/office-hours"
+              element={
+                <ProtectedRoute allowedRoles={['super_admin', 'mentor', 'program_officer']} requiredModule="mentors">
+                  <MentorAvailabilityPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="mentors/grading"
+              element={
+                <ProtectedRoute allowedRoles={['super_admin', 'mentor', 'program_officer']} requiredModule="mentors">
+                  <FacultyGradingPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="mentors/course-outlines"
+              element={
+                <ProtectedRoute allowedRoles={['super_admin', 'mentor', 'program_officer', 'admissions']} requiredModule="mentors">
+                  <CourseOutlinePage />
                 </ProtectedRoute>
               }
             />
@@ -115,7 +148,7 @@ export const App: React.FC = () => {
             <Route
               path="attendance"
               element={
-                <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'mentor', 'finance']} requiredModule="attendance">
+                <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'mentor', 'finance', 'program_officer']} requiredModule="attendance">
                   <StaffAttendancePage />
                 </ProtectedRoute>
               }
@@ -133,7 +166,7 @@ export const App: React.FC = () => {
             <Route
               path="settings"
               element={
-                <ProtectedRoute allowedRoles={['super_admin']}>
+                <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'mentor', 'finance', 'program_officer', 'student']}>
                   <SettingsPage />
                 </ProtectedRoute>
               }

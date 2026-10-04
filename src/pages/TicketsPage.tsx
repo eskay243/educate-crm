@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useCRM } from '../context/CRMContext';
 import { TicketCategory, TicketPriority, TicketStatus } from '../types/crm';
+import { CrispStatusBadge } from '../components/common/CrispStatusBadge';
 
 export const TicketsPage: React.FC = () => {
   const { 
@@ -184,14 +185,6 @@ export const TicketsPage: React.FC = () => {
     }
   };
 
-  const getStatusBadgeClass = (status: TicketStatus) => {
-    switch (status) {
-      case 'open': return 'bg-amber-500/15 text-amber-700 border-amber-300';
-      case 'in_progress': return 'bg-blue-500/15 text-blue-700 border-blue-300';
-      case 'resolved': return 'bg-emerald-500/15 text-emerald-700 border-emerald-300';
-      case 'closed': return 'bg-slate-500/15 text-slate-700 border-slate-300';
-    }
-  };
 
   return (
     <div className="space-y-stack-lg animate-in fade-in duration-200">
@@ -460,9 +453,7 @@ export const TicketsPage: React.FC = () => {
                   </td>
 
                   <td className="p-3 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold border ${getStatusBadgeClass(ticket.status)}`}>
-                      {ticket.status.replace('_', ' ').toUpperCase()}
-                    </span>
+                    <CrispStatusBadge status={ticket.status} />
                   </td>
 
                   <td className="p-3 whitespace-nowrap">
@@ -643,9 +634,7 @@ export const TicketsPage: React.FC = () => {
                 <span className="font-mono text-xs font-bold text-primary px-2 py-0.5 bg-primary/10 rounded">
                   {activeTicket.ticketNumber}
                 </span>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${getStatusBadgeClass(activeTicket.status)}`}>
-                  {activeTicket.status.replace('_', ' ').toUpperCase()}
-                </span>
+                <CrispStatusBadge status={activeTicket.status} />
                 <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${getPriorityBadgeClass(activeTicket.priority)}`}>
                   {activeTicket.priority}
                 </span>

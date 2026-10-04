@@ -172,6 +172,36 @@ export const BookSessionModal: React.FC<BookSessionModalProps> = ({ isOpen, onCl
                 />
               </div>
 
+              {/* Quick-Select Office Hours */}
+              {currentMentor?.officeHours && currentMentor.officeHours.filter(h => h.isActive).length > 0 && (
+                <div className="sm:col-span-2 p-2.5 rounded-lg bg-surface-container border border-outline-variant/60 space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] text-secondary">
+                    <span className="font-semibold text-on-surface flex items-center gap-1">
+                      <span className="material-symbols-outlined text-primary text-[14px]">schedule</span>
+                      <span>{currentMentor.name}&apos;s Weekly Office Hours</span>
+                    </span>
+                    <span>Click to autofill time</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {currentMentor.officeHours.filter(h => h.isActive).map(slot => (
+                      <button
+                        key={slot.id}
+                        type="button"
+                        onClick={() => {
+                          setTime(`${slot.startTime} - ${slot.endTime} (WAT)`);
+                          if (slot.slotDurationMinutes) {
+                            setDurationHours(slot.slotDurationMinutes / 60);
+                          }
+                        }}
+                        className="px-2 py-1 rounded bg-surface border border-outline-variant hover:border-primary text-[10px] font-mono font-bold text-on-surface hover:bg-primary/5 transition-colors cursor-pointer"
+                      >
+                        {slot.dayOfWeek}: {slot.startTime} - {slot.endTime} ({slot.locationType.includes('Google') ? 'Meet' : 'Hub'})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-1">
                 <label className="font-label-md text-xs text-secondary font-semibold">Duration (Hours)</label>
                 <select

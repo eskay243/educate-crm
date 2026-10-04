@@ -23,6 +23,11 @@ import { CertificateModal } from '../modals/CertificateModal';
 import { SubmitPerformanceReportModal } from '../modals/SubmitPerformanceReportModal';
 import { TopUpWalletModal } from '../modals/TopUpWalletModal';
 import { DisburseFundsModal } from '../modals/DisburseFundsModal';
+import { ScheduleClassModal } from '../modals/ScheduleClassModal';
+import { TakeAttendanceModal } from '../modals/TakeAttendanceModal';
+import { ResetUserPasswordModal } from '../modals/ResetUserPasswordModal';
+import { CourseOutlineModal } from '../modals/CourseOutlineModal';
+import { RequestPayoutModal } from '../modals/RequestPayoutModal';
 import { MobileBottomNav } from './MobileBottomNav';
 
 export const AppLayout: React.FC = () => {
@@ -138,6 +143,26 @@ export const AppLayout: React.FC = () => {
       />
       <DisburseFundsModal
         isOpen={activeModal === 'disburse-expense' || activeModal === 'disburse-mentor'}
+        onClose={closeModal}
+      />
+      <ScheduleClassModal
+        isOpen={activeModal === 'schedule-class'}
+        onClose={closeModal}
+      />
+      <TakeAttendanceModal
+        isOpen={activeModal === 'take-attendance'}
+        onClose={closeModal}
+      />
+      <ResetUserPasswordModal
+        isOpen={activeModal === 'reset-user-password'}
+        onClose={closeModal}
+      />
+      <CourseOutlineModal
+        isOpen={activeModal === 'course-outline'}
+        onClose={closeModal}
+      />
+      <RequestPayoutModal
+        isOpen={activeModal === 'request-payout'}
         onClose={closeModal}
       />
       <ChangePasswordModal />

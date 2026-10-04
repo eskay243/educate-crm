@@ -52,12 +52,12 @@ export const CreateRecordHubModal: React.FC<CreateRecordHubModalProps> = ({ isOp
       <div className="absolute inset-0" onClick={onClose} />
 
       {/* Modal Container */}
-      <div className="glass-panel relative w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden transform transition-all bg-surface-container-lowest/95 border border-outline-variant/60 z-10">
+      <div className="relative w-full max-w-3xl rounded-xl shadow-modal flex flex-col max-h-[90vh] overflow-hidden transform transition-all bg-surface border border-border-subtle z-10">
         {/* Header */}
-        <div className="flex items-center justify-between p-stack-lg border-b border-outline-variant/40 bg-surface-container-lowest">
+        <div className="flex items-center justify-between p-6 border-b border-border-subtle bg-surface">
           <div>
-            <h2 className="font-headline-lg text-headline-lg font-bold text-on-surface">Create New Record</h2>
-            <p className="font-body-md text-body-md text-on-surface-variant mt-1">Select the type of record you want to add to the CRM.</p>
+            <h2 className="font-headline-lg text-xl font-bold text-crisp-black">Create New Record</h2>
+            <p className="font-sans text-xs text-on-surface-variant mt-0.5">Select the type of record you want to add to the CRM.</p>
           </div>
           <button
             onClick={onClose}

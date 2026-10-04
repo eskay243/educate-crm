@@ -16,7 +16,9 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
     disburseExpenseFromWallet,
     disburseMentorFromWallet,
     openModal,
-    showToast
+    showToast,
+    settings,
+    staffUsers,
   } = useCRM();
 
   const [bankName, setBankName] = useState('');
@@ -27,9 +29,14 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
   const [isVerified, setIsVerified] = useState(false);
   const [isDisbursing, setIsDisbursing] = useState(false);
   const [reason, setReason] = useState('');
+  const [isKycAutoFilled, setIsKycAutoFilled] = useState(false);
 
   const isMentorPayout = Boolean(selectedMentorForDisburse);
   const isExpensePayout = Boolean(selectedExpenseForDisburse);
+
+  const requiredLecturingHours = selectedMentorForDisburse?.minimumRequiredHours || settings.mentorMinimumLecturedHours || 20;
+  const mentorLecturedHours = selectedMentorForDisburse?.lecturedHours || 0;
+  const isMentorHoursEligible = !isMentorPayout || (mentorLecturedHours >= requiredLecturingHours);
 
   const amountToDisburse = isMentorPayout 
     ? (selectedMentorForDisburse?.pendingPayout || 0)
@@ -46,16 +53,33 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
       setAccountNumber(selectedMentorForDisburse.accountNumber || '');
       setAccountName(selectedMentorForDisburse.accountName || selectedMentorForDisburse.name);
       setIsVerified(Boolean(selectedMentorForDisburse.isAccountVerified || selectedMentorForDisburse.bankVerified));
+      setIsKycAutoFilled(false);
       setReason(`Faculty 37% Commission Share for ${selectedMentorForDisburse.name}`);
     } else if (selectedExpenseForDisburse) {
-      setBankName(selectedExpenseForDisburse.disbursementBankName || 'Guaranty Trust Bank (GTBank)');
-      setBankCode(selectedExpenseForDisburse.disbursementBankCode || '058');
-      setAccountNumber(selectedExpenseForDisburse.disbursementAccountNumber || '');
-      setAccountName(selectedExpenseForDisburse.disbursementAccountName || selectedExpenseForDisburse.vendor);
-      setIsVerified(Boolean(selectedExpenseForDisburse.disbursementAccountNumber));
+      // Look up requester in staffUsers to see if they have KYC bank details saved
+      const requester = staffUsers.find(
+        u => (selectedExpenseForDisburse.requesterEmail && u.email?.toLowerCase() === selectedExpenseForDisburse.requesterEmail.toLowerCase()) ||
+             (selectedExpenseForDisburse.requestedBy && u.name?.toLowerCase() === selectedExpenseForDisburse.requestedBy.toLowerCase())
+      );
+
+      const hasDirectBank = Boolean(selectedExpenseForDisburse.disbursementAccountNumber);
+      const hasStaffKyc = Boolean(requester?.accountNumber);
+
+      const resolvedBankName = selectedExpenseForDisburse.disbursementBankName || requester?.bankName || 'Guaranty Trust Bank (GTBank)';
+      const resolvedBankCode = selectedExpenseForDisburse.disbursementBankCode || requester?.bankCode || '058';
+      const resolvedAccountNumber = selectedExpenseForDisburse.disbursementAccountNumber || requester?.accountNumber || '';
+      const resolvedAccountName = selectedExpenseForDisburse.disbursementAccountName || requester?.accountName || selectedExpenseForDisburse.vendor;
+      const resolvedVerified = Boolean(hasDirectBank || requester?.isBankVerified);
+
+      setBankName(resolvedBankName);
+      setBankCode(resolvedBankCode);
+      setAccountNumber(resolvedAccountNumber);
+      setAccountName(resolvedAccountName);
+      setIsVerified(resolvedVerified);
+      setIsKycAutoFilled(!hasDirectBank && hasStaffKyc);
       setReason(`OpEx Disbursement: ${selectedExpenseForDisburse.title} (${selectedExpenseForDisburse.expenseCode})`);
     }
-  }, [selectedMentorForDisburse, selectedExpenseForDisburse]);
+  }, [selectedMentorForDisburse, selectedExpenseForDisburse, staffUsers]);
 
   if (!isOpen || (!isMentorPayout && !isExpensePayout)) return null;
 
@@ -93,6 +117,11 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
   };
 
   const handleConfirmDisburse = async () => {
+    if (isMentorPayout && !isMentorHoursEligible) {
+      showToast('Hours Threshold Gatekeeping', `Payout blocked: Mentor has logged ${mentorLecturedHours.toFixed(1)}h of required ${requiredLecturingHours}h class lectures.`, 'error');
+      return;
+    }
+
     if (!hasSufficientBalance) {
       showToast('Insufficient Wallet Balance', `Please top up the wallet with at least ${formatNaira(amountToDisburse - currentWalletBalance)}.`, 'error');
       return;
@@ -106,7 +135,8 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
     setIsDisbursing(true);
     try {
       if (isMentorPayout && selectedMentorForDisburse) {
-        const success = await disburseMentorFromWallet(selectedMentorForDisburse.id, amountToDisburse, reason);
+        const payoutReqId = (selectedMentorForDisburse as any).payoutRequestId;
+        const success = await disburseMentorFromWallet(selectedMentorForDisburse.id, amountToDisburse, reason, payoutReqId);
         if (success) {
           setSelectedMentorForDisburse(null);
           onClose();
@@ -133,11 +163,11 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div 
-        className="w-full max-w-lg bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        className="w-full max-w-lg bg-surface border border-outline rounded-xl shadow-modal overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-6 bg-gradient-to-r from-emerald-800 to-[#00236f] text-white flex justify-between items-start">
+        <div className="p-6 bg-crisp-black text-white flex justify-between items-start border-b border-outline">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white">
               <span className="material-symbols-outlined text-[24px]">send_money</span>
@@ -203,12 +233,34 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
             </div>
           </div>
 
+          {/* Academic Lecturing Hours Gate Warning */}
+          {isMentorPayout && !isMentorHoursEligible && (
+            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-950 text-xs flex items-start gap-2.5">
+              <span className="material-symbols-outlined text-rose-600 text-[20px] shrink-0 mt-0.5">lock</span>
+              <div className="space-y-1">
+                <h5 className="font-bold text-rose-950">Payout Locked: Minimum Lecturing Hours Required</h5>
+                <p className="leading-relaxed">
+                  Academic policy mandates that faculty mentors complete at least <strong>{requiredLecturingHours} verified class lecture hours</strong> before commission share payouts can be released.
+                  Mentor has logged <strong>{mentorLecturedHours.toFixed(1)} hours</strong> ({Math.max(0, requiredLecturingHours - mentorLecturedHours).toFixed(1)} hours still needed).
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Beneficiary Details Form */}
           <div className="space-y-3 bg-surface-container-low p-4 rounded-xl border border-outline-variant/60">
-            <h4 className="text-xs font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
-              <span className="material-symbols-outlined text-[16px] text-primary">account_balance</span>
-              <span>Beneficiary Bank Details (NIBSS)</span>
-            </h4>
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
+                <span className="material-symbols-outlined text-[16px] text-primary">account_balance</span>
+                <span>Beneficiary Bank Details (NIBSS)</span>
+              </h4>
+              {isKycAutoFilled && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#dcfce7] border border-[#86efac] text-[#166534] text-[10px] font-bold animate-in fade-in">
+                  <span className="material-symbols-outlined text-[12px]">verified</span>
+                  <span>Auto-filled from Requester Profile KYC</span>
+                </span>
+              )}
+            </div>
 
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="space-y-1">
@@ -312,18 +364,22 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
           <button
             type="button"
             onClick={handleConfirmDisburse}
-            disabled={!hasSufficientBalance || isDisbursing || !accountNumber || accountNumber.length !== 10}
+            disabled={!hasSufficientBalance || isDisbursing || !accountNumber || accountNumber.length !== 10 || !isMentorHoursEligible}
             className={`px-5 py-2.5 rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-2 cursor-pointer ${
-              hasSufficientBalance && accountNumber.length === 10
+              hasSufficientBalance && accountNumber.length === 10 && isMentorHoursEligible
                 ? 'bg-[#166534] hover:bg-[#15803d] text-white'
                 : 'bg-surface-container text-secondary cursor-not-allowed opacity-60'
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">
-              {isDisbursing ? 'progress_activity' : 'send'}
+              {!isMentorHoursEligible ? 'lock' : (isDisbursing ? 'progress_activity' : 'send')}
             </span>
             <span>
-              {isDisbursing ? 'Sending via Paystack...' : `Authorize ${formatNaira(amountToDisburse)} Payout`}
+              {!isMentorHoursEligible 
+                ? 'Payout Locked (Under Minimum Hours)'
+                : isDisbursing 
+                ? 'Sending via Paystack...' 
+                : `Authorize ${formatNaira(amountToDisburse)} Payout`}
             </span>
           </button>
         </div>

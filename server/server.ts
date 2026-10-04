@@ -50,6 +50,7 @@ import {
   initialStudentPerformanceReports,
   defaultRoleDefinitions,
   initialTickets,
+  initialTimetables,
 } from '../src/data/mockData.js';
 
 interface DatabaseSchema {
@@ -72,6 +73,8 @@ interface DatabaseSchema {
   tickets?: any[];
   customRoles?: any[];
   wallet?: any;
+  timetables?: any[];
+  payoutRequests?: any[];
 }
 
 const defaultWallet = {
@@ -111,6 +114,8 @@ const getInitialDatabase = (): DatabaseSchema => ({
   tickets: initialTickets,
   customRoles: defaultRoleDefinitions,
   wallet: defaultWallet,
+  timetables: initialTimetables,
+  payoutRequests: [],
 });
 
 const loadDatabase = (): DatabaseSchema => {
@@ -125,6 +130,8 @@ const loadDatabase = (): DatabaseSchema => {
     if (!Array.isArray(parsed.courses)) parsed.courses = [];
     if (!Array.isArray(parsed.tickets)) parsed.tickets = initialTickets;
     if (!Array.isArray(parsed.customRoles)) parsed.customRoles = defaultRoleDefinitions;
+    if (!Array.isArray(parsed.timetables)) parsed.timetables = initialTimetables;
+    if (!Array.isArray(parsed.payoutRequests)) parsed.payoutRequests = [];
     if (!parsed.wallet) parsed.wallet = defaultWallet;
     return parsed;
   } catch (err) {
@@ -270,6 +277,38 @@ if (!db.mentors || db.mentors.length === 0) {
       paidPayout: 655000,
       joinedDate: '2025-11-01',
       rating: 4.9,
+      officeHours: [
+        {
+          id: 'slot-1',
+          dayOfWeek: 'Tuesday',
+          startTime: '14:00',
+          endTime: '17:00',
+          slotDurationMinutes: 30,
+          meetingLink: 'https://meet.google.com/nex-codelab-1on1',
+          locationType: 'Google Meet (Online)',
+          isActive: true,
+        },
+        {
+          id: 'slot-2',
+          dayOfWeek: 'Thursday',
+          startTime: '10:00',
+          endTime: '13:00',
+          slotDurationMinutes: 30,
+          meetingLink: 'https://meet.google.com/nex-codelab-1on1',
+          locationType: 'Google Meet (Online)',
+          isActive: true,
+        },
+        {
+          id: 'slot-3',
+          dayOfWeek: 'Friday',
+          startTime: '15:00',
+          endTime: '17:00',
+          slotDurationMinutes: 45,
+          meetingLink: 'https://meet.google.com/nex-codelab-lab',
+          locationType: 'Campus Hub Lab',
+          isActive: true,
+        },
+      ],
     }
   ];
   saveDatabase(db);
@@ -313,7 +352,12 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
   let user: any = null;
 
   if (cleanEmail) {
-    user = db.staffUsers?.find((u: any) => u.email.toLowerCase() === cleanEmail);
+    if (cleanEmail === 'admin@codelab.institute' || cleanEmail === 'superadmin@codelab.institute') {
+      user = db.staffUsers?.find((u: any) => u.role === 'super_admin');
+    }
+    if (!user) {
+      user = db.staffUsers?.find((u: any) => u.email.toLowerCase() === cleanEmail);
+    }
     if (!user) {
       const mentor = db.mentors?.find((m: any) => m.email.toLowerCase() === cleanEmail);
       if (mentor) {
@@ -326,6 +370,8 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
           mentorId: mentor.id,
           department: mentor.department,
           password: mentor.password,
+          isActive: mentor.isActive !== false && mentor.status !== 'Deactivated',
+          status: mentor.status || 'Active',
         };
       }
     }
@@ -340,6 +386,8 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
           roleTitle: 'Enrolled Scholar / Student',
           studentId: student.id,
           password: student.password,
+          isActive: student.isActive !== false && student.status !== 'Deactivated',
+          status: student.status || 'Active',
         };
       }
     }
@@ -356,6 +404,14 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
   const expectedPassword = user.password || 'password123';
   if (password.trim() !== expectedPassword.trim()) {
     return res.status(401).json({ success: false, message: 'Invalid password. Please check your credentials.' });
+  }
+
+  if (user.isActive === false || user.status === 'Deactivated') {
+    return res.status(403).json({ 
+      success: false, 
+      error: 'Account Deactivated',
+      message: 'This account has been deactivated by the Super Admin. Please contact administration for reactivation.' 
+    });
   }
 
   // Sanitize user (strip password)
@@ -2475,6 +2531,254 @@ app.patch('/api/staff/:id', (req: Request, res: Response) => {
   res.json({ success: true, data: db.staffUsers[index] });
 });
 
+// ----------------------------------------------------
+// Super Admin User Administration Endpoints
+// (Activate / Deactivate & Password Reset across Staff, Mentors, Students)
+// ----------------------------------------------------
+app.patch('/api/users/:id/status', (req: Request, res: Response) => {
+  const callerRole = (req.headers['x-user-role'] as string) || req.body?.callerRole;
+  if (callerRole && callerRole !== 'super_admin') {
+    return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin can activate or deactivate accounts.' });
+  }
+
+  const { id } = req.params;
+  const { isActive, reason } = req.body;
+  const activeBool = Boolean(isActive);
+  const now = new Date().toISOString();
+
+  let targetType: 'staff' | 'mentor' | 'student' | null = null;
+  let updatedRecord: any = null;
+
+  // 1. Check Staff
+  const staffIndex = db.staffUsers?.findIndex(u => u.id === id);
+  if (staffIndex !== -1 && staffIndex !== undefined) {
+    db.staffUsers[staffIndex].isActive = activeBool;
+    db.staffUsers[staffIndex].status = activeBool ? 'Active' : 'Deactivated';
+    if (!activeBool) {
+      db.staffUsers[staffIndex].deactivatedAt = now;
+      db.staffUsers[staffIndex].deactivatedReason = reason || 'Deactivated by Super Admin';
+    } else {
+      delete db.staffUsers[staffIndex].deactivatedAt;
+      delete db.staffUsers[staffIndex].deactivatedReason;
+    }
+    targetType = 'staff';
+    const { password: _, ...cleanStaff } = db.staffUsers[staffIndex];
+    updatedRecord = cleanStaff;
+  }
+
+  // 2. Check Mentor
+  const mentorIndex = db.mentors?.findIndex(m => m.id === id || m.mentorCode === id);
+  if (mentorIndex !== -1 && mentorIndex !== undefined) {
+    db.mentors[mentorIndex].isActive = activeBool;
+    db.mentors[mentorIndex].status = activeBool ? 'Active' : 'Deactivated';
+    if (!activeBool) {
+      db.mentors[mentorIndex].deactivatedAt = now;
+      db.mentors[mentorIndex].deactivatedReason = reason || 'Deactivated by Super Admin';
+    } else {
+      delete db.mentors[mentorIndex].deactivatedAt;
+      delete db.mentors[mentorIndex].deactivatedReason;
+    }
+    targetType = targetType || 'mentor';
+    const { password: _, ...cleanMentor } = db.mentors[mentorIndex];
+    if (!updatedRecord) updatedRecord = cleanMentor;
+  }
+
+  // 3. Check Student
+  const studentIndex = db.students?.findIndex(s => s.id === id || s.studentCode === id);
+  if (studentIndex !== -1 && studentIndex !== undefined) {
+    db.students[studentIndex].isActive = activeBool;
+    db.students[studentIndex].status = activeBool ? 'Active' : 'Deactivated';
+    if (!activeBool) {
+      db.students[studentIndex].deactivatedAt = now;
+      db.students[studentIndex].deactivatedReason = reason || 'Deactivated by Super Admin';
+    } else {
+      delete db.students[studentIndex].deactivatedAt;
+      delete db.students[studentIndex].deactivatedReason;
+    }
+    targetType = targetType || 'student';
+    const { password: _, ...cleanStudent } = db.students[studentIndex];
+    if (!updatedRecord) updatedRecord = cleanStudent;
+  }
+
+  if (!targetType) {
+    return res.status(404).json({ success: false, message: 'User account not found' });
+  }
+
+  saveDatabase(db);
+  res.json({
+    success: true,
+    message: `Account successfully ${activeBool ? 'activated' : 'deactivated'}`,
+    data: updatedRecord,
+    targetType,
+  });
+});
+
+app.post('/api/users/:id/reset-password', (req: Request, res: Response) => {
+  const callerRole = (req.headers['x-user-role'] as string) || req.body?.callerRole;
+  if (callerRole && callerRole !== 'super_admin') {
+    return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin can reset user passwords.' });
+  }
+
+  const { id } = req.params;
+  const { newPassword } = req.body;
+
+  if (!newPassword || typeof newPassword !== 'string' || newPassword.trim().length < 6) {
+    return res.status(400).json({ success: false, message: 'New password must be at least 6 characters long.' });
+  }
+
+  let found = false;
+
+  // 1. Staff
+  const staff = db.staffUsers?.find(u => u.id === id);
+  if (staff) {
+    staff.password = newPassword.trim();
+    found = true;
+  }
+
+  // 2. Mentor
+  const mentor = db.mentors?.find(m => m.id === id || m.mentorCode === id);
+  if (mentor) {
+    mentor.password = newPassword.trim();
+    found = true;
+  }
+
+  // 3. Student
+  const student = db.students?.find(s => s.id === id || s.studentCode === id);
+  if (student) {
+    student.password = newPassword.trim();
+    found = true;
+  }
+
+  if (!found) {
+    return res.status(404).json({ success: false, message: 'User account not found' });
+  }
+
+  saveDatabase(db);
+  res.json({ success: true, message: 'Password has been successfully updated.' });
+});
+
+// ----------------------------------------------------
+// Timetable & Academic Scheduling Endpoints
+// ----------------------------------------------------
+app.get('/api/timetables', (req: Request, res: Response) => {
+  if (!db.timetables) db.timetables = initialTimetables;
+  const { mentorId, courseId, cohortId } = req.query;
+  let slots = db.timetables;
+
+  if (mentorId) {
+    slots = slots.filter((s: any) => s.mentorId === mentorId);
+  }
+  if (courseId) {
+    slots = slots.filter((s: any) => s.courseId === courseId);
+  }
+  if (cohortId) {
+    slots = slots.filter((s: any) => s.cohortId === cohortId);
+  }
+
+  res.json({ success: true, data: slots });
+});
+
+app.post('/api/timetables', (req: Request, res: Response) => {
+  if (!db.timetables) db.timetables = initialTimetables;
+  const newSlot = {
+    ...req.body,
+    id: req.body.id || `slot-${Date.now()}`,
+    createdAt: new Date().toISOString(),
+    attendanceMarked: false,
+    attendanceRecords: req.body.attendanceRecords || [],
+    status: req.body.status || 'Scheduled',
+  };
+
+  db.timetables.unshift(newSlot);
+  saveDatabase(db);
+  res.status(201).json({ success: true, data: newSlot });
+});
+
+app.patch('/api/timetables/:id', (req: Request, res: Response) => {
+  if (!db.timetables) db.timetables = initialTimetables;
+  const { id } = req.params;
+  const index = db.timetables.findIndex((s: any) => s.id === id);
+  if (index === -1) return res.status(404).json({ success: false, message: 'Timetable slot not found' });
+
+  db.timetables[index] = { ...db.timetables[index], ...req.body };
+  saveDatabase(db);
+  res.json({ success: true, data: db.timetables[index] });
+});
+
+app.delete('/api/timetables/:id', (req: Request, res: Response) => {
+  if (!db.timetables) db.timetables = initialTimetables;
+  const { id } = req.params;
+  const initialLength = db.timetables.length;
+  db.timetables = db.timetables.filter((s: any) => s.id !== id);
+
+  if (db.timetables.length === initialLength) {
+    return res.status(404).json({ success: false, message: 'Timetable slot not found' });
+  }
+
+  saveDatabase(db);
+  res.json({ success: true, message: 'Timetable slot deleted successfully' });
+});
+
+app.post('/api/timetables/:id/attendance', (req: Request, res: Response) => {
+  if (!db.timetables) db.timetables = initialTimetables;
+  const { id } = req.params;
+  const slotIndex = db.timetables.findIndex((s: any) => s.id === id);
+  if (slotIndex === -1) return res.status(404).json({ success: false, message: 'Timetable slot not found' });
+
+  const slot = db.timetables[slotIndex];
+  const { attendanceRecords, notes } = req.body;
+  const durationHours = slot.durationHours || 2;
+  const now = new Date().toISOString();
+
+  // 1. Update slot records
+  const updatedRecords = (attendanceRecords || []).map((rec: any) => ({
+    ...rec,
+    markedAt: now,
+    hoursCredited: rec.status === 'Attended' ? durationHours : 0,
+  }));
+
+  slot.attendanceMarked = true;
+  slot.status = 'Completed';
+  slot.attendanceRecords = updatedRecords;
+  if (notes) slot.notes = notes;
+
+  // 2. Credit attended learning hours to students
+  let studentsCreditedCount = 0;
+  for (const rec of updatedRecords) {
+    if (rec.status === 'Attended') {
+      const student = db.students.find(s => s.id === rec.studentId || s.studentCode === rec.studentId);
+      if (student) {
+        student.attendedLearningHours = (student.attendedLearningHours || 0) + durationHours;
+        studentsCreditedCount++;
+      }
+    }
+  }
+
+  // 3. Credit lecturing hours to the mentor
+  let mentorCredited = false;
+  if (slot.mentorId) {
+    const mentor = db.mentors.find(m => m.id === slot.mentorId || m.name === slot.mentorName);
+    if (mentor) {
+      mentor.lecturedHours = (mentor.lecturedHours || 0) + durationHours;
+      mentorCredited = true;
+    }
+  }
+
+  db.timetables[slotIndex] = slot;
+  saveDatabase(db);
+
+  res.json({
+    success: true,
+    message: `Attendance marked successfully. ${studentsCreditedCount} students and assigned faculty credited with ${durationHours} hours.`,
+    data: {
+      slot,
+      studentsCreditedCount,
+      mentorCredited,
+      durationHours,
+    }
+  });
+});
+
 app.get('/api/settings', (req: Request, res: Response) => {
   res.json({ success: true, data: sanitizeSettings(db.settings) });
 });
@@ -2807,6 +3111,16 @@ app.post('/api/paystack/disburse-mentor', async (req: Request, res: Response) =>
       return res.status(404).json({ success: false, message: 'Mentor not found' });
     }
 
+    const minRequired = mentor.minimumRequiredHours ?? db.settings?.mentorMinimumLecturedHours ?? 20;
+    const actualHours = mentor.lecturedHours ?? 0;
+    if (actualHours < minRequired) {
+      return res.status(400).json({
+        success: false,
+        error: 'Lecturing Hours Requirement Not Met',
+        message: `Payout locked: Faculty mentor has logged ${actualHours} lecturing hours. A minimum threshold of ${minRequired} lecturing hours is strictly required before payout eligibility.`
+      });
+    }
+
     const disburseAmount = Number(amount) || mentor.pendingPayout || 0;
     if (disburseAmount <= 0) {
       return res.status(400).json({ success: false, message: 'Disbursement amount must be greater than 0' });
@@ -2904,6 +3218,16 @@ app.post('/api/paystack/disburse-mentor', async (req: Request, res: Response) =>
       user: 'Finance Controller'
     });
 
+    // Reconcile associated payout request if provided
+    if (req.body.payoutRequestId && Array.isArray(db.payoutRequests)) {
+      const pReq = db.payoutRequests.find(r => r.id === req.body.payoutRequestId);
+      if (pReq) {
+        pReq.status = 'Disbursed';
+        pReq.disbursedAt = new Date().toISOString();
+        pReq.disburseReference = transferRef;
+      }
+    }
+
     saveDatabase(db);
     sendMentorPayoutAdviceEmail(mentor, disburseAmount, transferRef);
     res.json({
@@ -2915,6 +3239,87 @@ app.post('/api/paystack/disburse-mentor', async (req: Request, res: Response) =>
     console.error('Paystack disbursement error:', error);
     res.status(500).json({ success: false, message: error.message || 'Disbursement failed' });
   }
+});
+
+// ----------------------------------------------------
+// Mentor Payout Request Endpoints
+// ----------------------------------------------------
+app.get('/api/payout-requests', (req: Request, res: Response) => {
+  if (!Array.isArray(db.payoutRequests)) db.payoutRequests = [];
+  res.json({ success: true, data: db.payoutRequests });
+});
+
+app.post('/api/payout-requests', (req: Request, res: Response) => {
+  if (!Array.isArray(db.payoutRequests)) db.payoutRequests = [];
+  const { mentorId, amount, notes } = req.body;
+  const mentor = db.mentors?.find((m: any) => m.id === mentorId);
+  if (!mentor) {
+    return res.status(404).json({ success: false, message: 'Mentor profile not found.' });
+  }
+
+  const minRequired = mentor.minimumRequiredHours ?? db.settings?.mentorMinimumLecturedHours ?? 20;
+  const actualHours = mentor.lecturedHours ?? 0;
+  if (actualHours < minRequired) {
+    return res.status(400).json({
+      success: false,
+      message: `Ineligible for payout request: You have logged ${actualHours}h of lecturing. A minimum threshold of ${minRequired}h is required.`
+    });
+  }
+
+  const reqAmount = Number(amount) || mentor.pendingPayout || 0;
+  if (reqAmount <= 0) {
+    return res.status(400).json({ success: false, message: 'Requested amount must be greater than ₦0.' });
+  }
+
+  const newRequest = {
+    id: `req-${Date.now()}`,
+    mentorId: mentor.id,
+    mentorName: mentor.name,
+    mentorEmail: mentor.email,
+    amount: reqAmount,
+    lecturedHours: actualHours,
+    minimumRequiredHours: minRequired,
+    bankName: mentor.bankName || 'Guaranty Trust Bank (GTBank)',
+    accountNumber: mentor.accountNumber || '0123456789',
+    accountName: mentor.accountName || mentor.name,
+    bankCode: mentor.bankCode || '058',
+    status: 'Pending',
+    requestedAt: new Date().toISOString(),
+    notes: notes || '',
+  };
+
+  db.payoutRequests.unshift(newRequest);
+
+  db.notifications.unshift({
+    id: `notif-${Date.now()}`,
+    title: 'New Faculty Payout Request',
+    message: `${mentor.name} requested payout of ₦${reqAmount.toLocaleString()} (${actualHours}h lectured).`,
+    type: 'system',
+    timestamp: 'Just now',
+    read: false,
+    link: '/mentors',
+  });
+
+  saveDatabase(db);
+  res.status(201).json({ success: true, data: newRequest });
+});
+
+app.patch('/api/payout-requests/:id', (req: Request, res: Response) => {
+  if (!Array.isArray(db.payoutRequests)) db.payoutRequests = [];
+  const { id } = req.params;
+  const index = db.payoutRequests.findIndex((r: any) => r.id === id);
+  if (index === -1) {
+    return res.status(404).json({ success: false, message: 'Payout request not found.' });
+  }
+
+  db.payoutRequests[index] = {
+    ...db.payoutRequests[index],
+    ...req.body,
+    updatedAt: new Date().toISOString(),
+  };
+
+  saveDatabase(db);
+  res.json({ success: true, data: db.payoutRequests[index] });
 });
 
 // ----------------------------------------------------
@@ -3551,6 +3956,105 @@ app.post('/api/lms/lessons/:lessonId/complete', (req: Request, res: Response) =>
 
   saveDatabase(db);
   res.json({ success: true, data: { student, completedLessonIds: student.completedLessonIds, progressPercent: student.progressPercent } });
+});
+
+app.patch('/api/lms/lessons/:lessonId/mentor-complete', (req: Request, res: Response) => {
+  if (!db.lmsModules) db.lmsModules = initialLMSModules;
+  const { lessonId } = req.params;
+  const { mentorId, mentorName, notes } = req.body;
+
+  let targetLesson: any = null;
+  for (const mod of db.lmsModules) {
+    const lesson = mod.lessons?.find((l: any) => l.id === lessonId);
+    if (lesson) {
+      targetLesson = lesson;
+      break;
+    }
+  }
+
+  if (!targetLesson) {
+    return res.status(404).json({ success: false, message: 'Topic/Lesson not found in syllabus' });
+  }
+
+  targetLesson.completedByMentor = true;
+  targetLesson.completedByMentorName = mentorName || 'Assigned Faculty Mentor';
+  targetLesson.completedByMentorAt = new Date().toISOString();
+  targetLesson.completionNotes = notes || '';
+  targetLesson.approvalStatus = 'Taught (Pending PO Approval)';
+
+  saveDatabase(db);
+  res.json({
+    success: true,
+    message: 'Topic marked as taught and submitted for Program Officer approval.',
+    data: targetLesson,
+  });
+});
+
+app.patch('/api/lms/lessons/:lessonId/po-approve', (req: Request, res: Response) => {
+  if (!db.lmsModules) db.lmsModules = initialLMSModules;
+  const callerRole = (req.headers['x-user-role'] as string) || req.body?.callerRole;
+  if (callerRole && callerRole !== 'super_admin' && callerRole !== 'program_officer') {
+    return res.status(403).json({ success: false, message: 'Forbidden: Only Program Officer or Super Admin can approve curriculum topics.' });
+  }
+
+  const { lessonId } = req.params;
+  const { approvedBy, approvedByName, courseTitle } = req.body;
+
+  let targetLesson: any = null;
+  let targetModule: any = null;
+  for (const mod of db.lmsModules) {
+    const lesson = mod.lessons?.find((l: any) => l.id === lessonId);
+    if (lesson) {
+      targetLesson = lesson;
+      targetModule = mod;
+      break;
+    }
+  }
+
+  if (!targetLesson) {
+    return res.status(404).json({ success: false, message: 'Topic/Lesson not found in syllabus' });
+  }
+
+  targetLesson.approvedByProgramOfficer = true;
+  targetLesson.approvedByProgramOfficerName = approvedByName || 'Academic Program Officer';
+  targetLesson.approvedAt = new Date().toISOString();
+  targetLesson.approvalStatus = 'Approved & Published';
+
+  // Synchronize learning progress with enrolled students of this course
+  const effectiveCourseTitle = courseTitle || targetModule?.courseTitle;
+  let updatedStudentsCount = 0;
+
+  if (effectiveCourseTitle && Array.isArray(db.students)) {
+    const totalLessons = db.lmsModules.reduce(
+      (acc: number, mod: any) => acc + (mod.lessons?.length || 0),
+      0
+    ) || 1;
+
+    for (const student of db.students) {
+      const isEnrolled = 
+        student.program === effectiveCourseTitle || 
+        student.courses?.some((c: any) => c.name === effectiveCourseTitle || c.title === effectiveCourseTitle);
+
+      if (isEnrolled) {
+        if (!student.completedLessonIds) student.completedLessonIds = [];
+        if (!student.completedLessonIds.includes(lessonId)) {
+          student.completedLessonIds.push(lessonId);
+          student.progressPercent = Math.min(100, Math.round((student.completedLessonIds.length / totalLessons) * 100));
+          updatedStudentsCount++;
+        }
+      }
+    }
+  }
+
+  saveDatabase(db);
+  res.json({
+    success: true,
+    message: `Topic approved and published. Enrolled scholars' curriculum structures updated (${updatedStudentsCount} students updated).`,
+    data: {
+      lesson: targetLesson,
+      updatedStudentsCount,
+    }
+  });
 });
 
 app.get('/api/lms/assignments', (req: Request, res: Response) => {

@@ -63,7 +63,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
         </div>
       )}
 
-      <header className="bg-surface flex justify-between items-center h-16 px-gutter w-full sticky top-0 z-30 border-b border-outline-variant shadow-xs transition-colors">
+      <header className="bg-surface flex justify-between items-center h-16 px-gutter w-full sticky top-0 z-30 border-b border-border-subtle shadow-xs transition-colors">
         {/* Mobile Menu Toggle & Brand */}
         <div className="flex items-center gap-stack-md md:hidden">
           <button
@@ -86,7 +86,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
             value={globalSearch}
             onChange={(e) => setGlobalSearch(e.target.value)}
             placeholder="Search leads, cohorts, curricula, expenses..."
-            className="w-full h-9 pl-9 pr-4 rounded bg-surface-container-low border border-outline-variant font-body-md text-xs text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+            className="w-full h-9 pl-9 pr-4 rounded-md bg-canvas border border-border-subtle font-sans text-xs text-crisp-black focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
           />
           {globalSearch && (
             <button
@@ -104,7 +104,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
           {currentUser && currentUser.role !== 'student' && currentUser.role !== 'mentor' && (
             <button
               onClick={() => openModal('create-hub')}
-              className="hidden sm:flex items-center gap-1 px-3 h-8 rounded bg-primary text-on-primary font-label-md text-xs font-semibold hover:bg-primary-container transition-colors shadow-xs"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 h-8 rounded-md bg-primary hover:bg-primary-hover text-white text-xs font-semibold transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">add</span>
               <span>New Record</span>
@@ -116,17 +116,17 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
             activeAttendanceSession ? (
               <div 
                 onClick={() => openModal('clock-out')}
-                className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#ecfdf5] border border-[#a7f3d0] text-[#065f46] text-xs font-semibold cursor-pointer hover:bg-[#d1fae5] transition-all"
+                className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-sea-green-light border border-sea-green/30 text-sea-green text-xs font-semibold cursor-pointer hover:bg-sea-green-light/80 transition-all"
                 title="Click to Clock Out"
               >
-                <span className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse"></span>
+                <span className="w-2 h-2 rounded-full bg-sea-green animate-pulse"></span>
                 <span className="capitalize">{activeAttendanceSession.workMode}</span>
-                <span className="font-data-tabular font-bold border-l border-[#a7f3d0] pl-1.5">{elapsedText}</span>
+                <span className="font-data-tabular font-bold border-l border-sea-green/30 pl-1.5">{elapsedText}</span>
               </div>
             ) : (
               <button
                 onClick={() => openModal('clock-in')}
-                className="h-8 px-2.5 sm:px-3 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-primary/20"
+                className="h-8 px-2.5 sm:px-3 rounded-md bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-primary/20"
                 title="Clock In for Shift"
               >
                 <span className="material-symbols-outlined text-[16px]">timer</span>

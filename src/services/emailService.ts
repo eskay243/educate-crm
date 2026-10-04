@@ -24,8 +24,8 @@ export class EmailService {
   private logs: EmailDispatchLog[] = [];
 
   generateHtml(payload: EmailTemplatePayload): string {
-    const primaryColor = '#00236f';
-    const accentColor = '#1e3a8a';
+    const primaryColor = '#1872F5';
+    const accentColor = '#1464CC';
     const dateFormatted = new Date().toLocaleDateString('en-NG', { 
       year: 'numeric', 
       month: 'long', 
@@ -368,7 +368,7 @@ export class EmailService {
                 </tr>
                 <tr>
                   <td style="padding: 6px 0; color: #64748b;">Requisition Amount:</td>
-                  <td style="padding: 6px 0; color: #0f172a; font-weight: 800; font-size: 16px;">₦${Number(payload.data.amount || 0).toLocaleString()}</td>
+                  <td style="padding: 6px 0; color: #1C293C; font-weight: 800; font-size: 16px;">₦${Number(payload.data.amount || 0).toLocaleString()}</td>
                 </tr>
                 <tr>
                   <td style="padding: 6px 0; color: #64748b;">Category &amp; Department:</td>

@@ -32,7 +32,9 @@ import {
   RoleCapabilities,
   TicketStatus,
   ExpenseAndBudgetWallet,
-  VirtualAccountDetails
+  VirtualAccountDetails,
+  TimetableSlot,
+  MentorPayoutRequest
 } from '../types/crm';
 import { 
   initialLeads, 
@@ -53,7 +55,9 @@ import {
   initialAssignments,
   initialStudentPerformanceReports,
   defaultRoleDefinitions,
-  initialTickets
+  initialTickets,
+  initialTimetables,
+  initialPayoutRequests
 } from '../data/mockData';
 import { apiService } from '../services/api';
 import { emailService } from '../services/emailService';
@@ -139,11 +143,16 @@ interface CRMContextType {
     accountName: string;
     reason?: string;
   }) => Promise<boolean>;
-  disburseMentorFromWallet: (mentorId: string, amount: number, reason?: string) => Promise<boolean>;
+  disburseMentorFromWallet: (mentorId: string, amount: number, reason?: string, payoutRequestId?: string) => Promise<boolean>;
   updateWalletBudgetLimit: (limit: number) => Promise<void>;
   refreshWalletSummary: () => Promise<void>;
   reconcileWalletWithPaystack: () => Promise<void>;
   isSyncingWallet: boolean;
+  
+  // Mentor Payout Requests
+  payoutRequests: MentorPayoutRequest[];
+  requestMentorPayout: (amount: number, notes?: string) => Promise<{ success: boolean; message: string }>;
+  reviewMentorPayout: (requestId: string, status: 'Approved' | 'Rejected', reason?: string) => Promise<boolean>;
   
   // Attendance, Reports & Graduation Gatekeeping
   markSessionAttendance: (sessionId: string, status: 'Attended' | 'Absent', hoursCredited?: number) => Promise<void>;
@@ -153,9 +162,11 @@ interface CRMContextType {
   calculatePerformanceTier: (score: number) => 'Exceeding' | 'On Track' | 'Needs Support' | 'At Risk';
   
   // Auth actions
-  login: (role: UserRole, email?: string, password?: string) => Promise<{ success: boolean; message?: string }>;
+  login: (role: UserRole, email?: string, password?: string) => Promise<{ success: boolean; message?: string; user?: AuthUser }>;
   logout: () => void;
-  hasPermission: (requiredRole: UserRole | UserRole[]) => boolean;
+  hasPermission: (requiredRole: UserRole | UserRole[], moduleName?: keyof EnabledModules | string) => boolean;
+  hasModulePermission: (moduleName: string) => boolean;
+  toggleRoleModule: (roleId: string, moduleName: string) => Promise<void>;
   isSuperAdmin: boolean;
   isSimulatingRole: boolean;
   switchRole: (role: UserRole) => void;
@@ -170,6 +181,7 @@ interface CRMContextType {
   showToast: (title: string, message: string, type?: ToastMessage['type']) => void;
   removeToast: (id: string) => void;
   sendPaymentReminder: (studentId: string) => void;
+  updateUserProfile: (data: Partial<AuthUser>) => Promise<boolean>;
 
   // Modal controllers
   openModal: (modal: ModalType) => void;
@@ -238,6 +250,25 @@ interface CRMContextType {
 
   // Reset to seed data
   resetAllData: () => void;
+
+  // Academic Timetables & Scheduling
+  timetables: TimetableSlot[];
+  scheduleClass: (slot: Omit<TimetableSlot, 'id' | 'createdAt' | 'attendanceMarked' | 'attendanceRecords'>) => Promise<void>;
+  updateTimetableSlot: (id: string, updates: Partial<TimetableSlot>) => Promise<void>;
+  deleteTimetableSlot: (id: string) => Promise<void>;
+  markClassAttendance: (slotId: string, attendanceRecords: { studentId: string; studentName: string; studentCode?: string; status: 'Attended' | 'Absent' }[], notes?: string) => Promise<void>;
+  selectedSlotForAttendance: TimetableSlot | null;
+  setSelectedSlotForAttendance: (slot: TimetableSlot | null) => void;
+
+  // Course Outline Teaching & Program Officer Approval Gateway
+  markTopicAsTaught: (lessonId: string, notes?: string) => Promise<void>;
+  approveTopicByProgramOfficer: (lessonId: string, courseTitle?: string) => Promise<void>;
+
+  // Super Admin User Administration
+  toggleUserActiveStatus: (userId: string, isActive: boolean, reason?: string) => Promise<void>;
+  adminResetUserPassword: (userId: string, newPassword: string) => Promise<boolean>;
+  selectedUserForPasswordReset: { id: string; name: string; email: string; role: string; category?: string } | null;
+  setSelectedUserForPasswordReset: (user: { id: string; name: string; email: string; role: string; category?: string } | null) => void;
 }
 
 const CRMContext = createContext<CRMContextType | undefined>(undefined);
@@ -260,6 +291,8 @@ const STORAGE_KEYS = {
   TICKETS: 'nexus_clean_prod_tickets_v1',
   ROLES: 'nexus_clean_prod_roles_v1',
   WALLET: 'nexus_clean_prod_wallet_v2',
+  TIMETABLES: 'nexus_clean_prod_timetables_v1',
+  PAYOUT_REQUESTS: 'nexus_clean_prod_payout_requests_v1',
 };
 
 export const defaultWalletState: ExpenseAndBudgetWallet = {
@@ -321,7 +354,17 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [courses, setCourses] = useState<CourseProgram[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.COURSES);
-    return saved ? JSON.parse(saved) : initialCourses;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const existingIds = new Set(parsed.map((c: any) => c.id || c.title));
+          const missing = initialCourses.filter(c => !existingIds.has(c.id) && !existingIds.has(c.title));
+          return [...parsed, ...missing];
+        }
+      } catch (e) {}
+    }
+    return initialCourses;
   });
 
   const [cohorts, setCohorts] = useState<Cohort[]>(() => {
@@ -385,8 +428,18 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [lmsModules, setLmsModules] = useState<LMSModule[]>(() => {
-    const saved = localStorage.getItem('nexus_clean_prod_lms_modules_v1');
-    return saved ? JSON.parse(saved) : initialLMSModules;
+    const saved = localStorage.getItem('nexus_clean_prod_lms_modules_v2');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const existingIds = new Set(parsed.map((m: any) => m.id));
+          const missing = initialLMSModules.filter(m => !existingIds.has(m.id));
+          return [...parsed, ...missing];
+        }
+      } catch (e) {}
+    }
+    return initialLMSModules;
   });
 
   const [assignments, setAssignments] = useState<StudentAssignmentSubmission[]>(() => {
@@ -421,6 +474,14 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedCourseForEditId, setSelectedCourseForEditId] = useState<string | null>(null);
   const [selectedMentorForEditId, setSelectedMentorForEditId] = useState<string | null>(null);
 
+  // Timetables and Academic Administration state
+  const [timetables, setTimetables] = useState<TimetableSlot[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.TIMETABLES);
+    return saved ? JSON.parse(saved) : initialTimetables;
+  });
+  const [selectedUserForPasswordReset, setSelectedUserForPasswordReset] = useState<{ id: string; name: string; email: string; role: string; category?: string } | null>(null);
+  const [selectedSlotForAttendance, setSelectedSlotForAttendance] = useState<TimetableSlot | null>(null);
+
   // Operational Expense & Budget Wallet state
   const [wallet, setWallet] = useState<ExpenseAndBudgetWallet>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.WALLET);
@@ -428,6 +489,10 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
   const [selectedExpenseForDisburse, setSelectedExpenseForDisburse] = useState<Expense | null>(null);
   const [selectedMentorForDisburse, setSelectedMentorForDisburse] = useState<Mentor | null>(null);
+  const [payoutRequests, setPayoutRequests] = useState<MentorPayoutRequest[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.PAYOUT_REQUESTS);
+    return saved ? JSON.parse(saved) : initialPayoutRequests;
+  });
 
   // Bootstrap from backend on mount
   useEffect(() => {
@@ -470,6 +535,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if ((data as any).tickets) setTickets((data as any).tickets);
         if ((data as any).customRoles) setCustomRoles((data as any).customRoles);
         if ((data as any).wallet) setWallet((data as any).wallet);
+        if ((data as any).payoutRequests) setPayoutRequests((data as any).payoutRequests);
         console.log('🚀 Synchronized live data with Express REST backend.');
       } else if (isMounted) {
         setIsBackendConnected(false);
@@ -516,11 +582,13 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings)); }, [settings]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(activityLogs)); }, [activityLogs]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications)); }, [notifications]);
-  useEffect(() => { localStorage.setItem('nexus_clean_prod_lms_modules_v1', JSON.stringify(lmsModules)); }, [lmsModules]);
+  useEffect(() => { localStorage.setItem('nexus_clean_prod_lms_modules_v2', JSON.stringify(lmsModules)); }, [lmsModules]);
   useEffect(() => { localStorage.setItem('nexus_clean_prod_assignments_v1', JSON.stringify(assignments)); }, [assignments]);
   useEffect(() => { localStorage.setItem('nexus_clean_prod_student_reports_v1', JSON.stringify(studentPerformanceReports)); }, [studentPerformanceReports]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(tickets)); }, [tickets]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.ROLES, JSON.stringify(customRoles)); }, [customRoles]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEYS.TIMETABLES, JSON.stringify(timetables)); }, [timetables]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEYS.PAYOUT_REQUESTS, JSON.stringify(payoutRequests)); }, [payoutRequests]);
 
   // Current active student profile when logged in as a student
   const currentStudentProfile = useMemo(() => {
@@ -600,21 +668,70 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const isSimulatingRole = isSuperAdmin && currentUser?.role !== 'super_admin';
 
   // Auth actions
-  const login = async (role: UserRole, email?: string, password?: string): Promise<{ success: boolean; message?: string }> => {
+  const login = async (role: UserRole, email?: string, password?: string): Promise<{ success: boolean; message?: string; user?: AuthUser }> => {
     if (!password || !password.trim()) {
       return { success: false, message: 'Password is required to authenticate.' };
     }
 
+    const cleanEmail = email ? email.trim().toLowerCase() : '';
+    const isSuperAdminAlias = cleanEmail === 'admin@codelab.institute' || cleanEmail === 'superadmin@codelab.institute';
+
+    // 1. Try Backend Authentication if connected
+    if (isBackendConnected) {
+      try {
+        const backendRes = await apiService.login({
+          email: cleanEmail,
+          password: password.trim(),
+          role: isSuperAdminAlias ? 'super_admin' : role,
+        });
+
+        if (backendRes && backendRes.success && backendRes.user) {
+          const authUser: AuthUser = backendRes.user;
+          localStorage.removeItem('nexus_logged_out');
+
+          if (authUser.role === 'super_admin') {
+            sessionStorage.setItem('nexus_super_admin_session', 'true');
+            setIsSuperAdminSession(true);
+          } else {
+            sessionStorage.removeItem('nexus_super_admin_session');
+            setIsSuperAdminSession(false);
+          }
+
+          setCurrentUser(authUser);
+          showToast('Signed In', `Welcome, ${authUser.name} (${authUser.roleTitle}).`, 'info');
+          logActivity({
+            title: 'User Authenticated',
+            description: `${authUser.name} signed in as ${authUser.roleTitle}.`,
+            type: 'system',
+            user: authUser.name,
+          });
+
+          return { success: true, user: authUser };
+        } else if (backendRes && backendRes.message && backendRes.message !== 'Could not connect to authentication server.') {
+          return { success: false, message: backendRes.message };
+        }
+      } catch (err: any) {
+        console.warn('Backend login error, falling back to local authentication:', err);
+      }
+    }
+
+    // 2. Local State Fallback Authentication
     let matched: AuthUser | undefined;
 
-    if (email && email.trim()) {
-      const normalized = email.trim().toLowerCase();
+    if (cleanEmail) {
+      // Check Super Admin aliases
+      if (isSuperAdminAlias) {
+        matched = staffUsers.find(u => u.role === 'super_admin') || demoUsers.find(u => u.role === 'super_admin');
+      }
+
       // 1. Check staffUsers by email
-      matched = staffUsers.find(u => u.email.toLowerCase() === normalized);
+      if (!matched) {
+        matched = staffUsers.find(u => u.email.toLowerCase() === cleanEmail);
+      }
 
       // 2. Check mentors by email
       if (!matched) {
-        const mentor = mentors.find(m => m.email.toLowerCase() === normalized);
+        const mentor = mentors.find(m => m.email.toLowerCase() === cleanEmail);
         if (mentor) {
           matched = {
             id: mentor.id,
@@ -625,13 +742,15 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             mentorId: mentor.id,
             department: mentor.department,
             password: mentor.password,
+            isActive: mentor.isActive !== false && mentor.status !== 'Deactivated',
+            status: mentor.status === 'Deactivated' ? 'Deactivated' : 'Active',
           };
         }
       }
 
       // 3. Check students by email
       if (!matched) {
-        const student = students.find(s => s.email.toLowerCase() === normalized);
+        const student = students.find(s => s.email.toLowerCase() === cleanEmail);
         if (student) {
           matched = {
             id: student.id,
@@ -641,13 +760,15 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             roleTitle: 'Enrolled Scholar / Student',
             studentId: student.id,
             password: student.password,
+            isActive: student.isActive !== false && student.status !== 'Deactivated',
+            status: student.status === 'Deactivated' ? 'Deactivated' : 'Active',
           };
         }
       }
 
       // 4. Check demoUsers by email
       if (!matched) {
-        matched = demoUsers.find(u => u.email.toLowerCase() === normalized);
+        matched = demoUsers.find(u => u.email.toLowerCase() === cleanEmail);
       }
     }
 
@@ -661,11 +782,18 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     // Credential Verification:
-    // Determine the expected password for this account.
-    // If the account has an explicit password set, check it; otherwise fallback to default initial password 'password123'
-    const expectedPassword = matched.password || 'password123';
+    const demoUser = demoUsers.find(u => u.id === matched?.id || u.email.toLowerCase() === matched?.email.toLowerCase());
+    const expectedPassword = matched.password || demoUser?.password || 'password123';
     if (password.trim() !== expectedPassword.trim()) {
       return { success: false, message: 'Invalid password. Please check your credentials and try again.' };
+    }
+
+    // Check account status
+    if (matched.isActive === false || matched.status === 'Deactivated') {
+      return { 
+        success: false, 
+        message: 'This account has been deactivated by the Super Admin. Please contact administration for assistance.' 
+      };
     }
 
     // Clear explicit logout flag
@@ -689,7 +817,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       user: matched.name,
     });
 
-    return { success: true };
+    return { success: true, user: matched };
   };
 
   const switchRole = (newRole: UserRole) => {
@@ -783,31 +911,114 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const hasPermission = (requiredRole: UserRole | UserRole[]): boolean => {
+  const updateUserProfile = async (data: Partial<AuthUser>): Promise<boolean> => {
+    if (!currentUser) return false;
+
+    const updatedUser: AuthUser = {
+      ...currentUser,
+      ...data,
+    };
+
+    setCurrentUser(updatedUser);
+    localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(updatedUser));
+
+    // 1. Update in staffUsers if present
+    setStaffUsers(prev => prev.map(u => 
+      (u.id === currentUser.id || u.email.toLowerCase() === currentUser.email.toLowerCase())
+        ? { ...u, ...data }
+        : u
+    ));
+
+    // 2. If mentor, sync bank details & contact info into mentors
+    const mentorIdToSync = currentUser.mentorId;
+    if (mentorIdToSync || currentUser.role === 'mentor') {
+      setMentors(prev => prev.map(m => {
+        if ((mentorIdToSync && m.id === mentorIdToSync) || m.id === currentUser.id || m.email.toLowerCase() === currentUser.email.toLowerCase()) {
+          return {
+            ...m,
+            phone: data.phone ?? m.phone,
+            avatarUrl: data.avatarUrl ?? m.avatarUrl,
+            bankName: data.bankName ?? m.bankName,
+            bankCode: data.bankCode ?? m.bankCode,
+            accountNumber: data.accountNumber ?? m.accountNumber,
+            accountName: data.accountName ?? m.accountName,
+            isAccountVerified: data.isBankVerified ?? m.isAccountVerified,
+            bankVerified: data.isBankVerified ?? m.bankVerified,
+          };
+        }
+        return m;
+      }));
+    }
+
+    // 3. If student, sync phone into students
+    const studentIdToSync = currentUser.studentId;
+    if (studentIdToSync || currentUser.role === 'student') {
+      setStudents(prev => prev.map(s => {
+        if ((studentIdToSync && s.id === studentIdToSync) || s.id === currentUser.id || s.email.toLowerCase() === currentUser.email.toLowerCase()) {
+          return {
+            ...s,
+            phone: data.phone ?? s.phone,
+          };
+        }
+        return s;
+      }));
+    }
+
+    showToast('Profile & KYC Saved', 'Your profile information and settlement bank details have been saved.', 'success');
+    logActivity({
+      title: 'Profile Updated',
+      description: `${currentUser.name} updated personal profile and settlement bank details.`,
+      type: 'system',
+      user: currentUser.name,
+    });
+
+    return true;
+  };
+
+  const hasPermission = (requiredRole: UserRole | UserRole[], moduleName?: keyof EnabledModules | string): boolean => {
     if (!currentUser) return false;
     if (currentUser.role === 'super_admin') return true;
-    const rolesArray = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
-    if (rolesArray.includes(currentUser.role)) return true;
 
-    // Check if custom role has permission for these modules
     const matchedRole = customRoles.find(r => r.id === currentUser.role);
-    if (matchedRole && matchedRole.allowedModules) {
-      const roleModuleMapping: Record<string, string[]> = {
-        admissions: ['leads', 'courses', 'students'],
-        finance: ['expenses', 'students', 'invoices'],
-        mentor: ['students', 'attendance', 'sessions'],
-        student: ['lms', 'student_portal'],
-      };
 
-      for (const role of rolesArray) {
-        if (matchedRole.allowedModules.includes(role as any)) return true;
-        const associatedModules = roleModuleMapping[role] || [];
-        if (associatedModules.some(m => matchedRole.allowedModules.includes(m as any))) {
-          return true;
-        }
-      }
+    // If checking access to a specific module, check role's allowedModules
+    if (moduleName) {
+      return Boolean(matchedRole?.allowedModules?.includes(moduleName));
     }
-    return false;
+
+    const rolesArray = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+    return rolesArray.includes(currentUser.role);
+  };
+
+  const hasModulePermission = (moduleName: string): boolean => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'super_admin') return true;
+    const matchedRole = customRoles.find(r => r.id === currentUser.role);
+    return Boolean(matchedRole?.allowedModules?.includes(moduleName));
+  };
+
+  const toggleRoleModule = async (roleId: string, moduleName: string) => {
+    const role = customRoles.find(r => r.id === roleId);
+    if (!role) return;
+    const currentModules = role.allowedModules || [];
+    const isCurrentlyGranted = currentModules.includes(moduleName);
+    const updatedModules = isCurrentlyGranted
+      ? currentModules.filter(m => m !== moduleName)
+      : [...currentModules, moduleName];
+
+    setCustomRoles(prev => prev.map(r => r.id === roleId ? { ...r, allowedModules: updatedModules } : r));
+    await apiService.updateRole(roleId, { ...role, allowedModules: updatedModules });
+    showToast(
+      'Role Updated', 
+      `${isCurrentlyGranted ? 'Revoked' : 'Granted'} "${moduleName}" access for ${role.name}.`, 
+      'info'
+    );
+    logActivity({
+      title: 'Module Permission Changed',
+      description: `Super Admin ${isCurrentlyGranted ? 'revoked' : 'granted'} module "${moduleName}" for role "${role.name}".`,
+      type: 'system',
+      user: currentUser?.name || 'Super Admin',
+    });
   };
 
   const hasFeaturePermission = (permission: keyof RoleCapabilities): boolean => {
@@ -1014,7 +1225,14 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Modal actions
   const openModal = (modal: ModalType) => setActiveModal(modal);
-  const closeModal = () => setActiveModal(null);
+  const closeModal = () => {
+    setActiveModal(null);
+    if (typeof window !== 'undefined' && window.location.search.includes('action=')) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('action');
+      window.history.replaceState({}, '', url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : ''));
+    }
+  };
 
   const logActivity = (activity: Omit<ActivityLogItem, 'id' | 'timestamp'>) => {
     const newLog: ActivityLogItem = {
@@ -2631,9 +2849,21 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const disburseMentorFromWallet = async (mentorId: string, amount: number, reason?: string): Promise<boolean> => {
+  const disburseMentorFromWallet = async (mentorId: string, amount: number, reason?: string, payoutRequestId?: string): Promise<boolean> => {
     const mentor = mentors.find(m => m.id === mentorId);
     if (!mentor) return false;
+
+    // Check minimum required lectured hours threshold
+    const minRequired = mentor.minimumRequiredHours ?? settings.mentorMinimumLecturedHours ?? 20;
+    const actualHours = mentor.lecturedHours ?? 0;
+    if (actualHours < minRequired) {
+      showToast(
+        'Payout Locked',
+        `Faculty member has logged ${actualHours} lectured hours. A minimum of ${minRequired} lectured hours is strictly required before payout eligibility.`,
+        'error'
+      );
+      return false;
+    }
 
     if (wallet.balance < amount) {
       showToast('Insufficient Wallet Balance', `Available: ${formatNaira(wallet.balance)}, Required: ${formatNaira(amount)}. Please fund the wallet before paying mentors.`, 'error');
@@ -2641,9 +2871,21 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     try {
-      const res = await apiService.disburseMentorFromWallet(mentorId, amount, reason);
+      const res = await apiService.disburseMentorFromWallet(mentorId, amount, reason, payoutRequestId);
       if (res && res.mentor) {
         setMentors(prev => prev.map(m => m.id === mentorId ? res.mentor : m));
+        if (payoutRequestId) {
+          setPayoutRequests(prev => prev.map(r => r.id === payoutRequestId ? {
+            ...r,
+            status: 'Disbursed',
+            disbursedAt: new Date().toISOString(),
+            disburseReference: res.transferRef || `NIP-CDL-${Date.now()}`,
+            whtRatePercent: r.whtRatePercent || 5,
+            whtDeductedAmount: r.whtDeductedAmount || Math.round(r.amount * 0.05),
+            netDisbursedAmount: r.netDisbursedAmount || Math.round(r.amount * 0.95),
+            voucherNumber: r.voucherNumber || `VCHR-CDL-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+          } : r));
+        }
         if (res.walletBalance !== undefined) {
           setWallet(prev => ({
             ...prev,
@@ -2679,6 +2921,18 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           pendingPayout: Math.max(0, (m.pendingPayout || 0) - amount),
           paidPayout: (m.paidPayout || 0) + amount,
         } : m));
+        if (payoutRequestId) {
+          setPayoutRequests(prev => prev.map(r => r.id === payoutRequestId ? {
+            ...r,
+            status: 'Disbursed',
+            disbursedAt: new Date().toISOString(),
+            disburseReference: trfRef,
+            whtRatePercent: r.whtRatePercent || 5,
+            whtDeductedAmount: r.whtDeductedAmount || Math.round(r.amount * 0.05),
+            netDisbursedAmount: r.netDisbursedAmount || Math.round(r.amount * 0.95),
+            voucherNumber: r.voucherNumber || `VCHR-CDL-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+          } : r));
+        }
         setWallet(prev => ({
           ...prev,
           balance: newBal,
@@ -2709,6 +2963,118 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showToast('Disbursement Error', e.message || 'Failed to disburse mentor share', 'error');
       return false;
     }
+  };
+
+  const requestMentorPayout = async (amount: number, notes?: string): Promise<{ success: boolean; message: string }> => {
+    const myMentorProfile = mentors.find(
+      m => m.id === currentUser?.mentorId || m.name === currentUser?.name || m.email === currentUser?.email
+    );
+    if (!myMentorProfile) {
+      return { success: false, message: 'Mentor profile not found.' };
+    }
+
+    const minRequired = myMentorProfile.minimumRequiredHours ?? settings.mentorMinimumLecturedHours ?? 20;
+    const actualHours = myMentorProfile.lecturedHours ?? 0;
+    if (actualHours < minRequired) {
+      return {
+        success: false,
+        message: `Ineligible: You have logged ${actualHours.toFixed(1)}h of lecturing. A minimum threshold of ${minRequired}h is strictly required before payout eligibility.`
+      };
+    }
+
+    const reqAmount = Number(amount) || myMentorProfile.pendingPayout || 0;
+    if (reqAmount <= 0) {
+      return { success: false, message: 'Requested payout amount must be greater than ₦0.' };
+    }
+
+    if (reqAmount > (myMentorProfile.pendingPayout || 0)) {
+      return { 
+        success: false, 
+        message: `Requested amount (${formatNaira(reqAmount)}) exceeds your pending balance of ${formatNaira(myMentorProfile.pendingPayout || 0)}.` 
+      };
+    }
+
+    const whtRatePercent = 5;
+    const whtDeductedAmount = Math.round(reqAmount * (whtRatePercent / 100));
+    const netDisbursedAmount = reqAmount - whtDeductedAmount;
+    const voucherNumber = `VCHR-CDL-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const newReq: MentorPayoutRequest = {
+      id: `req-${Date.now()}`,
+      mentorId: myMentorProfile.id,
+      mentorName: myMentorProfile.name,
+      mentorEmail: myMentorProfile.email,
+      amount: reqAmount,
+      whtRatePercent,
+      whtDeductedAmount,
+      netDisbursedAmount,
+      voucherNumber,
+      lecturedHours: actualHours,
+      minimumRequiredHours: minRequired,
+      bankName: myMentorProfile.bankName || 'Guaranty Trust Bank (GTBank)',
+      accountNumber: myMentorProfile.accountNumber || '0123456789',
+      accountName: myMentorProfile.accountName || myMentorProfile.name,
+      bankCode: myMentorProfile.bankCode || '058',
+      status: 'Pending',
+      requestedAt: new Date().toISOString(),
+      notes: notes || '',
+    };
+
+    setPayoutRequests(prev => [newReq, ...prev]);
+
+    if (isBackendConnected) {
+      try {
+        await apiService.createPayoutRequest({
+          mentorId: myMentorProfile.id,
+          amount: reqAmount,
+          notes,
+        });
+      } catch (e) {
+        console.warn('Backend sync failed for payout request:', e);
+      }
+    }
+
+    showToast('Payout Requested', `Payout request for ${formatNaira(reqAmount)} submitted to Finance.`, 'success');
+    addNotification({
+      title: '💵 Faculty Payout Request Submitted',
+      message: `${myMentorProfile.name} requested ${formatNaira(reqAmount)} (${actualHours.toFixed(1)}h logged).`,
+      type: 'mentor',
+      link: '/mentors',
+    });
+    logActivity({
+      title: 'Mentor Payout Requested',
+      description: `${myMentorProfile.name} submitted a commission payout request of ${formatNaira(reqAmount)}.`,
+      type: 'mentor',
+      user: myMentorProfile.name,
+    });
+
+    return { success: true, message: 'Payout request successfully submitted.' };
+  };
+
+  const reviewMentorPayout = async (requestId: string, status: 'Approved' | 'Rejected', reason?: string): Promise<boolean> => {
+    setPayoutRequests(prev => prev.map(r => r.id === requestId ? {
+      ...r,
+      status,
+      reviewedAt: new Date().toISOString(),
+      reviewedBy: currentUser?.name || 'Super Admin',
+      rejectionReason: reason,
+    } : r));
+
+    if (isBackendConnected) {
+      try {
+        await apiService.updatePayoutRequest(requestId, {
+          status,
+          reviewedAt: new Date().toISOString(),
+          reviewedBy: currentUser?.name || 'Super Admin',
+          rejectionReason: reason,
+        });
+      } catch (e) {
+        console.warn('Backend sync failed for payout review:', e);
+      }
+    }
+
+    showToast('Payout Request Updated', `Request marked as ${status}.`, 'info');
+    return true;
   };
 
   const updateWalletBudgetLimit = async (limit: number) => {
@@ -2927,6 +3293,396 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { success: true, certificateNumber: certNumber };
   };
 
+  // ----------------------------------------------------
+  // Academic Timetable & Scheduling Actions
+  // ----------------------------------------------------
+  const scheduleClass = async (slotData: Omit<TimetableSlot, 'id' | 'createdAt' | 'attendanceMarked' | 'attendanceRecords'>) => {
+    const newSlot: TimetableSlot = {
+      ...slotData,
+      id: `slot-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      attendanceMarked: false,
+      attendanceRecords: [],
+      status: 'Scheduled',
+    };
+
+    setTimetables(prev => [newSlot, ...prev]);
+
+    if (isBackendConnected) {
+      try {
+        await apiService.createTimetable(newSlot);
+      } catch (err) {
+        console.warn('Backend timetable create error:', err);
+      }
+    }
+
+    addNotification({
+      title: 'Class Scheduled on Timetable',
+      message: `${newSlot.courseTitle} (${newSlot.cohortName}): "${newSlot.topic}" on ${newSlot.date} at ${newSlot.startTime}.`,
+      type: 'mentor',
+      link: '/courses',
+    });
+
+    showToast(
+      'Class Scheduled',
+      `Class "${newSlot.topic}" on ${newSlot.date} (${newSlot.startTime}) scheduled with ${newSlot.mentorName}.`,
+      'success'
+    );
+
+    logActivity({
+      title: 'Class Scheduled',
+      description: `${newSlot.courseTitle} class scheduled by ${currentUser?.name || 'Academic Office'}.`,
+      type: 'mentor',
+      user: currentUser?.name || 'Program Officer',
+    });
+  };
+
+  const updateTimetableSlot = async (id: string, updates: Partial<TimetableSlot>) => {
+    setTimetables(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+    if (isBackendConnected) {
+      try {
+        await apiService.updateTimetable(id, updates);
+      } catch (err) {
+        console.warn('Backend timetable update error:', err);
+      }
+    }
+    showToast('Timetable Updated', 'Class slot details successfully updated.', 'info');
+  };
+
+  const deleteTimetableSlot = async (id: string) => {
+    setTimetables(prev => prev.filter(s => s.id !== id));
+    if (isBackendConnected) {
+      try {
+        await apiService.deleteTimetable(id);
+      } catch (err) {
+        console.warn('Backend timetable delete error:', err);
+      }
+    }
+    showToast('Class Removed', 'Timetable slot removed from schedule.', 'info');
+  };
+
+  const markClassAttendance = async (
+    slotId: string, 
+    attendanceRecords: { studentId: string; studentName: string; studentCode?: string; status: 'Attended' | 'Absent' }[], 
+    notes?: string
+  ) => {
+    const slot = timetables.find(s => s.id === slotId);
+    if (!slot) return;
+
+    const duration = slot.durationHours || 2;
+    const now = new Date().toISOString();
+
+    const formattedRecords = attendanceRecords.map(rec => ({
+      ...rec,
+      markedAt: now,
+      hoursCredited: rec.status === 'Attended' ? duration : 0,
+    }));
+
+    // Update timetable slot
+    setTimetables(prev => prev.map(s => {
+      if (s.id !== slotId) return s;
+      return {
+        ...s,
+        status: 'Completed',
+        attendanceMarked: true,
+        attendanceRecords: formattedRecords,
+        notes: notes || s.notes,
+      };
+    }));
+
+    // Credit student learning hours
+    const attendedStudentIds = new Set(
+      attendanceRecords.filter(r => r.status === 'Attended').map(r => r.studentId)
+    );
+
+    setStudents(prev => prev.map(st => {
+      if (attendedStudentIds.has(st.id) || (st.studentCode && attendedStudentIds.has(st.studentCode))) {
+        return {
+          ...st,
+          attendedLearningHours: (st.attendedLearningHours || 0) + duration,
+        };
+      }
+      return st;
+    }));
+
+    // Credit faculty mentor lecturing hours
+    if (slot.mentorId) {
+      setMentors(prev => prev.map(m => {
+        if (m.id === slot.mentorId || m.name === slot.mentorName) {
+          return {
+            ...m,
+            lecturedHours: (m.lecturedHours || 0) + duration,
+          };
+        }
+        return m;
+      }));
+    }
+
+    if (isBackendConnected) {
+      try {
+        await apiService.submitClassAttendance(slotId, { attendanceRecords: formattedRecords, notes });
+      } catch (err) {
+        console.warn('Backend class attendance error:', err);
+      }
+    }
+
+    showToast(
+      'Attendance Logged',
+      `Class attendance finalized. ${attendedStudentIds.size} student(s) and faculty credited with ${duration} hours.`,
+      'success'
+    );
+
+    logActivity({
+      title: 'Class Attendance Finalized',
+      description: `Attendance taken for ${slot.courseTitle}: "${slot.topic}". ${attendedStudentIds.size} scholars credited.`,
+      type: 'mentor',
+      user: currentUser?.name || 'Faculty Mentor',
+    });
+  };
+
+  // ----------------------------------------------------
+  // Course Outline Teaching & Program Officer Approval Gateway
+  // ----------------------------------------------------
+  const markTopicAsTaught = async (lessonId: string, notes?: string) => {
+    const mentorName = currentUser?.name || 'Faculty Mentor';
+    const now = new Date().toISOString();
+
+    setLmsModules(prev => prev.map(mod => ({
+      ...mod,
+      lessons: mod.lessons.map(les => {
+        if (les.id !== lessonId) return les;
+        return {
+          ...les,
+          completedByMentor: true,
+          completedByMentorName: mentorName,
+          completedByMentorAt: now,
+          completionNotes: notes || '',
+          approvalStatus: 'Taught (Pending PO Approval)',
+        };
+      })
+    })));
+
+    if (isBackendConnected) {
+      try {
+        await apiService.markTopicTaught(lessonId, {
+          mentorId: currentUser?.id || '',
+          mentorName,
+          notes,
+        });
+      } catch (err) {
+        console.warn('Backend mark topic taught error:', err);
+      }
+    }
+
+    addNotification({
+      title: 'Syllabus Topic Taught — Pending Approval',
+      message: `${mentorName} marked topic as completed. Awaiting Program Officer verification.`,
+      type: 'mentor',
+      link: '/courses',
+    });
+
+    showToast(
+      'Topic Marked as Taught',
+      'Submitted to Academic Program Officer for verification and student syllabus sync.',
+      'success'
+    );
+
+    logActivity({
+      title: 'Topic Taught (Pending PO)',
+      description: `${mentorName} marked lesson #${lessonId} as taught.`,
+      type: 'mentor',
+      user: mentorName,
+    });
+  };
+
+  const approveTopicByProgramOfficer = async (lessonId: string, courseTitle?: string) => {
+    const poName = currentUser?.name || 'Academic Program Officer';
+    const now = new Date().toISOString();
+
+    let targetCourseTitle = courseTitle;
+
+    setLmsModules(prev => prev.map(mod => {
+      const hasLesson = mod.lessons.some(l => l.id === lessonId);
+      if (hasLesson && !targetCourseTitle) {
+        targetCourseTitle = mod.courseTitle;
+      }
+      return {
+        ...mod,
+        lessons: mod.lessons.map(les => {
+          if (les.id !== lessonId) return les;
+          return {
+            ...les,
+            approvedByProgramOfficer: true,
+            approvedByProgramOfficerName: poName,
+            approvedAt: now,
+            approvalStatus: 'Approved & Published',
+          };
+        })
+      };
+    }));
+
+    // Update syllabus progress for enrolled students
+    const totalLessons = lmsModules.reduce(
+      (acc, m) => acc + (m.lessons?.length || 0),
+      0
+    ) || 1;
+
+    setStudents(prev => prev.map(st => {
+      const isEnrolled = !targetCourseTitle || st.program === targetCourseTitle || st.courses?.some(c => c.name === targetCourseTitle);
+      if (!isEnrolled) return st;
+
+      const currentCompleted = st.completedLessonIds || [];
+      if (!currentCompleted.includes(lessonId)) {
+        const nextCompleted = [...currentCompleted, lessonId];
+        return {
+          ...st,
+          completedLessonIds: nextCompleted,
+          progressPercent: Math.min(100, Math.round((nextCompleted.length / totalLessons) * 100)),
+        };
+      }
+      return st;
+    }));
+
+    if (isBackendConnected) {
+      try {
+        await apiService.approveTopicByPO(lessonId, {
+          approvedBy: currentUser?.id || '',
+          approvedByName: poName,
+          courseTitle: targetCourseTitle,
+        });
+      } catch (err) {
+        console.warn('Backend approve topic error:', err);
+      }
+    }
+
+    addNotification({
+      title: 'Syllabus Topic Approved & Published',
+      message: `Topic approved by ${poName}. Enrolled scholars have had their curriculum updated.`,
+      type: 'mentor',
+      link: '/courses',
+    });
+
+    showToast(
+      'Topic Approved & Published',
+      `Syllabus updated and enrolled scholars' curriculum progress synchronized.`,
+      'success'
+    );
+
+    logActivity({
+      title: 'Topic Approved by Program Officer',
+      description: `${poName} approved syllabus topic #${lessonId}.`,
+      type: 'mentor',
+      user: poName,
+    });
+  };
+
+  // ----------------------------------------------------
+  // Super Admin User Administration Actions
+  // ----------------------------------------------------
+  const toggleUserActiveStatus = async (userId: string, isActive: boolean, reason?: string) => {
+    const activeBool = Boolean(isActive);
+
+    // Update staffUsers
+    setStaffUsers(prev => prev.map(u => {
+      if (u.id === userId) {
+        return {
+          ...u,
+          isActive: activeBool,
+          status: activeBool ? 'Active' : 'Deactivated',
+          deactivatedAt: activeBool ? undefined : new Date().toISOString(),
+          deactivatedReason: activeBool ? undefined : (reason || 'Deactivated by Super Admin'),
+        };
+      }
+      return u;
+    }));
+
+    // Update mentors
+    setMentors(prev => prev.map(m => {
+      if (m.id === userId || m.mentorCode === userId) {
+        return {
+          ...m,
+          isActive: activeBool,
+          status: activeBool ? 'Active' : 'Deactivated',
+        };
+      }
+      return m;
+    }));
+
+    // Update students
+    setStudents(prev => prev.map(s => {
+      if (s.id === userId || s.studentCode === userId) {
+        return {
+          ...s,
+          isActive: activeBool,
+          status: activeBool ? 'Active' : 'Deactivated',
+        };
+      }
+      return s;
+    }));
+
+    // If current logged-in user is deactivated, force logout
+    if (currentUser?.id === userId && !activeBool) {
+      logout();
+    }
+
+    if (isBackendConnected) {
+      try {
+        await apiService.toggleUserStatus(userId, activeBool, reason);
+      } catch (err) {
+        console.warn('Backend user status toggle error:', err);
+      }
+    }
+
+    showToast(
+      `Account ${activeBool ? 'Activated' : 'Deactivated'}`,
+      `User account ${userId} is now ${activeBool ? 'Active' : 'Deactivated'}.`,
+      activeBool ? 'success' : 'warning'
+    );
+
+    logActivity({
+      title: `Account ${activeBool ? 'Activated' : 'Deactivated'}`,
+      description: `Account ID ${userId} set to ${activeBool ? 'Active' : 'Deactivated'} by Super Admin.`,
+      type: 'system',
+      user: currentUser?.name || 'Super Admin',
+    });
+  };
+
+  const adminResetUserPassword = async (userId: string, newPassword: string): Promise<boolean> => {
+    if (!newPassword || newPassword.trim().length < 6) {
+      showToast('Password Error', 'Password must be at least 6 characters long.', 'error');
+      return false;
+    }
+
+    // Update staffUsers
+    setStaffUsers(prev => prev.map(u => u.id === userId ? { ...u, password: newPassword.trim() } : u));
+    // Update mentors
+    setMentors(prev => prev.map(m => (m.id === userId || m.mentorCode === userId) ? { ...m, password: newPassword.trim() } : m));
+    // Update students
+    setStudents(prev => prev.map(s => (s.id === userId || s.studentCode === userId) ? { ...s, password: newPassword.trim() } : s));
+
+    if (isBackendConnected) {
+      try {
+        const res = await apiService.resetUserPassword(userId, newPassword.trim());
+        if (!res || !res.success) {
+          showToast('Reset Failed', res?.message || 'Could not reset password on server.', 'error');
+          return false;
+        }
+      } catch (err) {
+        console.warn('Backend password reset error:', err);
+      }
+    }
+
+    showToast('Password Reset', 'User password has been successfully reset.', 'success');
+    logActivity({
+      title: 'User Password Reset',
+      description: `Super Admin reset password for account ID ${userId}.`,
+      type: 'system',
+      user: currentUser?.name || 'Super Admin',
+    });
+
+    return true;
+  };
+
   // KPIs
   const kpis: ExecutiveKPIs = useMemo(() => {
     const activeStudentCount = students.filter(s => s.status === 'Active').length;
@@ -3076,6 +3832,25 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         refreshWalletSummary,
         reconcileWalletWithPaystack,
         isSyncingWallet,
+        timetables,
+        scheduleClass,
+        updateTimetableSlot,
+        deleteTimetableSlot,
+        markClassAttendance,
+        selectedSlotForAttendance,
+        setSelectedSlotForAttendance,
+        markTopicAsTaught,
+        approveTopicByProgramOfficer,
+        toggleUserActiveStatus,
+        adminResetUserPassword,
+        selectedUserForPasswordReset,
+        setSelectedUserForPasswordReset,
+        hasModulePermission,
+        toggleRoleModule,
+        payoutRequests,
+        requestMentorPayout,
+        reviewMentorPayout,
+        updateUserProfile,
       }}
     >
       {children}

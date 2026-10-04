@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useCRM, formatNaira } from '../../context/CRMContext';
 import { PerformanceMeter } from '../../components/common/PerformanceMeter';
@@ -13,7 +13,8 @@ export const StudentDashboardPage: React.FC = () => {
     payTuitionWithPaystack, 
     invoices,
     openModal,
-    settings
+    settings,
+    timetables,
   } = useCRM();
 
   const student = currentStudentProfile || {
@@ -46,6 +47,19 @@ export const StudentDashboardPage: React.FC = () => {
   const pendingInvoice = invoices.find(inv => (inv.studentId === student.id || inv.studentName === student.name) && inv.status !== 'Paid');
   const studentAssignments = assignments.filter(a => a.studentId === student.id || a.studentName === student.name);
 
+  // Cohort live timetable slots
+  const cohortTimetable = useMemo(() => {
+    if (!timetables) return [];
+    return timetables.filter(slot => {
+      const matchCohort = student.cohort && slot.cohortName.toLowerCase().includes(student.cohort.toLowerCase());
+      const matchCourse = student.program && (
+        slot.courseTitle.toLowerCase().includes(student.program.toLowerCase()) ||
+        student.program.toLowerCase().includes(slot.courseTitle.toLowerCase())
+      );
+      return matchCohort || matchCourse;
+    });
+  }, [timetables, student]);
+
   // Total lessons count
   const totalLessons = lmsModules.reduce((acc, m) => acc + (m.lessons?.length || 0), 0) || 7;
   const completedCount = student.completedLessonIds?.length || 1;
@@ -62,7 +76,7 @@ export const StudentDashboardPage: React.FC = () => {
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
       {/* Top Scholar Header Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary to-primary-container p-6 md:p-8 text-on-primary shadow-lg">
+      <div className="relative overflow-hidden rounded-xl bg-crisp-black p-6 md:p-8 text-white border border-outline">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-semibold uppercase tracking-wider">
@@ -358,6 +372,78 @@ export const StudentDashboardPage: React.FC = () => {
 
         {/* Right Column: Structured Curriculum & Recent Submissions */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Scheduled Live Classes & Timetable */}
+          <div className="rounded-2xl border border-outline-variant bg-surface-container-low p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-on-surface text-lg flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-[22px]">calendar_month</span>
+                  <span>Cohort Live Class Timetable</span>
+                </h3>
+                <p className="text-xs text-on-surface-variant">Scheduled classes and lectures for {student.cohort}</p>
+              </div>
+              <Link 
+                to="/student/courses" 
+                className="text-xs text-primary font-bold hover:underline flex items-center gap-1"
+              >
+                <span>View Full Curriculum</span>
+                <span className="material-symbols-outlined text-xs">chevron_right</span>
+              </Link>
+            </div>
+
+            {cohortTimetable.length === 0 ? (
+              <div className="p-6 rounded-xl border border-dashed border-outline-variant text-center text-xs text-secondary">
+                <span className="material-symbols-outlined text-2xl opacity-40 mb-1 block">event_available</span>
+                No upcoming classes scheduled for your cohort this week. Check back soon!
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {cohortTimetable.slice(0, 4).map(slot => (
+                  <div key={slot.id} className="p-3.5 rounded-xl bg-surface border border-outline-variant/80 hover:border-primary/50 transition-all space-y-2">
+                    <div className="flex justify-between items-start gap-1">
+                      <span className="px-2 py-0.5 rounded bg-primary-container/30 text-primary text-[10px] font-bold">
+                        {slot.dayOfWeek} • {slot.startTime} - {slot.endTime}
+                      </span>
+                      {slot.attendanceMarked ? (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                          Attended
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
+                          Upcoming
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-xs text-on-surface line-clamp-1">{slot.topic}</h4>
+                      <p className="text-[11px] text-secondary">Instructor: <strong>{slot.mentorName}</strong></p>
+                    </div>
+
+                    <div className="pt-2 border-t border-outline-variant/40 flex items-center justify-between text-xs">
+                      {slot.meetingLink ? (
+                        <a
+                          href={slot.meetingLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="h-7 px-3 rounded bg-primary text-on-primary hover:bg-primary/90 text-[11px] font-bold transition-all flex items-center gap-1 shadow-xs"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">videocam</span>
+                          <span>Join Live Class</span>
+                        </a>
+                      ) : slot.venue ? (
+                        <span className="text-[11px] text-secondary flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[13px]">location_on</span>
+                          <span>{slot.venue}</span>
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Active Syllabus / Current Module */}
           <div className="rounded-2xl border border-outline-variant bg-surface-container-low p-6 shadow-xs">
             <div className="flex items-center justify-between mb-4">

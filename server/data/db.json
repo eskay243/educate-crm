@@ -174,7 +174,11 @@
           "amount": 850000,
           "status": "Paid"
         }
-      ]
+      ],
+      "performanceScore": 77,
+      "performanceTier": "On Track",
+      "welfareNotes": "there internet has been erratic druring our training session",
+      "attendedLearningHours": 2
     },
     {
       "id": "stu-1789170781816",
@@ -210,7 +214,8 @@
           "amount": 850000,
           "status": "Paid"
         }
-      ]
+      ],
+      "attendedLearningHours": 2
     },
     {
       "id": "stu-1789170775779",
@@ -246,7 +251,8 @@
           "amount": 850000,
           "status": "Paid"
         }
-      ]
+      ],
+      "attendedLearningHours": 2
     },
     {
       "name": "PROMISE ANURIKA G OKOROJI",
@@ -282,7 +288,8 @@
       ],
       "id": "stu-1789137640775",
       "studentCode": "STU-9436",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "UZOKA PEACE ESOMCHUKWU ",
@@ -325,7 +332,8 @@
       ],
       "id": "stu-1789137560243",
       "studentCode": "STU-4173",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "ABUBAKAR SADIQ UMAR",
@@ -361,7 +369,8 @@
       ],
       "id": "stu-1789137453521",
       "studentCode": "STU-6342",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "EMMANUELLA MOSES",
@@ -397,7 +406,8 @@
       ],
       "id": "stu-1789137358964",
       "studentCode": "STU-5191",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "AYOBAMI ABIODUN ",
@@ -433,7 +443,8 @@
       ],
       "id": "stu-1789137214569",
       "studentCode": "STU-6839",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "PROSPER OJOCHEGBE IBRAHIM",
@@ -476,7 +487,8 @@
       ],
       "id": "stu-1789137103072",
       "studentCode": "STU-8592",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "CHIJIOKE CHUKWUNEDU",
@@ -519,7 +531,8 @@
       ],
       "id": "stu-1789137001700",
       "studentCode": "STU-3481",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "IFEANYI ANTHONY",
@@ -555,7 +568,8 @@
       ],
       "id": "stu-1789136929093",
       "studentCode": "STU-8706",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "Suleiman Salihu",
@@ -598,7 +612,8 @@
       ],
       "id": "stu-1789135528728",
       "studentCode": "STU-8991",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "SULTAN ABDULWAHAB",
@@ -677,7 +692,8 @@
       ],
       "id": "stu-1789134940078",
       "studentCode": "STU-3060",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "HENRY EKENE NDUPU",
@@ -713,7 +729,8 @@
       ],
       "id": "stu-1789134519546",
       "studentCode": "STU-8804",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "EHIS ATHENA ENAHOLO",
@@ -749,7 +766,8 @@
       ],
       "id": "stu-1789134263203",
       "studentCode": "STU-6381",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "KASHIO SHEKINAH",
@@ -785,7 +803,8 @@
       ],
       "id": "stu-1789134147915",
       "studentCode": "STU-9692",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "Muhammed Obansa ",
@@ -821,7 +840,8 @@
       ],
       "id": "stu-1789133464671",
       "studentCode": "STU-8689",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "ENDURANCE EBE",
@@ -857,7 +877,8 @@
       ],
       "id": "stu-1789132927623",
       "studentCode": "STU-1071",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "EMEDIONG ESSIEN AKPAN",
@@ -894,7 +915,7 @@
       "id": "stu-1789132789487",
       "studentCode": "STU-8955",
       "enrolledDate": "2026-09-11",
-      "attendedLearningHours": 8
+      "attendedLearningHours": 10
     },
     {
       "name": "ZULAIHAT ABDULRAHMAN",
@@ -930,7 +951,11 @@
       ],
       "id": "stu-1789132452516",
       "studentCode": "STU-9899",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2,
+      "performanceScore": 40,
+      "performanceTier": "At Risk",
+      "welfareNotes": "he has not attended lectures in 3 weeks, I think he needs to be called to order"
     },
     {
       "name": "ZAINAB FOLARIN ",
@@ -966,7 +991,8 @@
       ],
       "id": "stu-1789132235951",
       "studentCode": "STU-8912",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "FATIMA ",
@@ -1002,7 +1028,8 @@
       ],
       "id": "stu-1789132133717",
       "studentCode": "STU-6094",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "VICTORIA WILLIAMS",
@@ -1038,7 +1065,8 @@
       ],
       "id": "stu-1789132075368",
       "studentCode": "STU-6110",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "VICTOR NWABUNMA",
@@ -1074,7 +1102,8 @@
       ],
       "id": "stu-1789131940828",
       "studentCode": "STU-7298",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "VICTOR EZEOKAFOR",
@@ -1118,7 +1147,8 @@
       "id": "stu-1789131759952",
       "studentCode": "STU-5191",
       "enrolledDate": "2026-09-11",
-      "mentorId": "men-1789052796561"
+      "mentorId": "men-1789052796561",
+      "attendedLearningHours": 2
     },
     {
       "name": "MUBARAK ABDULMALIK",
@@ -1154,7 +1184,8 @@
       ],
       "id": "stu-1789131142685",
       "studentCode": "STU-6865",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "UMOH IMOH MICHEAL ",
@@ -1190,7 +1221,8 @@
       ],
       "id": "stu-1789131142401",
       "studentCode": "STU-7695",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "UJUNWA  MARYROSE EYA ",
@@ -1226,7 +1258,8 @@
       ],
       "id": "stu-1789131047892",
       "studentCode": "STU-1132",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "UGOCHUKWU CHIDERA",
@@ -1262,7 +1295,8 @@
       ],
       "id": "stu-1789130949479",
       "studentCode": "STU-6188",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "SAMUEL OLUWAFEMI",
@@ -1298,7 +1332,8 @@
       ],
       "id": "stu-1789130690413",
       "studentCode": "STU-6535",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "PRINCEWILL CHUKWUDUBEM",
@@ -1334,7 +1369,8 @@
       ],
       "id": "stu-1789130500858",
       "studentCode": "STU-4689",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "OLUWAKEMI MOSES MARY",
@@ -1370,7 +1406,8 @@
       ],
       "id": "stu-1789130233491",
       "studentCode": "STU-9491",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "OKORO PAULINUS FAVOUR ",
@@ -1406,7 +1443,8 @@
       ],
       "id": "stu-1789129910717",
       "studentCode": "STU-5653",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "KUMAPAYI FAITH",
@@ -1442,7 +1480,8 @@
       ],
       "id": "stu-1789129742177",
       "studentCode": "STU-5337",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "JOSEPHINE IGOH ",
@@ -1478,7 +1517,8 @@
       ],
       "id": "stu-1789129569102",
       "studentCode": "STU-7726",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "IFEANYI STANLEY ",
@@ -1514,7 +1554,8 @@
       ],
       "id": "stu-1789129450278",
       "studentCode": "STU-5731",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "GIFT OJOCHEGBE SHAIBU",
@@ -1550,7 +1591,8 @@
       ],
       "id": "stu-1789129305529",
       "studentCode": "STU-3176",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "EMMANUEL IBITAYO",
@@ -1586,7 +1628,8 @@
       ],
       "id": "stu-1789129119003",
       "studentCode": "STU-2147",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "GODSPOWER JOHN",
@@ -1622,7 +1665,8 @@
       ],
       "id": "stu-1789129030966",
       "studentCode": "STU-9660",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "DEBORAH NWABUNMA",
@@ -1658,7 +1702,8 @@
       ],
       "id": "stu-1789127850395",
       "studentCode": "STU-5818",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "CHRIS STEPHEN",
@@ -1694,7 +1739,8 @@
       ],
       "id": "stu-1789127595520",
       "studentCode": "STU-6340",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "ADENIKE OLAJUYIGBE ",
@@ -1730,7 +1776,8 @@
       ],
       "id": "stu-1789127390465",
       "studentCode": "STU-6116",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "Naomi Musa",
@@ -1773,7 +1820,8 @@
       ],
       "id": "stu-1789127135478",
       "studentCode": "STU-5212",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "ABDUKHALIQ SULEIMAN ",
@@ -1816,7 +1864,8 @@
       ],
       "id": "stu-1789123667599",
       "studentCode": "STU-6075",
-      "enrolledDate": "2026-09-11"
+      "enrolledDate": "2026-09-11",
+      "attendedLearningHours": 2
     },
     {
       "name": "zubairu",
@@ -1859,7 +1908,8 @@
       ],
       "id": "stu-1789052591941",
       "studentCode": "STU-9819",
-      "enrolledDate": "2026-09-10"
+      "enrolledDate": "2026-09-10",
+      "attendedLearningHours": 2
     }
   ],
   "mentors": [
@@ -1891,7 +1941,8 @@
       "sessionsCount": 0,
       "bio": "",
       "accountVerificationSource": "cbn_nuban_verified",
-      "accountVerifiedAt": "2026-09-11T15:32:35.967Z"
+      "accountVerifiedAt": "2026-09-11T15:32:35.967Z",
+      "lecturedHours": 2
     },
     {
       "name": "Opara Light ",
@@ -2661,6 +2712,22 @@
   },
   "activityLogs": [
     {
+      "id": "act-1791095661093-rep",
+      "timestamp": "2026-10-04T06:34:21.093Z",
+      "title": "Mentor Report: ZULAIHAT ABDULRAHMAN",
+      "description": "Dr. Chidi Okeke submitted performance evaluation for ZULAIHAT ABDULRAHMAN (Score: 40% - At Risk).",
+      "type": "mentor",
+      "user": "Dr. Chidi Okeke"
+    },
+    {
+      "id": "act-1791087613775-rep",
+      "timestamp": "2026-10-04T04:20:13.775Z",
+      "title": "Mentor Report: Uncle P",
+      "description": "Dr. Chidi Okeke submitted performance evaluation for Uncle P (Score: 77% - On Track).",
+      "type": "mentor",
+      "user": "Dr. Chidi Okeke"
+    },
+    {
       "id": "act-1790102539885-att",
       "timestamp": "2026-09-22T18:42:19.885Z",
       "title": "Session Attendance: Attended",
@@ -2694,6 +2761,15 @@
     }
   ],
   "notifications": [
+    {
+      "id": "notif-tkt-1791095661078",
+      "title": "🎫 New Support Ticket: TKT-1010",
+      "message": "Dr. Chidi Okeke (Lead Engineering Faculty & Senior Mentor) submitted ticket: \"🚨 At-Risk Student Welfare: ZULAIHAT ABDULRAHMAN (Disengagement / Non-Responsiveness)\"",
+      "type": "system",
+      "timestamp": "Just now",
+      "read": false,
+      "link": "/tickets"
+    },
     {
       "id": "notif-tkt-1789655834066",
       "title": "🎫 New Support Ticket: TKT-1009",
@@ -2839,7 +2915,9 @@
       "role": "admissions",
       "roleTitle": "Head of Admissions & Enrollments",
       "department": "Admissions Office",
-      "password": "password123"
+      "password": "password123",
+      "isActive": true,
+      "status": "Active"
     },
     {
       "id": "user-finance-demo",
@@ -2849,6 +2927,17 @@
       "roleTitle": "Bursar & Financial Controller",
       "department": "Bursary & Accounts",
       "password": "password123"
+    },
+    {
+      "id": "user-po-demo",
+      "name": "Bolanle Nnamdi",
+      "email": "program.officer@codelab.institute",
+      "role": "program_officer",
+      "roleTitle": "Academic Program Officer & Curriculum Lead",
+      "department": "Academic Affairs",
+      "password": "password123",
+      "isActive": true,
+      "status": "Active"
     }
   ],
   "attendance": [
@@ -3410,7 +3499,12 @@
               "title": "Clean Code in TypeScript",
               "url": "https://github.com/labs/ts-patterns"
             }
-          ]
+          ],
+          "completedByMentor": true,
+          "completedByMentorName": "Dr. Chidi Okeke",
+          "completedByMentorAt": "2026-10-04T05:30:13.224Z",
+          "completionNotes": "",
+          "approvalStatus": "Taught (Pending PO Approval)"
         },
         {
           "id": "les-1-2",
@@ -3424,7 +3518,15 @@
               "title": "TanStack Query v5 Docs",
               "url": "https://tanstack.com/query/latest"
             }
-          ]
+          ],
+          "completedByMentor": true,
+          "completedByMentorName": "Dr. Chidi Okeke",
+          "completedByMentorAt": "2026-10-02T10:18:23.364Z",
+          "completionNotes": "",
+          "approvalStatus": "Approved & Published",
+          "approvedByProgramOfficer": true,
+          "approvedByProgramOfficerName": "Academic Program Officer",
+          "approvedAt": "2026-10-02T10:18:23.370Z"
         },
         {
           "id": "les-1-3",
@@ -3540,6 +3642,42 @@
   ],
   "studentPerformanceReports": [
     {
+      "studentId": "stu-1789132452516",
+      "studentName": "ZULAIHAT ABDULRAHMAN",
+      "studentCode": "STU-9899",
+      "program": "Basic Frontend Development ",
+      "mentorId": "user-mentor-demo",
+      "mentorName": "Dr. Chidi Okeke",
+      "performanceScore": 40,
+      "performanceTier": "At Risk",
+      "attendanceRating": "Passive",
+      "technicalMasteryNotes": "At-risk alert flagged under category: Disengagement / Non-Responsiveness.",
+      "welfareObservations": "he has not attended lectures in 3 weeks, I think he needs to be called to order",
+      "recommendations": "Dispatched welfare actions: Schedule emergency counseling session with Welfare Officer; Notify Academic Program Director & Executive Board",
+      "managementFollowUpStatus": "In Progress",
+      "id": "rep-1791095661093",
+      "reportCode": "REP-CDL-2026-4518",
+      "submittedAt": "2026-10-04T06:34:21.093Z"
+    },
+    {
+      "studentId": "stu-1789170782348",
+      "studentName": "Uncle P",
+      "studentCode": "STU-9051",
+      "mentorId": "user-mentor-demo",
+      "mentorName": "Dr. Chidi Okeke",
+      "program": "Data Analysis",
+      "performanceScore": 77,
+      "performanceTier": "On Track",
+      "attendanceRating": "Irregular",
+      "technicalMasteryNotes": "he learns really fast but seems to be distracted ",
+      "welfareObservations": "there internet has been erratic druring our training session",
+      "recommendations": "I think he needs to be called to order ",
+      "managementFollowUpStatus": "Pending Review",
+      "id": "rep-1791087613774",
+      "reportCode": "REP-CDL-2026-1102",
+      "submittedAt": "2026-10-04T04:20:13.774Z"
+    },
+    {
       "id": "rep-001",
       "reportCode": "REP-CDL-2026-001",
       "studentId": "stu-demo-001",
@@ -3562,6 +3700,27 @@
     }
   ],
   "tickets": [
+    {
+      "title": "🚨 At-Risk Student Welfare: ZULAIHAT ABDULRAHMAN (Disengagement / Non-Responsiveness)",
+      "description": "STUDENT WELFARE & AT-RISK INTERVENTION REPORT\n--------------------------------------------------\nStudent:            ZULAIHAT ABDULRAHMAN (#STU-9899)\nProgram:            Basic Frontend Development  (Cohort 1 2026)\nAssigned Mentor:    Ayomikun  Kunle \nFlagged By:         Dr. Chidi Okeke (Lead Engineering Faculty & Senior Mentor)\nDate Flagged:       4 October 2026\nIntervention Class: Disengagement / Non-Responsiveness\nUrgency Level:      MEDIUM\n\nFACULTY OBSERVATIONS:\nhe has not attended lectures in 3 weeks, I think he needs to be called to order\n\nREQUESTED ACTIONS & INTERVENTIONS:\n• Schedule emergency counseling session with Welfare Officer\n• Notify Academic Program Director & Executive Board\n\nCONTACT INFO:\nEmail: Zulaihatabdulrahman2020@gmail.com | Phone: 9066504920",
+      "category": "academic_welfare",
+      "priority": "medium",
+      "status": "open",
+      "assignedToRole": "program_officer",
+      "createdBy": {
+        "id": "user-mentor-demo",
+        "name": "Dr. Chidi Okeke",
+        "email": "chidi.okeke@codelab.institute",
+        "role": "mentor",
+        "roleTitle": "Lead Engineering Faculty & Senior Mentor"
+      },
+      "id": "tkt-1791095661065",
+      "ticketNumber": "TKT-1010",
+      "createdAt": "2026-10-04T06:34:21.078Z",
+      "updatedAt": "2026-10-04T06:34:21.078Z",
+      "comments": [],
+      "assignedToName": "Super Admin / Operations"
+    },
     {
       "title": "Invoice shows wrong student's data on every record",
       "description": "View Official Invoice\" always displays the same invoice (Uncle P, Data Analysis, ₦850,000, OPay account) regardless of which student's record it's opened from. Confirmed on 3 different students same wrong invoice every time. This is a billing/privacy risk if used with real students before fixed.",
@@ -3846,10 +4005,9 @@
       "badgeColor": "bg-purple-500/10 text-purple-700 border border-purple-500/20",
       "allowedModules": [
         "mentors",
-        "students",
         "courses",
-        "attendance",
-        "tickets"
+        "tickets",
+        "lms"
       ],
       "permissions": {
         "canAddCourses": false,
@@ -3969,9 +4127,9 @@
     }
   ],
   "wallet": {
-    "balance": 200,
+    "balance": 600,
     "monthlyBudgetLimit": 1500000,
-    "totalInflow": 200,
+    "totalInflow": 600,
     "totalOutflow": 0,
     "virtualAccount": {
       "accountNumber": "9817707007",
@@ -3986,6 +4144,44 @@
     },
     "transactions": [
       {
+        "id": "wtx-paystack-6601996994",
+        "type": "credit",
+        "category": "card_topup",
+        "amount": 150,
+        "fee": 2.25,
+        "reference": "CDL-WAL-TOP-1790556429829-2137",
+        "description": "Online Wallet Top-Up via Paystack Checkout",
+        "timestamp": "2026-09-28T00:48:28.000Z",
+        "balanceAfter": 150,
+        "initiatedBy": "NIP Transfer (•••• X235)",
+        "senderName": null,
+        "senderBank": "Guaranty Trust Bank",
+        "senderAccountNumber": "•••• X235",
+        "receiverAccountNumber": "9817707007",
+        "receiverBank": "Wema Bank",
+        "channel": "bank_transfer",
+        "status": "success"
+      },
+      {
+        "id": "wtx-paystack-6601078468",
+        "type": "credit",
+        "category": "dva_bank_deposit",
+        "amount": 250,
+        "fee": 2.5,
+        "reference": "00001320260927180317000000022010363",
+        "description": "Live Bank Transfer via Dedicated NUBAN (Wema Bank NIP)",
+        "timestamp": "2026-09-27T17:03:21.000Z",
+        "balanceAfter": 250,
+        "initiatedBy": "NIP Transfer (•••• 0235)",
+        "senderName": null,
+        "senderBank": "Interbank NIP",
+        "senderAccountNumber": "•••• 0235",
+        "receiverAccountNumber": "9817707007",
+        "receiverBank": "Wema Bank",
+        "channel": "dedicated_nuban",
+        "status": "success"
+      },
+      {
         "id": "wtx-paystack-6597791530",
         "type": "credit",
         "category": "dva_bank_deposit",
@@ -3995,11 +4191,495 @@
         "description": "Live Bank Transfer via Dedicated NUBAN (Wema Bank NIP)",
         "timestamp": "2026-09-26T16:15:16.000Z",
         "balanceAfter": 200,
-        "initiatedBy": "Nexus Wallet",
+        "initiatedBy": "NIP Transfer (•••• 0235)",
+        "senderName": null,
+        "senderBank": "Interbank NIP",
+        "senderAccountNumber": "•••• 0235",
+        "receiverAccountNumber": "9817707007",
+        "receiverBank": "Wema Bank",
         "channel": "dedicated_nuban",
         "status": "success"
       }
     ],
-    "lastSyncedAt": "2026-09-27T16:58:57.025Z"
-  }
+    "lastSyncedAt": "2026-10-04T14:46:05.440Z",
+    "paystackLiveBalance": 0
+  },
+  "timetables": [
+    {
+      "courseId": "crs-swe-01",
+      "courseTitle": "Full-Stack Software Engineering",
+      "cohortId": "coh-alpha-2026",
+      "cohortName": "Alpha Cohort 2026",
+      "mentorId": "men-demo-001",
+      "mentorName": "Dr. Chidi Okeke",
+      "topic": "Automated Testing & Integration Pipelines",
+      "dayOfWeek": "Wednesday",
+      "date": "2026-10-07",
+      "startTime": "10:00 AM",
+      "endTime": "12:00 PM",
+      "durationHours": 2,
+      "venue": "Virtual Room 1",
+      "meetingLink": "https://meet.google.com/test-pipeline",
+      "createdBy": "Bolanle Nnamdi",
+      "id": "slot-1790936177582",
+      "createdAt": "2026-10-02T10:16:17.582Z",
+      "attendanceMarked": true,
+      "attendanceRecords": [
+        {
+          "studentId": "stu-demo",
+          "studentName": "Scholar Student",
+          "status": "Attended",
+          "markedAt": "2026-10-02T10:16:17.586Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-002",
+          "studentName": "Fatima Abubakar",
+          "status": "Absent",
+          "markedAt": "2026-10-02T10:16:17.586Z",
+          "hoursCredited": 0
+        }
+      ],
+      "status": "Completed",
+      "notes": "Covered unit testing and CI pipelines"
+    },
+    {
+      "courseId": "crs-swe-01",
+      "courseTitle": "Full-Stack Software Engineering",
+      "cohortId": "coh-alpha-2026",
+      "cohortName": "Alpha Cohort 2026",
+      "mentorId": "men-demo-001",
+      "mentorName": "Dr. Chidi Okeke",
+      "topic": "Automated Testing & Integration Pipelines",
+      "dayOfWeek": "Wednesday",
+      "date": "2026-10-07",
+      "startTime": "10:00 AM",
+      "endTime": "12:00 PM",
+      "durationHours": 2,
+      "venue": "Virtual Room 1",
+      "meetingLink": "https://meet.google.com/test-pipeline",
+      "createdBy": "Bolanle Nnamdi",
+      "id": "slot-1790936101099",
+      "createdAt": "2026-10-02T10:15:01.099Z",
+      "attendanceMarked": false,
+      "attendanceRecords": [],
+      "status": "Scheduled"
+    },
+    {
+      "id": "slot-001",
+      "courseId": "course-se-01",
+      "courseTitle": "Full-Stack Software Engineering",
+      "cohortId": "coh-2026-01",
+      "cohortName": "Cohort Alpha 2026",
+      "topic": "1.1 Deep Dive: TypeScript Generics & Strict Typing Systems",
+      "mentorId": "user-mentor-demo",
+      "mentorName": "Dr. Chidi Okeke",
+      "dayOfWeek": "Friday",
+      "date": "2026-09-12",
+      "startTime": "10:00 AM",
+      "endTime": "12:00 PM",
+      "durationHours": 2,
+      "venue": "Victoria Island Hub - Lab A",
+      "meetingLink": "https://meet.google.com/abc-defg-hij",
+      "status": "Completed",
+      "attendanceMarked": true,
+      "attendanceRecords": [
+        {
+          "studentId": "stu-1789170782348",
+          "studentName": "Uncle P",
+          "studentCode": "STU-9051",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789170781816",
+          "studentName": "Bhiggest Miike",
+          "studentCode": "STU-7830",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789170775779",
+          "studentName": "History News",
+          "studentCode": "STU-9306",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789137640775",
+          "studentName": "PROMISE ANURIKA G OKOROJI",
+          "studentCode": "STU-9436",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789137560243",
+          "studentName": "UZOKA PEACE ESOMCHUKWU ",
+          "studentCode": "STU-4173",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789137453521",
+          "studentName": "ABUBAKAR SADIQ UMAR",
+          "studentCode": "STU-6342",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789137358964",
+          "studentName": "EMMANUELLA MOSES",
+          "studentCode": "STU-5191",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789137214569",
+          "studentName": "AYOBAMI ABIODUN ",
+          "studentCode": "STU-6839",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789137103072",
+          "studentName": "PROSPER OJOCHEGBE IBRAHIM",
+          "studentCode": "STU-8592",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789137001700",
+          "studentName": "CHIJIOKE CHUKWUNEDU",
+          "studentCode": "STU-3481",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789136929093",
+          "studentName": "IFEANYI ANTHONY",
+          "studentCode": "STU-8706",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789135528728",
+          "studentName": "Suleiman Salihu",
+          "studentCode": "STU-8991",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789135274120",
+          "studentName": "SULTAN ABDULWAHAB",
+          "studentCode": "STU-7742",
+          "status": "Absent",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 0
+        },
+        {
+          "studentId": "stu-1789134940078",
+          "studentName": "EBUBECHIKA J.O",
+          "studentCode": "STU-3060",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789134519546",
+          "studentName": "HENRY EKENE NDUPU",
+          "studentCode": "STU-8804",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789134263203",
+          "studentName": "EHIS ATHENA ENAHOLO",
+          "studentCode": "STU-6381",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789134147915",
+          "studentName": "KASHIO SHEKINAH",
+          "studentCode": "STU-9692",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789133464671",
+          "studentName": "Muhammed Obansa ",
+          "studentCode": "STU-8689",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789132927623",
+          "studentName": "ENDURANCE EBE",
+          "studentCode": "STU-1071",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789132789487",
+          "studentName": "EMEDIONG ESSIEN AKPAN",
+          "studentCode": "STU-8955",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789132452516",
+          "studentName": "ZULAIHAT ABDULRAHMAN",
+          "studentCode": "STU-9899",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789132235951",
+          "studentName": "ZAINAB FOLARIN ",
+          "studentCode": "STU-8912",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789132133717",
+          "studentName": "FATIMA ",
+          "studentCode": "STU-6094",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789132075368",
+          "studentName": "VICTORIA WILLIAMS",
+          "studentCode": "STU-6110",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789131940828",
+          "studentName": "VICTOR NWABUNMA",
+          "studentCode": "STU-7298",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789131759952",
+          "studentName": "VICTOR EZEOKAFOR",
+          "studentCode": "STU-5191",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789131142685",
+          "studentName": "MUBARAK ABDULMALIK",
+          "studentCode": "STU-6865",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789131142401",
+          "studentName": "UMOH IMOH MICHEAL ",
+          "studentCode": "STU-7695",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789131047892",
+          "studentName": "UJUNWA  MARYROSE EYA ",
+          "studentCode": "STU-1132",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789130949479",
+          "studentName": "UGOCHUKWU CHIDERA",
+          "studentCode": "STU-6188",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789130690413",
+          "studentName": "SAMUEL OLUWAFEMI",
+          "studentCode": "STU-6535",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789130500858",
+          "studentName": "PRINCEWILL CHUKWUDUBEM",
+          "studentCode": "STU-4689",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789130233491",
+          "studentName": "OLUWAKEMI MOSES MARY",
+          "studentCode": "STU-9491",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789129910717",
+          "studentName": "OKORO PAULINUS FAVOUR ",
+          "studentCode": "STU-5653",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789129742177",
+          "studentName": "KUMAPAYI FAITH",
+          "studentCode": "STU-5337",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789129569102",
+          "studentName": "JOSEPHINE IGOH ",
+          "studentCode": "STU-7726",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789129450278",
+          "studentName": "IFEANYI STANLEY ",
+          "studentCode": "STU-5731",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789129305529",
+          "studentName": "GIFT OJOCHEGBE SHAIBU",
+          "studentCode": "STU-3176",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789129119003",
+          "studentName": "EMMANUEL IBITAYO",
+          "studentCode": "STU-2147",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789129030966",
+          "studentName": "GODSPOWER JOHN",
+          "studentCode": "STU-9660",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789127850395",
+          "studentName": "DEBORAH NWABUNMA",
+          "studentCode": "STU-5818",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789127595520",
+          "studentName": "CHRIS STEPHEN",
+          "studentCode": "STU-6340",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789127390465",
+          "studentName": "ADENIKE OLAJUYIGBE ",
+          "studentCode": "STU-6116",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789127135478",
+          "studentName": "Naomi Musa",
+          "studentCode": "STU-5212",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789123667599",
+          "studentName": "ABDUKHALIQ SULEIMAN ",
+          "studentCode": "STU-6075",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        },
+        {
+          "studentId": "stu-1789052591941",
+          "studentName": "zubairu",
+          "studentCode": "STU-9819",
+          "status": "Attended",
+          "markedAt": "2026-10-04T04:22:38.599Z",
+          "hoursCredited": 2
+        }
+      ],
+      "notes": "Covered generics, union discrimination, and AST validators.",
+      "createdBy": "Bolanle Nnamdi",
+      "createdAt": "2026-09-10T09:00:00Z"
+    },
+    {
+      "id": "slot-002",
+      "courseId": "course-se-01",
+      "courseTitle": "Full-Stack Software Engineering",
+      "cohortId": "coh-2026-01",
+      "cohortName": "Cohort Alpha 2026",
+      "topic": "1.2 State Architecture: TanStack Query & Optimistic Mutations",
+      "mentorId": "user-mentor-demo",
+      "mentorName": "Dr. Chidi Okeke",
+      "dayOfWeek": "Tuesday",
+      "date": "2026-09-15",
+      "startTime": "02:00 PM",
+      "endTime": "04:00 PM",
+      "durationHours": 2,
+      "venue": "Google Meet Virtual Classroom",
+      "meetingLink": "https://meet.google.com/xyz-uvwx-rst",
+      "status": "Scheduled",
+      "attendanceMarked": false,
+      "attendanceRecords": [],
+      "notes": "Live coding session with optimistic rollbacks.",
+      "createdBy": "Bolanle Nnamdi",
+      "createdAt": "2026-09-11T10:00:00Z"
+    }
+  ],
+  "payoutRequests": []
 }

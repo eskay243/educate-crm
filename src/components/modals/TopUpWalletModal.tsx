@@ -65,11 +65,11 @@ export const TopUpWalletModal: React.FC<TopUpWalletModalProps> = ({ isOpen, onCl
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div 
-        className="w-full max-w-lg bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        className="w-full max-w-lg bg-surface border border-outline rounded-xl shadow-modal overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-6 bg-gradient-to-r from-primary to-[#00174a] text-white flex justify-between items-start">
+        <div className="p-6 bg-crisp-black text-white flex justify-between items-start border-b border-outline">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white">
               <span className="material-symbols-outlined text-[24px]">account_balance_wallet</span>
@@ -77,7 +77,7 @@ export const TopUpWalletModal: React.FC<TopUpWalletModalProps> = ({ isOpen, onCl
             <div>
               <h3 className="font-display text-lg font-bold">Fund Expense &amp; Budget Wallet</h3>
               <p className="text-white/80 text-xs">
-                Current liquid balance: <strong className="text-emerald-300 font-data-tabular">{formatNaira(wallet?.balance || 0)}</strong>
+                Current liquid balance: <strong className="text-sea-green font-data-tabular">{formatNaira(wallet?.balance || 0)}</strong>
               </p>
             </div>
           </div>
@@ -90,10 +90,10 @@ export const TopUpWalletModal: React.FC<TopUpWalletModalProps> = ({ isOpen, onCl
         </div>
 
         {/* Tab Switcher */}
-        <div className="grid grid-cols-2 p-1.5 m-5 mb-3 bg-surface-container rounded-xl border border-outline-variant/50">
+        <div className="grid grid-cols-2 p-1.5 m-5 mb-3 bg-canvas rounded-lg border border-outline">
           <button
             onClick={() => setActiveTab('dva')}
-            className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            className={`py-2 px-3 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'dva'
                 ? 'bg-surface text-primary shadow-xs'
                 : 'text-secondary hover:text-on-surface'
@@ -104,7 +104,7 @@ export const TopUpWalletModal: React.FC<TopUpWalletModalProps> = ({ isOpen, onCl
           </button>
           <button
             onClick={() => setActiveTab('card')}
-            className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            className={`py-2 px-3 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'card'
                 ? 'bg-surface text-primary shadow-xs'
                 : 'text-secondary hover:text-on-surface'
@@ -120,7 +120,7 @@ export const TopUpWalletModal: React.FC<TopUpWalletModalProps> = ({ isOpen, onCl
           <div className="p-6 pt-2 space-y-4">
             {virtualAccount ? (
               <div className="space-y-4">
-                <div className="bg-gradient-to-br from-surface to-surface-container-low border border-outline-variant rounded-xl p-5 relative overflow-hidden">
+                <div className="bg-surface border border-outline rounded-xl p-5 relative overflow-hidden">
                   <div className="flex justify-between items-start mb-3">
                     <div>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-secondary">
@@ -131,8 +131,8 @@ export const TopUpWalletModal: React.FC<TopUpWalletModalProps> = ({ isOpen, onCl
                         {virtualAccount.bankName}
                       </h4>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#DCFCE7] text-[#166534] border border-[#166534]/20 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#166534] animate-pulse" />
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sea-green-light text-sea-green border border-sea-green/20 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-sea-green animate-pulse" />
                       Active 24/7 NIBSS
                     </span>
                   </div>

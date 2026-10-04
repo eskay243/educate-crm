@@ -32,3 +32,4 @@ server/backups/*.json
 *.sln
 *.sw?
 .agents/
+scratch/

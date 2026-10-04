@@ -1,7 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useCRM, formatNaira } from '../context/CRMContext';
-import { MentorStatus } from '../types/crm';
+import { MentorStatus, MentorPayoutRequest, Student } from '../types/crm';
 import { PerformanceMeter } from '../components/common/PerformanceMeter';
+import { PayoutVoucherModal } from '../components/modals/PayoutVoucherModal';
+import { StudentWelfareInterventionModal } from '../components/modals/StudentWelfareInterventionModal';
+import { CrispStatusBadge } from '../components/common/CrispStatusBadge';
 
 export const MentorManagementPage: React.FC = () => {
   const { 
@@ -19,12 +23,23 @@ export const MentorManagementPage: React.FC = () => {
     setSelectedMentorForEditId,
     currentUser,
     setSelectedMentorForDisburse,
-    wallet
+    wallet,
+    timetables,
+    settings,
+    setSelectedSlotForAttendance,
+    payoutRequests,
+    reviewMentorPayout,
   } = useCRM();
 
-  const [activeTab, setActiveTab] = useState<'roster' | 'sessions' | 'reports'>('roster');
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<'roster' | 'sessions' | 'reports' | 'timetable' | 'payouts'>('roster');
   const [tableSearch, setTableSearch] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<string>('All');
+  const [selectedPayoutForVoucher, setSelectedPayoutForVoucher] = useState<MentorPayoutRequest | null>(null);
+  const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
+  const [selectedStudentForWelfare, setSelectedStudentForWelfare] = useState<Student | null>(null);
+  const [isWelfareModalOpen, setIsWelfareModalOpen] = useState(false);
 
   const effectiveSearch = globalSearch || tableSearch;
   const isMentor = currentUser?.role === 'mentor';
@@ -37,6 +52,56 @@ export const MentorManagementPage: React.FC = () => {
         m => m.id === currentUser?.mentorId || m.name === currentUser?.name || m.email === currentUser?.email
       ) || null)
     : null;
+
+  // React to URL action and tab query params
+  useEffect(() => {
+    const action = searchParams.get('action');
+    const tabParam = searchParams.get('tab');
+
+    if (tabParam === 'availability') {
+      navigate('/mentors/office-hours', { replace: true });
+      return;
+    }
+    if (tabParam === 'grading') {
+      navigate('/mentors/grading', { replace: true });
+      return;
+    }
+
+    if (tabParam && ['roster', 'sessions', 'reports', 'timetable', 'payouts'].includes(tabParam)) {
+      setActiveTab(tabParam as any);
+    }
+
+    if (action) {
+      if (action === 'course-outline') {
+        navigate('/mentors/course-outlines', { replace: true });
+        return;
+      } else if (action === 'book-session') {
+        setSelectedMentorForBookingId(isMentor ? (myMentorProfile?.id || null) : null);
+        openModal('book-session');
+      } else if (action === 'submit-report') {
+        openModal('submit-performance-report');
+      } else if (action === 'request-payout') {
+        openModal('request-payout');
+      }
+
+      // Immediately clean the action query param from the URL to prevent sticky modal re-opening loop
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('action');
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams, isMentor, myMentorProfile, openModal, setSelectedMentorForBookingId, setSearchParams]);
+
+  const accessiblePayoutRequests = useMemo(() => {
+    if (!payoutRequests) return [];
+    if (!isMentor) return payoutRequests;
+    return payoutRequests.filter(
+      r => r.mentorId === myMentorProfile?.id || r.mentorEmail.toLowerCase() === currentUser?.email.toLowerCase()
+    );
+  }, [payoutRequests, isMentor, myMentorProfile, currentUser]);
+
+  const pendingPayoutCount = useMemo(() => {
+    return (payoutRequests || []).filter(r => r.status === 'Pending').length;
+  }, [payoutRequests]);
 
   // Mentors are only allowed to see mentors that they share a course, student, or department with
   const accessibleMentors = useMemo(() => {
@@ -112,6 +177,31 @@ export const MentorManagementPage: React.FC = () => {
     });
   }, [accessibleReports, effectiveSearch]);
 
+  const accessibleTimetables = useMemo(() => {
+    if (!timetables) return [];
+    if (!isMentor) return timetables;
+    return timetables.filter(
+      slot =>
+        slot.mentorId === myMentorProfile?.id ||
+        (myMentorProfile?.name && slot.mentorName.toLowerCase().includes(myMentorProfile.name.toLowerCase()))
+    );
+  }, [timetables, isMentor, myMentorProfile]);
+
+  const filteredTimetables = useMemo(() => {
+    return accessibleTimetables.filter(slot => {
+      const q = effectiveSearch.toLowerCase();
+      const venueOrLink = (slot.venue || slot.meetingLink || '').toLowerCase();
+      return (
+        !q ||
+        slot.courseTitle.toLowerCase().includes(q) ||
+        slot.cohortName.toLowerCase().includes(q) ||
+        slot.mentorName.toLowerCase().includes(q) ||
+        slot.topic.toLowerCase().includes(q) ||
+        venueOrLink.includes(q)
+      );
+    });
+  }, [accessibleTimetables, effectiveSearch]);
+
   const departments = ['All', 'Software Engineering', 'Data & AI', 'Design Systems', 'Backend & Cloud', 'Frontend', 'Product'];
 
   // Metrics
@@ -154,27 +244,73 @@ export const MentorManagementPage: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Link
+            to="/mentors/course-outlines"
+            className="btn-secondary h-10 px-3.5 text-xs"
+            title="Review Course Outlines and Mark Completed Syllabus Topics"
+          >
+            <span className="material-symbols-outlined text-primary text-[18px]">account_tree</span>
+            <span>Course Outlines</span>
+          </Link>
           <button
             onClick={() => {
               setSelectedMentorForBookingId(isMentor ? (myMentorProfile?.id || null) : null);
               openModal('book-session');
             }}
-            className="h-10 px-4 bg-secondary-container text-primary rounded font-label-md text-label-md font-bold hover:bg-surface-container-high transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
+            className="btn-secondary h-10 px-3.5 text-xs"
           >
-            <span className="material-symbols-outlined text-[18px]">calendar_month</span>
+            <span className="material-symbols-outlined text-primary text-[18px]">calendar_month</span>
             <span>+ Log 1-on-1 Session</span>
           </button>
           <button
             onClick={() => openModal('submit-performance-report')}
-            className="h-10 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-label-md text-label-md font-bold transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
+            className="btn-secondary h-10 px-3.5 text-xs"
           >
-            <span className="material-symbols-outlined text-[18px]">assessment</span>
+            <span className="material-symbols-outlined text-sea-green text-[18px]">assessment</span>
             <span>+ File Evaluation Report</span>
           </button>
+          <Link
+            to="/mentors/office-hours"
+            className="btn-secondary h-10 px-3 text-xs"
+            title="Configure weekly office hours and self-booking slots"
+          >
+            <span className="material-symbols-outlined text-[18px]">schedule</span>
+            <span>Office Hours</span>
+          </Link>
+          <Link
+            to="/mentors/grading"
+            className="btn-secondary h-10 px-3 text-xs"
+            title="Review student assignments and score rubrics"
+          >
+            <span className="material-symbols-outlined text-[18px]">fact_check</span>
+            <span>Grading Inbox</span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedStudentForWelfare(null);
+              setIsWelfareModalOpen(true);
+            }}
+            className="btn-danger h-10 px-3.5 text-xs"
+            title="Flag an at-risk student mentee for immediate academic & welfare intervention"
+          >
+            <span className="material-symbols-outlined text-[18px]">emergency_home</span>
+            <span>🚨 Flag At-Risk</span>
+          </button>
+          {isMentor && (
+            <button
+              onClick={() => openModal('request-payout')}
+              className="btn-primary h-10 px-3.5 text-xs"
+              title="Request withdrawal of your accrued 37% commission"
+            >
+              <span className="material-symbols-outlined text-[18px]">payments</span>
+              <span>Request Payout</span>
+            </button>
+          )}
           {isSuperAdmin && (
             <button
               onClick={() => openModal('recruit-mentor')}
-              className="h-10 px-4 bg-primary text-on-primary rounded font-label-md text-label-md font-bold hover:bg-primary/90 transition-colors shadow-xs flex items-center gap-2 cursor-pointer"
+              className="btn-primary h-10 px-3.5 text-xs"
             >
               <span className="material-symbols-outlined text-[18px]">person_add</span>
               <span>Recruit Faculty Mentor</span>
@@ -183,8 +319,8 @@ export const MentorManagementPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 3 Bento Summary Widgets */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+      {/* 4 Bento Summary Widgets */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
         <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs">
           <div className="flex justify-between items-start mb-stack-md">
             <div className="w-10 h-10 rounded bg-secondary-container flex items-center justify-center text-primary">
@@ -217,6 +353,35 @@ export const MentorManagementPage: React.FC = () => {
 
         <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs">
           <div className="flex justify-between items-start mb-stack-md">
+            <div className="w-10 h-10 rounded bg-emerald-100 text-emerald-800 flex items-center justify-center">
+              <span className="material-symbols-outlined">timer</span>
+            </div>
+            {isMentor ? (
+              (myMentorProfile?.lecturedHours || 0) >= (myMentorProfile?.minimumRequiredHours || settings.mentorMinimumLecturedHours || 20) ? (
+                <span className="text-[10px] font-bold text-[#166534] bg-[#dcfce7] px-2 py-0.5 rounded">Eligible</span>
+              ) : (
+                <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">Under Hours</span>
+              )
+            ) : (
+              <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-1 rounded font-data-tabular">
+                {settings.mentorMinimumLecturedHours || 20}h Target
+              </span>
+            )}
+          </div>
+          <p className="font-body-sm text-body-sm text-secondary mb-unit">
+            {isMentor ? 'Class Lecturing Hours' : 'Faculty Lecturing Hours'}
+          </p>
+          <div className="flex items-baseline gap-1">
+            <h3 className="font-display text-display font-bold text-on-surface font-data-tabular">
+              {isMentor
+                ? `${(myMentorProfile?.lecturedHours || 0).toFixed(1)} / ${(myMentorProfile?.minimumRequiredHours || settings.mentorMinimumLecturedHours || 20).toFixed(0)}h`
+                : `${mentors.reduce((acc, m) => acc + (m.lecturedHours || 0), 0).toFixed(1)}h Total`}
+            </h3>
+          </div>
+        </div>
+
+        <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs">
+          <div className="flex justify-between items-start mb-stack-md">
             <div className="w-10 h-10 rounded bg-surface-container flex items-center justify-center text-on-surface">
               <span className="material-symbols-outlined">account_balance_wallet</span>
             </div>
@@ -233,6 +398,15 @@ export const MentorManagementPage: React.FC = () => {
               Wallet: {formatNaira(wallet?.balance || 0)}
             </span>
           </div>
+          {isMentor && (
+            <button
+              onClick={() => openModal('request-payout')}
+              className="mt-3 w-full py-2 px-3 bg-primary text-on-primary rounded-lg text-xs font-bold hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">payments</span>
+              <span>Request Commission Payout</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -240,13 +414,13 @@ export const MentorManagementPage: React.FC = () => {
       <div className="bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden shadow-xs">
         {/* Navigation Tabs & Search Controls */}
         <div className="p-stack-md border-b border-outline-variant flex justify-between items-center bg-surface-bright flex-wrap gap-4">
-          <div className="flex border border-outline-variant rounded p-1 bg-surface">
+          <div className="flex border border-outline rounded-lg p-1 bg-canvas overflow-x-auto gap-1">
             <button
               onClick={() => setActiveTab('roster')}
-              className={`px-4 py-1.5 rounded text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                 activeTab === 'roster'
-                  ? 'bg-primary text-on-primary shadow-xs'
-                  : 'text-secondary hover:text-on-surface'
+                  ? 'bg-primary text-white'
+                  : 'text-secondary hover:text-crisp-black'
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">groups</span>
@@ -254,10 +428,10 @@ export const MentorManagementPage: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveTab('sessions')}
-              className={`px-4 py-1.5 rounded text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                 activeTab === 'sessions'
-                  ? 'bg-primary text-on-primary shadow-xs'
-                  : 'text-secondary hover:text-on-surface'
+                  ? 'bg-primary text-white'
+                  : 'text-secondary hover:text-crisp-black'
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">calendar_month</span>
@@ -265,14 +439,41 @@ export const MentorManagementPage: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveTab('reports')}
-              className={`px-4 py-1.5 rounded text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                 activeTab === 'reports'
-                  ? 'bg-primary text-on-primary shadow-xs'
-                  : 'text-secondary hover:text-on-surface'
+                  ? 'bg-primary text-white'
+                  : 'text-secondary hover:text-crisp-black'
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">assessment</span>
               <span>Student Evaluations &amp; Welfare ({filteredReports.length})</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('timetable')}
+              className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                activeTab === 'timetable'
+                  ? 'bg-primary text-white'
+                  : 'text-secondary hover:text-crisp-black'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">calendar_today</span>
+              <span>{isMentor ? 'My Class Timetable' : 'Class Timetable'} ({accessibleTimetables.length})</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('payouts')}
+              className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                activeTab === 'payouts'
+                  ? 'bg-primary text-white'
+                  : 'text-secondary hover:text-crisp-black'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">payments</span>
+              <span>{isMentor ? 'My Payout Requests' : 'Payout Requests'}</span>
+              {pendingPayoutCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-lemon-curry text-white text-[10px] font-bold">
+                  {pendingPayoutCount}
+                </span>
+              )}
             </button>
           </div>
 
@@ -336,6 +537,7 @@ export const MentorManagementPage: React.FC = () => {
                     <tr className="border-b border-outline-variant bg-surface text-secondary font-label-md">
                       <th className="px-stack-md py-3 font-semibold">Faculty Mentor</th>
                       <th className="px-stack-md py-3 font-semibold">Department</th>
+                      <th className="px-stack-md py-3 font-semibold">Lectured Hours</th>
                       <th className="px-stack-md py-3 font-semibold">Mentees / Cap</th>
                       <th className="px-stack-md py-3 font-semibold">Commission Agreement</th>
                       <th className="px-stack-md py-3 font-semibold">Pending Share (₦)</th>
@@ -351,6 +553,9 @@ export const MentorManagementPage: React.FC = () => {
                       const formattedAccount = mentor.accountNumber
                         ? (canViewFullBanking ? mentor.accountNumber : `••••${mentor.accountNumber.slice(-4)}`)
                         : 'N/A';
+                      const reqHours = mentor.minimumRequiredHours || settings.mentorMinimumLecturedHours || 20;
+                      const loggedHours = mentor.lecturedHours || 0;
+                      const isHoursEligible = loggedHours >= reqHours;
 
                       return (
                         <tr 
@@ -387,6 +592,31 @@ export const MentorManagementPage: React.FC = () => {
                           </td>
 
                           <td className="px-stack-md py-3">
+                            <div>
+                              <div className="flex items-center gap-1 font-data-tabular">
+                                <span className={`font-bold ${isHoursEligible ? 'text-emerald-700' : 'text-amber-700'}`}>
+                                  {loggedHours.toFixed(1)}h
+                                </span>
+                                <span className="text-secondary text-[10px]">/ {reqHours.toFixed(0)}h</span>
+                              </div>
+                              {isHoursEligible ? (
+                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-bold bg-[#dcfce7] text-[#166534]">
+                                  <span className="material-symbols-outlined text-[12px]">verified</span>
+                                  <span>Eligible</span>
+                                </span>
+                              ) : (
+                                <span
+                                  className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-800"
+                                  title={`Requires at least ${reqHours} hours of class lectures before payout eligibility`}
+                                >
+                                  <span className="material-symbols-outlined text-[12px]">lock</span>
+                                  <span>Needs {Math.max(0, reqHours - loggedHours).toFixed(1)}h</span>
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          <td className="px-stack-md py-3">
                             <div className="flex items-center gap-2">
                               <span className="font-bold">{mentor.activeMentees}</span>
                               <span className="text-secondary text-[11px]">/ {mentor.maxCapacity} max</span>
@@ -419,11 +649,7 @@ export const MentorManagementPage: React.FC = () => {
                                 <option value="On Leave">On Leave</option>
                               </select>
                             ) : (
-                              <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                                mentor.status === 'Active' ? 'bg-[#dcfce7] text-[#166534]' : 'bg-surface-container text-secondary'
-                              }`}>
-                                {mentor.status}
-                              </span>
+                              <CrispStatusBadge status={mentor.status} />
                             )}
                           </td>
 
@@ -456,19 +682,30 @@ export const MentorManagementPage: React.FC = () => {
                               </button>
 
                               {(isSuperAdmin || isFinance) && mentor.pendingPayout > 0 && (
-                                <button 
-                                  onClick={() => {
-                                    setSelectedMentorForDisburse(mentor);
-                                    openModal('disburse-mentor');
-                                  }}
-                                  className={`px-2.5 py-1 rounded text-white font-sans text-xs font-semibold shadow-xs transition-colors flex items-center gap-1 cursor-pointer ${
-                                    mentor.isAccountVerified ? 'bg-[#166534] hover:bg-[#15803d]' : 'bg-amber-600 hover:bg-amber-700'
-                                  }`}
-                                  title={mentor.isAccountVerified ? "Disburse 37% Commission Share via Expense Wallet" : "Account Unverified - Verify before disbursement"}
-                                >
-                                  <span className="material-symbols-outlined text-[14px]">send_money</span>
-                                  <span>{mentor.isAccountVerified ? 'Disburse Share' : 'Verify & Disburse'}</span>
-                                </button>
+                                isHoursEligible ? (
+                                  <button 
+                                    onClick={() => {
+                                      setSelectedMentorForDisburse(mentor);
+                                      openModal('disburse-mentor');
+                                    }}
+                                    className={`px-2.5 py-1 rounded text-white font-sans text-xs font-semibold shadow-xs transition-colors flex items-center gap-1 cursor-pointer ${
+                                      mentor.isAccountVerified ? 'bg-[#166534] hover:bg-[#15803d]' : 'bg-amber-600 hover:bg-amber-700'
+                                    }`}
+                                    title={mentor.isAccountVerified ? "Disburse 37% Commission Share via Expense Wallet" : "Account Unverified - Verify before disbursement"}
+                                  >
+                                    <span className="material-symbols-outlined text-[14px]">send_money</span>
+                                    <span>{mentor.isAccountVerified ? 'Disburse Share' : 'Verify & Disburse'}</span>
+                                  </button>
+                                ) : (
+                                  <button 
+                                    disabled
+                                    className="px-2.5 py-1 rounded bg-slate-100 border border-slate-300 text-slate-500 font-sans text-xs font-semibold shadow-xs flex items-center gap-1 cursor-not-allowed"
+                                    title={`Payout Locked: Mentor has logged ${loggedHours.toFixed(1)}h of required ${reqHours.toFixed(1)}h lecturing hours.`}
+                                  >
+                                    <span className="material-symbols-outlined text-[14px]">lock</span>
+                                    <span>Locked ({loggedHours.toFixed(0)}/{reqHours.toFixed(0)}h)</span>
+                                  </button>
+                                )
                               )}
                             </div>
                           </td>
@@ -619,17 +856,58 @@ export const MentorManagementPage: React.FC = () => {
                     Faculty mentors submit formal student performance evaluations and welfare observations directly to Admissions and Executive Leadership.
                   </p>
                 </div>
-                <button
-                  onClick={() => openModal('submit-performance-report')}
-                  className="px-4 h-9 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 flex items-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <span className="material-symbols-outlined text-[16px]">add_circle</span>
-                  <span>+ File Student Evaluation</span>
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => openModal('submit-performance-report')}
+                    className="px-4 h-9 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">add_circle</span>
+                    <span>+ File Student Evaluation</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedStudentForWelfare(null);
+                      setIsWelfareModalOpen(true);
+                    }}
+                    className="px-4 h-9 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">emergency_home</span>
+                    <span>🚨 Flag At-Risk Mentee</span>
+                  </button>
+                </div>
               </div>
             ) : (
-              <table className="w-full text-left border-collapse min-w-[950px] text-xs">
-                <thead>
+              <div>
+                <div className="p-3 bg-surface-container-low border-b border-outline-variant flex items-center justify-between flex-wrap gap-2">
+                  <span className="text-xs font-semibold text-secondary">
+                    Formal faculty evaluations &amp; early-warning welfare ledger
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openModal('submit-performance-report')}
+                      className="px-3 h-8 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">add_circle</span>
+                      <span>+ File Evaluation</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedStudentForWelfare(null);
+                        setIsWelfareModalOpen(true);
+                      }}
+                      className="px-3 h-8 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">emergency_home</span>
+                      <span>🚨 Flag At-Risk Mentee</span>
+                    </button>
+                  </div>
+                </div>
+
+                <table className="w-full text-left border-collapse min-w-[950px] text-xs">
+                  <thead>
                   <tr className="border-b border-outline-variant bg-surface-container-low text-secondary font-label-md">
                     <th className="px-stack-md py-3 font-semibold">Report Code</th>
                     <th className="px-stack-md py-3 font-semibold">Student &amp; Program</th>
@@ -713,16 +991,343 @@ export const MentorManagementPage: React.FC = () => {
                               <option value="Resolved">Resolved</option>
                             </select>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const s = students.find(st => st.id === r.studentId || st.name === r.studentName);
+                              setSelectedStudentForWelfare(s || null);
+                              setIsWelfareModalOpen(true);
+                            }}
+                            className="p-1 rounded text-rose-600 hover:bg-rose-50 transition-colors"
+                            title="Dispatch immediate welfare alert for this student"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">emergency_home</span>
+                          </button>
                         </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         )}
+
+        {/* Tab 4: Class Timetable & Attendance */}
+        {activeTab === 'timetable' && (
+          <div className="p-stack-md space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-outline-variant/60 pb-3">
+              <div>
+                <h3 className="font-bold text-sm text-on-surface">
+                  {isMentor ? 'My Scheduled Lectures & Class Attendance' : 'All Faculty Scheduled Classes & Attendance'}
+                </h3>
+                <p className="text-xs text-secondary mt-0.5">
+                  Record student class attendance to log teaching hours toward your {settings.mentorMinimumLecturedHours || 20}-hour payout eligibility threshold.
+                </p>
+              </div>
+              <Link
+                to="/mentors/course-outlines"
+                className="h-8 px-3 rounded bg-surface border border-outline-variant hover:border-primary text-on-surface text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <span className="material-symbols-outlined text-primary text-[16px]">account_tree</span>
+                <span>View Course Outline</span>
+              </Link>
+            </div>
+
+            {filteredTimetables.length === 0 ? (
+              <div className="p-12 text-center flex flex-col items-center justify-center space-y-3">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[28px]">calendar_month</span>
+                </div>
+                <div className="max-w-sm space-y-1">
+                  <h3 className="font-bold text-sm text-on-surface">No Classes Scheduled</h3>
+                  <p className="text-xs text-secondary">
+                    {isMentor 
+                      ? 'You have no timetable classes scheduled for your courses yet. The Program Officer schedules lecture slots.'
+                      : 'No timetable classes match the active search or filters.'}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {filteredTimetables.map(slot => (
+                  <div
+                    key={slot.id}
+                    className="p-4 rounded-xl bg-surface border border-outline-variant hover:border-primary/50 transition-all space-y-3 shadow-xs flex flex-col justify-between"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-start gap-2">
+                        <span className="px-2 py-0.5 rounded bg-primary-container/30 text-primary text-[11px] font-bold">
+                          {slot.dayOfWeek} • {slot.startTime} - {slot.endTime}
+                        </span>
+                        {slot.attendanceMarked ? (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            Attended ({(slot.attendanceRecords || []).filter(r => r.status === 'Attended').length})
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-bold border border-amber-200">
+                            Pending Attendance
+                          </span>
+                        )}
+                      </div>
+
+                      <div>
+                        <h4 className="font-bold text-sm text-on-surface line-clamp-1">{slot.topic}</h4>
+                        <p className="text-xs text-secondary mt-0.5">
+                          {slot.courseTitle} • <span className="font-medium text-on-surface">{slot.cohortName}</span>
+                        </p>
+                      </div>
+
+                      <div className="pt-2 border-t border-outline-variant/40 space-y-1 text-xs">
+                        <div className="flex items-center gap-1.5 text-secondary">
+                          <span className="material-symbols-outlined text-[15px] text-primary">person</span>
+                          <span>Faculty: <strong className="text-on-surface">{slot.mentorName}</strong></span>
+                        </div>
+
+                        {slot.meetingLink ? (
+                          <div className="flex items-center gap-1.5 text-secondary">
+                            <span className="material-symbols-outlined text-[15px] text-primary">videocam</span>
+                            <a
+                              href={slot.meetingLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-primary hover:underline font-medium line-clamp-1"
+                            >
+                              Class Link
+                            </a>
+                          </div>
+                        ) : slot.venue ? (
+                          <div className="flex items-center gap-1.5 text-secondary">
+                            <span className="material-symbols-outlined text-[15px] text-secondary">location_on</span>
+                            <span className="line-clamp-1">{slot.venue}</span>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-outline-variant/60 flex items-center justify-between gap-2">
+                      <button
+                        onClick={() => {
+                          setSelectedSlotForAttendance(slot);
+                          openModal('take-attendance');
+                        }}
+                        className="h-8 px-3 rounded bg-primary text-on-primary hover:bg-primary/90 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs w-full justify-center"
+                      >
+                        <span className="material-symbols-outlined text-[15px]">how_to_reg</span>
+                        <span>{slot.attendanceMarked ? 'Review / Update Attendance' : 'Take Class Attendance'}</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 5: Faculty Commission Payout Requests */}
+        {activeTab === 'payouts' && (
+          <div className="p-stack-md space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-outline-variant/60 pb-3">
+              <div>
+                <h3 className="font-bold text-sm text-on-surface">
+                  {isMentor ? 'My Commission Payout Requests' : 'Faculty Commission Payout Requests & Disbursements'}
+                </h3>
+                <p className="text-xs text-secondary mt-0.5">
+                  {isMentor 
+                    ? 'Track review and disbursement status of your 37% faculty commission withdrawals.'
+                    : 'Review requests, verify minimum lecturing hours eligibility (20h), and disburse directly via Paystack.'}
+                </p>
+              </div>
+              {isMentor && (
+                <button
+                  onClick={() => openModal('request-payout')}
+                  className="h-8 px-3 rounded bg-primary text-on-primary hover:bg-primary/90 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <span className="material-symbols-outlined text-[16px]">add</span>
+                  <span>+ New Payout Request</span>
+                </button>
+              )}
+            </div>
+
+            {accessiblePayoutRequests.length === 0 ? (
+              <div className="p-12 text-center flex flex-col items-center justify-center space-y-3">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[28px]">payments</span>
+                </div>
+                <div className="max-w-sm space-y-1">
+                  <h3 className="font-bold text-sm text-on-surface">No Payout Requests</h3>
+                  <p className="text-xs text-secondary">
+                    {isMentor 
+                      ? 'You have not submitted any payout requests yet. Once you fulfill 20 lecturing hours, click Request Payout.'
+                      : 'No faculty payout requests have been submitted yet.'}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto border border-outline-variant/60 rounded-xl bg-surface">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-outline-variant bg-surface-container-low text-[11px] font-bold text-secondary uppercase tracking-wider">
+                      <th className="px-4 py-3">Voucher &amp; Date</th>
+                      <th className="px-4 py-3">Faculty Mentor</th>
+                      <th className="px-4 py-3">Lecturing Hours</th>
+                      <th className="px-4 py-3">Settlement Bank</th>
+                      <th className="px-4 py-3">Gross (₦)</th>
+                      <th className="px-4 py-3">WHT 5% (₦)</th>
+                      <th className="px-4 py-3">Net Disbursed (₦)</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3 text-right">Tax Slip &amp; Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/50 text-xs">
+                    {accessiblePayoutRequests.map((req) => {
+                      const isHoursEligible = req.lecturedHours >= req.minimumRequiredHours;
+                      const whtVal = req.whtDeductedAmount ?? Math.round(req.amount * 0.05);
+                      const netVal = req.netDisbursedAmount ?? (req.amount - whtVal);
+                      const voucherCode = req.voucherNumber || `VCHR-CDL-${req.id.slice(-4)}`;
+
+                      return (
+                        <tr key={req.id} className="hover:bg-surface-container/50 transition-colors">
+                          <td className="px-4 py-3 font-mono">
+                            <span className="font-bold text-primary block">{voucherCode}</span>
+                            <span className="text-[10px] text-secondary">
+                              {new Date(req.requestedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="font-bold text-on-surface block">{req.mentorName}</span>
+                            <span className="text-[11px] text-secondary">{req.mentorEmail}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                              isHoursEligible ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-800'
+                            }`}>
+                              {req.lecturedHours}h / {req.minimumRequiredHours}h
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="font-semibold text-on-surface block">{req.bankName}</span>
+                            <span className="font-mono text-secondary text-[11px]">{req.accountNumber} ({req.accountName})</span>
+                          </td>
+                          <td className="px-4 py-3 font-bold font-mono text-on-surface text-xs">
+                            {formatNaira(req.amount)}
+                          </td>
+                          <td className="px-4 py-3 font-bold font-mono text-rose-600 text-xs">
+                            - {formatNaira(whtVal)}
+                          </td>
+                          <td className="px-4 py-3 font-bold font-mono text-emerald-700 dark:text-emerald-300 text-xs">
+                            {formatNaira(netVal)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <CrispStatusBadge status={req.status} />
+                            {req.disburseReference && (
+                              <span className="block text-[9px] font-mono text-secondary mt-0.5 truncate max-w-[120px]" title={req.disburseReference}>
+                                Ref: {req.disburseReference}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                              {/* Download / View WHT Voucher Slip */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedPayoutForVoucher(req);
+                                  setIsVoucherModalOpen(true);
+                                }}
+                                className="px-2.5 py-1 rounded bg-surface border border-outline-variant hover:border-primary text-on-surface text-[11px] font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
+                                title="View official remuneration voucher and WHT deduction slip"
+                              >
+                                <span className="material-symbols-outlined text-[14px] text-primary">receipt_long</span>
+                                <span>WHT Slip</span>
+                              </button>
+
+                              {(isSuperAdmin || isFinance) && req.status === 'Pending' && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => reviewMentorPayout(req.id, 'Approved')}
+                                    className="px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 text-[11px] font-bold transition-colors cursor-pointer"
+                                    title="Approve for payout"
+                                  >
+                                    Approve
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const reason = window.prompt('Enter reason for rejecting this payout request:');
+                                      if (reason !== null) {
+                                        reviewMentorPayout(req.id, 'Rejected', reason);
+                                      }
+                                    }}
+                                    className="px-2 py-1 rounded bg-rose-50 text-rose-700 hover:bg-rose-100 text-[11px] font-bold transition-colors cursor-pointer"
+                                    title="Reject payout request"
+                                  >
+                                    Reject
+                                  </button>
+                                </>
+                              )}
+
+                              {(isSuperAdmin || isFinance) && (req.status === 'Pending' || req.status === 'Approved') && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const mentorObj = mentors.find(m => m.id === req.mentorId) || {
+                                      id: req.mentorId,
+                                      name: req.mentorName,
+                                      email: req.mentorEmail,
+                                      bankName: req.bankName,
+                                      bankCode: req.bankCode,
+                                      accountNumber: req.accountNumber,
+                                      accountName: req.accountName,
+                                      pendingPayout: req.amount,
+                                      lecturedHours: req.lecturedHours,
+                                      minimumRequiredHours: req.minimumRequiredHours,
+                                      isAccountVerified: true,
+                                      role: 'Faculty Mentor',
+                                      department: 'Academics',
+                                    };
+                                    (mentorObj as any).payoutRequestId = req.id;
+                                    setSelectedMentorForDisburse(mentorObj as any);
+                                    openModal('disburse-mentor');
+                                  }}
+                                  className="px-2.5 py-1 rounded bg-primary text-on-primary hover:bg-primary/90 text-[11px] font-bold transition-colors shadow-xs cursor-pointer flex items-center gap-1"
+                                  title="Disburse directly from institutional wallet via Paystack"
+                                >
+                                  <span className="material-symbols-outlined text-[13px]">payments</span>
+                                  <span>Disburse</span>
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* End of tabs */}
       </div>
+
+      {/* Official Remuneration & WHT Tax Slip Modal */}
+      <PayoutVoucherModal
+        isOpen={isVoucherModalOpen}
+        onClose={() => setIsVoucherModalOpen(false)}
+        payoutRequest={selectedPayoutForVoucher}
+      />
+
+      {/* Student Early-Warning & At-Risk Welfare Intervention Modal */}
+      <StudentWelfareInterventionModal
+        isOpen={isWelfareModalOpen}
+        onClose={() => setIsWelfareModalOpen(false)}
+        targetStudent={selectedStudentForWelfare}
+      />
     </div>
   );
 };

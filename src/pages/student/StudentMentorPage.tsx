@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useCRM } from '../../context/CRMContext';
 
 export const StudentMentorPage: React.FC = () => {
@@ -24,14 +24,53 @@ export const StudentMentorPage: React.FC = () => {
     s.studentId === student.id || s.studentName === student.name
   );
 
+  // Active mentor office hours
+  const activeOfficeHours = useMemo(() => {
+    return (mentor?.officeHours || []).filter(h => h.isActive);
+  }, [mentor?.officeHours]);
+
   // Booking Form State
   const [topic, setTopic] = useState('');
   const [sessionType, setSessionType] = useState('Code Architecture Review');
   const [sessionDate, setSessionDate] = useState('');
-  const [sessionTime, setSessionTime] = useState('14:00');
+  const [sessionTime, setSessionTime] = useState('14:00 - 14:30');
   const [meetingMode, setMeetingMode] = useState<'Google Meet' | 'Lagos Hub In-Person'>('Google Meet');
   const [notes, setNotes] = useState('');
   const [isBooking, setIsBooking] = useState(false);
+  const [selectedMeetingLink, setSelectedMeetingLink] = useState<string>('');
+
+  // Selected Day detection & matching slots
+  const selectedDayName = useMemo(() => {
+    if (!sessionDate) return null;
+    const d = new Date(sessionDate + 'T00:00:00');
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[d.getDay()];
+  }, [sessionDate]);
+
+  const matchingSlotsForDay = useMemo(() => {
+    if (!selectedDayName) return [];
+    return activeOfficeHours.filter(h => h.dayOfWeek === selectedDayName);
+  }, [activeOfficeHours, selectedDayName]);
+
+  // Generate intervals helper
+  const generateIntervals = (start: string, end: string, durationMin: number) => {
+    const [startH, startM] = start.split(':').map(Number);
+    const [endH, endM] = end.split(':').map(Number);
+    let cur = startH * 60 + startM;
+    const endTotal = endH * 60 + endM;
+    const intervals: string[] = [];
+
+    while (cur + durationMin <= endTotal) {
+      const h1 = String(Math.floor(cur / 60)).padStart(2, '0');
+      const m1 = String(cur % 60).padStart(2, '0');
+      const next = cur + durationMin;
+      const h2 = String(Math.floor(next / 60)).padStart(2, '0');
+      const m2 = String(next % 60).padStart(2, '0');
+      intervals.push(`${h1}:${m1} - ${h2}:${m2}`);
+      cur = next;
+    }
+    return intervals;
+  };
 
   const handleBookSession = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +86,10 @@ export const StudentMentorPage: React.FC = () => {
 
     setIsBooking(true);
     try {
+      const resolvedMeetingLink = selectedMeetingLink || 
+        (matchingSlotsForDay[0]?.meetingLink) || 
+        (meetingMode === 'Google Meet' ? 'https://meet.google.com/nex-codelab-1on1' : undefined);
+
       bookSession({
         mentorId: mentor.id,
         mentorName: mentor.name,
@@ -58,6 +101,8 @@ export const StudentMentorPage: React.FC = () => {
         durationHours: 1,
         topic: `${sessionType}: ${topic}`,
         notes: `Meeting Format: ${meetingMode}. ${notes}`,
+        meetingLink: resolvedMeetingLink,
+        locationType: meetingMode,
         status: 'Scheduled',
         compensationAmount: 8500,
       });
@@ -66,6 +111,7 @@ export const StudentMentorPage: React.FC = () => {
       setTopic('');
       setNotes('');
       setSessionDate('');
+      setSelectedMeetingLink('');
     } finally {
       setIsBooking(false);
     }
@@ -93,7 +139,7 @@ export const StudentMentorPage: React.FC = () => {
           {mentor ? (
             <div className="bg-surface-container-low border border-outline-variant rounded-2xl p-6 shadow-xs space-y-5">
               <div className="flex items-start gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary-container text-on-primary flex items-center justify-center font-extrabold text-2xl shadow-sm shrink-0">
+                <div className="w-16 h-16 rounded-xl bg-primary text-white flex items-center justify-center font-extrabold text-2xl shrink-0">
                   {mentor.name.charAt(0)}
                 </div>
                 <div>
@@ -155,6 +201,44 @@ export const StudentMentorPage: React.FC = () => {
                   </div>
                 )}
               </div>
+
+              {/* Weekly Office Hours Schedule */}
+              <div className="p-4 rounded-xl bg-surface-container border border-outline-variant/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[15px] text-primary">schedule</span>
+                    <span>Weekly Office Hours</span>
+                  </h4>
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded">
+                    {activeOfficeHours.length} Open Windows
+                  </span>
+                </div>
+
+                {activeOfficeHours.length === 0 ? (
+                  <p className="text-[11px] text-on-surface-variant italic">
+                    Faculty has not published set office hours. You can request any standard time slot using the booking form.
+                  </p>
+                ) : (
+                  <div className="space-y-2 pt-1">
+                    {activeOfficeHours.map(slot => (
+                      <div key={slot.id} className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-surface border border-outline-variant/40 shadow-xs">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-primary">{slot.dayOfWeek}</span>
+                            <span className="font-mono text-on-surface text-[11px] font-semibold">{slot.startTime} - {slot.endTime}</span>
+                          </div>
+                          <p className="text-[10px] text-on-surface-variant">
+                            {slot.slotDurationMinutes} min individual coaching slots
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-semibold text-on-surface-variant bg-surface-container px-2 py-0.5 rounded border border-outline-variant/40">
+                          {slot.locationType.includes('Google') ? 'Meet' : slot.locationType.includes('Zoom') ? 'Zoom' : 'Hub Lab'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             <div className="p-8 text-center border border-dashed border-outline-variant rounded-2xl">
@@ -180,7 +264,7 @@ export const StudentMentorPage: React.FC = () => {
                   <select
                     value={sessionType}
                     onChange={e => setSessionType(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-outline-variant bg-surface-container text-xs font-medium focus:ring-2 focus:ring-primary focus:outline-none"
+                    className="w-full px-3 py-2.5 rounded-xl border border-outline-variant bg-surface-container text-xs font-medium focus:ring-2 focus:ring-primary focus:outline-none cursor-pointer"
                   >
                     <option value="Code Architecture Review">Code Architecture Review</option>
                     <option value="Lab Deliverable Defense">Lab Deliverable Defense</option>
@@ -194,7 +278,7 @@ export const StudentMentorPage: React.FC = () => {
                   <select
                     value={meetingMode}
                     onChange={e => setMeetingMode(e.target.value as any)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-outline-variant bg-surface-container text-xs font-medium focus:ring-2 focus:ring-primary focus:outline-none"
+                    className="w-full px-3 py-2.5 rounded-xl border border-outline-variant bg-surface-container text-xs font-medium focus:ring-2 focus:ring-primary focus:outline-none cursor-pointer"
                   >
                     <option value="Google Meet">Google Meet (Online Video Call)</option>
                     <option value="Lagos Hub In-Person">Lagos VI Tech Hub (In-Person)</option>
@@ -202,32 +286,107 @@ export const StudentMentorPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-on-surface mb-1">Date *</label>
-                  <input
-                    type="date"
-                    required
-                    value={sessionDate}
-                    onChange={e => setSessionDate(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-outline-variant bg-surface-container text-xs font-medium focus:ring-2 focus:ring-primary focus:outline-none"
-                  />
+              {/* Date & Time Slot Selection */}
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-on-surface mb-1">
+                      Date * {selectedDayName && <span className="text-primary font-mono">({selectedDayName})</span>}
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={sessionDate}
+                      onChange={e => setSessionDate(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-outline-variant bg-surface-container text-xs font-medium focus:ring-2 focus:ring-primary focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-on-surface mb-1">Time Window *</label>
+                    <input
+                      type="text"
+                      required
+                      value={sessionTime}
+                      onChange={e => setSessionTime(e.target.value)}
+                      placeholder="e.g. 14:00 - 14:30"
+                      className="w-full px-3 py-2.5 rounded-xl border border-outline-variant bg-surface-container text-xs font-medium focus:ring-2 focus:ring-primary focus:outline-none font-mono"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-on-surface mb-1">Time Slot *</label>
-                  <select
-                    value={sessionTime}
-                    onChange={e => setSessionTime(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-outline-variant bg-surface-container text-xs font-medium focus:ring-2 focus:ring-primary focus:outline-none"
-                  >
-                    <option value="10:00">10:00 AM WAT</option>
-                    <option value="12:00">12:00 PM WAT</option>
-                    <option value="14:00">02:00 PM WAT</option>
-                    <option value="16:00">04:00 PM WAT</option>
-                    <option value="18:00">06:00 PM WAT</option>
-                  </select>
-                </div>
+                {/* Dynamic Slot Picker from Mentor's Office Hours */}
+                {sessionDate && (
+                  <div className="p-3.5 rounded-xl bg-surface border border-outline-variant/60 space-y-2">
+                    {matchingSlotsForDay.length > 0 ? (
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-primary text-[16px]">event_seat</span>
+                            <span>Open Office Hours on {selectedDayName}</span>
+                          </span>
+                          <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded">
+                            Select an available slot
+                          </span>
+                        </div>
+
+                        <div className="space-y-2">
+                          {matchingSlotsForDay.map(slot => {
+                            const intervals = generateIntervals(slot.startTime, slot.endTime, slot.slotDurationMinutes);
+                            return (
+                              <div key={slot.id} className="space-y-1.5">
+                                <div className="text-[10px] text-on-surface-variant font-semibold">
+                                  {slot.startTime} - {slot.endTime} • {slot.locationType}
+                                </div>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                                  {intervals.map((intv, idx) => {
+                                    const isSelected = sessionTime.startsWith(intv.split(' ')[0]);
+                                    return (
+                                      <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={() => {
+                                          setSessionTime(intv);
+                                          if (slot.meetingLink) setSelectedMeetingLink(slot.meetingLink);
+                                          if (slot.locationType.includes('Campus')) {
+                                            setMeetingMode('Lagos Hub In-Person');
+                                          } else {
+                                            setMeetingMode('Google Meet');
+                                          }
+                                        }}
+                                        className={`px-2 py-1.5 rounded-lg text-[11px] font-mono font-bold transition-all cursor-pointer text-center ${
+                                          isSelected
+                                            ? 'bg-primary text-on-primary ring-2 ring-primary/40 shadow-xs'
+                                            : 'bg-surface-container border border-outline-variant hover:border-primary text-on-surface hover:bg-primary/5'
+                                        }`}
+                                      >
+                                        {intv.split(' - ')[0]}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-2 text-xs text-on-surface-variant">
+                        <span className="material-symbols-outlined text-amber-500 text-base shrink-0 mt-0.5">info</span>
+                        <div>
+                          <p className="font-semibold text-on-surface">Off-Hours Session Request</p>
+                          <p className="text-[11px] text-secondary mt-0.5">
+                            {mentor.name} has scheduled office hours on{' '}
+                            <span className="font-bold text-on-surface">
+                              {[...new Set(activeOfficeHours.map(h => h.dayOfWeek))].join(', ') || 'selected days'}
+                            </span>
+                            . You can book an off-hours appointment or switch date to an office hours day.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -256,7 +415,7 @@ export const StudentMentorPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isBooking}
-                className="w-full py-3 rounded-xl bg-primary hover:bg-primary/90 active:scale-[0.98] text-on-primary font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+                className="w-full py-3 rounded-xl bg-primary hover:bg-primary/90 active:scale-[0.98] text-on-primary font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-base">calendar_month</span>
                 <span>{isBooking ? 'Scheduling Session...' : 'Confirm 1-on-1 Coaching Session'}</span>
@@ -276,7 +435,7 @@ export const StudentMentorPage: React.FC = () => {
               <div className="space-y-3">
                 {studentSessions.map((sess) => (
                   <div key={sess.id} className="p-4 rounded-xl border border-outline-variant/80 bg-surface-container/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-mono font-bold text-primary">{sess.sessionCode}</span>
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
@@ -304,9 +463,23 @@ export const StudentMentorPage: React.FC = () => {
                       <p className="text-xs text-on-surface-variant">{sess.notes}</p>
                     </div>
 
-                    <div className="text-right shrink-0">
-                      <div className="text-xs font-bold text-on-surface">{sess.date} at {sess.time}</div>
-                      <div className="text-[11px] text-on-surface-variant mt-0.5">{sess.durationHours} hr session</div>
+                    <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 shrink-0">
+                      <div className="text-left sm:text-right">
+                        <div className="text-xs font-bold text-on-surface">{sess.date} at {sess.time}</div>
+                        <div className="text-[11px] text-on-surface-variant mt-0.5">{sess.durationHours} hr session</div>
+                      </div>
+
+                      {sess.meetingLink && (
+                        <a
+                          href={sess.meetingLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-all shadow-xs"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">videocam</span>
+                          <span>Join Meeting</span>
+                        </a>
+                      )}
                     </div>
                   </div>
                 ))}

@@ -61,7 +61,7 @@ export const PWAInstallPrompt: React.FC = () => {
             <img
               src="/icons/icon-192.png"
               alt="Nexus CRM Logo"
-              className="w-11 h-11 rounded-xl shadow-md shrink-0 object-contain bg-[#0B0F19] p-0.5"
+              className="w-11 h-11 rounded-lg shrink-0 object-contain bg-crisp-black p-0.5"
             />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
@@ -119,7 +119,7 @@ export const PWAInstallPrompt: React.FC = () => {
                 <img
                   src="/icons/icon-192.png"
                   alt="CODELAB Logo"
-                  className="w-12 h-12 rounded-2xl shadow bg-[#0B0F19] p-1"
+                  className="w-12 h-12 rounded-xl bg-crisp-black p-1"
                 />
                 <div>
                   <h3 className="font-headline-sm text-base font-bold text-on-surface">
@@ -212,7 +212,7 @@ export const PWAInstallPrompt: React.FC = () => {
                 <img
                   src="/icons/icon-192.png"
                   alt="CODELAB Logo"
-                  className="w-12 h-12 rounded-2xl shadow bg-[#0B0F19] p-1"
+                  className="w-12 h-12 rounded-xl bg-crisp-black p-1"
                 />
                 <div>
                   <h3 className="font-headline-sm text-base font-bold text-on-surface">

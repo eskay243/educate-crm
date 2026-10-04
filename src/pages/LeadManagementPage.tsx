@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useCRM, formatNaira } from '../context/CRMContext';
 import { LeadStatus } from '../types/crm';
+import { CrispStatusBadge } from '../components/common/CrispStatusBadge';
 
 export const LeadManagementPage: React.FC = () => {
   const { leads, updateLeadStatus, updateLeadNotes, convertLeadToStudent, openModal, globalSearch } = useCRM();
@@ -63,24 +64,6 @@ export const LeadManagementPage: React.FC = () => {
     );
   };
 
-  const getStatusBadge = (status: LeadStatus) => {
-    switch (status) {
-      case 'Qualified':
-        return 'bg-[#E8F5E9] text-[#1B5E20]';
-      case 'Negotiation':
-        return 'bg-[#FFF3E0] text-[#E65100]';
-      case 'Discovery':
-        return 'bg-[#E3F2FD] text-[#0D47A1]';
-      case 'Overdue':
-        return 'bg-[#FFEBEE] text-[#B71C1C]';
-      case 'Converted':
-        return 'bg-emerald-100 text-emerald-800';
-      case 'Lost':
-        return 'bg-rose-100 text-rose-800';
-      default:
-        return 'bg-surface-container text-on-surface';
-    }
-  };
 
   const kanbanStages: { stage: LeadStatus; title: string; color: string; bgAccent: string }[] = [
     { stage: 'New', title: 'New Leads', color: 'border-blue-400', bgAccent: 'bg-blue-50/50' },
@@ -450,9 +433,7 @@ export const LeadManagementPage: React.FC = () => {
                       )}
                     </td>
                     <td className="p-stack-md">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusBadge(lead.status as LeadStatus)}`}>
-                        {lead.status}
-                      </span>
+                      <CrispStatusBadge status={lead.status} />
                     </td>
                     <td className="p-stack-md font-data-tabular font-bold text-primary">
                       {formatNaira(lead.dealValue || 0)}

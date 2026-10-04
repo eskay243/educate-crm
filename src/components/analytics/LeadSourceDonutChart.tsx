@@ -15,7 +15,8 @@ interface LeadSourceData {
   color: string;
 }
 
-const PALETTE = ['#00236f', '#1e3a8a', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
+// Crisp Foundation Palette: Crisp Blue, Sea Green, Ochre, Majorette Purple, Lemon Curry, Critical, Crisp Black
+const PALETTE = ['#1872F5', '#41B57A', '#E07414', '#8F53F2', '#C3A108', '#E02020', '#1C293C'];
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {

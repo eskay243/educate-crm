@@ -25,21 +25,21 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         <div className="space-y-1 font-data-tabular">
           <div className="flex justify-between items-center text-primary">
             <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-[#00236f]"></span>
+              <span className="w-2 h-2 rounded-full bg-[#1872F5]"></span>
               <span>Tuition Revenue:</span>
             </span>
             <span className="font-bold">{formatNaira(rev)}</span>
           </div>
-          <div className="flex justify-between items-center text-[#1e3a8a]">
+          <div className="flex justify-between items-center text-ochre">
             <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-[#1e3a8a]"></span>
+              <span className="w-2 h-2 rounded-full bg-[#E07414]"></span>
               <span>Mentor Honorariums:</span>
             </span>
             <span className="font-semibold">{formatNaira(hon)}</span>
           </div>
           <div className="flex justify-between items-center text-error">
             <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-[#b91c1c]"></span>
+              <span className="w-2 h-2 rounded-full bg-[#E02020]"></span>
               <span>Operating Costs:</span>
             </span>
             <span className="font-semibold">{formatNaira(op)}</span>
@@ -122,9 +122,9 @@ export const RevenueCostChart: React.FC = () => {
               return value;
             }}
           />
-          <Bar dataKey="revenue" fill="#00236f" radius={[4, 4, 0, 0]} maxBarSize={32} />
-          <Bar dataKey="honorariums" fill="#1e3a8a" radius={[4, 4, 0, 0]} maxBarSize={32} />
-          <Bar dataKey="operatingCost" fill="#b91c1c" radius={[4, 4, 0, 0]} maxBarSize={32} />
+          <Bar dataKey="revenue" fill="#1872F5" radius={[4, 4, 0, 0]} maxBarSize={32} />
+          <Bar dataKey="honorariums" fill="#E07414" radius={[4, 4, 0, 0]} maxBarSize={32} />
+          <Bar dataKey="operatingCost" fill="#E02020" radius={[4, 4, 0, 0]} maxBarSize={32} />
         </BarChart>
       </ResponsiveContainer>
     </div>
