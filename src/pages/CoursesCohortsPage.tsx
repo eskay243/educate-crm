@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useCRM, formatNaira } from '../context/CRMContext';
 import { LMSLesson } from '../types/crm';
 
@@ -160,15 +161,15 @@ export const CoursesCohortsPage: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          {/* Course Outline Modal Trigger */}
-          <button
-            onClick={() => openModal('course-outline')}
+          {/* Course Outline Dedicated Page Trigger */}
+          <Link
+            to="/mentors/course-outlines"
             className="btn-secondary text-xs h-10 px-3.5"
-            title="Create and Manage Course Outlines & Topic Modules"
+            title="Review Course Outlines & Topic Modules"
           >
             <span className="material-symbols-outlined text-primary text-[18px]">account_tree</span>
             <span>Course Outlines</span>
-          </button>
+          </Link>
 
           {/* Schedule Class Modal Trigger */}
           {canScheduleClasses && (
@@ -419,13 +420,13 @@ export const CoursesCohortsPage: React.FC = () => {
                       <div className="space-y-1.5 mb-4">
                         <div className="flex justify-between items-center">
                           <p className="font-label-md text-xs text-secondary font-semibold uppercase tracking-wider">Curriculum Modules</p>
-                          <button
-                            onClick={() => openModal('course-outline')}
+                          <Link
+                            to="/mentors/course-outlines"
                             className="text-[11px] text-primary font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
                           >
                             <span>Open Outline</span>
                             <span className="material-symbols-outlined text-[13px]">chevron_right</span>
-                          </button>
+                          </Link>
                         </div>
                         <ul className="space-y-1">
                           {(course.syllabusModules || []).map((mod, idx) => (

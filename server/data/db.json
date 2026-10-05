@@ -2147,6 +2147,82 @@
   ],
   "courses": [
     {
+      "id": "course-da-03",
+      "code": "CDA-301",
+      "title": "Data Analytics & Python Intelligence",
+      "category": "Data Science & Analytics",
+      "description": "Practical data analytics with Python, Pandas, SQL databases, PowerBI interactive reporting, and statistical modeling.",
+      "durationWeeks": 9,
+      "durationDays": 60,
+      "durationTrack": "60-Day Practitioner",
+      "tuitionFee": 320000,
+      "syllabusModules": [
+        "mod-da-1",
+        "mod-da-2"
+      ],
+      "leadInstructor": "Dr. Amina Yusuf",
+      "enrolledCount": 6,
+      "status": "Active",
+      "rating": 4.9,
+      "minimumRequiredHours": 35,
+      "nsqfLevel": "NSQF Level 4 (Data Analyst Practitioner)",
+      "nitdaTrack": "NITDA National Data & AI Framework",
+      "theoryHours": 20,
+      "practicalHours": 50,
+      "learningGuidelinesSummary": "60-Day practitioner syllabus with emphasis on real Nigerian market datasets, financial time-series analysis, and executive dashboards."
+    },
+    {
+      "id": "course-fe-02",
+      "code": "CFE-201",
+      "title": "Frontend React & TypeScript Sprint",
+      "category": "Software Engineering",
+      "description": "Fast-track intensive sprint for developing accessible, reactive user interfaces with React 19, Tailwind CSS, and REST API consumption.",
+      "durationWeeks": 4,
+      "durationDays": 30,
+      "durationTrack": "30-Day Sprint",
+      "tuitionFee": 180000,
+      "syllabusModules": [
+        "mod-fe-1",
+        "mod-fe-2"
+      ],
+      "leadInstructor": "Engr. Damilola Adeyemi",
+      "enrolledCount": 4,
+      "status": "Active",
+      "rating": 4.8,
+      "minimumRequiredHours": 25,
+      "nsqfLevel": "NSQF Level 3 (Junior Web Practitioner)",
+      "nitdaTrack": "NITDA Digital Skills Initiative (Frontend Track)",
+      "theoryHours": 12,
+      "practicalHours": 36,
+      "learningGuidelinesSummary": "30-Day accelerated program focusing on high-speed UI prototyping, state architecture, and verifiable GitHub project portfolio."
+    },
+    {
+      "id": "course-se-01",
+      "code": "CSE-101",
+      "title": "Full-Stack Software Engineering",
+      "category": "Software Engineering",
+      "description": "Comprehensive software engineering bootcamp covering modern frontend, backend microservices, DevOps, and cloud deployment.",
+      "durationWeeks": 9,
+      "durationDays": 60,
+      "durationTrack": "60-Day Practitioner",
+      "tuitionFee": 350000,
+      "syllabusModules": [
+        "mod-1",
+        "mod-2",
+        "mod-3"
+      ],
+      "leadInstructor": "Dr. Chidi Okeke",
+      "enrolledCount": 1,
+      "status": "Active",
+      "rating": 4.9,
+      "minimumRequiredHours": 40,
+      "nsqfLevel": "NSQF Level 4 (National Vocational Certificate)",
+      "nitdaTrack": "NITDA 3MTT / NDLEP Software Engineering Track",
+      "theoryHours": 25,
+      "practicalHours": 60,
+      "learningGuidelinesSummary": "Covers full development lifecycle from TypeScript architecture to Dockerized Linux VPS microservices. Requires 70% practical lab completion."
+    },
+    {
       "code": "CEL-117",
       "title": "Graphic Design",
       "category": "Product Design (UI/UX)",
@@ -2161,7 +2237,12 @@
       "status": "Active",
       "id": "course-1789137305640",
       "enrolledCount": 0,
-      "rating": 5
+      "rating": 5,
+      "durationTrack": "30-Day Sprint",
+      "durationDays": 30,
+      "theoryHours": 20,
+      "practicalHours": 50,
+      "nsqfLevel": "NSQF Level 4"
     },
     {
       "code": "CEL-0114",
@@ -2178,11 +2259,16 @@
       "status": "Active",
       "id": "course-1789132549615",
       "enrolledCount": 0,
-      "rating": 5
+      "rating": 5,
+      "durationTrack": "60-Day Practitioner",
+      "durationDays": 60,
+      "theoryHours": 20,
+      "practicalHours": 50,
+      "nsqfLevel": "NSQF Level 4"
     },
     {
       "code": "CEL-0113",
-      "title": "Project Management ",
+      "title": "Project Management",
       "category": "Product Management",
       "description": "Comprehensive professional training track in Project Management .",
       "durationWeeks": 12,
@@ -2195,11 +2281,16 @@
       "status": "Active",
       "id": "course-1789130374811",
       "enrolledCount": 0,
-      "rating": 5
+      "rating": 5,
+      "durationTrack": "60-Day Practitioner",
+      "durationDays": 60,
+      "theoryHours": 20,
+      "practicalHours": 50,
+      "nsqfLevel": "NSQF Level 4"
     },
     {
       "code": "CEL-0112",
-      "title": "UI/UX ",
+      "title": "UI/UX",
       "category": "Product Design (UI/UX)",
       "description": "Comprehensive professional training track in UI/UX .",
       "durationWeeks": 12,
@@ -2212,11 +2303,16 @@
       "status": "Active",
       "id": "course-1789128701476",
       "enrolledCount": 0,
-      "rating": 5
+      "rating": 5,
+      "durationTrack": "60-Day Practitioner",
+      "durationDays": 60,
+      "theoryHours": 20,
+      "practicalHours": 50,
+      "nsqfLevel": "NSQF Level 4"
     },
     {
       "code": "CEL-0111",
-      "title": "Content creating and Video editing ",
+      "title": "Content creating and Video editing",
       "category": "Digital Marketing & Growth",
       "description": "Comprehensive professional training track in Content creating and Video editing .",
       "durationWeeks": 4,
@@ -2229,11 +2325,16 @@
       "status": "Active",
       "id": "course-1789128656555",
       "enrolledCount": 0,
-      "rating": 5
+      "rating": 5,
+      "durationTrack": "30-Day Sprint",
+      "durationDays": 30,
+      "theoryHours": 20,
+      "practicalHours": 50,
+      "nsqfLevel": "NSQF Level 4"
     },
     {
       "code": "CEL-0110",
-      "title": "Social Media Management ",
+      "title": "Social Media Management",
       "category": "Digital Marketing & Growth",
       "description": "Comprehensive professional training track in Social Media Management .",
       "durationWeeks": 16,
@@ -2246,11 +2347,16 @@
       "status": "Active",
       "id": "course-1789128620149",
       "enrolledCount": 0,
-      "rating": 5
+      "rating": 5,
+      "durationTrack": "60-Day Practitioner",
+      "durationDays": 60,
+      "theoryHours": 20,
+      "practicalHours": 50,
+      "nsqfLevel": "NSQF Level 4"
     },
     {
       "code": "CEL-0109",
-      "title": "Digital Marketing ",
+      "title": "Digital Marketing",
       "category": "Digital Marketing & Growth",
       "description": "Comprehensive professional training track in Digital Marketing .",
       "durationWeeks": 16,
@@ -2263,11 +2369,16 @@
       "status": "Active",
       "id": "course-1789128577843",
       "enrolledCount": 0,
-      "rating": 5
+      "rating": 5,
+      "durationTrack": "60-Day Practitioner",
+      "durationDays": 60,
+      "theoryHours": 20,
+      "practicalHours": 50,
+      "nsqfLevel": "NSQF Level 4"
     },
     {
       "code": "CEL-0108",
-      "title": "AI with Python Machine Learning ",
+      "title": "AI with Python Machine Learning",
       "category": "Artificial Intelligence & Machine Learning",
       "description": "Comprehensive professional training track in AI with Python Machine Learning .",
       "durationWeeks": 16,
@@ -2280,11 +2391,16 @@
       "status": "Active",
       "id": "course-1789128527826",
       "enrolledCount": 0,
-      "rating": 5
+      "rating": 5,
+      "durationTrack": "60-Day Practitioner",
+      "durationDays": 60,
+      "theoryHours": 20,
+      "practicalHours": 50,
+      "nsqfLevel": "NSQF Level 4"
     },
     {
       "code": "CEL-0107",
-      "title": "Ai Automation ",
+      "title": "Ai Automation",
       "category": "Artificial Intelligence & Machine Learning",
       "description": "Comprehensive professional training track in Ai Automation .",
       "durationWeeks": 12,
@@ -2297,11 +2413,16 @@
       "status": "Active",
       "id": "course-1789128471320",
       "enrolledCount": 0,
-      "rating": 5
+      "rating": 5,
+      "durationTrack": "60-Day Practitioner",
+      "durationDays": 60,
+      "theoryHours": 20,
+      "practicalHours": 50,
+      "nsqfLevel": "NSQF Level 4"
     },
     {
       "code": "CEL-0106",
-      "title": "Data Science ",
+      "title": "Data Science",
       "category": "Data Science & Analytics",
       "description": "Comprehensive professional training track in Data Science .",
       "durationWeeks": 24,
@@ -2314,11 +2435,16 @@
       "status": "Active",
       "id": "course-1789128423830",
       "enrolledCount": 0,
-      "rating": 5
+      "rating": 5,
+      "durationTrack": "60-Day Practitioner",
+      "durationDays": 60,
+      "theoryHours": 20,
+      "practicalHours": 50,
+      "nsqfLevel": "NSQF Level 4"
     },
     {
       "code": "CEL-0105",
-      "title": "Data Analysis ",
+      "title": "Data Analysis",
       "category": "Data Science & Analytics",
       "description": "Comprehensive professional training track in Data Analysis .",
       "durationWeeks": 16,
@@ -2331,11 +2457,16 @@
       "status": "Active",
       "id": "course-1789128399795",
       "enrolledCount": 0,
-      "rating": 5
+      "rating": 5,
+      "durationTrack": "60-Day Practitioner",
+      "durationDays": 60,
+      "theoryHours": 20,
+      "practicalHours": 50,
+      "nsqfLevel": "NSQF Level 4"
     },
     {
       "code": "CEL-0104",
-      "title": "Fullstack web Development ",
+      "title": "Fullstack web Development",
       "category": "Software Engineering",
       "description": "Comprehensive professional training track in Fullstack web Development .",
       "durationWeeks": 23,
@@ -2348,11 +2479,16 @@
       "status": "Active",
       "id": "course-1789128365582",
       "enrolledCount": 0,
-      "rating": 5
+      "rating": 5,
+      "durationTrack": "60-Day Practitioner",
+      "durationDays": 60,
+      "theoryHours": 20,
+      "practicalHours": 50,
+      "nsqfLevel": "NSQF Level 4"
     },
     {
       "code": "CEL-0103",
-      "title": "Backend Development ",
+      "title": "Backend Development",
       "category": "Software Engineering",
       "description": "Comprehensive professional training track in Backend Development .",
       "durationWeeks": 12,
@@ -2365,11 +2501,16 @@
       "status": "Active",
       "id": "course-1789128336912",
       "enrolledCount": 0,
-      "rating": 5
+      "rating": 5,
+      "durationTrack": "60-Day Practitioner",
+      "durationDays": 60,
+      "theoryHours": 20,
+      "practicalHours": 50,
+      "nsqfLevel": "NSQF Level 4"
     },
     {
       "code": "CEL-0102",
-      "title": "Advance Frontend Development ",
+      "title": "Advance Frontend Development",
       "category": "Software Engineering",
       "description": "Comprehensive professional training track in Advance Frontend Development .",
       "durationWeeks": 12,
@@ -2382,11 +2523,16 @@
       "status": "Active",
       "id": "course-1789128315002",
       "enrolledCount": 0,
-      "rating": 5
+      "rating": 5,
+      "durationTrack": "60-Day Practitioner",
+      "durationDays": 60,
+      "theoryHours": 20,
+      "practicalHours": 50,
+      "nsqfLevel": "NSQF Level 4"
     },
     {
       "code": "CEL-0101",
-      "title": "Basic Frontend Development ",
+      "title": "Basic Frontend Development",
       "category": "Software Engineering",
       "description": "Comprehensive professional training track in Basic Frontend Development .",
       "durationWeeks": 16,
@@ -2399,7 +2545,12 @@
       "status": "Active",
       "id": "course-1789128275775",
       "enrolledCount": 0,
-      "rating": 5
+      "rating": 5,
+      "durationTrack": "60-Day Practitioner",
+      "durationDays": 60,
+      "theoryHours": 20,
+      "practicalHours": 50,
+      "nsqfLevel": "NSQF Level 4"
     }
   ],
   "cohorts": [
@@ -3627,6 +3778,233 @@
           ]
         }
       ]
+    },
+    {
+      "id": "mod-fe-1",
+      "courseTitle": "Frontend React & TypeScript Sprint",
+      "title": "Module 1: Accelerated Component Prototyping & Styling",
+      "description": "Rapidly construct responsive interfaces using Tailwind CSS, semantic HTML5, and accessible component patterns.",
+      "order": 1,
+      "durationTrack": "30-Day Sprint",
+      "durationDays": 30,
+      "nsqfLevel": "NSQF Level 3",
+      "nitdaStandardCode": "NITDA-FND-MOD-01",
+      "theoryHours": 5,
+      "practicalHours": 16,
+      "learningGuideline": {
+        "prerequisites": [
+          "Basic HTML/CSS Knowledge",
+          "Text Editor & Terminal Navigation"
+        ],
+        "competencyOutcome": "Create responsive web apps adhering to modern layout standards, container queries, and mobile-first ergonomics.",
+        "expectedDeliverables": [
+          "Responsive E-Commerce Landing Page",
+          "Mobile Touch-Optimized Drawer Component"
+        ],
+        "dayRange": "Days 1 - 14 (Weeks 1 - 2)",
+        "theoryHours": 5,
+        "practicalHours": 16
+      },
+      "lessons": [
+        {
+          "id": "les-fe-1",
+          "moduleId": "mod-fe-1",
+          "title": "1.1 Modern CSS Grid, Flexbox & Tailwind CSS v4 Layouts",
+          "durationMinutes": 45,
+          "type": "video",
+          "dayNumber": 3,
+          "contentMarkdown": "### Rapid UI Development\nMaster utility-first architecture, responsive breakpoints, container queries, and design token consistency.",
+          "approvalStatus": "Approved & Published",
+          "completedByMentor": true,
+          "completedByMentorName": "Engr. Damilola Adeyemi",
+          "completedByMentorAt": "2026-09-20T10:00:00Z",
+          "approvedByProgramOfficer": true,
+          "approvedByProgramOfficerName": "Bolanle Nnamdi",
+          "approvedAt": "2026-09-20T14:00:00Z"
+        },
+        {
+          "id": "les-fe-2",
+          "moduleId": "mod-fe-1",
+          "title": "1.2 Sprint Lab: Interactive Product Showcase with Live Filters",
+          "durationMinutes": 75,
+          "type": "lab",
+          "dayNumber": 10,
+          "submissionRequired": true,
+          "practicalLabTask": "Responsive Product Showcase with Real-Time Search & Category Filters",
+          "contentMarkdown": "### Sprint Lab 1\nBuild an interactive e-commerce product catalog with client-side filter pills, dynamic search, and responsive mobile bottom sheets.",
+          "approvalStatus": "Not Started",
+          "completedByMentor": false,
+          "approvedByProgramOfficer": false
+        }
+      ]
+    },
+    {
+      "id": "mod-fe-2",
+      "courseTitle": "Frontend React & TypeScript Sprint",
+      "title": "Module 2: Async State, REST APIs & Capstone Showcase",
+      "description": "Fetch, mutate, and cache external REST API data, handle offline resilience, and deploy production builds.",
+      "order": 2,
+      "durationTrack": "30-Day Sprint",
+      "durationDays": 30,
+      "nsqfLevel": "NSQF Level 3",
+      "nitdaStandardCode": "NITDA-FND-MOD-02",
+      "theoryHours": 7,
+      "practicalHours": 20,
+      "learningGuideline": {
+        "prerequisites": [
+          "Module 1 Responsive Prototyping"
+        ],
+        "competencyOutcome": "Build zero-latency client data flows with debounce search, optimistic updates, and Netlify/Vercel deployment.",
+        "expectedDeliverables": [
+          "Interactive Multi-Step Form with Zod Validation",
+          "Final Sprint Capstone Portfolio Web App"
+        ],
+        "dayRange": "Days 15 - 30 (Weeks 3 - 4)",
+        "theoryHours": 7,
+        "practicalHours": 20
+      },
+      "lessons": [
+        {
+          "id": "les-fe-3",
+          "moduleId": "mod-fe-2",
+          "title": "2.1 Async REST API Consumption & Error Boundaries",
+          "durationMinutes": 50,
+          "type": "reading",
+          "dayNumber": 18,
+          "contentMarkdown": "### Resilient Client Architecture\nImplement graceful loading skeletons, retry backoffs, and accessible error boundary messages.",
+          "approvalStatus": "Not Started",
+          "completedByMentor": false,
+          "approvedByProgramOfficer": false
+        },
+        {
+          "id": "les-fe-4",
+          "moduleId": "mod-fe-2",
+          "title": "2.2 Sprint Capstone: Deploy Verified Frontend Portfolio App",
+          "durationMinutes": 90,
+          "type": "lab",
+          "dayNumber": 28,
+          "submissionRequired": true,
+          "practicalLabTask": "Deploy Verified Frontend Portfolio App with Custom Domain & CI/CD",
+          "contentMarkdown": "### 30-Day Capstone\nDeliver a complete client-side application connected to a live public API, deployed to production with custom meta tags and PWA manifest.",
+          "approvalStatus": "Not Started",
+          "completedByMentor": false,
+          "approvedByProgramOfficer": false
+        }
+      ]
+    },
+    {
+      "id": "mod-da-1",
+      "courseTitle": "Data Analytics & Python Intelligence",
+      "title": "Module 1: Python Data Pipelines, Pandas & Exploratory Analytics",
+      "description": "Data ingestion, cleaning, transformation, and exploratory statistical analysis with Python and Pandas.",
+      "order": 1,
+      "durationTrack": "60-Day Practitioner",
+      "durationDays": 60,
+      "nsqfLevel": "NSQF Level 4",
+      "nitdaStandardCode": "NITDA-DAT-MOD-01",
+      "theoryHours": 8,
+      "practicalHours": 20,
+      "learningGuideline": {
+        "prerequisites": [
+          "Basic Python Syntax",
+          "Spreadsheets & SQL Foundations"
+        ],
+        "competencyOutcome": "Ingest raw multi-source enterprise data, cleanse missing records, and generate statistical insights.",
+        "expectedDeliverables": [
+          "Data Ingestion Pipeline Jupyter Notebook",
+          "EDA Report on Nigerian Market Datasets"
+        ],
+        "dayRange": "Days 1 - 25",
+        "theoryHours": 8,
+        "practicalHours": 20
+      },
+      "lessons": [
+        {
+          "id": "les-da-1",
+          "moduleId": "mod-da-1",
+          "title": "1.1 Vectorized Data Cleaning & Time-Series Analysis with Pandas",
+          "durationMinutes": 60,
+          "type": "video",
+          "dayNumber": 4,
+          "contentMarkdown": "### Data Cleaning & Analysis\nMaster dataframe operations, handling missing values, indexing, and time-series resampling.",
+          "approvalStatus": "Approved & Published",
+          "completedByMentor": true,
+          "completedByMentorName": "Dr. Amina Yusuf",
+          "completedByMentorAt": "2026-09-18T11:00:00Z",
+          "approvedByProgramOfficer": true,
+          "approvedByProgramOfficerName": "Bolanle Nnamdi",
+          "approvedAt": "2026-09-18T15:00:00Z"
+        },
+        {
+          "id": "les-da-2",
+          "moduleId": "mod-da-1",
+          "title": "1.2 Practical Lab: Cleansing & Modeling E-Commerce Transactions",
+          "durationMinutes": 80,
+          "type": "lab",
+          "dayNumber": 12,
+          "submissionRequired": true,
+          "practicalLabTask": "Cleanse and model Nigerian retail e-commerce transaction dataset with Pandas",
+          "contentMarkdown": "### Practical Lab\nExecute data pipeline to ingest, scrub anomalous records, and compute monthly churn.",
+          "approvalStatus": "Not Started",
+          "completedByMentor": false,
+          "approvedByProgramOfficer": false
+        }
+      ]
+    },
+    {
+      "id": "mod-da-2",
+      "courseTitle": "Data Analytics & Python Intelligence",
+      "title": "Module 2: SQL Data Warehousing, PowerBI & Executive Dashboards",
+      "description": "Relational data modeling, advanced SQL window functions, PowerBI dashboards, and stakeholder presentations.",
+      "order": 2,
+      "durationTrack": "60-Day Practitioner",
+      "durationDays": 60,
+      "nsqfLevel": "NSQF Level 4",
+      "nitdaStandardCode": "NITDA-DAT-MOD-02",
+      "theoryHours": 12,
+      "practicalHours": 30,
+      "learningGuideline": {
+        "prerequisites": [
+          "Module 1 Python Foundations",
+          "Relational Schema Design"
+        ],
+        "competencyOutcome": "Build live operational reporting dashboards with SQL aggregations and automated PowerBI KPI refreshes.",
+        "expectedDeliverables": [
+          "Relational Data Warehouse Schema (PostgreSQL)",
+          "Executive KPI Dashboard (PowerBI / Metabase)"
+        ],
+        "dayRange": "Days 26 - 60",
+        "theoryHours": 12,
+        "practicalHours": 30
+      },
+      "lessons": [
+        {
+          "id": "les-da-3",
+          "moduleId": "mod-da-2",
+          "title": "2.1 Advanced SQL Analytical Windows & Partition Aggregations",
+          "durationMinutes": 60,
+          "type": "reading",
+          "dayNumber": 30,
+          "contentMarkdown": "### Enterprise SQL\nMaster CTEs, window functions (ROW_NUMBER, RANK, DENSE_RANK, LAG, LEAD), and partition aggregations.",
+          "approvalStatus": "Not Started",
+          "completedByMentor": false,
+          "approvedByProgramOfficer": false
+        },
+        {
+          "id": "les-da-4",
+          "moduleId": "mod-da-2",
+          "title": "2.2 Capstone Project: End-to-End Enterprise BI Dashboard",
+          "durationMinutes": 120,
+          "type": "lab",
+          "dayNumber": 56,
+          "submissionRequired": true,
+          "practicalLabTask": "Deliver end-to-end business intelligence pipeline with live executive dashboard and presentation",
+          "contentMarkdown": "### Data Analytics Capstone\nDeliver executive dashboard summarizing retail KPIs, customer lifetime value, and cohort retention.",
+          "approvalStatus": "Not Started",
+          "completedByMentor": false,
+          "approvedByProgramOfficer": false
+        }
+      ]
     }
   ],
   "assignments": [
@@ -4301,7 +4679,7 @@
         "status": "success"
       }
     ],
-    "lastSyncedAt": "2026-10-05T04:00:49.845Z",
+    "lastSyncedAt": "2026-10-05T06:54:12.678Z",
     "paystackLiveBalance": 0
   },
   "timetables": [

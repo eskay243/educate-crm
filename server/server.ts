@@ -206,9 +206,72 @@ if (!db.settings.enabledModules) {
   saveDatabase(db);
 }
 
+// Reconcile accredited courses and duration tracks
+if (!Array.isArray(db.courses) || db.courses.length === 0) {
+  db.courses = [...initialCourses];
+  saveDatabase(db);
+} else {
+  let coursesModified = false;
+  initialCourses.forEach(initCourse => {
+    const normInitTitle = initCourse.title.trim().toLowerCase();
+    const existingIdx = db.courses.findIndex((c: any) => (c.title || '').trim().toLowerCase() === normInitTitle);
+    if (existingIdx === -1) {
+      db.courses.unshift(initCourse);
+      coursesModified = true;
+    } else {
+      if (!db.courses[existingIdx].durationTrack) {
+        db.courses[existingIdx].durationTrack = initCourse.durationTrack;
+        db.courses[existingIdx].durationDays = initCourse.durationDays;
+        db.courses[existingIdx].nsqfLevel = initCourse.nsqfLevel;
+        db.courses[existingIdx].nitdaTrack = initCourse.nitdaTrack;
+        db.courses[existingIdx].theoryHours = initCourse.theoryHours;
+        db.courses[existingIdx].practicalHours = initCourse.practicalHours;
+        coursesModified = true;
+      }
+    }
+  });
+
+  // Ensure all existing courses have trimmed titles and default duration attributes
+  db.courses.forEach((c: any) => {
+    if (c.title && c.title !== c.title.trim()) {
+      c.title = c.title.trim();
+      coursesModified = true;
+    }
+    if (!c.durationTrack) {
+      c.durationTrack = (c.durationWeeks && c.durationWeeks <= 4) ? '30-Day Sprint' : '60-Day Practitioner';
+      c.durationDays = (c.durationTrack === '30-Day Sprint') ? 30 : 60;
+      c.theoryHours = c.theoryHours || 20;
+      c.practicalHours = c.practicalHours || 50;
+      c.nsqfLevel = c.nsqfLevel || 'NSQF Level 4';
+      coursesModified = true;
+    }
+  });
+
+  if (coursesModified) {
+    saveDatabase(db);
+  }
+}
+
 if (!db.lmsModules || db.lmsModules.length === 0) {
   db.lmsModules = initialLMSModules;
   saveDatabase(db);
+} else {
+  let modulesModified = false;
+  initialLMSModules.forEach(initMod => {
+    if (!db.lmsModules.some((m: any) => m.id === initMod.id)) {
+      db.lmsModules.push(initMod);
+      modulesModified = true;
+    }
+  });
+  db.lmsModules.forEach((m: any) => {
+    if (!Array.isArray(m.lessons)) {
+      m.lessons = [];
+      modulesModified = true;
+    }
+  });
+  if (modulesModified) {
+    saveDatabase(db);
+  }
 }
 
 if (!db.assignments || db.assignments.length === 0) {

@@ -56,38 +56,64 @@ export const CourseOutlinePage: React.FC = () => {
   // Filter courses by duration if selected
   const filteredCourses = useMemo(() => {
     if (durationFilter === 'All') return allCourses;
-    return allCourses.filter(c => c.durationTrack === durationFilter);
+    return allCourses.filter(c => c && c.durationTrack === durationFilter);
   }, [allCourses, durationFilter]);
 
   const activeCourse = useMemo(() => {
-    return filteredCourses.find(c => c.title === activeCourseTitle) || 
-      allCourses.find(c => c.title === activeCourseTitle) || 
+    const normalize = (t?: string) => (t || '').trim().toLowerCase();
+    const target = normalize(activeCourseTitle);
+    return filteredCourses.find(c => normalize(c?.title) === target) || 
+      allCourses.find(c => normalize(c?.title) === target) || 
       filteredCourses[0] || 
-      allCourses[0];
+      allCourses[0] ||
+      {
+        id: 'course-se-01',
+        code: 'CSE-101',
+        title: activeCourseTitle || 'Full-Stack Software Engineering',
+        category: 'Software Engineering',
+        description: 'Comprehensive modular curriculum aligned with NBTE and NITDA competency frameworks.',
+        durationWeeks: 9,
+        durationDays: 60,
+        durationTrack: '60-Day Practitioner' as CourseDurationTrack,
+        tuitionFee: 350000,
+        syllabusModules: ['mod-1', 'mod-2'],
+        leadInstructor: 'Dr. Chidi Okeke',
+        enrolledCount: 1,
+        status: 'Active' as const,
+        rating: 4.9,
+        minimumRequiredHours: 40,
+        nsqfLevel: 'NSQF Level 4 (National Vocational Certificate)',
+        nitdaTrack: 'NITDA 3MTT / NDLEP Software Engineering Track',
+        theoryHours: 25,
+        practicalHours: 60,
+      };
   }, [filteredCourses, allCourses, activeCourseTitle]);
 
   // Active modules for selected course
   const activeCourseModules = useMemo(() => {
-    const matched = lmsModules.filter(m => m.courseTitle === activeCourse.title);
+    const activeTitle = (activeCourse?.title || '').trim().toLowerCase();
+    const matched = (lmsModules || []).filter(m => (m?.courseTitle || '').trim().toLowerCase() === activeTitle);
     if (matched.length > 0) return matched;
 
     // Fallback: If no modules match course title yet, provide default structured outline
+    const cTitle = activeCourse?.title || 'Course Outline';
+    const cId = activeCourse?.id || 'default';
     return [
       {
-        id: `mod-${activeCourse.id}-1`,
-        courseTitle: activeCourse.title,
+        id: `mod-${cId}-1`,
+        courseTitle: cTitle,
         title: 'Module 1: Core Principles, Architecture & Setup',
-        description: `Foundation guidelines and essential tools for ${activeCourse.title}.`,
+        description: `Foundation guidelines and essential tools for ${cTitle}.`,
         order: 1,
-        durationTrack: activeCourse.durationTrack || '60-Day Practitioner',
-        durationDays: activeCourse.durationDays || 60,
-        nsqfLevel: activeCourse.nsqfLevel || 'NSQF Level 4',
+        durationTrack: activeCourse?.durationTrack || '60-Day Practitioner',
+        durationDays: activeCourse?.durationDays || 60,
+        nsqfLevel: activeCourse?.nsqfLevel || 'NSQF Level 4',
         nitdaStandardCode: 'NITDA-MOD-01',
-        theoryHours: Math.round((activeCourse.theoryHours || 20) * 0.4),
-        practicalHours: Math.round((activeCourse.practicalHours || 50) * 0.4),
+        theoryHours: Math.round((activeCourse?.theoryHours || 20) * 0.4),
+        practicalHours: Math.round((activeCourse?.practicalHours || 50) * 0.4),
         learningGuideline: {
           prerequisites: ['Basic Computing & Logic Fundamentals', 'Terminal Setup'],
-          competencyOutcome: `Demonstrate mastery of environment setup and baseline principles in ${activeCourse.category || 'Tech'}.`,
+          competencyOutcome: `Demonstrate mastery of environment setup and baseline principles in ${activeCourse?.category || 'Tech'}.`,
           expectedDeliverables: ['Environment Verification & Repository Setup', 'Sprint Milestone 1 Deliverable'],
           dayRange: 'Days 1 - 15',
           theoryHours: 8,
@@ -95,24 +121,24 @@ export const CourseOutlinePage: React.FC = () => {
         },
         lessons: [
           {
-            id: `les-${activeCourse.id}-1-1`,
-            moduleId: `mod-${activeCourse.id}-1`,
-            title: `1.1 Foundations & Industry Standards in ${activeCourse.title}`,
+            id: `les-${cId}-1-1`,
+            moduleId: `mod-${cId}-1`,
+            title: `1.1 Foundations & Industry Standards in ${cTitle}`,
             durationMinutes: 45,
             type: 'video' as const,
             dayNumber: 2,
             contentMarkdown: 'Orientation and foundational industry standards.',
             approvalStatus: 'Approved & Published' as const,
             completedByMentor: true,
-            completedByMentorName: activeCourse.leadInstructor || 'Lead Faculty',
+            completedByMentorName: activeCourse?.leadInstructor || 'Lead Faculty',
             completedByMentorAt: '2026-09-12T10:00:00Z',
             approvedByProgramOfficer: true,
             approvedByProgramOfficerName: 'Academic Program Officer',
             approvedAt: '2026-09-12T14:00:00Z',
           },
           {
-            id: `les-${activeCourse.id}-1-2`,
-            moduleId: `mod-${activeCourse.id}-1`,
+            id: `les-${cId}-1-2`,
+            moduleId: `mod-${cId}-1`,
             title: '1.2 Practical Implementation Lab & Workspace Configuration',
             durationMinutes: 75,
             type: 'lab' as const,
@@ -122,7 +148,7 @@ export const CourseOutlinePage: React.FC = () => {
             contentMarkdown: 'Interactive hands-on lab.',
             approvalStatus: 'Taught (Pending PO Approval)' as const,
             completedByMentor: true,
-            completedByMentorName: activeCourse.leadInstructor || 'Lead Faculty',
+            completedByMentorName: activeCourse?.leadInstructor || 'Lead Faculty',
             completedByMentorAt: '2026-09-18T16:00:00Z',
             completionNotes: 'Class completed workspace setup with 100% test coverage.',
             approvedByProgramOfficer: false,
@@ -130,17 +156,17 @@ export const CourseOutlinePage: React.FC = () => {
         ]
       },
       {
-        id: `mod-${activeCourse.id}-2`,
-        courseTitle: activeCourse.title,
+        id: `mod-${cId}-2`,
+        courseTitle: cTitle,
         title: 'Module 2: Advanced Applied Competencies & Capstone Project',
-        description: `Applied industry tasks and portfolio project defense for ${activeCourse.title}.`,
+        description: `Applied industry tasks and portfolio project defense for ${cTitle}.`,
         order: 2,
-        durationTrack: activeCourse.durationTrack || '60-Day Practitioner',
-        durationDays: activeCourse.durationDays || 60,
-        nsqfLevel: activeCourse.nsqfLevel || 'NSQF Level 4',
+        durationTrack: activeCourse?.durationTrack || '60-Day Practitioner',
+        durationDays: activeCourse?.durationDays || 60,
+        nsqfLevel: activeCourse?.nsqfLevel || 'NSQF Level 4',
         nitdaStandardCode: 'NITDA-MOD-02',
-        theoryHours: Math.round((activeCourse.theoryHours || 20) * 0.6),
-        practicalHours: Math.round((activeCourse.practicalHours || 50) * 0.6),
+        theoryHours: Math.round((activeCourse?.theoryHours || 20) * 0.6),
+        practicalHours: Math.round((activeCourse?.practicalHours || 50) * 0.6),
         learningGuideline: {
           prerequisites: ['Module 1 Core Principles'],
           competencyOutcome: 'Build and deploy a verifiable real-world project meeting national competence criteria.',
@@ -151,8 +177,8 @@ export const CourseOutlinePage: React.FC = () => {
         },
         lessons: [
           {
-            id: `les-${activeCourse.id}-2-1`,
-            moduleId: `mod-${activeCourse.id}-2`,
+            id: `les-${cId}-2-1`,
+            moduleId: `mod-${cId}-2`,
             title: '2.1 Advanced System Architecture & Best Practices',
             durationMinutes: 60,
             type: 'reading' as const,
@@ -163,8 +189,8 @@ export const CourseOutlinePage: React.FC = () => {
             approvedByProgramOfficer: false,
           },
           {
-            id: `les-${activeCourse.id}-2-2`,
-            moduleId: `mod-${activeCourse.id}-2`,
+            id: `les-${cId}-2-2`,
+            moduleId: `mod-${cId}-2`,
             title: '2.2 Capstone Project Submission & Mentor Defense',
             durationMinutes: 120,
             type: 'lab' as const,
@@ -206,7 +232,7 @@ export const CourseOutlinePage: React.FC = () => {
   const handleApprove = async (lessonId: string) => {
     setIsProcessing(true);
     try {
-      await approveTopicByProgramOfficer(lessonId, activeCourse.title);
+      await approveTopicByProgramOfficer(lessonId, activeCourse?.title || activeCourseTitle);
       showToast('Accreditation Verified', 'Topic approved and synchronized with student classroom transcripts.', 'success');
     } finally {
       setIsProcessing(false);
@@ -216,13 +242,14 @@ export const CourseOutlinePage: React.FC = () => {
   const handleApproveAllPending = async (moduleId: string) => {
     const mod = activeCourseModules.find(m => m.id === moduleId);
     if (!mod) return;
-    const pendingLessons = mod.lessons.filter(l => l.approvalStatus === 'Taught (Pending PO Approval)');
+    const lessons = Array.isArray(mod.lessons) ? mod.lessons : [];
+    const pendingLessons = lessons.filter(l => l.approvalStatus === 'Taught (Pending PO Approval)');
     if (pendingLessons.length === 0) return;
 
     setIsProcessing(true);
     try {
       for (const lesson of pendingLessons) {
-        await approveTopicByProgramOfficer(lesson.id, activeCourse.title);
+        await approveTopicByProgramOfficer(lesson.id, activeCourse?.title || activeCourseTitle);
       }
       showToast('Module Accredited', `${pendingLessons.length} topics confirmed and published by Program Officer.`, 'success');
     } finally {
@@ -336,13 +363,13 @@ export const CourseOutlinePage: React.FC = () => {
       {filteredCourses.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
           {filteredCourses.map(course => {
-            const isSelected = activeCourse.title === course.title;
+            const isSelected = (activeCourse?.title || '').trim().toLowerCase() === (course?.title || '').trim().toLowerCase();
             const durationBadge = course.durationTrack || (course.durationDays ? `${course.durationDays}-Day Track` : '60-Day Practitioner');
 
             return (
               <button
                 key={course.id || course.title}
-                onClick={() => setActiveCourseTitle(course.title)}
+                onClick={() => course?.title && setActiveCourseTitle(course.title)}
                 className={`p-3.5 rounded-xl border transition-all text-left min-w-[240px] shrink-0 cursor-pointer shadow-xs ${
                   isSelected
                     ? 'bg-primary/5 border-primary text-primary shadow-sm'
@@ -440,14 +467,15 @@ export const CourseOutlinePage: React.FC = () => {
           </h3>
 
           <span className="text-xs text-secondary">
-            {activeCourseModules.reduce((acc, m) => acc + m.lessons.length, 0)} Total Syllabus Lessons
+            {activeCourseModules.reduce((acc, m) => acc + (Array.isArray(m?.lessons) ? m.lessons.length : 0), 0)} Total Syllabus Lessons
           </span>
         </div>
 
         {activeCourseModules.map((mod) => {
           const isGuidelinesOpen = expandedGuidelines[mod.id] !== false;
-          const pendingCount = mod.lessons.filter(l => l.approvalStatus === 'Taught (Pending PO Approval)').length;
-          const approvedCount = mod.lessons.filter(l => l.approvalStatus === 'Approved & Published').length;
+          const lessons = Array.isArray(mod?.lessons) ? mod.lessons : [];
+          const pendingCount = lessons.filter(l => l?.approvalStatus === 'Taught (Pending PO Approval)').length;
+          const approvedCount = lessons.filter(l => l?.approvalStatus === 'Approved & Published').length;
 
           return (
             <div 
@@ -496,7 +524,7 @@ export const CourseOutlinePage: React.FC = () => {
                   )}
 
                   <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-surface-container text-secondary">
-                    {approvedCount}/{mod.lessons.length} Accredited
+                    {approvedCount}/{lessons.length} Accredited
                   </span>
                 </div>
               </div>
@@ -520,7 +548,7 @@ export const CourseOutlinePage: React.FC = () => {
                     <div className="space-y-1.5">
                       <p className="font-semibold text-on-surface text-xs">📦 Expected Practical Lab Deliverables (70%):</p>
                       <div className="bg-surface p-3 rounded-xl border border-outline-variant/60 space-y-1.5">
-                        {mod.learningGuideline.expectedDeliverables.map((deliv, idx) => (
+                        {(mod.learningGuideline.expectedDeliverables || []).map((deliv, idx) => (
                           <div key={idx} className="flex items-start gap-2 text-secondary text-xs">
                             <span className="text-emerald-600 font-bold">✓</span>
                             <span>{deliv}</span>
@@ -533,7 +561,7 @@ export const CourseOutlinePage: React.FC = () => {
                   {mod.learningGuideline.prerequisites && mod.learningGuideline.prerequisites.length > 0 && (
                     <div className="flex items-center gap-2 flex-wrap pt-1">
                       <span className="font-semibold text-xs text-secondary">Prerequisites:</span>
-                      {mod.learningGuideline.prerequisites.map((pre, idx) => (
+                      {(mod.learningGuideline.prerequisites || []).map((pre, idx) => (
                         <span key={idx} className="px-2.5 py-0.5 rounded-full bg-surface border border-outline-variant/60 text-[11px] text-secondary font-medium">
                           {pre}
                         </span>
@@ -545,10 +573,11 @@ export const CourseOutlinePage: React.FC = () => {
 
               {/* Lessons / Topics List */}
               <div className="divide-y divide-outline-variant/50">
-                {mod.lessons.map((lesson) => {
-                  const status = lesson.approvalStatus || 'Not Started';
+                {lessons.map((lesson) => {
+                  const status = lesson?.approvalStatus || 'Not Started';
                   const isApproved = status === 'Approved & Published';
                   const isPendingApproval = status === 'Taught (Pending PO Approval)';
+                  const lessonType = (lesson?.type || 'lesson').toUpperCase();
 
                   return (
                     <div 
@@ -566,7 +595,7 @@ export const CourseOutlinePage: React.FC = () => {
                             {lesson.title}
                           </span>
                           <span className="text-xs text-secondary font-mono">
-                            ({lesson.durationMinutes} mins &bull; {lesson.type.toUpperCase()})
+                            ({lesson.durationMinutes || 45} mins &bull; {lessonType})
                           </span>
 
                           {/* Code Lab Deliverable Badge */}

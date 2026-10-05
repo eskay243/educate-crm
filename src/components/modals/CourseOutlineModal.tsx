@@ -90,7 +90,8 @@ export const CourseOutlineModal: React.FC<CourseOutlineModalProps> = ({ isOpen, 
   const handleApproveAllPending = async (moduleId: string) => {
     const mod = currentModules.find(m => m.id === moduleId);
     if (!mod) return;
-    const pendingLessons = mod.lessons.filter(l => l.approvalStatus === 'Taught (Pending PO Approval)');
+    const lessons = Array.isArray(mod.lessons) ? mod.lessons : [];
+    const pendingLessons = lessons.filter(l => l.approvalStatus === 'Taught (Pending PO Approval)');
     if (pendingLessons.length === 0) return;
 
     setIsProcessing(true);
@@ -279,8 +280,9 @@ export const CourseOutlineModal: React.FC<CourseOutlineModalProps> = ({ isOpen, 
           ) : (
             currentModules.map(mod => {
               const isGuidelinesOpen = expandedGuidelines[mod.id] !== false;
-              const pendingCountInMod = mod.lessons.filter(l => l.approvalStatus === 'Taught (Pending PO Approval)').length;
-              const approvedCountInMod = mod.lessons.filter(l => l.approvalStatus === 'Approved & Published').length;
+              const lessons = Array.isArray(mod.lessons) ? mod.lessons : [];
+              const pendingCountInMod = lessons.filter(l => l.approvalStatus === 'Taught (Pending PO Approval)').length;
+              const approvedCountInMod = lessons.filter(l => l.approvalStatus === 'Approved & Published').length;
 
               return (
                 <div key={mod.id} className="border border-outline-variant rounded-xl overflow-hidden bg-surface shadow-xs space-y-0">
@@ -331,7 +333,7 @@ export const CourseOutlineModal: React.FC<CourseOutlineModalProps> = ({ isOpen, 
                       )}
 
                       <span className="text-[11px] font-bold px-2 py-1 rounded bg-surface-container text-secondary">
-                        {approvedCountInMod}/{mod.lessons.length} Accredited
+                        {approvedCountInMod}/{lessons.length} Accredited
                       </span>
                     </div>
                   </div>
@@ -355,7 +357,7 @@ export const CourseOutlineModal: React.FC<CourseOutlineModalProps> = ({ isOpen, 
                         <div className="space-y-1.5">
                           <p className="font-semibold text-on-surface text-xs">📦 Expected Practical Lab Deliverables (70%):</p>
                           <div className="bg-surface p-2.5 rounded-lg border border-outline-variant/60 space-y-1">
-                            {mod.learningGuideline.expectedDeliverables.map((deliv, idx) => (
+                            {(mod.learningGuideline.expectedDeliverables || []).map((deliv, idx) => (
                               <div key={idx} className="flex items-start gap-1.5 text-secondary text-xs">
                                 <span className="text-emerald-600 font-bold">✓</span>
                                 <span>{deliv}</span>
@@ -368,7 +370,7 @@ export const CourseOutlineModal: React.FC<CourseOutlineModalProps> = ({ isOpen, 
                       {mod.learningGuideline.prerequisites && mod.learningGuideline.prerequisites.length > 0 && (
                         <div className="flex items-center gap-2 flex-wrap pt-1">
                           <span className="font-semibold text-[11px] text-secondary">Prerequisites:</span>
-                          {mod.learningGuideline.prerequisites.map((pre, idx) => (
+                          {(mod.learningGuideline.prerequisites || []).map((pre, idx) => (
                             <span key={idx} className="px-2 py-0.5 rounded bg-surface border border-outline-variant/60 text-[10px] text-secondary font-medium">
                               {pre}
                             </span>
@@ -380,10 +382,11 @@ export const CourseOutlineModal: React.FC<CourseOutlineModalProps> = ({ isOpen, 
 
                   {/* Lessons / Topics List */}
                   <div className="divide-y divide-outline-variant/60">
-                    {mod.lessons.map(lesson => {
+                    {lessons.map(lesson => {
                       const status = lesson.approvalStatus || 'Not Started';
                       const isApproved = status === 'Approved & Published';
                       const isPendingApproval = status === 'Taught (Pending PO Approval)';
+                      const lessonType = (lesson?.type || 'lesson').toUpperCase();
 
                       return (
                         <div 
@@ -401,7 +404,7 @@ export const CourseOutlineModal: React.FC<CourseOutlineModalProps> = ({ isOpen, 
                                 {lesson.title}
                               </span>
                               <span className="text-[11px] text-secondary font-mono">
-                                ({lesson.durationMinutes} mins • {lesson.type.toUpperCase()})
+                                ({lesson.durationMinutes || 45} mins • {lessonType})
                               </span>
 
                               {/* Practical Lab Badge */}
