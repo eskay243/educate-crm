@@ -34,7 +34,6 @@ export const SettingsPage: React.FC = () => {
     students,
     currentUser,
     updateUserProfile,
-    logActivity,
     exportDatabaseBackup,
     restoreDatabaseBackup,
     flushProductionData,
@@ -50,6 +49,7 @@ export const SettingsPage: React.FC = () => {
     deleteStaffUser,
     editStaffUser,
     renameCustomRole,
+    changePassword,
   } = useCRM();
 
   const {
@@ -1302,21 +1302,17 @@ export const SettingsPage: React.FC = () => {
     setIsUpdatingPassword(true);
     try {
       if (currentUser?.email) {
-        await apiService.resetPassword(currentUser.email, securityNewPass);
+        const res = await changePassword(securityNewPass, currentUser.email);
+        if (!res.success) {
+          setSecurityError(res.message || 'Failed to update password.');
+          return;
+        }
       }
-      showToast('Password Updated', 'Your security credentials have been updated successfully.', 'success');
-      logActivity({
-        title: 'Security Password Changed',
-        description: `Account password was updated for ${currentUser?.name || currentUser?.email}.`,
-        type: 'system',
-        user: currentUser?.name || 'User',
-      });
       setSecurityCurrentPass('');
       setSecurityNewPass('');
       setSecurityConfirmPass('');
     } catch (err: any) {
       setSecurityError(err.message || 'Failed to update password.');
-      showToast('Update Failed', err.message || 'Password update failed', 'error');
     } finally {
       setIsUpdatingPassword(false);
     }

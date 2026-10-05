@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { useCRM } from '../../context/CRMContext';
-import { apiService } from '../../services/api';
 
 export const ChangePasswordModal: React.FC = () => {
-  const { activeModal, closeModal, currentUser, staffUsers, showToast, logActivity } = useCRM();
+  const { activeModal, closeModal, currentUser, changePassword } = useCRM();
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -38,22 +37,11 @@ export const ChangePasswordModal: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      // Find and update staff member password
-      const user = staffUsers.find(u => u.id === currentUser.id || u.email === currentUser.email);
-      if (user) {
-        user.password = newPassword;
+      const res = await changePassword(newPassword, currentUser.email);
+      if (!res.success) {
+        setError(res.message || 'Failed to update password on server.');
+        return;
       }
-      currentUser.password = newPassword;
-
-      await apiService.resetPassword(currentUser.email, newPassword);
-
-      showToast('Password Updated', 'Your security credentials have been updated successfully.', 'success');
-      logActivity({
-        title: 'Security Password Changed',
-        description: `Account password was updated for ${currentUser.name}.`,
-        type: 'system',
-        user: currentUser.name,
-      });
 
       closeModal();
       setCurrentPassword('');

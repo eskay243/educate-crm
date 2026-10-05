@@ -514,6 +514,64 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
   });
 });
 
+app.post('/api/auth/reset-password', (req: Request, res: Response) => {
+  const { email, password, newPassword } = req.body;
+  const cleanEmail = (email || '').trim().toLowerCase();
+  const cleanPassword = (newPassword || password || '').trim();
+
+  if (!cleanEmail) {
+    return res.status(400).json({ success: false, message: 'Institutional email address is required.' });
+  }
+
+  if (!cleanPassword || cleanPassword.length < 6) {
+    return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long.' });
+  }
+
+  let found = false;
+
+  // 1. Staff users (including secondary email and aliases)
+  const staff = db.staffUsers?.find((u: any) => 
+    u.email?.trim().toLowerCase() === cleanEmail ||
+    u.secondaryEmail?.trim().toLowerCase() === cleanEmail ||
+    (u.name?.toLowerCase().includes('oyinkonsola') && (cleanEmail === 'oyinojobo@gmail.com' || cleanEmail === 'oyinojobor@gmail.com'))
+  );
+  if (staff) {
+    staff.password = cleanPassword;
+    found = true;
+  }
+
+  // 2. Mentors
+  if (!found) {
+    const mentor = db.mentors?.find((m: any) => 
+      m.email?.trim().toLowerCase() === cleanEmail ||
+      m.secondaryEmail?.trim().toLowerCase() === cleanEmail
+    );
+    if (mentor) {
+      mentor.password = cleanPassword;
+      found = true;
+    }
+  }
+
+  // 3. Students
+  if (!found) {
+    const student = db.students?.find((s: any) => 
+      s.email?.trim().toLowerCase() === cleanEmail ||
+      s.secondaryEmail?.trim().toLowerCase() === cleanEmail
+    );
+    if (student) {
+      student.password = cleanPassword;
+      found = true;
+    }
+  }
+
+  if (!found) {
+    return res.status(404).json({ success: false, message: `No registered account found with email: ${email}` });
+  }
+
+  saveDatabase(db);
+  res.json({ success: true, message: 'Account password has been successfully reset.' });
+});
+
 // ----------------------------------------------------
 // Data Sanitization Helpers for Security
 // ----------------------------------------------------

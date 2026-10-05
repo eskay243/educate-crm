@@ -196,6 +196,7 @@ interface CRMContextType {
   deleteStaffUser: (id: string) => Promise<boolean>;
   editStaffUser: (id: string, updates: Partial<AuthUser>) => Promise<boolean>;
   renameCustomRole: (roleId: string, newName: string, newDescription?: string) => Promise<boolean>;
+  changePassword: (newPassword: string, email?: string) => Promise<{ success: boolean; message?: string }>;
 
   // Notifications & Toasts
   addNotification: (notif: Omit<NotificationItem, 'id' | 'timestamp' | 'read'>) => void;
@@ -3912,6 +3913,72 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   };
 
+  const changePassword = async (newPassword: string, email?: string): Promise<{ success: boolean; message?: string }> => {
+    const cleanPassword = newPassword.trim();
+    if (!cleanPassword || cleanPassword.length < 6) {
+      showToast('Password Error', 'Password must be at least 6 characters long.', 'error');
+      return { success: false, message: 'Password must be at least 6 characters long.' };
+    }
+
+    const targetEmail = (email || currentUser?.email || '').trim().toLowerCase();
+    if (!targetEmail) {
+      showToast('Error', 'No user email specified.', 'error');
+      return { success: false, message: 'No user email specified.' };
+    }
+
+    // 1. Update in-memory state for currentUser if matches
+    if (currentUser && (currentUser.email.toLowerCase() === targetEmail || (currentUser as any).secondaryEmail?.toLowerCase() === targetEmail)) {
+      const updatedUser = { ...currentUser, password: cleanPassword };
+      setCurrentUser(updatedUser);
+      localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(updatedUser));
+    }
+
+    // 2. Update staffUsers
+    setStaffUsers(prev => prev.map(u => 
+      (u.email?.toLowerCase().trim() === targetEmail || (u as any).secondaryEmail?.toLowerCase().trim() === targetEmail || (u.name?.toLowerCase().includes('oyinkonsola') && (targetEmail === 'oyinojobo@gmail.com' || targetEmail === 'oyinojobor@gmail.com')))
+        ? { ...u, password: cleanPassword }
+        : u
+    ));
+
+    // 3. Update mentors
+    setMentors(prev => prev.map(m => 
+      (m.email?.toLowerCase().trim() === targetEmail || (m as any).secondaryEmail?.toLowerCase().trim() === targetEmail)
+        ? { ...m, password: cleanPassword }
+        : m
+    ));
+
+    // 4. Update students
+    setStudents(prev => prev.map(s => 
+      (s.email?.toLowerCase().trim() === targetEmail || (s as any).secondaryEmail?.toLowerCase().trim() === targetEmail)
+        ? { ...s, password: cleanPassword }
+        : s
+    ));
+
+    // 5. Backend sync
+    if (isBackendConnected) {
+      try {
+        const res = await apiService.resetPassword(targetEmail, cleanPassword);
+        if (!res || !res.success) {
+          showToast('Reset Failed', res?.message || 'Could not update password on server.', 'error');
+          return { success: false, message: res?.message || 'Could not update password on server.' };
+        }
+      } catch (err: any) {
+        showToast('Reset Failed', err?.message || 'Could not update password on server.', 'error');
+        return { success: false, message: err?.message || 'Could not update password on server.' };
+      }
+    }
+
+    showToast('Password Updated', 'Your security credentials have been updated successfully.', 'success');
+    logActivity({
+      title: 'Password Updated',
+      description: `Password was successfully updated for account ${targetEmail}.`,
+      type: 'system',
+      user: currentUser?.name || targetEmail,
+    });
+
+    return { success: true, message: 'Password updated successfully.' };
+  };
+
   // KPIs
   const kpis: ExecutiveKPIs = useMemo(() => {
     const activeStudentCount = students.filter(s => s.status === 'Active').length;
@@ -4083,6 +4150,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteStaffUser,
         editStaffUser,
         renameCustomRole,
+        changePassword,
       }}
     >
       {children}

@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
 import { BrandLogo } from '../components/common/BrandLogo';
 
+import { apiService } from '../services/api';
+
 export const ResetPasswordPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -33,7 +35,7 @@ export const ResetPasswordPage: React.FC = () => {
 
   const strength = getPasswordStrength();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
 
@@ -42,8 +44,8 @@ export const ResetPasswordPage: React.FC = () => {
       return;
     }
 
-    if (password.length < 8) {
-      setErrorMessage('Password must be at least 8 characters long.');
+    if (password.length < 6) {
+      setErrorMessage('Password must be at least 6 characters long.');
       return;
     }
 
@@ -53,21 +55,18 @@ export const ResetPasswordPage: React.FC = () => {
     }
 
     setIsLoading(true);
-    setTimeout(() => {
-      // Update staff password in localStorage / mock
-      const existing = localStorage.getItem('nexus_clean_prod_staff_v1');
-      if (existing) {
-        try {
-          const users = JSON.parse(existing);
-          const updated = users.map((u: any) => u.email === email ? { ...u, password } : u);
-          localStorage.setItem('nexus_clean_prod_staff_v1', JSON.stringify(updated));
-        } catch (e) {
-          console.error('Failed to update credentials:', e);
-        }
+    try {
+      const res = await apiService.resetPassword(email.trim(), password.trim());
+      if (res && res.success) {
+        setIsSubmitted(true);
+      } else {
+        setErrorMessage(res?.message || 'Failed to update password on server. Please check the email address.');
       }
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'A network error occurred while connecting to the server.');
+    } finally {
       setIsLoading(false);
-      setIsSubmitted(true);
-    }, 600);
+    }
   };
 
   return (
