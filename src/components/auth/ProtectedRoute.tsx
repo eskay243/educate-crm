@@ -17,8 +17,14 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  const roleRestricted = allowedRoles && allowedRoles.length > 0 && !hasPermission(allowedRoles);
-  const moduleRestricted = requiredModule && !hasModulePermission(requiredModule);
+  // If route requires a module, grant access if user has module permission or matches allowedRoles
+  const hasModuleAccess = requiredModule ? hasModulePermission(requiredModule) : true;
+  const hasRoleAccess = allowedRoles && allowedRoles.length > 0
+    ? (hasPermission(allowedRoles, requiredModule) || (requiredModule ? hasModulePermission(requiredModule) : false))
+    : true;
+
+  const roleRestricted = !hasRoleAccess;
+  const moduleRestricted = requiredModule ? !hasModuleAccess : false;
 
   if (roleRestricted || moduleRestricted) {
     return (

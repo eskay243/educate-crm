@@ -2712,6 +2712,14 @@
   },
   "activityLogs": [
     {
+      "id": "act-1791171077057-staff-del",
+      "timestamp": "2026-10-05T03:31:17.057Z",
+      "title": "Staff Member Deleted",
+      "description": "Staff profile for Temp Staff (tempstaff@codelab.institute) was removed from the institution.",
+      "type": "system",
+      "user": "Super Admin"
+    },
+    {
       "id": "act-1791095661093-rep",
       "timestamp": "2026-10-04T06:34:21.093Z",
       "title": "Mentor Report: ZULAIHAT ABDULRAHMAN",
@@ -2874,8 +2882,8 @@
     {
       "name": "Ndifreke Precious Henry",
       "email": "ndifrekehenry001@gmail.com",
-      "role": "finance",
-      "roleTitle": "Chief Financial Officer / Controller",
+      "role": "role_program_officer_4739",
+      "roleTitle": "Program officer",
       "department": "Admin/Program Officer",
       "password": "Password123",
       "id": "user-1789117130703"
@@ -4124,6 +4132,33 @@
         "canManageAttendance": false,
         "canSubmitReports": false
       }
+    },
+    {
+      "name": "Program officer",
+      "description": "incharge of all program planning and mentors relations",
+      "allowedModules": [
+        "courses",
+        "students",
+        "tickets",
+        "leads",
+        "mentors",
+        "expenses"
+      ],
+      "permissions": {
+        "canAddCourses": true,
+        "canAddCohorts": true,
+        "canAddLeads": false,
+        "canEnrollStudents": true,
+        "canLogExpenses": true,
+        "canApproveExpenses": false,
+        "canIssueCertificates": false,
+        "canViewBilling": false,
+        "canManageSettings": false,
+        "canManageAttendance": false,
+        "canSubmitReports": false
+      },
+      "id": "role_program_officer_4739",
+      "isSystem": false
     }
   ],
   "wallet": {
@@ -4201,7 +4236,7 @@
         "status": "success"
       }
     ],
-    "lastSyncedAt": "2026-10-04T14:46:05.440Z",
+    "lastSyncedAt": "2026-10-05T03:34:03.343Z",
     "paystackLiveBalance": 0
   },
   "timetables": [

@@ -159,7 +159,7 @@ Powered by Nodemailer with live Zoho SMTP (`smtp.zoho.com`) delivery, responsive
 - **Frontend**: React 19, TypeScript, Vite, Tailwind CSS, Recharts, Material Symbols, Lucide React.
 - **Backend API**: Node.js, Express, TypeScript (`tsx`), CORS, Nodemailer, Crypto HMAC.
 - **Database Persistence**: File-based JSON store (`server/data/db.json`) + LocalStorage browser synchronization.
-- **Hosting**: Hostinger Ubuntu 24.04 VPS (`72.61.106.87`), PM2 Process Manager, Nginx Reverse Proxy, SSL via Let's Encrypt.
+- **Hosting**: Hostinger Ubuntu 24.04 VPS (`72.61.106.87` / `https://growpot.cloud`), PM2 Process Manager, Nginx Reverse Proxy, SSL via Let's Encrypt.
 
 ---
 
@@ -200,7 +200,7 @@ Powered by Nodemailer with live Zoho SMTP (`smtp.zoho.com`) delivery, responsive
 
 #### 2. Live Paystack Webhook Configuration
 - **Status**: Backend webhook endpoint implemented (`POST /api/paystack/webhook`) with HMAC SHA-512 signature validation.
-- **Scope**: Configure live Webhook URL in Paystack Merchant Dashboard (`https://crm.codelab.institute/api/paystack/webhook` or `http://72.61.106.87/api/paystack/webhook`) to receive real-time asynchronous transfer and charge events.
+- **Scope**: Configure live Webhook URL in Paystack Merchant Dashboard (`https://growpot.cloud/api/paystack/webhook`) to receive real-time asynchronous transfer and charge events.
 
 #### 3. Automated Certificate of Completion Generator
 - **Status**: Planned for next phase.

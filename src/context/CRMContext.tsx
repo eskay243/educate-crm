@@ -63,6 +63,7 @@ import { apiService } from '../services/api';
 import { emailService } from '../services/emailService';
 import { calculateDistanceMeters } from '../utils/geo';
 import { launchPaystackPayment } from '../services/paystackService';
+import { APP_BASE_URL } from '../utils/url';
 
 
 export const formatNaira = (amount: number, fractionDigits = 0): string => {
@@ -82,6 +83,26 @@ export const formatNairaCompact = (amount: number): string => {
     return `₦${val}K`;
   }
   return `₦${amount}`;
+};
+
+export const resolveRoleTitle = (roleId: string, customRolesList?: any[]): string => {
+  const staticMap: Record<string, string> = {
+    super_admin: 'Super Admin / Managing Director',
+    admissions: 'Admissions Officer',
+    finance: 'Finance Officer & Bursar',
+    instructor: 'Instructor / Faculty Lead',
+    student: 'Enrolled Scholar / Student',
+    program_officer: 'Academic Program Officer & Curriculum Lead',
+    mentor: 'Faculty Mentor & Instructor',
+    it_support: 'IT & Systems Operations',
+    customer_service: 'Customer Support & Scholar Welfare',
+  };
+  if (staticMap[roleId]) return staticMap[roleId];
+  if (Array.isArray(customRolesList)) {
+    const custom = customRolesList.find((r: any) => r.id === roleId);
+    if (custom?.name) return custom.name;
+  }
+  return 'Staff Member';
 };
 
 interface CRMContextType {
@@ -172,6 +193,9 @@ interface CRMContextType {
   switchRole: (role: UserRole) => void;
   addStaffUser: (user: Omit<AuthUser, 'id'>) => void;
   updateUserRole: (userId: string, role: UserRole, mentorId?: string) => void;
+  deleteStaffUser: (id: string) => Promise<boolean>;
+  editStaffUser: (id: string, updates: Partial<AuthUser>) => Promise<boolean>;
+  renameCustomRole: (roleId: string, newName: string, newDescription?: string) => Promise<boolean>;
 
   // Notifications & Toasts
   addNotification: (notif: Omit<NotificationItem, 'id' | 'timestamp' | 'read'>) => void;
@@ -329,7 +353,24 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [staffUsers, setStaffUsers] = useState<AuthUser[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.STAFF);
-    return saved ? JSON.parse(saved) : demoUsers;
+    let parsed: AuthUser[] = demoUsers;
+    if (saved) {
+      try {
+        const json = JSON.parse(saved);
+        if (Array.isArray(json)) parsed = json;
+      } catch (e) {}
+    }
+    // Deduplicate by email so duplicate entries never accumulate
+    const seen = new Set<string>();
+    const uniqueList: AuthUser[] = [];
+    for (const u of parsed) {
+      const emailKey = u.email?.toLowerCase().trim();
+      if (!emailKey || !seen.has(emailKey)) {
+        if (emailKey) seen.add(emailKey);
+        uniqueList.push(u);
+      }
+    }
+    return uniqueList;
   });
 
   const [leads, setLeads] = useState<Lead[]>(() => {
@@ -528,7 +569,16 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (data.attendance) setAttendanceRecords(data.attendance);
         if (data.settings) setSettings(data.settings);
         if (data.notifications) setNotifications(data.notifications);
-        if (data.staffUsers) setStaffUsers(data.staffUsers);
+        if (data.staffUsers) {
+          const seen = new Set<string>();
+          const uniqueStaff = data.staffUsers.filter(u => {
+            const k = u.email?.toLowerCase().trim();
+            if (!k || seen.has(k)) return false;
+            seen.add(k);
+            return true;
+          });
+          setStaffUsers(uniqueStaff);
+        }
         if (data.lmsModules) setLmsModules(data.lmsModules);
         if (data.assignments) setAssignments(data.assignments);
         if ((data as any).studentPerformanceReports) setStudentPerformanceReports((data as any).studentPerformanceReports);
@@ -1162,42 +1212,44 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addStaffUser = (userData: Omit<AuthUser, 'id'>) => {
+    const cleanEmail = userData.email?.toLowerCase().trim();
+    if (cleanEmail && staffUsers.some(u => u.email?.toLowerCase().trim() === cleanEmail)) {
+      showToast('Account Exists', `A staff member with email "${userData.email}" already exists.`, 'error');
+      return;
+    }
+
+    const resolvedTitle = userData.roleTitle || resolveRoleTitle(userData.role, customRoles);
     const newUser: AuthUser = {
       ...userData,
       id: `user-${Date.now()}`,
+      roleTitle: resolvedTitle,
     };
     setStaffUsers(prev => [newUser, ...prev]);
-    apiService.createStaff(userData);
-    showToast('Staff Provisioned', `${newUser.name} added as ${newUser.roleTitle}.`, 'success');
+    apiService.createStaff({ ...userData, roleTitle: resolvedTitle });
+    showToast('Staff Provisioned', `${newUser.name} added as ${resolvedTitle}.`, 'success');
     addNotification({
       title: 'New Staff Provisioned',
-      message: `${newUser.name} provisioned as ${newUser.roleTitle} in ${newUser.department}.`,
+      message: `${newUser.name} provisioned as ${resolvedTitle} in ${newUser.department}.`,
       type: 'system',
       link: '/settings',
     });
     logActivity({
       title: 'Staff Member Provisioned',
-      description: `${newUser.name} created as ${newUser.roleTitle}.`,
+      description: `${newUser.name} created as ${resolvedTitle}.`,
       type: 'system',
       user: currentUser?.name || 'Super Admin',
     });
   };
 
   const updateUserRole = (userId: string, role: UserRole, mentorId?: string) => {
-    const roleTitleMap: Record<UserRole, string> = {
-      super_admin: 'Managing Director & Super Admin',
-      admissions: 'Admissions Officer',
-      mentor: 'Faculty Mentor',
-      finance: 'Chief Financial Officer / Controller',
-      student: 'Enrolled Scholar / Student',
-    };
+    const newTitle = resolveRoleTitle(role, customRoles);
 
     setStaffUsers(prev => prev.map(u => {
       if (u.id === userId) {
         return {
           ...u,
           role,
-          roleTitle: roleTitleMap[role],
+          roleTitle: newTitle,
           mentorId: role === 'mentor' ? (mentorId || u.mentorId || 'men-1') : undefined,
         };
       }
@@ -1208,19 +1260,116 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentUser(prev => prev ? {
         ...prev,
         role,
-        roleTitle: roleTitleMap[role],
+        roleTitle: newTitle,
         mentorId: role === 'mentor' ? (mentorId || prev.mentorId || 'men-1') : undefined,
       } : null);
     }
 
-    apiService.updateStaff(userId, { role, roleTitle: roleTitleMap[role], mentorId });
-    showToast('Role Updated', `Staff permissions updated to ${roleTitleMap[role]}.`, 'info');
+    apiService.updateStaff(userId, { role, roleTitle: newTitle, mentorId });
+    showToast('Role Updated', `Staff permissions updated to ${newTitle}.`, 'info');
     logActivity({
       title: 'Staff Role Reassigned',
-      description: `Staff member role updated to ${roleTitleMap[role]}.`,
+      description: `Staff member role updated to ${newTitle}.`,
       type: 'system',
       user: currentUser?.name || 'Super Admin',
     });
+  };
+
+  const deleteStaffUser = async (id: string): Promise<boolean> => {
+    const target = staffUsers.find(u => u.id === id);
+    if (!target) return false;
+    if (target.role === 'super_admin' && (target.id === 'user-admin' || staffUsers.filter(u => u.role === 'super_admin').length <= 1)) {
+      showToast('Action Blocked', 'The primary Super Admin institutional account cannot be deleted.', 'error');
+      return false;
+    }
+
+    try {
+      await apiService.deleteStaff(id);
+      setStaffUsers(prev => prev.filter(u => u.id !== id));
+      showToast('Staff Deleted', `${target.name} has been removed from staff directory.`, 'success');
+      logActivity({
+        title: 'Staff Member Removed',
+        description: `Staff profile for ${target.name} (${target.email}) was removed.`,
+        type: 'system',
+        user: currentUser?.name || 'Super Admin',
+      });
+      return true;
+    } catch (err: any) {
+      showToast('Delete Failed', err.message || 'Unable to delete staff member.', 'error');
+      return false;
+    }
+  };
+
+  const editStaffUser = async (id: string, updates: Partial<AuthUser>): Promise<boolean> => {
+    if (updates.email) {
+      const clean = updates.email.toLowerCase().trim();
+      const conflict = staffUsers.some(u => u.id !== id && u.email?.toLowerCase().trim() === clean);
+      if (conflict) {
+        showToast('Email Conflict', 'Another staff account is already registered with this email address.', 'error');
+        return false;
+      }
+    }
+
+    const resolvedUpdates: Partial<AuthUser> = { ...updates };
+    if (updates.role) {
+      resolvedUpdates.roleTitle = resolveRoleTitle(updates.role, customRoles);
+    }
+
+    try {
+      await apiService.updateStaff(id, resolvedUpdates);
+      setStaffUsers(prev => prev.map(u => u.id === id ? { ...u, ...resolvedUpdates } : u));
+      if (currentUser?.id === id) {
+        const updatedCurrent = { ...currentUser, ...resolvedUpdates };
+        setCurrentUser(updatedCurrent);
+        localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(updatedCurrent));
+      }
+      showToast('Staff Updated', 'Staff profile details updated successfully.', 'success');
+      logActivity({
+        title: 'Staff Profile Updated',
+        description: `Updated profile details for staff member ${id}.`,
+        type: 'system',
+        user: currentUser?.name || 'Super Admin',
+      });
+      return true;
+    } catch (err: any) {
+      showToast('Update Failed', err.message || 'Failed to update staff member.', 'error');
+      return false;
+    }
+  };
+
+  const renameCustomRole = async (roleId: string, newName: string, newDescription?: string): Promise<boolean> => {
+    if (!newName || !newName.trim()) {
+      showToast('Invalid Name', 'Role name cannot be empty.', 'error');
+      return false;
+    }
+
+    try {
+      const payload: Partial<CustomRoleDefinition> = { name: newName.trim() };
+      if (newDescription !== undefined) payload.description = newDescription.trim();
+
+      await apiService.updateRole(roleId, payload);
+
+      setCustomRoles(prev => prev.map(r => r.id === roleId ? { ...r, ...payload } : r));
+      setStaffUsers(prev => prev.map(u => u.role === roleId ? { ...u, roleTitle: newName.trim() } : u));
+
+      if (currentUser?.role === roleId) {
+        const updatedUser = { ...currentUser, roleTitle: newName.trim() };
+        setCurrentUser(updatedUser);
+        localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(updatedUser));
+      }
+
+      showToast('Role Renamed', `Role title updated to "${newName.trim()}".`, 'success');
+      logActivity({
+        title: 'Custom Role Renamed',
+        description: `Role ${roleId} was renamed to "${newName.trim()}".`,
+        type: 'system',
+        user: currentUser?.name || 'Super Admin',
+      });
+      return true;
+    } catch (err: any) {
+      showToast('Rename Failed', err.message || 'Failed to rename custom role.', 'error');
+      return false;
+    }
   };
 
   // Modal actions
@@ -1395,7 +1544,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           mentorName: newStudent.mentorName,
           paidAmount: feeAmount,
           balance: 0,
-          portalUrl: `http://72.61.106.87/login?role=student&email=${encodeURIComponent(lead.email || '')}`,
+          portalUrl: `${APP_BASE_URL}/login?role=student&email=${encodeURIComponent(lead.email || '')}`,
         }
       }).catch(err => console.error('Error sending student welcome email:', err));
     }
@@ -1446,7 +1595,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           mentorName: newStudent.mentorName,
           paidAmount: (newStudent.totalFees || 0) - (newStudent.outstandingBalance || 0),
           balance: newStudent.outstandingBalance || 0,
-          portalUrl: `http://72.61.106.87/login?role=student&email=${encodeURIComponent(newStudent.email || '')}`,
+          portalUrl: `${APP_BASE_URL}/login?role=student&email=${encodeURIComponent(newStudent.email || '')}`,
         }
       }).catch(err => console.error('Error sending student welcome email:', err));
     }
@@ -1607,7 +1756,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           courses: Array.isArray(newMentor.courses) ? newMentor.courses.join(', ') : (newMentor.expertise?.join(', ') || 'Academic Track'),
           commissionRate: `${newMentor.commissionRate || 37}% per student enrollment`,
           bankDetails: `${newMentor.bankName || ''} - ${newMentor.accountNumber || ''} (${newMentor.accountName || newMentor.name})`,
-          portalUrl: `http://72.61.106.87/login?role=mentor&email=${encodeURIComponent(newMentor.email || '')}`,
+          portalUrl: `${APP_BASE_URL}/login?role=mentor&email=${encodeURIComponent(newMentor.email || '')}`,
         }
       }).catch(err => console.error('Error sending mentor welcome email:', err));
     }
@@ -1692,7 +1841,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         urgency: newExpense.urgency,
         receiptName: newExpense.receiptName,
         description: newExpense.description,
-        actionUrl: 'http://72.61.106.87/expenses',
+        actionUrl: `${APP_BASE_URL}/expenses`,
       }
     }).catch(err => console.error('Error sending expense approval request email:', err));
   };
@@ -1768,7 +1917,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         amount: expense.amount,
         reviewedBy: reviewer,
         reviewedAt: timestamp,
-        actionUrl: 'http://72.61.106.87/expenses',
+        actionUrl: `${APP_BASE_URL}/expenses`,
       }
     }).catch(err => console.error('Error sending expense approved email:', err));
   };
@@ -1822,7 +1971,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         reviewedBy: reviewer,
         reviewedAt: timestamp,
         rejectionReason: reason,
-        actionUrl: 'http://72.61.106.87/expenses',
+        actionUrl: `${APP_BASE_URL}/expenses`,
       }
     }).catch(err => console.error('Error sending expense rejected email:', err));
   };
@@ -2419,7 +2568,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           githubUrl: newSub.githubUrl,
           liveUrl: newSub.liveUrl,
           notes: newSub.notes,
-          reviewUrl: 'http://72.61.106.87/courses',
+          reviewUrl: `${APP_BASE_URL}/courses`,
         }
       }).catch(err => console.error('Error sending assignment submitted email:', err));
     }
@@ -2481,7 +2630,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           status,
           reviewedBy: currentUser?.name || 'Faculty Mentor',
           mentorFeedback,
-          portalUrl: 'http://72.61.106.87/student/courses',
+          portalUrl: `${APP_BASE_URL}/student/courses`,
         }
       }).catch(err => console.error('Error sending assignment graded email:', err));
     }
@@ -2592,7 +2741,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               tuitionPaid: res.amountNaira,
               commissionAmount: commission,
               newPendingPayout: (assignedMentor.pendingPayout || 0) + commission,
-              portalUrl: 'http://72.61.106.87/mentors',
+              portalUrl: `${APP_BASE_URL}/mentors`,
             }
           }).catch(err => console.error('Error sending mentor commission alert email:', err));
         }
@@ -2610,7 +2759,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             amount: res.amountNaira,
             gateway: 'Paystack Direct Settlement',
             reference: res.reference,
-            actionUrl: 'http://72.61.106.87/invoices',
+            actionUrl: `${APP_BASE_URL}/invoices`,
           }
         }).catch(err => console.error('Error sending finance tuition alert email:', err));
 
@@ -2652,7 +2801,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         amount: payload.amount,
         bankRef: payload.referenceNumber,
         fileName: payload.receiptProofUrl || 'bank_transfer_slip.jpg',
-        actionUrl: 'http://72.61.106.87/invoices',
+        actionUrl: `${APP_BASE_URL}/invoices`,
       }
     }).catch(err => console.error('Error sending POP alert email:', err));
 
@@ -3851,6 +4000,9 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         requestMentorPayout,
         reviewMentorPayout,
         updateUserProfile,
+        deleteStaffUser,
+        editStaffUser,
+        renameCustomRole,
       }}
     >
       {children}

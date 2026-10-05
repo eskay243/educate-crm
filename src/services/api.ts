@@ -261,6 +261,13 @@ class ApiService {
     });
   }
 
+  async deleteStaff(id: string): Promise<boolean> {
+    const res = await this.request<{ success: boolean; message?: string }>(`/staff/${id}`, {
+      method: 'DELETE',
+    });
+    return Boolean(res?.success);
+  }
+
   async getSettings(): Promise<OrganizationSettings | null> {
     return this.request<OrganizationSettings>('/settings');
   }

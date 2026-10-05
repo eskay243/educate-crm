@@ -1,4 +1,5 @@
 import { EmailTemplateType } from '../types/crm';
+import { APP_BASE_URL } from '../utils/url';
 
 export interface EmailTemplatePayload {
   to: string;
@@ -112,7 +113,7 @@ export class EmailService {
             </ol>
 
             <div style="text-align: center; margin: 28px 0;">
-              <a href="${payload.data.setupUrl || 'http://72.61.106.87/login?role=mentor&email=' + encodeURIComponent(payload.to)}" 
+              <a href="${payload.data.setupUrl || `${APP_BASE_URL}/login?role=mentor&email=` + encodeURIComponent(payload.to)}" 
                  style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block; box-shadow: 0 2px 4px rgba(0,35,111,0.2);">
                 Access Faculty Portal →
               </a>
@@ -174,7 +175,7 @@ export class EmailService {
             </ol>
 
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${payload.data.portalUrl || 'http://72.61.106.87/login?role=student&email=' + encodeURIComponent(payload.to)}" 
+              <a href="${payload.data.portalUrl || `${APP_BASE_URL}/login?role=student&email=` + encodeURIComponent(payload.to)}" 
                  style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 28px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block; box-shadow: 0 2px 4px rgba(0,35,111,0.2);">
                 Launch Student Portal →
               </a>
@@ -202,7 +203,7 @@ export class EmailService {
             <p>To access the CRM portal and configure your security credentials, please click the button below to set your password:</p>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${payload.data.setupUrl || 'http://72.61.106.87/reset-password?role=' + encodeURIComponent(payload.data.role || '') + '&email=' + encodeURIComponent(payload.to)}" 
+              <a href="${payload.data.setupUrl || `${APP_BASE_URL}/reset-password?role=` + encodeURIComponent(payload.data.role || '') + '&email=' + encodeURIComponent(payload.to)}" 
                  style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 28px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block; box-shadow: 0 2px 4px rgba(0,35,111,0.2);">
                 Set Your Password &amp; Activate Account →
               </a>
@@ -223,7 +224,7 @@ export class EmailService {
             <p>${payload.data.securityNotice || `We received a request to reset the password for your CODELAB EDUCARE LTD account (${payload.to}).`}</p>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${payload.data.resetUrl || 'http://72.61.106.87/reset-password?role=' + encodeURIComponent(payload.data.role || '') + '&email=' + encodeURIComponent(payload.to)}" 
+              <a href="${payload.data.resetUrl || `${APP_BASE_URL}/reset-password?role=` + encodeURIComponent(payload.data.role || '') + '&email=' + encodeURIComponent(payload.to)}" 
                  style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 28px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
                 Reset Account Password →
               </a>
@@ -407,7 +408,7 @@ export class EmailService {
             ` : ''}
 
             <div style="text-align: center; margin: 28px 0;">
-              <a href="${payload.data.actionUrl || 'http://72.61.106.87/expenses'}" 
+              <a href="${payload.data.actionUrl || `${APP_BASE_URL}/expenses`}" 
                  style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block; box-shadow: 0 2px 4px rgba(0,35,111,0.2);">
                 Review &amp; Authorize Requisition →
               </a>
@@ -461,7 +462,7 @@ export class EmailService {
             </div>
 
             <div style="text-align: center; margin: 28px 0;">
-              <a href="${payload.data.actionUrl || 'http://72.61.106.87/expenses'}" 
+              <a href="${payload.data.actionUrl || `${APP_BASE_URL}/expenses`}" 
                  style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
                 View In OpEx Ledger →
               </a>
@@ -510,7 +511,7 @@ export class EmailService {
             </div>
 
             <div style="text-align: center; margin: 28px 0;">
-              <a href="${payload.data.actionUrl || 'http://72.61.106.87/expenses'}" 
+              <a href="${payload.data.actionUrl || `${APP_BASE_URL}/expenses`}" 
                  style="background-color: #475569; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
                 Review in Portal &amp; Resubmit →
               </a>
@@ -564,7 +565,7 @@ export class EmailService {
             </p>
 
             <div style="text-align: center; margin: 28px 0;">
-              <a href="${payload.data.portalUrl || 'http://72.61.106.87/mentors'}" 
+              <a href="${payload.data.portalUrl || `${APP_BASE_URL}/mentors`}" 
                  style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
                 View Commission Ledger →
               </a>
@@ -617,7 +618,7 @@ export class EmailService {
             </div>
 
             <div style="text-align: center; margin: 28px 0;">
-              <a href="${payload.data.portalUrl || 'http://72.61.106.87/mentors'}" 
+              <a href="${payload.data.portalUrl || `${APP_BASE_URL}/mentors`}" 
                  style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
                 View Settlement History →
               </a>
@@ -678,7 +679,7 @@ export class EmailService {
             ` : ''}
 
             <div style="text-align: center; margin: 28px 0;">
-              <a href="${payload.data.reviewUrl || 'http://72.61.106.87/courses'}" 
+              <a href="${payload.data.reviewUrl || `${APP_BASE_URL}/courses`}" 
                  style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
                 Evaluate &amp; Grade Submission →
               </a>
@@ -735,7 +736,7 @@ export class EmailService {
             ` : ''}
 
             <div style="text-align: center; margin: 28px 0;">
-              <a href="${payload.data.portalUrl || 'http://72.61.106.87/student/courses'}" 
+              <a href="${payload.data.portalUrl || `${APP_BASE_URL}/student/courses`}" 
                  style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
                 Launch LMS &amp; Continue Syllabus →
               </a>
@@ -785,7 +786,7 @@ export class EmailService {
             </div>
 
             <div style="text-align: center; margin: 28px 0;">
-              <a href="${payload.data.portalUrl || 'http://72.61.106.87/mentors'}" 
+              <a href="${payload.data.portalUrl || `${APP_BASE_URL}/mentors`}" 
                  style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
                 Open Faculty Mentees Roster →
               </a>
@@ -831,7 +832,7 @@ export class EmailService {
             </div>
 
             <div style="text-align: center; margin: 28px 0;">
-              <a href="${payload.data.actionUrl || 'http://72.61.106.87/invoices'}" 
+              <a href="${payload.data.actionUrl || `${APP_BASE_URL}/invoices`}" 
                  style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
                 Verify Payment in Bursary →
               </a>
@@ -881,7 +882,7 @@ export class EmailService {
             </div>
 
             <div style="text-align: center; margin: 28px 0;">
-              <a href="${payload.data.actionUrl || 'http://72.61.106.87/invoices'}" 
+              <a href="${payload.data.actionUrl || `${APP_BASE_URL}/invoices`}" 
                  style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
                 View Institutional Billing Ledger →
               </a>

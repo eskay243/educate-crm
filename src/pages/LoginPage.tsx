@@ -6,8 +6,6 @@ import { UserRole } from '../types/crm';
 import { BrandLogo } from '../components/common/BrandLogo';
 import { usePWA } from '../context/PWAContext';
 
-const VALID_ROLES: UserRole[] = ['super_admin', 'student', 'admissions', 'mentor', 'finance', 'program_officer'];
-
 const ROLE_DISPLAY_NAMES: Record<UserRole, string> = {
   super_admin: 'Super Admin / Managing Director',
   student: 'Enrolled Scholar / Student',
@@ -27,7 +25,7 @@ const ROLE_SHORT_LABELS: Record<UserRole, string> = {
 };
 
 export const LoginPage: React.FC = () => {
-  const { login, settings, staffUsers, mentors, students } = useCRM();
+  const { login, settings, staffUsers, mentors, students, customRoles } = useCRM();
   const { isStandalone, isIOS, promptInstall, setShowIOSInstallGuide } = usePWA();
   const navigate = useNavigate();
   const location = useLocation();
@@ -44,39 +42,74 @@ export const LoginPage: React.FC = () => {
   const queryRole = searchParams.get('role') as UserRole | null;
   const queryEmail = searchParams.get('email') || '';
 
-  // Initialize selected role safely: respect query param if valid, otherwise default to 'student' (safest role)
+  // Initialize selected role safely: respect query param if present, otherwise default to 'student'
   const [selectedRole, setSelectedRole] = useState<UserRole>(() => {
-    if (queryRole && VALID_ROLES.includes(queryRole)) {
-      return queryRole;
-    }
+    if (queryRole) return queryRole;
     return 'student';
   });
 
-  // Never hardcode pre-filled Super Admin credentials
   const [email, setEmail] = useState<string>(queryEmail);
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [detectedUser, setDetectedUser] = useState<{ name: string; roleTitle: string; role: string } | null>(null);
 
   // Sync state if query params change
   useEffect(() => {
-    if (queryRole && VALID_ROLES.includes(queryRole)) {
+    if (queryRole) {
       setSelectedRole(queryRole);
     }
     if (queryEmail) {
       setEmail(queryEmail);
+      detectUserFromEmail(queryEmail);
     }
   }, [queryRole, queryEmail]);
 
-  // Intelligent auto-detection of role based on email input
-  const handleEmailChange = (val: string) => {
-    setEmail(val);
-    if (errorMessage) setErrorMessage('');
-    const norm = val.trim().toLowerCase();
-    if (!norm) return;
+  const detectUserFromEmail = (rawEmail: string) => {
+    const norm = rawEmail.trim().toLowerCase();
+    if (!norm) {
+      setDetectedUser(null);
+      return;
+    }
 
-    // 0. Super Admin Aliases
+    // 1. Check if matches a registered staff member (including custom roles)
+    const staffMatch = staffUsers?.find(u => u.email.toLowerCase() === norm);
+    if (staffMatch) {
+      setSelectedRole(staffMatch.role as UserRole);
+      setDetectedUser({
+        name: staffMatch.name,
+        roleTitle: staffMatch.roleTitle || staffMatch.role,
+        role: staffMatch.role,
+      });
+      return;
+    }
+
+    // 2. Check if matches a registered mentor
+    const mentorMatch = mentors?.find(m => m.email.toLowerCase() === norm);
+    if (mentorMatch) {
+      setSelectedRole('mentor');
+      setDetectedUser({
+        name: mentorMatch.name,
+        roleTitle: mentorMatch.role || 'Faculty Mentor',
+        role: 'mentor',
+      });
+      return;
+    }
+
+    // 3. Check if matches an enrolled student
+    const studentMatch = students?.find(s => s.email.toLowerCase() === norm);
+    if (studentMatch) {
+      setSelectedRole('student');
+      setDetectedUser({
+        name: studentMatch.name,
+        roleTitle: 'Enrolled Scholar / Student',
+        role: 'student',
+      });
+      return;
+    }
+
+    // 4. Super Admin Aliases
     if (
       norm === 'admin@codelab.institute' || 
       norm === 'superadmin@codelab.institute' || 
@@ -85,43 +118,34 @@ export const LoginPage: React.FC = () => {
       norm === 'admin'
     ) {
       setSelectedRole('super_admin');
+      setDetectedUser({
+        name: 'Managing Director',
+        roleTitle: 'Super Admin',
+        role: 'super_admin',
+      });
       return;
     }
 
-    // 1. Check if matches a registered staff member
-    const staffMatch = staffUsers?.find(u => u.email.toLowerCase() === norm);
-    if (staffMatch?.role && VALID_ROLES.includes(staffMatch.role)) {
-      setSelectedRole(staffMatch.role);
-      return;
-    }
-
-    // 2. Check if matches a registered mentor
-    const mentorMatch = mentors?.find(m => m.email.toLowerCase() === norm);
-    if (mentorMatch) {
-      setSelectedRole('mentor');
-      return;
-    }
-
-    // 3. Check if matches an enrolled student
-    const studentMatch = students?.find(s => s.email.toLowerCase() === norm);
-    if (studentMatch) {
-      setSelectedRole('student');
-      return;
-    }
-
-    // 4. Check demo users
+    // 5. Check demo users
     const demoMatch = demoUsers.find(u => u.email.toLowerCase() === norm);
-    if (demoMatch?.role && VALID_ROLES.includes(demoMatch.role)) {
-      setSelectedRole(demoMatch.role);
+    if (demoMatch) {
+      setSelectedRole(demoMatch.role as UserRole);
+      setDetectedUser({
+        name: demoMatch.name,
+        roleTitle: demoMatch.roleTitle,
+        role: demoMatch.role,
+      });
       return;
     }
+
+    setDetectedUser(null);
   };
 
-  const handleFillSuperAdminDemo = () => {
-    setSelectedRole('super_admin');
-    setEmail('abiola.adefowope@codelab.institute');
-    setPassword('password123');
-    setErrorMessage('');
+  // Intelligent auto-detection of role based on email input
+  const handleEmailChange = (val: string) => {
+    setEmail(val);
+    if (errorMessage) setErrorMessage('');
+    detectUserFromEmail(val);
   };
 
   const from = (location.state as any)?.from?.pathname || '/';
@@ -137,18 +161,19 @@ export const LoginPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const result = await login(selectedRole, email, password);
+      const roleToUse = detectedUser?.role ? (detectedUser.role as UserRole) : selectedRole;
+      const result = await login(roleToUse, email, password);
       if (!result.success) {
         setErrorMessage(result.message || 'Invalid credentials. Please verify your email and password.');
         setIsSubmitting(false);
         return;
       }
       
-      const authenticatedRole = result.user?.role || selectedRole;
+      const authenticatedRole = result.user?.role || roleToUse;
       let target = from === '/' ? '/' : from;
       if (from === '/') {
         if (authenticatedRole === 'student') target = '/student/dashboard';
-        else if (authenticatedRole === 'program_officer') target = '/courses';
+        else if (authenticatedRole === 'program_officer' || authenticatedRole.includes('program_officer')) target = '/courses';
         else if (authenticatedRole === 'admissions') target = '/leads';
         else if (authenticatedRole === 'finance') target = '/expenses';
         else if (authenticatedRole === 'mentor') target = '/mentors';
@@ -206,9 +231,11 @@ export const LoginPage: React.FC = () => {
             <div className="p-3 bg-secondary-container/30 border border-secondary-container rounded-lg flex items-center gap-2.5 text-xs text-on-surface animate-in fade-in duration-200">
               <span className="material-symbols-outlined text-primary text-[18px]">verified_user</span>
               <div className="leading-tight">
-                <span className="font-semibold text-primary">{ROLE_SHORT_LABELS[selectedRole]} Sign In Link</span>
+                <span className="font-semibold text-primary">
+                  {(ROLE_SHORT_LABELS as any)[selectedRole] || customRoles?.find(r => r.id === selectedRole)?.name || 'Institutional'} Sign In Link
+                </span>
                 <p className="text-[11px] text-secondary mt-0.5">
-                  Signing in with institutional role <strong>{ROLE_DISPLAY_NAMES[selectedRole]}</strong>
+                  Signing in with institutional role <strong>{(ROLE_DISPLAY_NAMES as any)[selectedRole] || customRoles?.find(r => r.id === selectedRole)?.name || selectedRole}</strong>
                   {email && <span> for <strong>{email}</strong></span>}.
                 </p>
               </div>
@@ -223,32 +250,23 @@ export const LoginPage: React.FC = () => {
                 onChange={e => setSelectedRole(e.target.value as UserRole)}
                 className="w-full h-11 px-3 rounded bg-surface border border-outline-variant text-sm font-body-md focus:border-primary outline-none cursor-pointer"
               >
-                <option value="student">🎓 Enrolled Scholar / Student</option>
-                <option value="mentor">💼 Faculty Mentor &amp; Instructor</option>
-                <option value="admissions">📋 Admissions &amp; Enrollments Officer</option>
-                <option value="finance">💰 Finance &amp; Bursary Officer</option>
-                <option value="program_officer">📋 Program Officer &amp; Curriculum Lead</option>
-                <option value="super_admin">🛡️ Super Admin / Managing Director</option>
+                <optgroup label="System Roles">
+                  <option value="student">🎓 Enrolled Scholar / Student</option>
+                  <option value="mentor">💼 Faculty Mentor &amp; Instructor</option>
+                  <option value="admissions">📋 Admissions &amp; Enrollments Officer</option>
+                  <option value="finance">💰 Finance &amp; Bursary Officer</option>
+                  <option value="program_officer">📋 Program Officer &amp; Curriculum Lead</option>
+                  <option value="super_admin">🛡️ Super Admin / Managing Director</option>
+                </optgroup>
+                {customRoles && customRoles.filter(r => !['super_admin', 'student', 'mentor', 'admissions', 'finance', 'program_officer'].includes(r.id)).length > 0 && (
+                  <optgroup label="Custom Assigned Roles">
+                    {customRoles.filter(r => !['super_admin', 'student', 'mentor', 'admissions', 'finance', 'program_officer'].includes(r.id)).map(cr => (
+                      <option key={cr.id} value={cr.id}>🛡️ {cr.name}</option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             </div>
-
-            {selectedRole === 'super_admin' && (
-              <div className="p-2.5 bg-primary/5 border border-primary/20 rounded-lg flex items-center justify-between text-xs animate-in fade-in duration-150">
-                <div className="flex items-center gap-2 text-on-surface min-w-0">
-                  <span className="material-symbols-outlined text-primary text-[18px] shrink-0">admin_panel_settings</span>
-                  <div className="text-[11px] leading-tight truncate">
-                    <span className="font-semibold text-primary">Super Admin Identity:</span> <span className="font-mono text-on-surface">abiola.adefowope@codelab.institute</span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleFillSuperAdminDemo}
-                  className="px-2.5 py-1 text-[11px] font-bold text-primary bg-primary/10 hover:bg-primary/20 rounded transition-colors shrink-0 cursor-pointer ml-2"
-                >
-                  Auto-fill
-                </button>
-              </div>
-            )}
 
             <div className="space-y-1">
               <label className="font-label-md text-xs text-secondary font-semibold">Institutional Email Address</label>
@@ -261,10 +279,18 @@ export const LoginPage: React.FC = () => {
                   required
                   value={email}
                   onChange={e => handleEmailChange(e.target.value)}
-                  placeholder="e.g. name@codelab.institute or personal email"
+                  placeholder="e.g. name@codelab.institute or registered email"
                   className="w-full h-11 pl-9 pr-3 rounded bg-surface border border-outline-variant text-sm font-body-md focus:border-primary outline-none"
                 />
               </div>
+
+              {/* Verified Account Recognition Badge */}
+              {detectedUser && (
+                <div className="mt-1.5 flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#dcfce7] border border-[#86efac] text-[#166534] text-[11px] font-semibold animate-in fade-in duration-150">
+                  <span className="material-symbols-outlined text-[15px] text-[#16a34a]">verified</span>
+                  <span>Recognized: <strong>{detectedUser.name}</strong> ({detectedUser.roleTitle})</span>
+                </div>
+              )}
             </div>
 
             <div className="space-y-1">

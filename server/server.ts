@@ -20,6 +20,7 @@ try {
 const app = express();
 const PORT = process.env.PORT || 5001;
 const DB_FILE = path.join(__dirname, 'data', 'db.json');
+const APP_BASE_URL = process.env.APP_URL || process.env.FRONTEND_URL || 'https://growpot.cloud';
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -611,7 +612,7 @@ const sendStudentWelcomeEmail = async (student: any) => {
   if (!student?.email) return;
   try {
     const { transporter, from, isTestAccount } = await getTransporter();
-    const portalUrl = `http://72.61.106.87/login?role=student&email=${encodeURIComponent(student.email || '')}`;
+    const portalUrl = `${APP_BASE_URL}/login?role=student&email=${encodeURIComponent(student.email || '')}`;
 
     const customTemplate = db.settings?.customEmailTemplates?.student_welcome;
     let subject = customTemplate?.subject || `🎓 Welcome to CODELAB EDUCARE LTD — Admission Confirmation (${student.studentCode || 'STU'})`;
@@ -670,7 +671,7 @@ const sendMentorWelcomeEmail = async (mentor: any) => {
   if (!mentor?.email) return;
   try {
     const { transporter, from, isTestAccount } = await getTransporter();
-    const portalUrl = `http://72.61.106.87/login?role=mentor&email=${encodeURIComponent(mentor.email || '')}`;
+    const portalUrl = `${APP_BASE_URL}/login?role=mentor&email=${encodeURIComponent(mentor.email || '')}`;
     const facultyId = mentor.facultyId || `FAC-${mentor.id?.slice?.(0, 5) || Date.now().toString().slice(-4)}`;
     const department = mentor.department || 'Academic Instruction';
     const courses = Array.isArray(mentor.courses) ? mentor.courses.join(', ') : (mentor.courses || 'Assigned Courses');
@@ -837,7 +838,7 @@ const sendExpenseApprovalRequestEmail = async (expense: any) => {
         ` : ''}
 
         <div style="text-align: center; margin: 28px 0;">
-          <a href="http://72.61.106.87/expenses" 
+          <a href="${APP_BASE_URL}/expenses" 
              style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
             Review &amp; Authorize Requisition →
           </a>
@@ -904,7 +905,7 @@ const sendExpenseDecisionEmail = async (expense: any, status: 'Approved' | 'Reje
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
-          <a href="http://72.61.106.87/expenses" 
+          <a href="${APP_BASE_URL}/expenses" 
              style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
             View In OpEx Ledger →
           </a>
@@ -949,7 +950,7 @@ const sendExpenseDecisionEmail = async (expense: any, status: 'Approved' | 'Reje
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
-          <a href="http://72.61.106.87/expenses" 
+          <a href="${APP_BASE_URL}/expenses" 
              style="background-color: #475569; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
             Review in Portal &amp; Resubmit →
           </a>
@@ -1024,7 +1025,7 @@ const sendTuitionPaymentEmails = async (payload: {
           </div>
 
           <div style="text-align: center; margin: 28px 0;">
-            <a href="http://72.61.106.87/student/billing" 
+            <a href="${APP_BASE_URL}/student/billing" 
                style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
               View Student Billing Portal →
             </a>
@@ -1083,7 +1084,7 @@ const sendTuitionPaymentEmails = async (payload: {
           </div>
 
           <div style="text-align: center; margin: 28px 0;">
-            <a href="http://72.61.106.87/mentors" 
+            <a href="${APP_BASE_URL}/mentors" 
                style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
               View Commission Ledger →
             </a>
@@ -1170,7 +1171,7 @@ const sendMentorPayoutAdviceEmail = async (mentor: any, amount: number, transfer
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
-          <a href="http://72.61.106.87/mentors" 
+          <a href="${APP_BASE_URL}/mentors" 
              style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
             View Settlement History →
           </a>
@@ -1240,7 +1241,7 @@ const sendAssignmentSubmittedEmail = async (submission: any, mentor: any) => {
         ` : ''}
 
         <div style="text-align: center; margin: 28px 0;">
-          <a href="http://72.61.106.87/courses" 
+          <a href="${APP_BASE_URL}/courses" 
              style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
             Evaluate &amp; Grade Submission →
           </a>
@@ -1308,7 +1309,7 @@ const sendAssignmentGradedEmail = async (assignment: any, student: any) => {
         ` : ''}
 
         <div style="text-align: center; margin: 28px 0;">
-          <a href="http://72.61.106.87/student/courses" 
+          <a href="${APP_BASE_URL}/student/courses" 
              style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
             Launch LMS Portal →
           </a>
@@ -1368,7 +1369,7 @@ const sendNewMenteeAssignedEmail = async (student: any, mentor: any) => {
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
-          <a href="http://72.61.106.87/mentors" 
+          <a href="${APP_BASE_URL}/mentors" 
              style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
             Open Faculty Mentees Roster →
           </a>
@@ -1442,7 +1443,7 @@ const sendProofOfPaymentAlertEmail = async (student: any, proofRecord: any) => {
           ${proofRecord.receiptProofUrl ? `<p style="margin: 0;"><strong>Receipt File:</strong> 📎 ${proofRecord.receiptProofUrl}</p>` : ''}
         </div>
         <div style="text-align: center; margin: 28px 0;">
-          <a href="http://72.61.106.87/invoices" 
+          <a href="${APP_BASE_URL}/invoices" 
              style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">
             Verify Payment in Bursary →
           </a>
@@ -1538,7 +1539,7 @@ const sendTicketRaisedEmails = async (ticket: any) => {
   try {
     const { transporter, from } = await getTransporter();
     const primaryColor = '#00236f';
-    const portalUrl = 'http://72.61.106.87/tickets';
+    const portalUrl = `${APP_BASE_URL}/tickets`;
     const adminEmail = db.settings?.smtp?.user || db.settings?.email || 'admin@codelab.institute';
 
     // 1. Confirmation Email to Ticket Creator
@@ -1689,7 +1690,7 @@ const sendTicketInProgressEmail = async (ticket: any) => {
   try {
     const { transporter, from } = await getTransporter();
     const primaryColor = '#00236f';
-    const portalUrl = 'http://72.61.106.87/tickets';
+    const portalUrl = `${APP_BASE_URL}/tickets`;
     const subject = `⚙️ [In Progress] Support Ticket #${ticket.ticketNumber} — ${ticket.title}`;
     const bodyContent = `
       <div style="padding: 32px 24px; color: #1e293b; line-height: 1.6; font-family: 'Inter', sans-serif;">
@@ -1751,7 +1752,7 @@ const sendTicketResolvedEmail = async (ticket: any, resolutionNotes?: string) =>
   try {
     const { transporter, from } = await getTransporter();
     const primaryColor = '#00236f';
-    const portalUrl = 'http://72.61.106.87/tickets';
+    const portalUrl = `${APP_BASE_URL}/tickets`;
     const subject = `✅ [Resolved] Support Ticket #${ticket.ticketNumber} — ${ticket.title}`;
     const bodyContent = `
       <div style="padding: 32px 24px; color: #1e293b; line-height: 1.6; font-family: 'Inter', sans-serif;">
@@ -1873,7 +1874,7 @@ app.post('/api/email/send-test', async (req: Request, res: Response) => {
 app.post('/api/auth/send-welcome', async (req: Request, res: Response) => {
   const { email, name, roleTitle, role, html } = req.body;
   const token = `token-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
-  const setupUrl = `http://72.61.106.87/reset-password?role=${encodeURIComponent(role || '')}&email=${encodeURIComponent(email)}&token=${token}`;
+  const setupUrl = `${APP_BASE_URL}/reset-password?role=${encodeURIComponent(role || '')}&email=${encodeURIComponent(email)}&token=${token}`;
 
   try {
     const { transporter, from, isTestAccount } = await getTransporter();
@@ -2512,10 +2513,19 @@ app.get('/api/staff', (req: Request, res: Response) => {
 });
 
 app.post('/api/staff', (req: Request, res: Response) => {
+  const { email } = req.body;
+  if (email && Array.isArray(db.staffUsers)) {
+    const existing = db.staffUsers.find((u: any) => u.email?.toLowerCase().trim() === email.toLowerCase().trim());
+    if (existing) {
+      return res.status(409).json({ success: false, message: 'A staff member with this email address already exists.' });
+    }
+  }
+
   const newStaff = {
     ...req.body,
     id: `user-${Date.now()}`,
   };
+  if (!Array.isArray(db.staffUsers)) db.staffUsers = [];
   db.staffUsers.unshift(newStaff);
   saveDatabase(db);
   res.status(201).json({ success: true, data: newStaff });
@@ -2526,9 +2536,46 @@ app.patch('/api/staff/:id', (req: Request, res: Response) => {
   const index = db.staffUsers.findIndex(u => u.id === id);
   if (index === -1) return res.status(404).json({ success: false, message: 'Staff not found' });
 
+  // If email is changing, verify no other user has it
+  if (req.body.email) {
+    const cleanEmail = req.body.email.toLowerCase().trim();
+    const emailConflict = db.staffUsers.some(u => u.id !== id && u.email?.toLowerCase().trim() === cleanEmail);
+    if (emailConflict) {
+      return res.status(409).json({ success: false, message: 'Another staff user already has this email address.' });
+    }
+  }
+
   db.staffUsers[index] = { ...db.staffUsers[index], ...req.body };
   saveDatabase(db);
   res.json({ success: true, data: db.staffUsers[index] });
+});
+
+app.delete('/api/staff/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const staff = (db.staffUsers || []).find((u: any) => u.id === id);
+  if (!staff) {
+    return res.status(404).json({ success: false, message: 'Staff user not found' });
+  }
+
+  // Prevent deleting the primary Super Admin account
+  if (staff.role === 'super_admin' && staff.id === 'user-admin') {
+    return res.status(403).json({ success: false, message: 'The primary Super Admin institutional account cannot be deleted.' });
+  }
+
+  db.staffUsers = (db.staffUsers || []).filter((u: any) => u.id !== id);
+  saveDatabase(db);
+
+  db.activityLogs.unshift({
+    id: `act-${Date.now()}-staff-del`,
+    timestamp: new Date().toISOString(),
+    title: 'Staff Member Deleted',
+    description: `Staff profile for ${staff.name} (${staff.email}) was removed from the institution.`,
+    type: 'system',
+    user: 'Super Admin'
+  });
+  saveDatabase(db);
+
+  res.json({ success: true, message: `Staff member ${staff.name} deleted successfully.` });
 });
 
 // ----------------------------------------------------
@@ -4295,7 +4342,7 @@ app.post('/api/tickets/:id/comments', async (req: Request, res: Response) => {
     if (recipient) {
       const { transporter, from } = await getTransporter();
       const primaryColor = '#00236f';
-      const portalUrl = 'http://72.61.106.87/tickets';
+      const portalUrl = `${APP_BASE_URL}/tickets`;
       const subject = `💬 [Reply on Ticket] #${ticket.ticketNumber} — ${ticket.title}`;
       const bodyContent = `
         <div style="padding: 32px 24px; color: #1e293b; line-height: 1.6; font-family: 'Inter', sans-serif;">
@@ -4362,6 +4409,15 @@ app.patch('/api/roles/:id', (req: Request, res: Response) => {
     ...db.customRoles[index],
     ...req.body,
   };
+
+  // If role name was updated, cascade to all staff members assigned to this role
+  if (req.body.name && Array.isArray(db.staffUsers)) {
+    db.staffUsers.forEach(u => {
+      if (u.role === id) {
+        u.roleTitle = req.body.name;
+      }
+    });
+  }
 
   saveDatabase(db);
   res.json({ success: true, data: db.customRoles[index] });

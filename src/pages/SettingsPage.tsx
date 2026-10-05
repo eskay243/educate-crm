@@ -1,7 +1,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
-import { UserRole, EnabledModules, CampusLocation, RoleCapabilities } from '../types/crm';
+import { UserRole, EnabledModules, CampusLocation, RoleCapabilities, AuthUser, CustomRoleDefinition } from '../types/crm';
 import { emailService, EmailTemplatePayload, EmailDispatchLog } from '../services/emailService';
 import { apiService } from '../services/api';
 import { NIGERIAN_BANKS } from '../data/nigerianBanks';
@@ -9,6 +9,7 @@ import { BrandLogo } from '../components/common/BrandLogo';
 import { initialCampuses } from '../data/mockData';
 import { getDeviceCoordinates } from '../utils/geo';
 import { usePWA } from '../context/PWAContext';
+import { APP_BASE_URL } from '../utils/url';
 
 const ALL_SYSTEM_MODULES: { id: string; label: string; icon: string }[] = [
   { id: 'courses', label: 'Programs & Cohorts', icon: 'menu_book' },
@@ -46,6 +47,9 @@ export const SettingsPage: React.FC = () => {
     toggleRoleModule,
     toggleUserActiveStatus,
     setSelectedUserForPasswordReset,
+    deleteStaffUser,
+    editStaffUser,
+    renameCustomRole,
   } = useCRM();
 
   const {
@@ -378,6 +382,82 @@ export const SettingsPage: React.FC = () => {
   const [newStaffDept, setNewStaffDept] = useState('Admissions');
   const [newStaffMentorId, setNewStaffMentorId] = useState('');
 
+  // Staff Edit & Delete States
+  const [editingStaffUser, setEditingStaffUser] = useState<AuthUser | null>(null);
+  const [editStaffName, setEditStaffName] = useState('');
+  const [editStaffEmail, setEditStaffEmail] = useState('');
+  const [editStaffRole, setEditStaffRole] = useState<UserRole>('admissions');
+  const [editStaffDepartment, setEditStaffDepartment] = useState('');
+  const [isSavingStaffEdit, setIsSavingStaffEdit] = useState(false);
+
+  const [deletingStaffUser, setDeletingStaffUser] = useState<AuthUser | null>(null);
+  const [isDeletingStaff, setIsDeletingStaff] = useState(false);
+
+  // Custom Role Renaming States
+  const [renamingRole, setRenamingRole] = useState<CustomRoleDefinition | null>(null);
+  const [renamedRoleTitle, setRenamedRoleTitle] = useState('');
+  const [renamedRoleDesc, setRenamedRoleDesc] = useState('');
+  const [isRenamingRole, setIsRenamingRole] = useState(false);
+
+  const handleOpenEditStaff = (user: AuthUser) => {
+    setEditingStaffUser(user);
+    setEditStaffName(user.name);
+    setEditStaffEmail(user.email);
+    setEditStaffRole(user.role);
+    setEditStaffDepartment(user.department || '');
+  };
+
+  const handleSaveStaffEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStaffUser) return;
+    if (!editStaffName.trim() || !editStaffEmail.trim()) {
+      showToast('Validation Error', 'Full Name and Email Address are required.', 'error');
+      return;
+    }
+    setIsSavingStaffEdit(true);
+    const success = await editStaffUser(editingStaffUser.id, {
+      name: editStaffName.trim(),
+      email: editStaffEmail.trim().toLowerCase(),
+      role: editStaffRole,
+      department: editStaffDepartment.trim(),
+    });
+    setIsSavingStaffEdit(false);
+    if (success) {
+      setEditingStaffUser(null);
+    }
+  };
+
+  const handleConfirmDeleteStaff = async () => {
+    if (!deletingStaffUser) return;
+    setIsDeletingStaff(true);
+    const success = await deleteStaffUser(deletingStaffUser.id);
+    setIsDeletingStaff(false);
+    if (success) {
+      setDeletingStaffUser(null);
+    }
+  };
+
+  const handleOpenRenameRole = (role: CustomRoleDefinition) => {
+    setRenamingRole(role);
+    setRenamedRoleTitle(role.name);
+    setRenamedRoleDesc(role.description || '');
+  };
+
+  const handleSaveRoleRename = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!renamingRole) return;
+    if (!renamedRoleTitle.trim()) {
+      showToast('Validation Error', 'Role Title cannot be empty.', 'error');
+      return;
+    }
+    setIsRenamingRole(true);
+    const success = await renameCustomRole(renamingRole.id, renamedRoleTitle.trim(), renamedRoleDesc.trim());
+    setIsRenamingRole(false);
+    if (success) {
+      setRenamingRole(null);
+    }
+  };
+
   // Custom Roles & Permission Architect State
   const [showCreateRoleModal, setShowCreateRoleModal] = useState(false);
   const [newRoleName, setNewRoleName] = useState('');
@@ -419,7 +499,7 @@ export const SettingsPage: React.FC = () => {
   // 1. Staff Welcome Editable Fields
   const [welcomeRoleTitle, setWelcomeRoleTitle] = useState('Senior Admissions Specialist');
   const [welcomeDept, setWelcomeDept] = useState('Admissions & Student Success');
-  const [welcomeSetupUrl, setWelcomeSetupUrl] = useState('http://72.61.106.87/reset-password');
+  const [welcomeSetupUrl, setWelcomeSetupUrl] = useState(`${APP_BASE_URL}/reset-password`);
   const [welcomeNote, setWelcomeNote] = useState('Your institutional staff account has been provisioned on the Nexus CRM Portal.');
 
   // 2. Payment Reminder Editable Fields
@@ -448,7 +528,7 @@ export const SettingsPage: React.FC = () => {
   const [sessionVenue, setSessionVenue] = useState('Google Meet / Lagos Hub Lab 3');
 
   // 5. Password Reset Editable Fields
-  const [resetLinkUrl, setResetLinkUrl] = useState('http://72.61.106.87/reset-password');
+  const [resetLinkUrl, setResetLinkUrl] = useState(`${APP_BASE_URL}/reset-password`);
   const [resetExpiry, setResetExpiry] = useState('24 hours');
   const [resetSecurityNote, setResetSecurityNote] = useState('We received a request to reset the password for your Nexus CRM account.');
 
@@ -501,7 +581,7 @@ export const SettingsPage: React.FC = () => {
           cohort: 'Executive Cohort 2026',
           mentorName: sessionMentorName,
           paymentStatus: 'Cleared & Active (Full Tuition Paid)',
-          portalUrl: `http://72.61.106.87/login?role=student&email=${encodeURIComponent(testRecipientEmail || 'student@codelab.institute')}`,
+          portalUrl: `${APP_BASE_URL}/login?role=student&email=${encodeURIComponent(testRecipientEmail || 'student@codelab.institute')}`,
         };
       case 'mentor_welcome':
         return {
@@ -510,7 +590,7 @@ export const SettingsPage: React.FC = () => {
           courses: mentorCourses,
           commissionRate: mentorCommissionRate,
           bankDetails: mentorBankDetails,
-          portalUrl: `http://72.61.106.87/login?role=mentor&email=${encodeURIComponent(testRecipientEmail || 'mentor@codelab.institute')}`,
+          portalUrl: `${APP_BASE_URL}/login?role=mentor&email=${encodeURIComponent(testRecipientEmail || 'mentor@codelab.institute')}`,
         };
       case 'staff_welcome':
         return {
@@ -567,7 +647,7 @@ export const SettingsPage: React.FC = () => {
           urgency: 'Urgent',
           receiptName: 'cisco_invoice_9021.pdf',
           description: 'Critical network switch replacement for Victoria Island Lab 2 high-density lab.',
-          actionUrl: 'http://72.61.106.87/expenses',
+          actionUrl: `${APP_BASE_URL}/expenses`,
         };
       case 'expense_approved':
         return {
@@ -576,7 +656,7 @@ export const SettingsPage: React.FC = () => {
           amount: 185000,
           reviewedBy: 'Abiola Adefowope (Super Admin)',
           reviewedAt: new Date().toISOString().split('T')[0],
-          actionUrl: 'http://72.61.106.87/expenses',
+          actionUrl: `${APP_BASE_URL}/expenses`,
         };
       case 'expense_rejected':
         return {
@@ -585,7 +665,7 @@ export const SettingsPage: React.FC = () => {
           amount: 185000,
           reviewedBy: 'Super Admin',
           rejectionReason: 'Exceeds remaining departmental hardware budget for Q3. Please defer or source alternate vendor discount.',
-          actionUrl: 'http://72.61.106.87/expenses',
+          actionUrl: `${APP_BASE_URL}/expenses`,
         };
       case 'mentor_commission_earned':
         return {
@@ -594,7 +674,7 @@ export const SettingsPage: React.FC = () => {
           tuitionPaid: 850000,
           commissionAmount: 314500,
           newPendingPayout: 314500,
-          portalUrl: 'http://72.61.106.87/mentors',
+          portalUrl: `${APP_BASE_URL}/mentors`,
         };
       case 'mentor_payout_disbursed':
         return {
@@ -603,7 +683,7 @@ export const SettingsPage: React.FC = () => {
           accountNumber: '0812948192',
           transferRef: 'TRF-PAYSTACK-948102',
           date: new Date().toISOString().split('T')[0],
-          portalUrl: 'http://72.61.106.87/mentors',
+          portalUrl: `${APP_BASE_URL}/mentors`,
         };
       case 'lab_assignment_submitted':
         return {
@@ -614,7 +694,7 @@ export const SettingsPage: React.FC = () => {
           githubUrl: 'https://github.com/codelab-student/fullstack-demo',
           liveUrl: 'https://codelab-demo.vercel.app',
           notes: 'Configured with PostgreSQL database and JWT authentication.',
-          reviewUrl: 'http://72.61.106.87/courses',
+          reviewUrl: `${APP_BASE_URL}/courses`,
         };
       case 'lab_assignment_graded':
         return {
@@ -623,7 +703,7 @@ export const SettingsPage: React.FC = () => {
           status: 'Passed',
           reviewedBy: sessionMentorName || 'Arthur Pendelton',
           mentorFeedback: 'Superb architecture and code modularity. Clean API error boundaries and database migrations.',
-          portalUrl: 'http://72.61.106.87/student/courses',
+          portalUrl: `${APP_BASE_URL}/student/courses`,
         };
       case 'new_mentee_assigned':
         return {
@@ -632,7 +712,7 @@ export const SettingsPage: React.FC = () => {
           program: 'Full-Stack Software Engineering',
           cohort: 'Executive Cohort 2026',
           studentEmail: 'chidi.okeke@codelab.institute',
-          portalUrl: 'http://72.61.106.87/mentors',
+          portalUrl: `${APP_BASE_URL}/mentors`,
         };
       case 'proof_of_payment_alert':
         return {
@@ -641,7 +721,7 @@ export const SettingsPage: React.FC = () => {
           amount: 850000,
           bankRef: 'NIBSS-TRF-091823901',
           fileName: 'transfer_receipt_access.jpg',
-          actionUrl: 'http://72.61.106.87/invoices',
+          actionUrl: `${APP_BASE_URL}/invoices`,
         };
       case 'tuition_payment_alert':
         return {
@@ -651,7 +731,7 @@ export const SettingsPage: React.FC = () => {
           amount: 850000,
           gateway: 'Paystack Direct Settlement',
           reference: 'PAY-REF-8910293',
-          actionUrl: 'http://72.61.106.87/invoices',
+          actionUrl: `${APP_BASE_URL}/invoices`,
         };
       case 'mentor_student_performance_report':
         return {
@@ -675,7 +755,7 @@ export const SettingsPage: React.FC = () => {
           program: reminderProgram,
           certificateNumber: 'CERT-CDL-2026-9042',
           issuedDate: '11 September 2026',
-          portalUrl: 'http://72.61.106.87/student/courses',
+          portalUrl: `${APP_BASE_URL}/student/courses`,
         };
       default:
         return {};
@@ -956,7 +1036,7 @@ export const SettingsPage: React.FC = () => {
       data: {
         roleTitle: effectiveRoleTitle,
         department: newStaffDept,
-        setupUrl: `http://72.61.106.87/reset-password?email=${encodeURIComponent(newStaffEmail)}&token=welcome-${Date.now()}`
+        setupUrl: `${APP_BASE_URL}/reset-password?email=${encodeURIComponent(newStaffEmail)}&token=welcome-${Date.now()}`
       }
     });
 
@@ -1243,7 +1323,7 @@ export const SettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-stack-lg animate-in fade-in duration-200 max-w-6xl">
+    <div className="space-y-stack-lg animate-in fade-in duration-200 w-full max-w-[1600px] mx-auto">
       {/* Page Header */}
       <div>
         <h2 className="font-headline-lg text-headline-lg font-bold text-on-surface mb-unit">
@@ -1270,140 +1350,199 @@ export const SettingsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Tabs Navigation */}
-      <div className="flex border-b border-outline-variant gap-2 overflow-x-auto">
-        {/* Profile & KYC Tab - Visible to all users */}
-        <button
-          onClick={() => setActiveTab('profile')}
-          className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
-            effectiveSection === 'profile'
-              ? 'border-b-2 border-primary text-primary'
-              : 'text-secondary hover:text-on-surface'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[18px]">account_circle</span>
-          <span>{isSuperAdmin ? 'My Profile & KYC' : 'My Profile & Bank KYC'}</span>
-          {isProfileBankVerified && (
-            <span className="px-1.5 py-0.5 rounded-full bg-[#dcfce7] text-[#166534] text-[10px] font-bold">
-              ✓ Verified
-            </span>
+      {/* Main Responsive Two-Column Layout: Left Vertical Navigation, Right Active Content */}
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+        {/* Left Sticky Vertical Navigation Sidebar */}
+        <aside className="w-full lg:w-72 shrink-0 bg-surface border border-outline-variant/60 rounded-2xl p-3.5 shadow-xs space-y-4 lg:sticky lg:top-4">
+          {/* Group 1: Personal & Security */}
+          <div className="space-y-1">
+            <div className="px-3 py-1 text-[10px] font-bold text-secondary/70 uppercase tracking-wider font-label-md">
+              Identity &amp; Security
+            </div>
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`w-full text-left px-3.5 py-2.5 rounded-xl font-medium text-xs flex items-center justify-between transition-all duration-150 cursor-pointer ${
+                effectiveSection === 'profile'
+                  ? 'bg-primary text-on-primary font-bold shadow-xs'
+                  : 'text-secondary hover:text-on-surface hover:bg-surface-container-low'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-[18px]">account_circle</span>
+                <span>{isSuperAdmin ? 'My Profile & KYC' : 'Profile & Bank KYC'}</span>
+              </div>
+              {isProfileBankVerified && (
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  effectiveSection === 'profile' ? 'bg-white/20 text-white' : 'bg-[#dcfce7] text-[#166534]'
+                }`}>
+                  ✓ KYC
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('security')}
+              className={`w-full text-left px-3.5 py-2.5 rounded-xl font-medium text-xs flex items-center justify-between transition-all duration-150 cursor-pointer ${
+                effectiveSection === 'security'
+                  ? 'bg-primary text-on-primary font-bold shadow-xs'
+                  : 'text-secondary hover:text-on-surface hover:bg-surface-container-low'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-[18px]">lock_reset</span>
+                <span>Security &amp; Password</span>
+              </div>
+            </button>
+          </div>
+
+          {/* Group 2: Access & Governance (Super Admin Only) */}
+          {isSuperAdmin && (
+            <div className="space-y-1 pt-3 border-t border-outline-variant/40">
+              <div className="px-3 py-1 text-[10px] font-bold text-secondary/70 uppercase tracking-wider font-label-md">
+                Access &amp; Governance
+              </div>
+              <button
+                onClick={() => setActiveTab('staff')}
+                className={`w-full text-left px-3.5 py-2.5 rounded-xl font-medium text-xs flex items-center justify-between transition-all duration-150 cursor-pointer ${
+                  effectiveSection === 'staff'
+                    ? 'bg-primary text-on-primary font-bold shadow-xs'
+                    : 'text-secondary hover:text-on-surface hover:bg-surface-container-low'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="material-symbols-outlined text-[18px]">badge</span>
+                  <span>Staff Accounts</span>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-data-tabular font-bold ${
+                  effectiveSection === 'staff' ? 'bg-white/20 text-white' : 'bg-surface-container text-secondary'
+                }`}>
+                  {staffUsers.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('users')}
+                className={`w-full text-left px-3.5 py-2.5 rounded-xl font-medium text-xs flex items-center justify-between transition-all duration-150 cursor-pointer ${
+                  effectiveSection === 'users'
+                    ? 'bg-primary text-on-primary font-bold shadow-xs'
+                    : 'text-secondary hover:text-on-surface hover:bg-surface-container-low'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
+                  <span>User Directory</span>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-data-tabular font-bold ${
+                  effectiveSection === 'users' ? 'bg-white/20 text-white' : 'bg-surface-container text-secondary'
+                }`}>
+                  {unifiedUsers.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('roles')}
+                className={`w-full text-left px-3.5 py-2.5 rounded-xl font-medium text-xs flex items-center justify-between transition-all duration-150 cursor-pointer ${
+                  effectiveSection === 'roles'
+                    ? 'bg-primary text-on-primary font-bold shadow-xs'
+                    : 'text-secondary hover:text-on-surface hover:bg-surface-container-low'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
+                  <span>Roles &amp; Permissions</span>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-data-tabular font-bold ${
+                  effectiveSection === 'roles' ? 'bg-white/20 text-white' : 'bg-surface-container text-secondary'
+                }`}>
+                  {customRoles.length}
+                </span>
+              </button>
+            </div>
           )}
-        </button>
 
-        {/* Institutional Tabs - Super Admin Only */}
-        {isSuperAdmin && (
-          <>
-            <button
-              onClick={() => setActiveTab('general')}
-              className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
-                effectiveSection === 'general'
-                  ? 'border-b-2 border-primary text-primary'
-                  : 'text-secondary hover:text-on-surface'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[18px]">domain</span>
-              <span>Institutional Profile</span>
-            </button>
+          {/* Group 3: Institutional Setup (Super Admin Only) */}
+          {isSuperAdmin && (
+            <div className="space-y-1 pt-3 border-t border-outline-variant/40">
+              <div className="px-3 py-1 text-[10px] font-bold text-secondary/70 uppercase tracking-wider font-label-md">
+                Institutional Setup
+              </div>
+              <button
+                onClick={() => setActiveTab('general')}
+                className={`w-full text-left px-3.5 py-2.5 rounded-xl font-medium text-xs flex items-center justify-between transition-all duration-150 cursor-pointer ${
+                  effectiveSection === 'general'
+                    ? 'bg-primary text-on-primary font-bold shadow-xs'
+                    : 'text-secondary hover:text-on-surface hover:bg-surface-container-low'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="material-symbols-outlined text-[18px]">domain</span>
+                  <span>Institutional Profile</span>
+                </div>
+              </button>
 
-            <button
-              onClick={() => setActiveTab('modules')}
-              className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
-                effectiveSection === 'modules'
-                  ? 'border-b-2 border-primary text-primary'
-                  : 'text-secondary hover:text-on-surface'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[18px]">toggle_on</span>
-              <span>Modules &amp; Launch Controls</span>
-              <span className="px-1.5 py-0.5 rounded-full bg-surface-container text-secondary text-[11px] font-data-tabular">
-                {Object.values(enabledModules).filter(Boolean).length}/{Object.keys(enabledModules).length}
-              </span>
-            </button>
+              <button
+                onClick={() => setActiveTab('modules')}
+                className={`w-full text-left px-3.5 py-2.5 rounded-xl font-medium text-xs flex items-center justify-between transition-all duration-150 cursor-pointer ${
+                  effectiveSection === 'modules'
+                    ? 'bg-primary text-on-primary font-bold shadow-xs'
+                    : 'text-secondary hover:text-on-surface hover:bg-surface-container-low'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="material-symbols-outlined text-[18px]">toggle_on</span>
+                  <span>Modules &amp; Launch</span>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-data-tabular font-bold ${
+                  effectiveSection === 'modules' ? 'bg-white/20 text-white' : 'bg-surface-container text-secondary'
+                }`}>
+                  {Object.values(enabledModules).filter(Boolean).length}/{Object.keys(enabledModules).length}
+                </span>
+              </button>
+            </div>
+          )}
 
-            <button
-              onClick={() => setActiveTab('staff')}
-              className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
-                effectiveSection === 'staff'
-                  ? 'border-b-2 border-primary text-primary'
-                  : 'text-secondary hover:text-on-surface'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[18px]">badge</span>
-              <span>Staff Accounts</span>
-              <span className="px-1.5 py-0.5 rounded-full bg-surface-container text-secondary text-[11px] font-data-tabular">
-                {staffUsers.length}
-              </span>
-            </button>
+          {/* Group 4: Communications & Recovery (Super Admin Only) */}
+          {isSuperAdmin && (
+            <div className="space-y-1 pt-3 border-t border-outline-variant/40">
+              <div className="px-3 py-1 text-[10px] font-bold text-secondary/70 uppercase tracking-wider font-label-md">
+                Operations &amp; Tools
+              </div>
+              <button
+                onClick={() => setActiveTab('emailing')}
+                className={`w-full text-left px-3.5 py-2.5 rounded-xl font-medium text-xs flex items-center justify-between transition-all duration-150 cursor-pointer ${
+                  effectiveSection === 'emailing'
+                    ? 'bg-primary text-on-primary font-bold shadow-xs'
+                    : 'text-secondary hover:text-on-surface hover:bg-surface-container-low'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="material-symbols-outlined text-[18px]">mark_email_read</span>
+                  <span>Email &amp; SMTP</span>
+                </div>
+                {smtpUser && (
+                  <span className={`w-2 h-2 rounded-full ${effectiveSection === 'emailing' ? 'bg-white' : 'bg-emerald-500'}`} />
+                )}
+              </button>
 
-            <button
-              onClick={() => setActiveTab('users')}
-              className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
-                effectiveSection === 'users'
-                  ? 'border-b-2 border-primary text-primary'
-                  : 'text-secondary hover:text-on-surface'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
-              <span>User Directory</span>
-              <span className="px-1.5 py-0.5 rounded-full bg-surface-container text-secondary text-[11px] font-data-tabular">
-                {unifiedUsers.length}
-              </span>
-            </button>
+              <button
+                onClick={() => setActiveTab('backups')}
+                className={`w-full text-left px-3.5 py-2.5 rounded-xl font-medium text-xs flex items-center justify-between transition-all duration-150 cursor-pointer ${
+                  effectiveSection === 'backups'
+                    ? 'bg-primary text-on-primary font-bold shadow-xs'
+                    : 'text-secondary hover:text-on-surface hover:bg-surface-container-low'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="material-symbols-outlined text-[18px]">cloud_sync</span>
+                  <span>Backup &amp; Recovery</span>
+                </div>
+              </button>
+            </div>
+          )}
+        </aside>
 
-            <button
-              onClick={() => setActiveTab('roles')}
-              className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
-                effectiveSection === 'roles'
-                  ? 'border-b-2 border-primary text-primary'
-                  : 'text-secondary hover:text-on-surface'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
-              <span>Roles &amp; Permissions</span>
-              <span className="px-1.5 py-0.5 rounded-full bg-surface-container text-secondary text-[11px] font-data-tabular">
-                {customRoles.length}
-              </span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('emailing')}
-              className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
-                effectiveSection === 'emailing'
-                  ? 'border-b-2 border-primary text-primary'
-                  : 'text-secondary hover:text-on-surface'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[18px]">mark_email_read</span>
-              <span>Email &amp; SMTP</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('backups')}
-              className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
-                effectiveSection === 'backups'
-                  ? 'border-b-2 border-primary text-primary'
-                  : 'text-secondary hover:text-on-surface'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[18px]">cloud_sync</span>
-              <span>Backup &amp; Production Data</span>
-            </button>
-          </>
-        )}
-
-        {/* Security & Password Tab */}
-        <button
-          onClick={() => setActiveTab('security')}
-          className={`pb-3 px-4 font-label-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
-            effectiveSection === 'security'
-              ? 'border-b-2 border-primary text-primary'
-              : 'text-secondary hover:text-on-surface'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[18px]">lock_reset</span>
-          <span>Security &amp; Password</span>
-        </button>
-      </div>
+        {/* Right Main Content Area */}
+        <main className="flex-1 min-w-0 w-full space-y-6">
 
       {/* ========================================================================= */}
       {/* SECTION: MY PROFILE & NIGERIAN STANDARD KYC (ALL ROLES) */}
@@ -3470,6 +3609,26 @@ export const SettingsPage: React.FC = () => {
                       <td className="p-3 text-secondary">{user.department || 'Executive'}</td>
                       <td className="p-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleOpenEditStaff(user)}
+                            className="px-2 py-1 rounded bg-surface border border-outline-variant hover:bg-surface-container font-semibold text-[11px] text-on-surface transition-colors inline-flex items-center gap-1 cursor-pointer"
+                            title="Edit Staff Information"
+                          >
+                            <span className="material-symbols-outlined text-[13px]">edit</span>
+                            <span>Edit</span>
+                          </button>
+
+                          {!(user.role === 'super_admin' && (user.id === 'user-admin' || staffUsers.filter(u => u.role === 'super_admin').length <= 1)) && (
+                            <button
+                              onClick={() => setDeletingStaffUser(user)}
+                              className="px-2 py-1 rounded bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 font-semibold text-[11px] transition-colors inline-flex items-center gap-1 cursor-pointer"
+                              title="Delete Staff Member"
+                            >
+                              <span className="material-symbols-outlined text-[13px]">delete</span>
+                              <span>Delete</span>
+                            </button>
+                          )}
+
                           {currentUser?.id === user.id && (
                             <button
                               onClick={() => openModal('change-password')}
@@ -3739,7 +3898,20 @@ export const SettingsPage: React.FC = () => {
                       </span>
                       <span className="font-mono text-[10px] text-secondary">({role.id})</span>
                     </div>
-                    <p className="text-xs text-secondary italic">{role.description}</p>
+                    <div className="flex items-center gap-3">
+                      <p className="text-xs text-secondary italic">{role.description}</p>
+                      {!role.isSystem && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenRenameRole(role)}
+                          className="h-7 px-2.5 rounded bg-surface hover:bg-surface-container border border-outline-variant font-semibold text-[11px] text-on-surface transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+                          title="Rename this role and cascade updates to assigned staff"
+                        >
+                          <span className="material-symbols-outlined text-[13px]">edit</span>
+                          <span>Rename Role</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Modules Bar & Interactive Toggles */}
@@ -4837,6 +5009,205 @@ export const SettingsPage: React.FC = () => {
             >
               Reset Seed Data
             </button>
+          </div>
+        </div>
+      )}
+        </main>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* EDIT STAFF MODAL */}
+      {/* ========================================================================= */}
+      {editingStaffUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-surface border border-outline-variant rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in zoom-in-95">
+            <div className="flex justify-between items-center border-b border-outline-variant pb-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[22px]">badge</span>
+                <h3 className="font-headline-md text-base font-bold text-on-surface">Edit Staff Profile &amp; Role</h3>
+              </div>
+              <button onClick={() => setEditingStaffUser(null)} className="text-secondary hover:text-on-surface cursor-pointer">
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveStaffEdit} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block text-secondary font-semibold mb-1">Full Legal Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={editStaffName}
+                  onChange={(e) => setEditStaffName(e.target.value)}
+                  className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-secondary font-semibold mb-1">Institutional Email Address *</label>
+                <input
+                  type="email"
+                  required
+                  value={editStaffEmail}
+                  onChange={(e) => setEditStaffEmail(e.target.value)}
+                  className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-secondary font-semibold mb-1">Assigned Institutional Role *</label>
+                <select
+                  value={editStaffRole}
+                  onChange={(e) => setEditStaffRole(e.target.value as UserRole)}
+                  className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none cursor-pointer"
+                >
+                  <optgroup label="System Roles">
+                    <option value="super_admin">Super Admin / Managing Director</option>
+                    <option value="admissions">Admissions Officer</option>
+                    <option value="finance">Finance Officer &amp; Bursar</option>
+                    <option value="mentor">Faculty Mentor &amp; Instructor</option>
+                    <option value="program_officer">Program Officer &amp; Curriculum Lead</option>
+                  </optgroup>
+                  {customRoles.filter(r => !['super_admin', 'admissions', 'mentor', 'finance', 'student', 'program_officer'].includes(r.id)).length > 0 && (
+                    <optgroup label="Custom Roles">
+                      {customRoles.filter(r => !['super_admin', 'admissions', 'mentor', 'finance', 'student', 'program_officer'].includes(r.id)).map(cr => (
+                        <option key={cr.id} value={cr.id}>{cr.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-secondary font-semibold mb-1">Department / Faculty</label>
+                <input
+                  type="text"
+                  value={editStaffDepartment}
+                  onChange={(e) => setEditStaffDepartment(e.target.value)}
+                  placeholder="e.g. Academic Affairs or Administration"
+                  className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-outline-variant">
+                <button
+                  type="button"
+                  onClick={() => setEditingStaffUser(null)}
+                  className="px-4 py-2 rounded-lg border border-outline-variant text-secondary font-semibold hover:bg-surface-container cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingStaffEdit}
+                  className="px-5 py-2 rounded-lg bg-primary text-on-primary font-bold hover:bg-primary/90 transition-colors shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingStaffEdit ? 'Saving...' : 'Save Profile Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* DELETE STAFF CONFIRMATION MODAL */}
+      {/* ========================================================================= */}
+      {deletingStaffUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-surface border border-outline-variant rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in zoom-in-95">
+            <div className="w-12 h-12 rounded-full bg-error/10 text-error flex items-center justify-center mx-auto">
+              <span className="material-symbols-outlined text-[32px]">person_remove</span>
+            </div>
+            <div className="text-center space-y-1">
+              <h3 className="font-headline-md text-base font-bold text-on-surface">Delete Staff Member</h3>
+              <p className="text-xs text-secondary leading-relaxed">
+                Are you sure you want to delete <strong className="text-on-surface">{deletingStaffUser.name}</strong> ({deletingStaffUser.email})? This staff account will be permanently removed from the institutional directory.
+              </p>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingStaffUser(null)}
+                className="flex-1 h-10 rounded-lg bg-surface hover:bg-surface-container border border-outline-variant font-bold text-xs text-on-surface transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingStaff}
+                onClick={handleConfirmDeleteStaff}
+                className="flex-1 h-10 rounded-lg bg-error hover:bg-error/90 font-bold text-xs text-white shadow-md transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {isDeletingStaff ? 'Deleting...' : 'Yes, Delete Staff'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* RENAME CUSTOM ROLE MODAL */}
+      {/* ========================================================================= */}
+      {renamingRole && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-surface border border-outline-variant rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in zoom-in-95">
+            <div className="flex justify-between items-center border-b border-outline-variant pb-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[22px]">edit_square</span>
+                <h3 className="font-headline-md text-base font-bold text-on-surface">Rename Role &amp; Update Title</h3>
+              </div>
+              <button onClick={() => setRenamingRole(null)} className="text-secondary hover:text-on-surface cursor-pointer">
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            <p className="text-xs text-secondary leading-relaxed">
+              Renaming this role will automatically update the displayed title for all staff members assigned to this role.
+            </p>
+
+            <form onSubmit={handleSaveRoleRename} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block text-secondary font-semibold mb-1">Role Title / Display Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={renamedRoleTitle}
+                  onChange={(e) => setRenamedRoleTitle(e.target.value)}
+                  placeholder="e.g. Lead Program Officer"
+                  className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-secondary font-semibold mb-1">Role Description &amp; Scope</label>
+                <textarea
+                  rows={3}
+                  value={renamedRoleDesc}
+                  onChange={(e) => setRenamedRoleDesc(e.target.value)}
+                  placeholder="Describe responsibilities and institutional duties..."
+                  className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none resize-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-outline-variant">
+                <button
+                  type="button"
+                  onClick={() => setRenamingRole(null)}
+                  className="px-4 py-2 rounded-lg border border-outline-variant text-secondary font-semibold hover:bg-surface-container cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isRenamingRole}
+                  className="px-5 py-2 rounded-lg bg-primary text-on-primary font-bold hover:bg-primary/90 transition-colors shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  {isRenamingRole ? 'Renaming...' : 'Update Role Name'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useCRM } from '../../context/CRMContext';
 import { Student } from '../../types/crm';
+import { APP_BASE_URL } from '../../utils/url';
 
 export interface CertificateModalProps {
   isOpen: boolean;
@@ -331,7 +332,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
               <div className="relative z-10 text-center text-[9px] text-[#94a3b8] mt-3 flex items-center justify-between border-t border-[#e2e8f0]/60 pt-2">
                 <span>RC-1849201 · TIN-29481029-0001</span>
                 <span>Date of Issue: {issueDateFormatted}</span>
-                <span>Verification: http://72.61.106.87/verify/{certNumber}</span>
+                <span>Verification: {APP_BASE_URL}/verify/{certNumber}</span>
               </div>
             </div>
           )}
