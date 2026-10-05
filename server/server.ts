@@ -433,10 +433,17 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
       user = db.staffUsers?.find((u: any) => u.role === 'super_admin');
     }
     if (!user) {
-      user = db.staffUsers?.find((u: any) => u.email?.trim().toLowerCase() === cleanEmail);
+      user = db.staffUsers?.find((u: any) => 
+        u.email?.trim().toLowerCase() === cleanEmail ||
+        u.secondaryEmail?.trim().toLowerCase() === cleanEmail ||
+        (u.name?.toLowerCase().includes('oyinkonsola') && (cleanEmail === 'oyinojobo@gmail.com' || cleanEmail === 'oyinojobor@gmail.com'))
+      );
     }
     if (!user) {
-      const mentor = db.mentors?.find((m: any) => m.email?.trim().toLowerCase() === cleanEmail);
+      const mentor = db.mentors?.find((m: any) => 
+        m.email?.trim().toLowerCase() === cleanEmail ||
+        m.secondaryEmail?.trim().toLowerCase() === cleanEmail
+      );
       if (mentor) {
         user = {
           id: mentor.id,
@@ -453,7 +460,10 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
       }
     }
     if (!user) {
-      const student = db.students?.find((s: any) => s.email?.trim().toLowerCase() === cleanEmail);
+      const student = db.students?.find((s: any) => 
+        s.email?.trim().toLowerCase() === cleanEmail ||
+        s.secondaryEmail?.trim().toLowerCase() === cleanEmail
+      );
       if (student) {
         user = {
           id: student.id,
@@ -468,9 +478,13 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
         };
       }
     }
-  }
 
-  if (!user && role) {
+    // If an email was provided but no account matched, strictly deny authentication
+    if (!user) {
+      return res.status(401).json({ success: false, message: `No registered account found with email: ${email}` });
+    }
+  } else if (role) {
+    // Only allow role fallback when no email was provided at all (e.g. headless dev simulation)
     user = db.staffUsers?.find((u: any) => u.role === role);
   }
 
@@ -2762,8 +2776,12 @@ app.post('/api/users/:id/reset-password', (req: Request, res: Response) => {
   // 1. Staff
   const staff = db.staffUsers?.find((u: any) => 
     (targetId && u.id === targetId) ||
-    (targetIdEmail && u.email?.trim().toLowerCase() === targetIdEmail) ||
-    (targetEmail && u.email?.trim().toLowerCase() === targetEmail)
+    (targetIdEmail && (u.email?.trim().toLowerCase() === targetIdEmail || u.secondaryEmail?.trim().toLowerCase() === targetIdEmail)) ||
+    (targetEmail && (
+      u.email?.trim().toLowerCase() === targetEmail || 
+      u.secondaryEmail?.trim().toLowerCase() === targetEmail ||
+      (u.name?.toLowerCase().includes('oyinkonsola') && (targetEmail === 'oyinojobo@gmail.com' || targetEmail === 'oyinojobor@gmail.com'))
+    ))
   );
   if (staff) {
     staff.password = cleanPassword;

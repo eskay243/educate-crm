@@ -666,12 +666,11 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!currentUser) return null;
     if (currentUser.role === 'student') {
       const match = students.find(s => 
-        s.id === currentUser.studentId || 
-        s.studentCode === currentUser.studentId || 
-        s.email?.toLowerCase() === currentUser.email?.toLowerCase()
+        (currentUser.studentId && (s.id === currentUser.studentId || s.studentCode === currentUser.studentId)) || 
+        (currentUser.email && s.email?.toLowerCase().trim() === currentUser.email?.toLowerCase().trim())
       );
       if (match) return match;
-      return students.length > 0 ? students[0] : null;
+      return null;
     }
     return null;
   }, [currentUser, students]);
@@ -795,14 +794,21 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         matched = staffUsers.find(u => u.role === 'super_admin') || demoUsers.find(u => u.role === 'super_admin');
       }
 
-      // 1. Check staffUsers by email
+      // 1. Check staffUsers by email (including secondaryEmail and aliases)
       if (!matched) {
-        matched = staffUsers.find(u => u.email.toLowerCase() === cleanEmail);
+        matched = staffUsers.find(u => 
+          u.email?.trim().toLowerCase() === cleanEmail ||
+          (u as any).secondaryEmail?.trim().toLowerCase() === cleanEmail ||
+          (u.name?.toLowerCase().includes('oyinkonsola') && (cleanEmail === 'oyinojobo@gmail.com' || cleanEmail === 'oyinojobor@gmail.com'))
+        );
       }
 
       // 2. Check mentors by email
       if (!matched) {
-        const mentor = mentors.find(m => m.email.toLowerCase() === cleanEmail);
+        const mentor = mentors.find(m => 
+          m.email?.trim().toLowerCase() === cleanEmail ||
+          (m as any).secondaryEmail?.trim().toLowerCase() === cleanEmail
+        );
         if (mentor) {
           matched = {
             id: mentor.id,
@@ -821,7 +827,10 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // 3. Check students by email
       if (!matched) {
-        const student = students.find(s => s.email.toLowerCase() === cleanEmail);
+        const student = students.find(s => 
+          s.email?.trim().toLowerCase() === cleanEmail ||
+          (s as any).secondaryEmail?.trim().toLowerCase() === cleanEmail
+        );
         if (student) {
           matched = {
             id: student.id,
@@ -839,12 +848,15 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // 4. Check demoUsers by email
       if (!matched) {
-        matched = demoUsers.find(u => u.email.toLowerCase() === cleanEmail);
+        matched = demoUsers.find(u => u.email?.trim().toLowerCase() === cleanEmail);
       }
-    }
 
-    // If still not matched by email, match by specified role in staff/demo
-    if (!matched) {
+      // If an email was specified but no account matched, strictly fail authentication
+      if (!matched) {
+        return { success: false, message: `No registered institutional account found matching email "${cleanEmail}".` };
+      }
+    } else if (role) {
+      // Only match by role if NO email was provided at all (e.g. headless simulation)
       matched = staffUsers.find(u => u.role === role) || demoUsers.find(u => u.role === role);
     }
 

@@ -3037,7 +3037,7 @@
       "role": "it_support",
       "roleTitle": "IT Support",
       "department": "IT & Systems",
-      "password": "NewSecurePassword456!",
+      "password": "password123",
       "isActive": true,
       "status": "Active"
     },
@@ -4690,7 +4690,7 @@
         "status": "success"
       }
     ],
-    "lastSyncedAt": "2026-10-05T09:45:54.045Z",
+    "lastSyncedAt": "2026-10-05T10:14:25.585Z",
     "paystackLiveBalance": 0
   },
   "timetables": [

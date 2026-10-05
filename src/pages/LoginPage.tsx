@@ -91,8 +91,12 @@ export const LoginPage: React.FC = () => {
       return;
     }
 
-    // 1. Check if matches a registered staff member (including custom roles)
-    const staffMatch = staffUsers?.find(u => u.email?.trim().toLowerCase() === norm);
+    // 1. Check if matches a registered staff member (including custom roles & secondary emails)
+    const staffMatch = staffUsers?.find(u => 
+      u.email?.trim().toLowerCase() === norm ||
+      (u as any).secondaryEmail?.trim().toLowerCase() === norm ||
+      (u.name?.toLowerCase().includes('oyinkonsola') && (norm === 'oyinojobo@gmail.com' || norm === 'oyinojobor@gmail.com'))
+    );
     if (staffMatch) {
       setSelectedRole(staffMatch.role as UserRole);
       setDetectedUser({
