@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useCRM, formatNaira } from '../context/CRMContext';
-import { MentorStatus, MentorPayoutRequest, Student } from '../types/crm';
+import { MentorStatus, MentorPayoutRequest, Student, Mentor } from '../types/crm';
 import { PerformanceMeter } from '../components/common/PerformanceMeter';
 import { PayoutVoucherModal } from '../components/modals/PayoutVoucherModal';
 import { StudentWelfareInterventionModal } from '../components/modals/StudentWelfareInterventionModal';
 import { CrispStatusBadge } from '../components/common/CrispStatusBadge';
+import { TransferTasksAndDeleteModal } from '../components/modals/TransferTasksAndDeleteModal';
 
 export const MentorManagementPage: React.FC = () => {
   const { 
@@ -29,6 +30,9 @@ export const MentorManagementPage: React.FC = () => {
     setSelectedSlotForAttendance,
     payoutRequests,
     reviewMentorPayout,
+    getUserTaskFootprint,
+    deleteMentorUser,
+    toggleUserActiveStatus,
   } = useCRM();
 
   const navigate = useNavigate();
@@ -36,10 +40,14 @@ export const MentorManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'roster' | 'sessions' | 'reports' | 'timetable' | 'payouts'>('roster');
   const [tableSearch, setTableSearch] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<string>('All');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'deactivated'>('all');
   const [selectedPayoutForVoucher, setSelectedPayoutForVoucher] = useState<MentorPayoutRequest | null>(null);
   const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
   const [selectedStudentForWelfare, setSelectedStudentForWelfare] = useState<Student | null>(null);
   const [isWelfareModalOpen, setIsWelfareModalOpen] = useState(false);
+  const [mentorToTransfer, setMentorToTransfer] = useState<Mentor | null>(null);
+  const [mentorToDeleteSimple, setMentorToDeleteSimple] = useState<Mentor | null>(null);
+  const [isDeletingMentor, setIsDeletingMentor] = useState(false);
 
   const effectiveSearch = globalSearch || tableSearch;
   const isMentor = currentUser?.role === 'mentor';
@@ -136,9 +144,17 @@ export const MentorManagementPage: React.FC = () => {
         mentor.email.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
         mentor.role.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
         mentor.department.toLowerCase().includes(effectiveSearch.toLowerCase());
-      return matchesDept && matchesSearch;
+      
+      let matchesStatus = true;
+      if (statusFilter === 'active') {
+        matchesStatus = mentor.isActive !== false && mentor.status !== 'Deactivated';
+      } else if (statusFilter === 'deactivated') {
+        matchesStatus = mentor.isActive === false || mentor.status === 'Deactivated';
+      }
+
+      return matchesDept && matchesSearch && matchesStatus;
     });
-  }, [accessibleMentors, departmentFilter, effectiveSearch]);
+  }, [accessibleMentors, departmentFilter, effectiveSearch, statusFilter]);
 
   // Mentors only see their own 1-on-1 sessions
   const accessibleSessions = useMemo(() => {
@@ -508,6 +524,43 @@ export const MentorManagementPage: React.FC = () => {
         {/* Tab 1: Faculty Roster Table */}
         {activeTab === 'roster' && (
           <div className="p-stack-md space-y-4">
+            {/* Status Filter Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+              <button
+                type="button"
+                onClick={() => setStatusFilter('all')}
+                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all border cursor-pointer ${
+                  statusFilter === 'all'
+                    ? 'bg-primary text-on-primary border-primary shadow-xs'
+                    : 'bg-surface border-outline-variant text-secondary hover:border-primary/50'
+                }`}
+              >
+                All Faculty ({accessibleMentors.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter('active')}
+                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all border cursor-pointer ${
+                  statusFilter === 'active'
+                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                    : 'bg-surface border-outline-variant text-secondary hover:border-emerald-500'
+                }`}
+              >
+                Active Only ({accessibleMentors.filter(m => m.isActive !== false && m.status !== 'Deactivated').length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter('deactivated')}
+                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all border cursor-pointer ${
+                  statusFilter === 'deactivated'
+                    ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
+                    : 'bg-surface border-outline-variant text-secondary hover:border-rose-500'
+                }`}
+              >
+                Deactivated / Inactive ({accessibleMentors.filter(m => m.isActive === false || m.status === 'Deactivated').length})
+              </button>
+            </div>
+
             {/* Mentor Table */}
             <div className="overflow-x-auto">
               {filteredMentors.length === 0 ? (
@@ -640,33 +693,67 @@ export const MentorManagementPage: React.FC = () => {
                           <td className="px-stack-md py-3">
                             {isSuperAdmin ? (
                               <select 
-                                value={mentor.status}
-                                onChange={(e) => updateMentorStatus(mentor.id, e.target.value as MentorStatus)}
-                                className="text-xs font-semibold px-2 py-1 rounded border border-outline-variant bg-surface outline-none cursor-pointer"
+                                value={mentor.isActive === false ? 'Deactivated' : mentor.status}
+                                onChange={(e) => {
+                                  const newStatus = e.target.value as MentorStatus;
+                                  if (newStatus === 'Deactivated') {
+                                    toggleUserActiveStatus(mentor.id, false, 'Deactivated via Faculty Roster');
+                                  } else {
+                                    updateMentorStatus(mentor.id, newStatus);
+                                    if (mentor.isActive === false) {
+                                      toggleUserActiveStatus(mentor.id, true);
+                                    }
+                                  }
+                                }}
+                                className={`text-xs font-semibold px-2 py-1 rounded border outline-none cursor-pointer ${
+                                  mentor.isActive === false || mentor.status === 'Deactivated'
+                                    ? 'border-rose-300 bg-rose-50 text-rose-800'
+                                    : 'border-outline-variant bg-surface'
+                                }`}
                               >
                                 <option value="Active">Active</option>
                                 <option value="Available">Available</option>
                                 <option value="On Leave">On Leave</option>
+                                <option value="Deactivated">Deactivated</option>
                               </select>
                             ) : (
-                              <CrispStatusBadge status={mentor.status} />
+                              <CrispStatusBadge status={mentor.isActive === false ? 'Deactivated' : mentor.status} />
                             )}
                           </td>
 
                           <td className="px-stack-md py-3 text-right">
                             <div className="flex items-center justify-end gap-1.5">
                               {isSuperAdmin && (
-                                <button 
-                                  onClick={() => {
-                                    setSelectedMentorForEditId(mentor.id);
-                                    openModal('edit-mentor');
-                                  }}
-                                  className="px-2.5 py-1 rounded border border-outline-variant hover:border-primary text-secondary hover:text-primary font-sans text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
-                                  title="Edit Faculty Mentor Profile"
-                                >
-                                  <span className="material-symbols-outlined text-[14px]">edit</span>
-                                  <span>Edit Profile</span>
-                                </button>
+                                <>
+                                  <button 
+                                    onClick={() => {
+                                      setSelectedMentorForEditId(mentor.id);
+                                      openModal('edit-mentor');
+                                    }}
+                                    className="px-2.5 py-1 rounded border border-outline-variant hover:border-primary text-secondary hover:text-primary font-sans text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                                    title="Edit Faculty Mentor Profile"
+                                  >
+                                    <span className="material-symbols-outlined text-[14px]">edit</span>
+                                    <span>Edit</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const footprint = getUserTaskFootprint(mentor.id, mentor.name, mentor.email);
+                                      if (footprint.totalTasks > 0) {
+                                        setMentorToTransfer(mentor);
+                                      } else {
+                                        setMentorToDeleteSimple(mentor);
+                                      }
+                                    }}
+                                    className="px-2.5 py-1 rounded border border-rose-200 text-rose-700 hover:bg-rose-50 hover:border-rose-300 font-sans text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                                    title="Delete Faculty Mentor"
+                                  >
+                                    <span className="material-symbols-outlined text-[14px]">delete</span>
+                                    <span>Delete</span>
+                                  </button>
+                                </>
                               )}
 
                               <button 
@@ -1328,6 +1415,66 @@ export const MentorManagementPage: React.FC = () => {
         onClose={() => setIsWelfareModalOpen(false)}
         targetStudent={selectedStudentForWelfare}
       />
+
+      {/* Transfer Tasks & Delete Modal */}
+      {mentorToTransfer && (
+        <TransferTasksAndDeleteModal
+          isOpen={!!mentorToTransfer}
+          onClose={() => setMentorToTransfer(null)}
+          userType="mentor"
+          userToDelete={{
+            id: mentorToTransfer.id,
+            name: mentorToTransfer.name,
+            email: mentorToTransfer.email,
+            role: 'Faculty Mentor',
+            avatarUrl: mentorToTransfer.avatarUrl,
+          }}
+          onDeleted={() => {
+            setMentorToTransfer(null);
+          }}
+        />
+      )}
+
+      {/* Simple Delete Confirmation Modal for Zero Tasks */}
+      {mentorToDeleteSimple && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-surface rounded-xl border border-outline shadow-xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center gap-3 text-rose-600">
+              <span className="material-symbols-outlined text-3xl">warning</span>
+              <h3 className="text-lg font-bold">Delete Faculty Member</h3>
+            </div>
+            <p className="text-sm text-secondary">
+              Are you sure you want to delete <strong className="text-on-surface">{mentorToDeleteSimple.name}</strong>? This user has no active assigned tasks or cohort leadership roles.
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setMentorToDeleteSimple(null)}
+                disabled={isDeletingMentor}
+                className="px-4 py-2 rounded-lg border border-outline text-secondary hover:bg-surface-variant text-sm font-semibold transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingMentor}
+                onClick={async () => {
+                  setIsDeletingMentor(true);
+                  try {
+                    await deleteMentorUser(mentorToDeleteSimple.id);
+                    setMentorToDeleteSimple(null);
+                  } finally {
+                    setIsDeletingMentor(false);
+                  }
+                }}
+                className="px-4 py-2 rounded-lg bg-rose-600 text-white hover:bg-rose-700 text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isDeletingMentor ? 'Deleting...' : 'Delete Mentor'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

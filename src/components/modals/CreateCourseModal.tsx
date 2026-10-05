@@ -7,7 +7,7 @@ export interface CreateCourseModalProps {
 }
 
 export const CreateCourseModal: React.FC<CreateCourseModalProps> = ({ isOpen, onClose }) => {
-  const { mentors, addCourse, settings, addCourseCategory } = useCRM();
+  const { activeMentors, addCourse, settings, addCourseCategory } = useCRM();
 
   const categoriesList = settings.courseCategories || [
     'Software Engineering',
@@ -28,7 +28,7 @@ export const CreateCourseModal: React.FC<CreateCourseModalProps> = ({ isOpen, on
   const [description, setDescription] = useState('');
   const [durationWeeks, setDurationWeeks] = useState(12);
   const [tuitionFee, setTuitionFee] = useState(850000);
-  const [leadInstructor, setLeadInstructor] = useState(mentors[0]?.name || 'Dr. Arthur Pendelton');
+  const [leadInstructor, setLeadInstructor] = useState(activeMentors[0]?.name || 'General Faculty');
   const [modules, setModules] = useState<string[]>([
     'Core Foundational Architecture',
     'Applied Industry Capstone & System Design',
@@ -227,10 +227,10 @@ export const CreateCourseModal: React.FC<CreateCourseModalProps> = ({ isOpen, on
                 onChange={e => setLeadInstructor(e.target.value)}
                 className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
               >
-                {mentors.length === 0 ? (
+                {activeMentors.length === 0 ? (
                   <option value="General Faculty">General Faculty Pool (Unassigned)</option>
                 ) : (
-                  mentors.map(m => (
+                  activeMentors.map(m => (
                     <option key={m.id} value={m.name}>
                       {m.name} ({m.department})
                     </option>

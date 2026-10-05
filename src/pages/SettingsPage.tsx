@@ -10,6 +10,7 @@ import { initialCampuses } from '../data/mockData';
 import { getDeviceCoordinates } from '../utils/geo';
 import { usePWA } from '../context/PWAContext';
 import { APP_BASE_URL } from '../utils/url';
+import { TransferTasksAndDeleteModal } from '../components/modals/TransferTasksAndDeleteModal';
 
 const ALL_SYSTEM_MODULES: { id: string; label: string; icon: string }[] = [
   { id: 'courses', label: 'Programs & Cohorts', icon: 'menu_book' },
@@ -50,6 +51,8 @@ export const SettingsPage: React.FC = () => {
     editStaffUser,
     renameCustomRole,
     changePassword,
+    activeMentors,
+    getUserTaskFootprint,
   } = useCRM();
 
   const {
@@ -391,6 +394,7 @@ export const SettingsPage: React.FC = () => {
   const [isSavingStaffEdit, setIsSavingStaffEdit] = useState(false);
 
   const [deletingStaffUser, setDeletingStaffUser] = useState<AuthUser | null>(null);
+  const [staffToTransfer, setStaffToTransfer] = useState<AuthUser | null>(null);
   const [isDeletingStaff, setIsDeletingStaff] = useState(false);
 
   // Custom Role Renaming States
@@ -3514,7 +3518,7 @@ export const SettingsPage: React.FC = () => {
                         onChange={(e) => setNewStaffMentorId(e.target.value)}
                         className="w-full h-9 px-3 rounded bg-surface-container-lowest border border-outline-variant text-xs outline-none focus:border-primary"
                       >
-                        {mentors.map(m => (
+                        {activeMentors.map(m => (
                           <option key={m.id} value={m.id}>{m.name} ({m.department})</option>
                         ))}
                       </select>
@@ -3616,7 +3620,14 @@ export const SettingsPage: React.FC = () => {
 
                           {!(user.role === 'super_admin' && (user.id === 'user-admin' || staffUsers.filter(u => u.role === 'super_admin').length <= 1)) && (
                             <button
-                              onClick={() => setDeletingStaffUser(user)}
+                              onClick={() => {
+                                const footprint = getUserTaskFootprint(user.id, user.name, user.email);
+                                if (footprint.totalTasks > 0) {
+                                  setStaffToTransfer(user);
+                                } else {
+                                  setDeletingStaffUser(user);
+                                }
+                              }}
                               className="px-2 py-1 rounded bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 font-semibold text-[11px] transition-colors inline-flex items-center gap-1 cursor-pointer"
                               title="Delete Staff Member"
                             >
@@ -5142,6 +5153,14 @@ export const SettingsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* TRANSFER TASKS AND DELETE STAFF MODAL */}
+      <TransferTasksAndDeleteModal
+        isOpen={Boolean(staffToTransfer)}
+        userToDelete={staffToTransfer}
+        userType="staff"
+        onClose={() => setStaffToTransfer(null)}
+      />
 
       {/* ========================================================================= */}
       {/* RENAME CUSTOM ROLE MODAL */}

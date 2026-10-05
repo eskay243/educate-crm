@@ -7,7 +7,7 @@ export interface CreateCohortModalProps {
 }
 
 export const CreateCohortModal: React.FC<CreateCohortModalProps> = ({ isOpen, onClose }) => {
-  const { courses, mentors, addCohort } = useCRM();
+  const { courses, activeMentors, addCohort } = useCRM();
 
   const [name, setName] = useState('');
   const [selectedCourseId, setSelectedCourseId] = useState<string>(courses[0]?.id || '__custom__');
@@ -15,7 +15,7 @@ export const CreateCohortModal: React.FC<CreateCohortModalProps> = ({ isOpen, on
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [maxCapacity, setMaxCapacity] = useState(40);
-  const [instructorName, setInstructorName] = useState(mentors[0]?.name || 'Faculty Mentor Assigned');
+  const [instructorName, setInstructorName] = useState(activeMentors[0]?.name || 'Faculty Mentor Assigned');
 
   if (!isOpen) return null;
 
@@ -120,10 +120,10 @@ export const CreateCohortModal: React.FC<CreateCohortModalProps> = ({ isOpen, on
                 onChange={e => setInstructorName(e.target.value)}
                 className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
               >
-                {mentors.length === 0 ? (
+                {activeMentors.length === 0 ? (
                   <option value="Faculty Mentor Assigned">General Faculty Pool (Unassigned)</option>
                 ) : (
-                  mentors.map(m => (
+                  activeMentors.map(m => (
                     <option key={m.id} value={m.name}>
                       {m.name} ({m.department})
                     </option>

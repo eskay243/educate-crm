@@ -7,7 +7,7 @@ export interface EditCourseModalProps {
 }
 
 export const EditCourseModal: React.FC<EditCourseModalProps> = ({ isOpen, onClose }) => {
-  const { courses, mentors, updateCourse, selectedCourseForEditId, settings, addCourseCategory } = useCRM();
+  const { courses, activeMentors, updateCourse, selectedCourseForEditId, settings, addCourseCategory } = useCRM();
 
   const categoriesList = settings.courseCategories || [
     'Software Engineering',
@@ -53,7 +53,7 @@ export const EditCourseModal: React.FC<EditCourseModalProps> = ({ isOpen, onClos
       setDescription(currentCourse.description || '');
       setDurationWeeks(currentCourse.durationWeeks || 12);
       setTuitionFee(currentCourse.tuitionFee || 850000);
-      setLeadInstructor(currentCourse.leadInstructor || (mentors[0]?.name || ''));
+      setLeadInstructor(currentCourse.leadInstructor || (activeMentors[0]?.name || ''));
       setModules(currentCourse.syllabusModules || []);
       setStatus(currentCourse.status || 'Active');
     }
@@ -239,10 +239,10 @@ export const EditCourseModal: React.FC<EditCourseModalProps> = ({ isOpen, onClos
                 onChange={e => setLeadInstructor(e.target.value)}
                 className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
               >
-                {mentors.length === 0 ? (
+                {activeMentors.length === 0 ? (
                   <option value="General Faculty">General Faculty Pool (Unassigned)</option>
                 ) : (
-                  mentors.map(m => (
+                  activeMentors.map(m => (
                     <option key={m.id} value={m.name}>
                       {m.name} ({m.department})
                     </option>

@@ -7,7 +7,7 @@ export interface AddLeadModalProps {
 }
 
 export const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
-  const { addLead, courses, staffUsers, currentUser } = useCRM();
+  const { addLead, courses, activeStaffUsers, currentUser } = useCRM();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -17,7 +17,7 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) =
   const [company, setCompany] = useState('');
   const [source, setSource] = useState('Organic Search');
   
-  const defaultRep = staffUsers.find(u => u.role === 'admissions' || u.role === 'super_admin')?.name || currentUser?.name || 'Admissions Team';
+  const defaultRep = activeStaffUsers.find(u => u.role === 'admissions' || u.role === 'super_admin')?.name || currentUser?.name || 'Admissions Team';
   const [assignedRep, setAssignedRep] = useState(defaultRep);
   const [score, setScore] = useState(75);
   const [dealValue, setDealValue] = useState<number>(courses[0]?.tuitionFee || 850000);
@@ -163,10 +163,10 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) =
                 onChange={e => setAssignedRep(e.target.value)}
                 className="w-full h-10 px-3 border border-outline-variant/80 rounded-md bg-surface text-body-md focus:border-primary focus:ring-1 focus:ring-primary outline-hidden cursor-pointer"
               >
-                {staffUsers.length === 0 ? (
+                {activeStaffUsers.length === 0 ? (
                   <option value={currentUser?.name || 'Super Admin'}>{currentUser?.name || 'Super Admin'} (Admissions)</option>
                 ) : (
-                  staffUsers.map(u => (
+                  activeStaffUsers.map(u => (
                     <option key={u.id} value={u.name}>
                       {u.name} ({u.roleTitle})
                     </option>

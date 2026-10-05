@@ -171,6 +171,17 @@ export const CoursesCohortsPage: React.FC = () => {
             <span>Course Outlines</span>
           </Link>
 
+          {/* Download QA Checklist Excel */}
+          <a
+            href="/Program_Officer_Module_QA_Checklist.xlsx"
+            download="Program_Officer_Module_QA_Checklist.xlsx"
+            className="btn-secondary text-xs h-10 px-3.5 flex items-center gap-1.5 hover:border-emerald-500 hover:text-emerald-700 transition-all"
+            title="Download Program Officer QA Checklist Spreadsheet (.xlsx)"
+          >
+            <span className="material-symbols-outlined text-emerald-600 text-[18px]">table_view</span>
+            <span>QA Checklist (.xlsx)</span>
+          </a>
+
           {/* Schedule Class Modal Trigger */}
           {canScheduleClasses && (
             <button

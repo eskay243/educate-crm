@@ -8,11 +8,11 @@ interface ScheduleClassModalProps {
 }
 
 export const ScheduleClassModal: React.FC<ScheduleClassModalProps> = ({ isOpen, onClose }) => {
-  const { courses, cohorts, mentors, lmsModules, scheduleClass } = useCRM();
+  const { courses, cohorts, activeMentors, lmsModules, scheduleClass } = useCRM();
 
   const [courseId, setCourseId] = useState(courses[0]?.id || '');
   const [cohortId, setCohortId] = useState(cohorts[0]?.id || '');
-  const [mentorId, setMentorId] = useState(mentors[0]?.id || '');
+  const [mentorId, setMentorId] = useState(activeMentors[0]?.id || '');
   const [topic, setTopic] = useState('');
   const [dayOfWeek, setDayOfWeek] = useState<TimetableSlot['dayOfWeek']>('Monday');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -28,7 +28,7 @@ export const ScheduleClassModal: React.FC<ScheduleClassModalProps> = ({ isOpen, 
 
   const selectedCourse = courses.find(c => c.id === courseId) || courses[0];
   const selectedCohort = cohorts.find(c => c.id === cohortId) || cohorts[0];
-  const selectedMentor = mentors.find(m => m.id === mentorId) || mentors[0];
+  const selectedMentor = activeMentors.find(m => m.id === mentorId) || activeMentors[0];
 
   // Available topics from syllabus for selected course
   const courseLessons = lmsModules
@@ -134,7 +134,7 @@ export const ScheduleClassModal: React.FC<ScheduleClassModalProps> = ({ isOpen, 
               className="w-full h-10 px-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
               required
             >
-              {mentors.map(m => (
+              {activeMentors.map(m => (
                 <option key={m.id} value={m.id}>
                   {m.name} ({m.role || 'Faculty Mentor'}) — {m.lecturedHours || 0} hrs logged
                 </option>

@@ -194,6 +194,25 @@ interface CRMContextType {
   addStaffUser: (user: Omit<AuthUser, 'id'>) => void;
   updateUserRole: (userId: string, role: UserRole, mentorId?: string) => void;
   deleteStaffUser: (id: string) => Promise<boolean>;
+  deleteMentorUser: (id: string) => Promise<boolean>;
+  transferTasksAndDeleteUser: (sourceUserId: string, targetUserId: string) => Promise<{ success: boolean; message: string }>;
+  activeMentors: Mentor[];
+  activeStaffUsers: AuthUser[];
+  getUserTaskFootprint: (userId: string, userName?: string, userEmail?: string) => {
+    totalTasks: number;
+    studentsCount: number;
+    cohortsCount: number;
+    timetablesCount: number;
+    ticketsCount: number;
+    leadsCount: number;
+    coursesCount: number;
+    assignedStudents: Student[];
+    assignedCohorts: Cohort[];
+    assignedTimetables: TimetableSlot[];
+    assignedTickets: SupportTicket[];
+    assignedLeads: Lead[];
+    assignedCourses: CourseProgram[];
+  };
   editStaffUser: (id: string, updates: Partial<AuthUser>) => Promise<boolean>;
   renameCustomRole: (roleId: string, newName: string, newDescription?: string) => Promise<boolean>;
   changePassword: (newPassword: string, email?: string) => Promise<{ success: boolean; message?: string }>;
@@ -1335,11 +1354,89 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const activeMentors = useMemo(() => {
+    return mentors.filter(m => m.isActive !== false && m.status !== 'Deactivated');
+  }, [mentors]);
+
+  const activeStaffUsers = useMemo(() => {
+    return staffUsers.filter(u => u.isActive !== false && u.status !== 'Deactivated');
+  }, [staffUsers]);
+
+  const getUserTaskFootprint = (userId: string, userName?: string, userEmail?: string) => {
+    const normName = (userName || '').trim().toLowerCase();
+    const normEmail = (userEmail || '').trim().toLowerCase();
+
+    const assignedStudents = students.filter(s => 
+      s.mentorId === userId || 
+      (normName && (s.mentorName || '').trim().toLowerCase() === normName)
+    );
+
+    const assignedCohorts = cohorts.filter(c => 
+      c.instructorId === userId || 
+      (normName && (c.instructorName || '').trim().toLowerCase() === normName)
+    );
+
+    const assignedTimetables = (timetables || []).filter(t => 
+      t.status !== 'Completed' && (
+        t.mentorId === userId || 
+        (normName && (t.mentorName || '').trim().toLowerCase() === normName)
+      )
+    );
+
+    const assignedTickets = (tickets || []).filter(t => 
+      t.status !== 'resolved' && t.status !== 'closed' && (
+        t.assignedTo === userId || 
+        (normEmail && (t.assignedToEmail || '').trim().toLowerCase() === normEmail)
+      )
+    );
+
+    const assignedLeads = (leads || []).filter(l => 
+      l.status !== 'Converted' && l.status !== 'Lost' && (
+        (normName && (l.assignedRep || '').trim().toLowerCase() === normName) ||
+        (normEmail && (l.assignedRep || '').trim().toLowerCase() === normEmail)
+      )
+    );
+
+    const assignedCourses = (courses || []).filter(c =>
+      normName && (c.leadInstructor || '').trim().toLowerCase() === normName
+    );
+
+    const totalTasks = 
+      assignedStudents.length + 
+      assignedCohorts.length + 
+      assignedTimetables.length + 
+      assignedTickets.length + 
+      assignedLeads.length + 
+      assignedCourses.length;
+
+    return {
+      totalTasks,
+      studentsCount: assignedStudents.length,
+      cohortsCount: assignedCohorts.length,
+      timetablesCount: assignedTimetables.length,
+      ticketsCount: assignedTickets.length,
+      leadsCount: assignedLeads.length,
+      coursesCount: assignedCourses.length,
+      assignedStudents,
+      assignedCohorts,
+      assignedTimetables,
+      assignedTickets,
+      assignedLeads,
+      assignedCourses,
+    };
+  };
+
   const deleteStaffUser = async (id: string): Promise<boolean> => {
     const target = staffUsers.find(u => u.id === id);
     if (!target) return false;
-    if (target.role === 'super_admin' && (target.id === 'user-admin' || staffUsers.filter(u => u.role === 'super_admin').length <= 1)) {
+    if (target.role === 'super_admin' && (target.id === 'user-admin' || target.email === 'admin@codelab.institute' || staffUsers.filter(u => u.role === 'super_admin').length <= 1)) {
       showToast('Action Blocked', 'The primary Super Admin institutional account cannot be deleted.', 'error');
+      return false;
+    }
+
+    const footprint = getUserTaskFootprint(target.id, target.name, target.email);
+    if (footprint.totalTasks > 0) {
+      showToast('Action Blocked', `Cannot delete ${target.name} because they have ${footprint.totalTasks} active assignment(s). Please transfer tasks first.`, 'warning');
       return false;
     }
 
@@ -1357,6 +1454,155 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (err: any) {
       showToast('Delete Failed', err.message || 'Unable to delete staff member.', 'error');
       return false;
+    }
+  };
+
+  const deleteMentorUser = async (id: string): Promise<boolean> => {
+    const target = mentors.find(m => m.id === id || m.mentorCode === id);
+    if (!target) return false;
+
+    const footprint = getUserTaskFootprint(target.id, target.name, target.email);
+    if (footprint.totalTasks > 0) {
+      showToast('Action Blocked', `Cannot delete ${target.name} because they have ${footprint.totalTasks} active assignment(s). Please transfer tasks first.`, 'warning');
+      return false;
+    }
+
+    try {
+      if (isBackendConnected) {
+        await apiService.deleteMentor(target.id);
+      }
+      setMentors(prev => prev.filter(m => m.id !== target.id && m.mentorCode !== target.mentorCode));
+      setStaffUsers(prev => prev.filter(u => u.id !== target.id && u.email !== target.email));
+      showToast('Faculty Deleted', `Mentor profile for ${target.name} was removed.`, 'success');
+      logActivity({
+        title: 'Faculty Member Removed',
+        description: `Mentor profile for ${target.name} (${target.email}) was removed.`,
+        type: 'system',
+        user: currentUser?.name || 'Super Admin',
+      });
+      return true;
+    } catch (err: any) {
+      showToast('Delete Failed', err.message || 'Unable to delete mentor profile.', 'error');
+      return false;
+    }
+  };
+
+  const transferTasksAndDeleteUser = async (sourceUserId: string, targetUserId: string): Promise<{ success: boolean; message: string }> => {
+    const source = staffUsers.find(u => u.id === sourceUserId) || mentors.find(m => m.id === sourceUserId || m.mentorCode === sourceUserId);
+    const target = staffUsers.find(u => u.id === targetUserId) || mentors.find(m => m.id === targetUserId || m.mentorCode === targetUserId);
+
+    if (!source || !target) {
+      const msg = 'Invalid source or replacement user specified.';
+      showToast('Transfer Failed', msg, 'error');
+      return { success: false, message: msg };
+    }
+
+    try {
+      if (isBackendConnected) {
+        const res = await apiService.transferTasksAndDeleteUser(sourceUserId, targetUserId);
+        if (!res.success) {
+          throw new Error(res.message || 'Transfer failed on server');
+        }
+      }
+
+      const sourceNameNorm = (source.name || '').trim().toLowerCase();
+      const sourceEmailNorm = (source.email || '').trim().toLowerCase();
+
+      // Client-side state sync
+      // Reassign students
+      setStudents(prev => prev.map(s => {
+        const matchId = s.mentorId === source.id;
+        const matchName = sourceNameNorm && (s.mentorName || '').trim().toLowerCase() === sourceNameNorm;
+        if (matchId || matchName) {
+          return { ...s, mentorId: target.id, mentorName: target.name };
+        }
+        return s;
+      }));
+
+      // Reassign cohorts
+      setCohorts(prev => prev.map(c => {
+        const matchId = c.instructorId === source.id;
+        const matchName = sourceNameNorm && (c.instructorName || '').trim().toLowerCase() === sourceNameNorm;
+        if (matchId || matchName) {
+          return { ...c, instructorId: target.id, instructorName: target.name };
+        }
+        return c;
+      }));
+
+      // Reassign timetables
+      setTimetables(prev => prev.map(t => {
+        if (t.status !== 'Completed') {
+          const matchId = t.mentorId === source.id;
+          const matchName = sourceNameNorm && (t.mentorName || '').trim().toLowerCase() === sourceNameNorm;
+          if (matchId || matchName) {
+            return { ...t, mentorId: target.id, mentorName: target.name };
+          }
+        }
+        return t;
+      }));
+
+      // Reassign tickets
+      setTickets(prev => prev.map(t => {
+        if (t.status !== 'resolved' && t.status !== 'closed') {
+          const matchId = t.assignedTo === source.id;
+          const matchEmail = sourceEmailNorm && (t.assignedToEmail || '').trim().toLowerCase() === sourceEmailNorm;
+          if (matchId || matchEmail) {
+            return { ...t, assignedTo: target.id, assignedToName: target.name, assignedToEmail: target.email };
+          }
+        }
+        return t;
+      }));
+
+      // Reassign leads
+      setLeads(prev => prev.map(l => {
+        if (l.status !== 'Converted' && l.status !== 'Lost') {
+          const matchName = sourceNameNorm && (l.assignedRep || '').trim().toLowerCase() === sourceNameNorm;
+          const matchEmail = sourceEmailNorm && (l.assignedRep || '').trim().toLowerCase() === sourceEmailNorm;
+          if (matchName || matchEmail) {
+            return { ...l, assignedRep: target.name };
+          }
+        }
+        return l;
+      }));
+
+      // Reassign courses
+      setCourses(prev => prev.map(c => {
+        const matchName = sourceNameNorm && (c.leadInstructor || '').trim().toLowerCase() === sourceNameNorm;
+        if (matchName) {
+          return { ...c, leadInstructor: target.name };
+        }
+        return c;
+      }));
+
+      // Reassign sessions
+      setSessions(prev => prev.map(sess => {
+        const matchId = sess.mentorId === source.id;
+        const matchName = sourceNameNorm && (sess.mentorName || '').trim().toLowerCase() === sourceNameNorm;
+        if (matchId || matchName) {
+          return { ...sess, mentorId: target.id, mentorName: target.name };
+        }
+        return sess;
+      }));
+
+      // Remove source user
+      setStaffUsers(prev => prev.filter(u => u.id !== source.id));
+      setMentors(prev => prev.filter(m => m.id !== source.id && m.mentorCode !== (source as any).mentorCode));
+
+      const successMsg = `Successfully transferred all responsibilities from ${source.name} to ${target.name} and removed ${source.name}.`;
+      showToast('Responsibilities Transferred', successMsg, 'success');
+
+      logActivity({
+        title: 'Account Responsibilities Transferred & User Deleted',
+        description: successMsg,
+        type: 'system',
+        user: currentUser?.name || 'Super Admin',
+      });
+
+      return { success: true, message: successMsg };
+    } catch (err: any) {
+      const errText = err.message || 'Failed to transfer responsibilities and delete account.';
+      showToast('Transfer Failed', errText, 'error');
+      return { success: false, message: errText };
     }
   };
 
@@ -1837,8 +2083,9 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateMentorStatus = (id: string, status: Mentor['status']) => {
-    setMentors(prev => prev.map(m => m.id === id ? { ...m, status } : m));
-    apiService.updateMentor(id, { status });
+    const isActive = status !== 'Deactivated';
+    setMentors(prev => prev.map(m => m.id === id ? { ...m, status, isActive } : m));
+    apiService.updateMentor(id, { status, isActive });
   };
 
   const updateMentor = (id: string, updatedData: Partial<Mentor>) => {
@@ -4148,6 +4395,11 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         reviewMentorPayout,
         updateUserProfile,
         deleteStaffUser,
+        deleteMentorUser,
+        transferTasksAndDeleteUser,
+        activeMentors,
+        activeStaffUsers,
+        getUserTaskFootprint,
         editStaffUser,
         renameCustomRole,
         changePassword,

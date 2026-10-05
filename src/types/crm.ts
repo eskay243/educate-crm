@@ -492,6 +492,7 @@ export interface Cohort {
   maxCapacity: number;
   enrolledCount: number;
   instructorName: string;
+  instructorId?: string;
   status: 'Upcoming' | 'In Progress' | 'Completed';
 }
 

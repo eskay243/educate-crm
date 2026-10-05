@@ -2863,6 +2863,22 @@
   },
   "activityLogs": [
     {
+      "id": "act-1791205365637-transfer-del",
+      "timestamp": "2026-10-05T13:02:45.637Z",
+      "title": "Account Responsibilities Transferred & User Deleted",
+      "description": "Transferred 1 student(s), 0 cohort(s), 0 lecture slot(s), 0 ticket(s), and 0 lead(s) from QA Source Mentor to QA Target Mentor, then deleted QA Source Mentor.",
+      "type": "system",
+      "user": "Super Admin"
+    },
+    {
+      "id": "act-1791205360648-mentor-del",
+      "timestamp": "2026-10-05T13:02:40.648Z",
+      "title": "Faculty Mentor Deleted",
+      "description": "Faculty profile for Temp QA Mentor (tempqa@example.com) was removed from the institution.",
+      "type": "system",
+      "user": "Super Admin"
+    },
+    {
       "id": "act-1791171077057-staff-del",
       "timestamp": "2026-10-05T03:31:17.057Z",
       "title": "Staff Member Deleted",
@@ -4690,7 +4706,7 @@
         "status": "success"
       }
     ],
-    "lastSyncedAt": "2026-10-05T10:56:51.065Z",
+    "lastSyncedAt": "2026-10-05T13:01:41.445Z",
     "paystackLiveBalance": 0
   },
   "timetables": [

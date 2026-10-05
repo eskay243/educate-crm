@@ -17,11 +17,13 @@ export const MentorAvailabilityManager: React.FC<MentorAvailabilityManagerProps>
 }) => {
   const { updateMentor, showToast } = useCRM();
 
+  const activeMentorsList = mentors.filter(m => m.isActive !== false && m.status !== 'Deactivated');
+
   const [selectedMentorId, setSelectedMentorId] = useState<string>(
-    initialTargetMentor?.id || mentors[0]?.id || ''
+    initialTargetMentor?.id || activeMentorsList[0]?.id || mentors[0]?.id || ''
   );
 
-  const activeMentor = mentors.find(m => m.id === selectedMentorId) || initialTargetMentor || mentors[0];
+  const activeMentor = mentors.find(m => m.id === selectedMentorId) || initialTargetMentor || activeMentorsList[0] || mentors[0];
 
   // Local state for office hour slots
   const [slots, setSlots] = useState<MentorAvailabilitySlot[]>(
@@ -216,7 +218,7 @@ export const MentorAvailabilityManager: React.FC<MentorAvailabilityManagerProps>
               onChange={e => setSelectedMentorId(e.target.value)}
               className="h-9 px-3 bg-surface border border-outline-variant rounded-lg text-xs font-bold text-on-surface outline-none cursor-pointer focus:border-primary"
             >
-              {mentors.map(m => (
+              {activeMentorsList.map(m => (
                 <option key={m.id} value={m.id}>
                   {m.name} ({m.department || 'Faculty'})
                 </option>

@@ -7,16 +7,16 @@ export interface AssignMentorModalProps {
 }
 
 export const AssignMentorModal: React.FC<AssignMentorModalProps> = ({ isOpen, onClose }) => {
-  const { students, mentors, assignMentorToStudent, selectedStudentForAssignmentId, openModal } = useCRM();
+  const { students, activeMentors, assignMentorToStudent, selectedStudentForAssignmentId, openModal } = useCRM();
 
   const [studentId, setStudentId] = useState<string>(selectedStudentForAssignmentId || students[0]?.id || '');
-  const [mentorId, setMentorId] = useState<string>(mentors[0]?.id || '');
+  const [mentorId, setMentorId] = useState<string>(activeMentors[0]?.id || '');
   const [assignmentNote, setAssignmentNote] = useState('');
 
   if (!isOpen) return null;
 
   const currentStudent = students.find(s => s.id === (studentId || selectedStudentForAssignmentId)) || students[0];
-  const currentMentor = mentors.find(m => m.id === (mentorId || mentors[0]?.id)) || mentors[0];
+  const currentMentor = activeMentors.find(m => m.id === (mentorId || activeMentors[0]?.id)) || activeMentors[0];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +26,7 @@ export const AssignMentorModal: React.FC<AssignMentorModalProps> = ({ isOpen, on
     onClose();
   };
 
-  const hasPrerequisites = students.length > 0 && mentors.length > 0;
+  const hasPrerequisites = students.length > 0 && activeMentors.length > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-margin-page animate-in fade-in duration-200">
@@ -63,7 +63,7 @@ export const AssignMentorModal: React.FC<AssignMentorModalProps> = ({ isOpen, on
               </p>
             </div>
             <div className="flex justify-center gap-3 pt-2">
-              {mentors.length === 0 && (
+              {activeMentors.length === 0 && (
                 <button
                   type="button"
                   onClick={() => { onClose(); openModal('recruit-mentor'); }}
@@ -111,7 +111,7 @@ export const AssignMentorModal: React.FC<AssignMentorModalProps> = ({ isOpen, on
                   onChange={e => setMentorId(e.target.value)}
                   className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
                 >
-                  {mentors.map(m => (
+                  {activeMentors.map(m => (
                     <option key={m.id} value={m.id}>
                       {m.name} ({m.department}) - Capacity: {m.activeMentees}/{m.maxCapacity}
                     </option>

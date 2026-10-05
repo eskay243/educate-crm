@@ -273,6 +273,21 @@ class ApiService {
     return Boolean(res?.success);
   }
 
+  async deleteMentor(id: string): Promise<boolean> {
+    const res = await this.request<{ success: boolean; message?: string }>(`/mentors/${id}`, {
+      method: 'DELETE',
+    });
+    return Boolean(res?.success);
+  }
+
+  async transferTasksAndDeleteUser(sourceUserId: string, targetUserId: string): Promise<{ success: boolean; message: string; transferred?: any }> {
+    const res = await this.request<{ success: boolean; message: string; transferred?: any }>(`/users/${sourceUserId}/transfer-and-delete`, {
+      method: 'POST',
+      body: JSON.stringify({ targetUserId }),
+    });
+    return res || { success: false, message: 'Transfer failed or server unreachable.' };
+  }
+
   async getSettings(): Promise<OrganizationSettings | null> {
     return this.request<OrganizationSettings>('/settings');
   }

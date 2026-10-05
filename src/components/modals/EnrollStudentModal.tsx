@@ -7,7 +7,7 @@ export interface EnrollStudentModalProps {
 }
 
 export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose }) => {
-  const { enrollStudent, mentors, courses, cohorts } = useCRM();
+  const { enrollStudent, activeMentors, courses, cohorts } = useCRM();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -18,7 +18,7 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
   const [customProgramTitle, setCustomProgramTitle] = useState('');
   
   // Mentor selection
-  const [mentorName, setMentorName] = useState(mentors[0]?.name || 'Faculty Mentor Assigned');
+  const [mentorName, setMentorName] = useState(activeMentors[0]?.name || 'Faculty Mentor Assigned');
   
   // Cohort selection
   const [selectedCohortCode, setSelectedCohortCode] = useState<string>(cohorts[0]?.cohortCode || '__custom__');
@@ -49,8 +49,8 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
       setTotalCourseFee(850000);
       setInitialPayment(425000);
     }
-    if (mentors.length > 0) {
-      setMentorName(mentors[0].name);
+    if (activeMentors.length > 0) {
+      setMentorName(activeMentors[0].name);
     }
     if (cohorts.length > 0) {
       setSelectedCohortCode(cohorts[0].cohortCode);
@@ -220,10 +220,10 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
                       onChange={e => setMentorName(e.target.value)}
                       className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded font-body-md text-on-surface focus:border-primary outline-none cursor-pointer"
                     >
-                      {mentors.length === 0 ? (
+                      {activeMentors.length === 0 ? (
                         <option value="Faculty Mentor Assigned">General Faculty Pool (Unassigned)</option>
                       ) : (
-                        mentors.map(m => (
+                        activeMentors.map(m => (
                           <option key={m.id} value={m.name}>{m.name} ({m.department})</option>
                         ))
                       )}

@@ -2701,6 +2701,73 @@ app.patch('/api/staff/:id', (req: Request, res: Response) => {
   res.json({ success: true, data: db.staffUsers[index] });
 });
 
+// ----------------------------------------------------
+// Helper to inspect active tasks/assignments for a user
+// ----------------------------------------------------
+function inspectUserAssignments(userId: string, userName?: string, userEmail?: string) {
+  const normName = (userName || '').trim().toLowerCase();
+  const normEmail = (userEmail || '').trim().toLowerCase();
+
+  const assignedStudents = (db.students || []).filter((s: any) => 
+    s.mentorId === userId || 
+    (normName && (s.mentorName || '').trim().toLowerCase() === normName)
+  );
+
+  const assignedCohorts = (db.cohorts || []).filter((c: any) => 
+    c.instructorId === userId || 
+    (normName && (c.instructorName || '').trim().toLowerCase() === normName)
+  );
+
+  const assignedTimetables = (db.timetables || []).filter((t: any) => 
+    t.status !== 'Completed' && (
+      t.mentorId === userId || 
+      (normName && (t.mentorName || '').trim().toLowerCase() === normName)
+    )
+  );
+
+  const assignedTickets = (db.tickets || []).filter((t: any) => 
+    t.status !== 'resolved' && t.status !== 'closed' && (
+      t.assignedTo === userId || 
+      (normEmail && (t.assignedToEmail || '').trim().toLowerCase() === normEmail)
+    )
+  );
+
+  const assignedLeads = (db.leads || []).filter((l: any) => 
+    l.status !== 'Converted' && l.status !== 'Lost' && (
+      (normName && (l.assignedRep || '').trim().toLowerCase() === normName) ||
+      (normEmail && (l.assignedRep || '').trim().toLowerCase() === normEmail)
+    )
+  );
+
+  const assignedCourses = (db.courses || []).filter((c: any) =>
+    normName && (c.leadInstructor || '').trim().toLowerCase() === normName
+  );
+
+  const totalTasks = 
+    assignedStudents.length + 
+    assignedCohorts.length + 
+    assignedTimetables.length + 
+    assignedTickets.length + 
+    assignedLeads.length + 
+    assignedCourses.length;
+
+  return {
+    totalTasks,
+    studentsCount: assignedStudents.length,
+    cohortsCount: assignedCohorts.length,
+    timetablesCount: assignedTimetables.length,
+    ticketsCount: assignedTickets.length,
+    leadsCount: assignedLeads.length,
+    coursesCount: assignedCourses.length,
+    assignedStudents,
+    assignedCohorts,
+    assignedTimetables,
+    assignedTickets,
+    assignedLeads,
+    assignedCourses
+  };
+}
+
 app.delete('/api/staff/:id', (req: Request, res: Response) => {
   const { id } = req.params;
   const staff = (db.staffUsers || []).find((u: any) => u.id === id);
@@ -2709,8 +2776,26 @@ app.delete('/api/staff/:id', (req: Request, res: Response) => {
   }
 
   // Prevent deleting the primary Super Admin account
-  if (staff.role === 'super_admin' && staff.id === 'user-admin') {
+  if (staff.role === 'super_admin' && (staff.id === 'user-admin' || staff.email === 'admin@codelab.institute')) {
     return res.status(403).json({ success: false, message: 'The primary Super Admin institutional account cannot be deleted.' });
+  }
+
+  // Guard: Check if staff user has active tasks or assignments
+  const footprint = inspectUserAssignments(staff.id, staff.name, staff.email);
+  if (footprint.totalTasks > 0) {
+    return res.status(409).json({
+      success: false,
+      code: 'HAS_ASSIGNED_TASKS',
+      message: `Cannot delete staff user ${staff.name} because they have ${footprint.totalTasks} active assignment(s). Please transfer responsibilities to another active user before deleting.`,
+      taskSummary: {
+        studentsCount: footprint.studentsCount,
+        cohortsCount: footprint.cohortsCount,
+        timetablesCount: footprint.timetablesCount,
+        ticketsCount: footprint.ticketsCount,
+        leadsCount: footprint.leadsCount,
+        coursesCount: footprint.coursesCount,
+      }
+    });
   }
 
   db.staffUsers = (db.staffUsers || []).filter((u: any) => u.id !== id);
@@ -2727,6 +2812,235 @@ app.delete('/api/staff/:id', (req: Request, res: Response) => {
   saveDatabase(db);
 
   res.json({ success: true, message: `Staff member ${staff.name} deleted successfully.` });
+});
+
+app.delete('/api/mentors/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const mentor = (db.mentors || []).find((m: any) => m.id === id || m.mentorCode === id);
+  if (!mentor) {
+    return res.status(404).json({ success: false, message: 'Faculty mentor not found' });
+  }
+
+  // Guard: Check if mentor has active students, cohorts, or upcoming timetables
+  const footprint = inspectUserAssignments(mentor.id, mentor.name, mentor.email);
+  if (footprint.totalTasks > 0) {
+    return res.status(409).json({
+      success: false,
+      code: 'HAS_ASSIGNED_TASKS',
+      message: `Cannot delete faculty mentor ${mentor.name} because they have ${footprint.totalTasks} active assignment(s). Please transfer responsibilities to an active faculty mentor before deleting.`,
+      taskSummary: {
+        studentsCount: footprint.studentsCount,
+        cohortsCount: footprint.cohortsCount,
+        timetablesCount: footprint.timetablesCount,
+        ticketsCount: footprint.ticketsCount,
+        leadsCount: footprint.leadsCount,
+        coursesCount: footprint.coursesCount,
+      }
+    });
+  }
+
+  db.mentors = (db.mentors || []).filter((m: any) => m.id !== mentor.id && m.mentorCode !== mentor.mentorCode);
+  db.staffUsers = (db.staffUsers || []).filter((u: any) => u.id !== mentor.id && u.email !== mentor.email);
+  saveDatabase(db);
+
+  db.activityLogs.unshift({
+    id: `act-${Date.now()}-mentor-del`,
+    timestamp: new Date().toISOString(),
+    title: 'Faculty Mentor Deleted',
+    description: `Faculty profile for ${mentor.name} (${mentor.email}) was removed from the institution.`,
+    type: 'system',
+    user: 'Super Admin'
+  });
+  saveDatabase(db);
+
+  res.json({ success: true, message: `Faculty mentor ${mentor.name} deleted successfully.` });
+});
+
+// ----------------------------------------------------
+// Atomic Transfer Responsibilities & Delete User Endpoint
+// ----------------------------------------------------
+app.post('/api/users/:id/transfer-and-delete', (req: Request, res: Response) => {
+  const callerRole = (req.headers['x-user-role'] as string) || req.body?.callerRole;
+  if (callerRole && callerRole !== 'super_admin') {
+    return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin can transfer responsibilities and delete accounts.' });
+  }
+
+  const { id } = req.params;
+  const { targetUserId } = req.body;
+
+  if (!targetUserId) {
+    return res.status(400).json({ success: false, message: 'A replacement target user must be selected.' });
+  }
+
+  if (targetUserId === id) {
+    return res.status(400).json({ success: false, message: 'Source user and replacement target user cannot be the same account.' });
+  }
+
+  // 1. Find source user
+  let sourceUser: any = (db.staffUsers || []).find((u: any) => u.id === id);
+  if (!sourceUser) {
+    sourceUser = (db.mentors || []).find((m: any) => m.id === id || m.mentorCode === id);
+  }
+  if (!sourceUser) {
+    return res.status(404).json({ success: false, message: 'Source user account not found.' });
+  }
+
+  // Prevent deleting primary Super Admin
+  if (sourceUser.role === 'super_admin' && (sourceUser.id === 'user-admin' || sourceUser.email === 'admin@codelab.institute')) {
+    return res.status(403).json({ success: false, message: 'The primary Super Admin institutional account cannot be deleted.' });
+  }
+
+  // 2. Find target replacement user
+  let targetUser: any = (db.staffUsers || []).find((u: any) => u.id === targetUserId);
+  if (!targetUser) {
+    targetUser = (db.mentors || []).find((m: any) => m.id === targetUserId || m.mentorCode === targetUserId);
+  }
+  if (!targetUser) {
+    return res.status(404).json({ success: false, message: 'Target replacement user not found.' });
+  }
+
+  if (targetUser.isActive === false || targetUser.status === 'Deactivated') {
+    return res.status(400).json({ success: false, message: 'Replacement user must be an active, non-deactivated account.' });
+  }
+
+  const sourceName = (sourceUser.name || '').trim();
+  const normSourceName = sourceName.toLowerCase();
+  const sourceEmail = (sourceUser.email || '').trim().toLowerCase();
+
+  let transferredStudents = 0;
+  let transferredCohorts = 0;
+  let transferredTimetables = 0;
+  let transferredTickets = 0;
+  let transferredLeads = 0;
+  let transferredCourses = 0;
+  let transferredSessions = 0;
+
+  // 3. Reassign Students
+  if (Array.isArray(db.students)) {
+    db.students.forEach((s: any) => {
+      const matchId = s.mentorId === sourceUser.id;
+      const matchName = normSourceName && (s.mentorName || '').trim().toLowerCase() === normSourceName;
+      if (matchId || matchName) {
+        s.mentorId = targetUser.id;
+        s.mentorName = targetUser.name;
+        transferredStudents++;
+      }
+    });
+  }
+
+  // 4. Reassign Cohorts
+  if (Array.isArray(db.cohorts)) {
+    db.cohorts.forEach((c: any) => {
+      const matchId = c.instructorId === sourceUser.id;
+      const matchName = normSourceName && (c.instructorName || '').trim().toLowerCase() === normSourceName;
+      if (matchId || matchName) {
+        c.instructorId = targetUser.id;
+        c.instructorName = targetUser.name;
+        transferredCohorts++;
+      }
+    });
+  }
+
+  // 5. Reassign Timetables
+  if (Array.isArray(db.timetables)) {
+    db.timetables.forEach((t: any) => {
+      if (t.status !== 'Completed') {
+        const matchId = t.mentorId === sourceUser.id;
+        const matchName = normSourceName && (t.mentorName || '').trim().toLowerCase() === normSourceName;
+        if (matchId || matchName) {
+          t.mentorId = targetUser.id;
+          t.mentorName = targetUser.name;
+          transferredTimetables++;
+        }
+      }
+    });
+  }
+
+  // 6. Reassign Tickets
+  if (Array.isArray(db.tickets)) {
+    db.tickets.forEach((t: any) => {
+      if (t.status !== 'resolved' && t.status !== 'closed') {
+        const matchId = t.assignedTo === sourceUser.id;
+        const matchEmail = sourceEmail && (t.assignedToEmail || '').trim().toLowerCase() === sourceEmail;
+        if (matchId || matchEmail) {
+          t.assignedTo = targetUser.id;
+          t.assignedToName = targetUser.name;
+          t.assignedToEmail = targetUser.email;
+          transferredTickets++;
+        }
+      }
+    });
+  }
+
+  // 7. Reassign Leads
+  if (Array.isArray(db.leads)) {
+    db.leads.forEach((l: any) => {
+      if (l.status !== 'Converted' && l.status !== 'Lost') {
+        const matchName = normSourceName && (l.assignedRep || '').trim().toLowerCase() === normSourceName;
+        const matchEmail = sourceEmail && (l.assignedRep || '').trim().toLowerCase() === sourceEmail;
+        if (matchName || matchEmail) {
+          l.assignedRep = targetUser.name;
+          transferredLeads++;
+        }
+      }
+    });
+  }
+
+  // 8. Reassign Courses
+  if (Array.isArray(db.courses)) {
+    db.courses.forEach((c: any) => {
+      const matchName = normSourceName && (c.leadInstructor || '').trim().toLowerCase() === normSourceName;
+      if (matchName) {
+        c.leadInstructor = targetUser.name;
+        transferredCourses++;
+      }
+    });
+  }
+
+  // 9. Reassign Mentorship Sessions
+  if (Array.isArray(db.sessions)) {
+    db.sessions.forEach((sess: any) => {
+      const matchId = sess.mentorId === sourceUser.id;
+      const matchName = normSourceName && (sess.mentorName || '').trim().toLowerCase() === normSourceName;
+      if (matchId || matchName) {
+        sess.mentorId = targetUser.id;
+        sess.mentorName = targetUser.name;
+        transferredSessions++;
+      }
+    });
+  }
+
+  // 10. Safely remove source user
+  db.staffUsers = (db.staffUsers || []).filter((u: any) => u.id !== sourceUser.id && u.id !== id);
+  db.mentors = (db.mentors || []).filter((m: any) => m.id !== sourceUser.id && m.id !== id && m.mentorCode !== sourceUser.mentorCode);
+
+  // 11. Activity log
+  const summaryMsg = `Transferred ${transferredStudents} student(s), ${transferredCohorts} cohort(s), ${transferredTimetables} lecture slot(s), ${transferredTickets} ticket(s), and ${transferredLeads} lead(s) from ${sourceUser.name} to ${targetUser.name}, then deleted ${sourceUser.name}.`;
+  
+  db.activityLogs.unshift({
+    id: `act-${Date.now()}-transfer-del`,
+    timestamp: new Date().toISOString(),
+    title: 'Account Responsibilities Transferred & User Deleted',
+    description: summaryMsg,
+    type: 'system',
+    user: 'Super Admin'
+  });
+
+  saveDatabase(db);
+
+  res.json({
+    success: true,
+    message: summaryMsg,
+    transferred: {
+      students: transferredStudents,
+      cohorts: transferredCohorts,
+      timetables: transferredTimetables,
+      tickets: transferredTickets,
+      leads: transferredLeads,
+      courses: transferredCourses,
+      sessions: transferredSessions
+    }
+  });
 });
 
 // ----------------------------------------------------

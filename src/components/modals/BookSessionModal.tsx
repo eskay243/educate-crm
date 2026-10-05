@@ -7,12 +7,12 @@ export interface BookSessionModalProps {
 }
 
 export const BookSessionModal: React.FC<BookSessionModalProps> = ({ isOpen, onClose }) => {
-  const { mentors, students, bookSession, selectedMentorForBookingId, currentUser, openModal } = useCRM();
+  const { activeMentors, students, bookSession, selectedMentorForBookingId, currentUser, openModal } = useCRM();
 
   const isMentor = currentUser?.role === 'mentor';
   const defaultMentorId = isMentor 
-    ? (currentUser?.mentorId || mentors[0]?.id || '')
-    : (selectedMentorForBookingId || mentors[0]?.id || '');
+    ? (currentUser?.mentorId || activeMentors[0]?.id || '')
+    : (selectedMentorForBookingId || activeMentors[0]?.id || '');
 
   const [mentorId, setMentorId] = useState<string>(defaultMentorId);
   const [studentId, setStudentId] = useState<string>(students[0]?.id || '');
@@ -24,7 +24,7 @@ export const BookSessionModal: React.FC<BookSessionModalProps> = ({ isOpen, onCl
 
   if (!isOpen) return null;
 
-  const currentMentor = mentors.find(m => m.id === (mentorId || defaultMentorId)) || mentors[0];
+  const currentMentor = activeMentors.find(m => m.id === (mentorId || defaultMentorId)) || activeMentors[0];
   const currentStudent = students.find(s => s.id === (studentId || students[0]?.id)) || students[0];
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -49,7 +49,7 @@ export const BookSessionModal: React.FC<BookSessionModalProps> = ({ isOpen, onCl
   };
 
   // If prerequisites are missing, show friendly guidance
-  const hasPrerequisites = mentors.length > 0 && students.length > 0;
+  const hasPrerequisites = activeMentors.length > 0 && students.length > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-margin-page animate-in fade-in duration-200">
@@ -86,7 +86,7 @@ export const BookSessionModal: React.FC<BookSessionModalProps> = ({ isOpen, onCl
               </p>
             </div>
             <div className="flex justify-center gap-3 pt-2">
-              {mentors.length === 0 && (
+              {activeMentors.length === 0 && (
                 <button
                   type="button"
                   onClick={() => { onClose(); openModal('recruit-mentor'); }}
@@ -127,7 +127,7 @@ export const BookSessionModal: React.FC<BookSessionModalProps> = ({ isOpen, onCl
                     onChange={e => setMentorId(e.target.value)}
                     className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
                   >
-                    {mentors.map(m => (
+                    {activeMentors.map(m => (
                       <option key={m.id} value={m.id}>
                         {m.name} ({m.department} • {m.commissionRate ?? 37}% Commission)
                       </option>
