@@ -3978,6 +3978,39 @@
       }
     },
     {
+      "id": "program_officer",
+      "name": "Academic Program Officer & Curriculum Lead",
+      "description": "Manages curriculum design, timetable scheduling, faculty assignment, and syllabus topic approvals.",
+      "isSystem": true,
+      "badgeColor": "bg-indigo-500/10 text-indigo-700 border border-indigo-500/20",
+      "allowedModules": [
+        "reports",
+        "courses",
+        "students",
+        "mentors",
+        "attendance",
+        "tickets",
+        "lms",
+        "settings"
+      ],
+      "permissions": {
+        "canAddCourses": true,
+        "canAddCohorts": true,
+        "canAddLeads": false,
+        "canEnrollStudents": true,
+        "canLogExpenses": false,
+        "canApproveExpenses": false,
+        "canIssueCertificates": true,
+        "canViewBilling": false,
+        "canManageSettings": false,
+        "canManageAttendance": true,
+        "canSubmitReports": true,
+        "canScheduleClasses": true,
+        "canApproveTopics": true,
+        "canManageUsers": false
+      }
+    },
+    {
       "id": "admissions",
       "name": "Head of Admissions & Enrollments",
       "description": "Manages prospect intake, converts leads, adds academic programs/cohorts, and registers student scholars.",
@@ -4159,6 +4192,38 @@
       },
       "id": "role_program_officer_4739",
       "isSystem": false
+    },
+    {
+      "id": "program_officer",
+      "name": "Academic Program Officer",
+      "description": "Manages curriculum design, timetable scheduling, faculty assignment, and syllabus topic approvals.",
+      "isSystem": true,
+      "badgeColor": "bg-indigo-500/10 text-indigo-700 border border-indigo-500/20",
+      "allowedModules": [
+        "reports",
+        "courses",
+        "students",
+        "mentors",
+        "attendance",
+        "tickets",
+        "lms"
+      ],
+      "permissions": {
+        "canAddCourses": true,
+        "canAddCohorts": true,
+        "canAddLeads": false,
+        "canEnrollStudents": true,
+        "canLogExpenses": false,
+        "canApproveExpenses": false,
+        "canIssueCertificates": true,
+        "canViewBilling": false,
+        "canManageSettings": false,
+        "canManageAttendance": true,
+        "canSubmitReports": true,
+        "canScheduleClasses": true,
+        "canApproveTopics": true,
+        "canManageUsers": false
+      }
     }
   ],
   "wallet": {
@@ -4236,7 +4301,7 @@
         "status": "success"
       }
     ],
-    "lastSyncedAt": "2026-10-05T03:34:03.343Z",
+    "lastSyncedAt": "2026-10-05T04:00:49.845Z",
     "paystackLiveBalance": 0
   },
   "timetables": [

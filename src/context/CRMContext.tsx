@@ -500,7 +500,19 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [customRoles, setCustomRoles] = useState<CustomRoleDefinition[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.ROLES);
-    return saved ? JSON.parse(saved) : defaultRoleDefinitions;
+    if (!saved) return defaultRoleDefinitions;
+    try {
+      const parsed: CustomRoleDefinition[] = JSON.parse(saved);
+      const merged = [...parsed];
+      for (const sysRole of defaultRoleDefinitions) {
+        if (!merged.some(r => r.id === sysRole.id)) {
+          merged.push(sysRole);
+        }
+      }
+      return merged;
+    } catch {
+      return defaultRoleDefinitions;
+    }
   });
 
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -583,7 +595,16 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (data.assignments) setAssignments(data.assignments);
         if ((data as any).studentPerformanceReports) setStudentPerformanceReports((data as any).studentPerformanceReports);
         if ((data as any).tickets) setTickets((data as any).tickets);
-        if ((data as any).customRoles) setCustomRoles((data as any).customRoles);
+        if ((data as any).customRoles) {
+          const fetchedRoles: CustomRoleDefinition[] = (data as any).customRoles;
+          const merged = [...fetchedRoles];
+          for (const sysRole of defaultRoleDefinitions) {
+            if (!merged.some(r => r.id === sysRole.id)) {
+              merged.push(sysRole);
+            }
+          }
+          setCustomRoles(merged);
+        }
         if ((data as any).wallet) setWallet((data as any).wallet);
         if ((data as any).payoutRequests) setPayoutRequests((data as any).payoutRequests);
         console.log('🚀 Synchronized live data with Express REST backend.');
@@ -1025,26 +1046,45 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   };
 
+  const hasModulePermission = (moduleName: string): boolean => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'super_admin') return true;
+
+    // 1. Look in customRoles
+    let matchedRole = customRoles.find(r => r.id === currentUser.role);
+    // 2. Fallback to defaultRoleDefinitions
+    if (!matchedRole) {
+      matchedRole = defaultRoleDefinitions.find(r => r.id === currentUser.role);
+    }
+    // 3. Fallback for custom role instances that map to standard roles
+    if (!matchedRole && currentUser.role.includes('program_officer')) {
+      matchedRole = defaultRoleDefinitions.find(r => r.id === 'program_officer');
+    }
+
+    if (matchedRole?.allowedModules) {
+      return matchedRole.allowedModules.includes(moduleName);
+    }
+    return false;
+  };
+
   const hasPermission = (requiredRole: UserRole | UserRole[], moduleName?: keyof EnabledModules | string): boolean => {
     if (!currentUser) return false;
     if (currentUser.role === 'super_admin') return true;
 
-    const matchedRole = customRoles.find(r => r.id === currentUser.role);
+    const rolesArray = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+    
+    // 1. Direct role match
+    if (rolesArray.includes(currentUser.role)) return true;
 
-    // If checking access to a specific module, check role's allowedModules
-    if (moduleName) {
-      return Boolean(matchedRole?.allowedModules?.includes(moduleName));
+    // 2. Custom role pattern matching (e.g. role_program_officer_4739 matches program_officer)
+    if (rolesArray.some(role => currentUser.role.includes(role))) return true;
+
+    // 3. Module permission match (if module is allowed for role, grant access)
+    if (moduleName && hasModulePermission(moduleName)) {
+      return true;
     }
 
-    const rolesArray = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
-    return rolesArray.includes(currentUser.role);
-  };
-
-  const hasModulePermission = (moduleName: string): boolean => {
-    if (!currentUser) return false;
-    if (currentUser.role === 'super_admin') return true;
-    const matchedRole = customRoles.find(r => r.id === currentUser.role);
-    return Boolean(matchedRole?.allowedModules?.includes(moduleName));
+    return false;
   };
 
   const toggleRoleModule = async (roleId: string, moduleName: string) => {

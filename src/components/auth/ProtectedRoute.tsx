@@ -23,10 +23,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
     ? (hasPermission(allowedRoles, requiredModule) || (requiredModule ? hasModulePermission(requiredModule) : false))
     : true;
 
-  const roleRestricted = !hasRoleAccess;
-  const moduleRestricted = requiredModule ? !hasModuleAccess : false;
+  // Access is denied if user fails role access AND fails module access
+  const isAccessDenied = allowedRoles && allowedRoles.length > 0
+    ? (!hasRoleAccess && !hasModuleAccess)
+    : (requiredModule ? !hasModuleAccess : false);
 
-  if (roleRestricted || moduleRestricted) {
+  if (isAccessDenied) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-200">
         <div className="w-16 h-16 rounded-full bg-error-container/30 text-error flex items-center justify-center mb-4 border border-error/20">

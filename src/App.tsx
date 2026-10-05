@@ -29,7 +29,7 @@ import { PWAInstallPrompt } from './components/common/PWAInstallPrompt';
 import { OfflineIndicator } from './components/common/OfflineIndicator';
 
 const HomeRoute: React.FC = () => {
-  const { currentUser } = useCRM();
+  const { currentUser, hasModulePermission } = useCRM();
   if (!currentUser) {
     return <Navigate to="/login" replace />;
   }
@@ -45,12 +45,21 @@ const HomeRoute: React.FC = () => {
   if (currentUser.role === 'mentor') {
     return <Navigate to="/mentors" replace />;
   }
-  if (currentUser.role === 'program_officer') {
+  if (currentUser.role === 'program_officer' || currentUser.role.includes('program_officer')) {
     return <Navigate to="/courses" replace />;
   }
   if (currentUser.role === 'super_admin') {
     return <ExecutiveReportPage />;
   }
+
+  // Fallback for custom configured roles based on enabled modules
+  if (hasModulePermission('reports')) return <ExecutiveReportPage />;
+  if (hasModulePermission('courses')) return <Navigate to="/courses" replace />;
+  if (hasModulePermission('leads')) return <Navigate to="/leads" replace />;
+  if (hasModulePermission('students')) return <Navigate to="/students" replace />;
+  if (hasModulePermission('mentors')) return <Navigate to="/mentors" replace />;
+  if (hasModulePermission('expenses')) return <Navigate to="/expenses" replace />;
+
   return <Navigate to="/tickets" replace />;
 };
 

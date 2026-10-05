@@ -221,6 +221,13 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
                         {currentUser?.role === 'super_admin' && <span className="material-symbols-outlined text-[13px]">check</span>}
                       </button>
                       <button
+                        onClick={() => { switchRole('program_officer'); setIsProfileOpen(false); }}
+                        className={`p-1.5 rounded text-left transition-colors flex items-center justify-between ${currentUser?.role === 'program_officer' ? 'bg-primary text-white font-bold' : 'bg-surface hover:bg-surface-container text-on-surface'}`}
+                      >
+                        <span>Program Officer</span>
+                        {currentUser?.role === 'program_officer' && <span className="material-symbols-outlined text-[13px]">check</span>}
+                      </button>
+                      <button
                         onClick={() => { switchRole('admissions'); setIsProfileOpen(false); }}
                         className={`p-1.5 rounded text-left transition-colors flex items-center justify-between ${currentUser?.role === 'admissions' ? 'bg-primary text-white font-bold' : 'bg-surface hover:bg-surface-container text-on-surface'}`}
                       >

@@ -130,7 +130,20 @@ const loadDatabase = (): DatabaseSchema => {
     const parsed = JSON.parse(data);
     if (!Array.isArray(parsed.courses)) parsed.courses = [];
     if (!Array.isArray(parsed.tickets)) parsed.tickets = initialTickets;
-    if (!Array.isArray(parsed.customRoles)) parsed.customRoles = defaultRoleDefinitions;
+    if (!Array.isArray(parsed.customRoles)) {
+      parsed.customRoles = [...defaultRoleDefinitions];
+    } else {
+      let modified = false;
+      for (const defRole of defaultRoleDefinitions) {
+        if (!parsed.customRoles.some((r: any) => r.id === defRole.id)) {
+          parsed.customRoles.push(defRole);
+          modified = true;
+        }
+      }
+      if (modified) {
+        fs.writeFileSync(DB_FILE, JSON.stringify(parsed, null, 2), 'utf-8');
+      }
+    }
     if (!Array.isArray(parsed.timetables)) parsed.timetables = initialTimetables;
     if (!Array.isArray(parsed.payoutRequests)) parsed.payoutRequests = [];
     if (!parsed.wallet) parsed.wallet = defaultWallet;
