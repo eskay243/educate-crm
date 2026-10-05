@@ -433,10 +433,10 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
       user = db.staffUsers?.find((u: any) => u.role === 'super_admin');
     }
     if (!user) {
-      user = db.staffUsers?.find((u: any) => u.email.toLowerCase() === cleanEmail);
+      user = db.staffUsers?.find((u: any) => u.email?.trim().toLowerCase() === cleanEmail);
     }
     if (!user) {
-      const mentor = db.mentors?.find((m: any) => m.email.toLowerCase() === cleanEmail);
+      const mentor = db.mentors?.find((m: any) => m.email?.trim().toLowerCase() === cleanEmail);
       if (mentor) {
         user = {
           id: mentor.id,
@@ -453,7 +453,7 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
       }
     }
     if (!user) {
-      const student = db.students?.find((s: any) => s.email.toLowerCase() === cleanEmail);
+      const student = db.students?.find((s: any) => s.email?.trim().toLowerCase() === cleanEmail);
       if (student) {
         user = {
           id: student.id,
@@ -2599,7 +2599,10 @@ app.post('/api/staff', (req: Request, res: Response) => {
 
   const newStaff = {
     ...req.body,
-    id: `user-${Date.now()}`,
+    id: req.body.id || `user-${Date.now()}`,
+    password: req.body.password || 'password123',
+    isActive: req.body.isActive !== false,
+    status: req.body.status || 'Active',
   };
   if (!Array.isArray(db.staffUsers)) db.staffUsers = [];
   db.staffUsers.unshift(newStaff);
@@ -2743,37 +2746,58 @@ app.post('/api/users/:id/reset-password', (req: Request, res: Response) => {
   }
 
   const { id } = req.params;
-  const { newPassword } = req.body;
+  const { newPassword, email } = req.body;
 
   if (!newPassword || typeof newPassword !== 'string' || newPassword.trim().length < 6) {
     return res.status(400).json({ success: false, message: 'New password must be at least 6 characters long.' });
   }
 
+  const targetId = (id || '').trim();
+  const targetEmail = (email || '').trim().toLowerCase();
+  const targetIdEmail = targetId.includes('@') ? targetId.toLowerCase() : '';
+
   let found = false;
+  const cleanPassword = newPassword.trim();
 
   // 1. Staff
-  const staff = db.staffUsers?.find(u => u.id === id);
+  const staff = db.staffUsers?.find((u: any) => 
+    (targetId && u.id === targetId) ||
+    (targetIdEmail && u.email?.trim().toLowerCase() === targetIdEmail) ||
+    (targetEmail && u.email?.trim().toLowerCase() === targetEmail)
+  );
   if (staff) {
-    staff.password = newPassword.trim();
+    staff.password = cleanPassword;
     found = true;
   }
 
   // 2. Mentor
-  const mentor = db.mentors?.find(m => m.id === id || m.mentorCode === id);
-  if (mentor) {
-    mentor.password = newPassword.trim();
-    found = true;
+  if (!found) {
+    const mentor = db.mentors?.find((m: any) => 
+      (targetId && (m.id === targetId || m.mentorCode === targetId)) ||
+      (targetIdEmail && m.email?.trim().toLowerCase() === targetIdEmail) ||
+      (targetEmail && m.email?.trim().toLowerCase() === targetEmail)
+    );
+    if (mentor) {
+      mentor.password = cleanPassword;
+      found = true;
+    }
   }
 
   // 3. Student
-  const student = db.students?.find(s => s.id === id || s.studentCode === id);
-  if (student) {
-    student.password = newPassword.trim();
-    found = true;
+  if (!found) {
+    const student = db.students?.find((s: any) => 
+      (targetId && (s.id === targetId || s.studentCode === targetId)) ||
+      (targetIdEmail && s.email?.trim().toLowerCase() === targetIdEmail) ||
+      (targetEmail && s.email?.trim().toLowerCase() === targetEmail)
+    );
+    if (student) {
+      student.password = cleanPassword;
+      found = true;
+    }
   }
 
   if (!found) {
-    return res.status(404).json({ success: false, message: 'User account not found' });
+    return res.status(404).json({ success: false, message: 'User account not found on server.' });
   }
 
   saveDatabase(db);

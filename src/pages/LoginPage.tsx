@@ -24,6 +24,24 @@ const ROLE_SHORT_LABELS: Record<UserRole, string> = {
   program_officer: 'Program Officer',
 };
 
+export const getRoleShortLabel = (role: string, customRolesList?: any[]): string => {
+  if (ROLE_SHORT_LABELS[role as UserRole]) return ROLE_SHORT_LABELS[role as UserRole];
+  const custom = customRolesList?.find(r => r.id === role);
+  if (custom) return custom.name;
+  if (role === 'it_support') return 'IT & Systems';
+  if (role === 'customer_service') return 'Customer Support';
+  return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+};
+
+export const getRoleDisplayName = (role: string, customRolesList?: any[]): string => {
+  if (ROLE_DISPLAY_NAMES[role as UserRole]) return ROLE_DISPLAY_NAMES[role as UserRole];
+  const custom = customRolesList?.find(r => r.id === role);
+  if (custom) return custom.name;
+  if (role === 'it_support') return 'IT & Systems Operations';
+  if (role === 'customer_service') return 'Customer Support & Scholar Welfare';
+  return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+};
+
 export const LoginPage: React.FC = () => {
   const { login, settings, staffUsers, mentors, students, customRoles } = useCRM();
   const { isStandalone, isIOS, promptInstall, setShowIOSInstallGuide } = usePWA();
@@ -74,7 +92,7 @@ export const LoginPage: React.FC = () => {
     }
 
     // 1. Check if matches a registered staff member (including custom roles)
-    const staffMatch = staffUsers?.find(u => u.email.toLowerCase() === norm);
+    const staffMatch = staffUsers?.find(u => u.email?.trim().toLowerCase() === norm);
     if (staffMatch) {
       setSelectedRole(staffMatch.role as UserRole);
       setDetectedUser({
@@ -86,7 +104,7 @@ export const LoginPage: React.FC = () => {
     }
 
     // 2. Check if matches a registered mentor
-    const mentorMatch = mentors?.find(m => m.email.toLowerCase() === norm);
+    const mentorMatch = mentors?.find(m => m.email?.trim().toLowerCase() === norm);
     if (mentorMatch) {
       setSelectedRole('mentor');
       setDetectedUser({
@@ -98,7 +116,7 @@ export const LoginPage: React.FC = () => {
     }
 
     // 3. Check if matches an enrolled student
-    const studentMatch = students?.find(s => s.email.toLowerCase() === norm);
+    const studentMatch = students?.find(s => s.email?.trim().toLowerCase() === norm);
     if (studentMatch) {
       setSelectedRole('student');
       setDetectedUser({
@@ -209,7 +227,7 @@ export const LoginPage: React.FC = () => {
               <h2 className="font-headline-md text-base font-bold text-on-surface">Institutional Portal Sign In</h2>
               {isRoleSpecifiedInUrl && (
                 <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold text-[11px] border border-primary/20">
-                  {ROLE_SHORT_LABELS[selectedRole]} Portal
+                  {getRoleShortLabel(selectedRole, customRoles)} Portal
                 </span>
               )}
             </div>
@@ -341,7 +359,7 @@ export const LoginPage: React.FC = () => {
                 <span>Authenticating...</span>
               ) : (
                 <>
-                  <span>Sign In to {ROLE_SHORT_LABELS[selectedRole]} Portal</span>
+                  <span>Sign In to {getRoleShortLabel(selectedRole, customRoles)} Portal</span>
                   <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                 </>
               )}

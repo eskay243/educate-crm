@@ -54,7 +54,12 @@ class ApiService {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        try {
+          const errJson = await response.json();
+          return errJson;
+        } catch {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
       }
 
       const json = await response.json();
@@ -628,10 +633,10 @@ class ApiService {
     });
   }
 
-  async resetUserPassword(userId: string, newPassword: string) {
-    return this.request<{ success: boolean; message: string }>(`/users/${userId}/reset-password`, {
+  async resetUserPassword(userId: string, newPassword: string, email?: string) {
+    return this.request<{ success: boolean; message: string }>(`/users/${encodeURIComponent(userId)}/reset-password`, {
       method: 'POST',
-      body: JSON.stringify({ newPassword }),
+      body: JSON.stringify({ newPassword, email }),
     });
   }
 

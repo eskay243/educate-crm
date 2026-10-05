@@ -3031,12 +3031,23 @@
   ],
   "staffUsers": [
     {
+      "id": "user-1791190659480",
+      "name": "Oyinkonsola Ojobor",
+      "email": "oyinojobo@gmail.com",
+      "role": "it_support",
+      "roleTitle": "IT Support",
+      "department": "IT & Systems",
+      "password": "NewSecurePassword456!",
+      "isActive": true,
+      "status": "Active"
+    },
+    {
       "name": "Ndifreke Precious Henry",
       "email": "ndifrekehenry001@gmail.com",
       "role": "role_program_officer_4739",
       "roleTitle": "Program officer",
       "department": "Admin/Program Officer",
-      "password": "Password123",
+      "password": "testPassword123",
       "id": "user-1789117130703"
     },
     {
@@ -4679,7 +4690,7 @@
         "status": "success"
       }
     ],
-    "lastSyncedAt": "2026-10-05T06:54:12.678Z",
+    "lastSyncedAt": "2026-10-05T09:45:54.045Z",
     "paystackLiveBalance": 0
   },
   "timetables": [

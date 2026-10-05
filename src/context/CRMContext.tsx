@@ -1263,9 +1263,16 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...userData,
       id: `user-${Date.now()}`,
       roleTitle: resolvedTitle,
+      password: userData.password || 'password123',
     };
     setStaffUsers(prev => [newUser, ...prev]);
-    apiService.createStaff({ ...userData, roleTitle: resolvedTitle });
+    apiService.createStaff(newUser).then(res => {
+      if (res && (res as any).id && (res as any).id !== newUser.id) {
+        setStaffUsers(prev => prev.map(u => u.id === newUser.id ? { ...u, id: (res as any).id } : u));
+      }
+    }).catch(err => {
+      console.warn('Backend createStaff error:', err);
+    });
     showToast('Staff Provisioned', `${newUser.name} added as ${resolvedTitle}.`, 'success');
     addNotification({
       title: 'New Staff Provisioned',
@@ -3842,29 +3849,50 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return false;
     }
 
+    const cleanPassword = newPassword.trim();
+    const targetUser = staffUsers.find(u => u.id === userId || (u.email && u.email.toLowerCase() === userId.toLowerCase())) 
+      || mentors.find(m => m.id === userId || m.mentorCode === userId || (m.email && m.email.toLowerCase() === userId.toLowerCase())) 
+      || students.find(s => s.id === userId || s.studentCode === userId || (s.email && s.email.toLowerCase() === userId.toLowerCase()));
+
+    const targetEmail = targetUser?.email?.trim().toLowerCase();
+
     // Update staffUsers
-    setStaffUsers(prev => prev.map(u => u.id === userId ? { ...u, password: newPassword.trim() } : u));
+    setStaffUsers(prev => prev.map(u => 
+      (u.id === userId || (targetEmail && u.email?.trim().toLowerCase() === targetEmail)) 
+        ? { ...u, password: cleanPassword } 
+        : u
+    ));
     // Update mentors
-    setMentors(prev => prev.map(m => (m.id === userId || m.mentorCode === userId) ? { ...m, password: newPassword.trim() } : m));
+    setMentors(prev => prev.map(m => 
+      (m.id === userId || m.mentorCode === userId || (targetEmail && m.email?.trim().toLowerCase() === targetEmail)) 
+        ? { ...m, password: cleanPassword } 
+        : m
+    ));
     // Update students
-    setStudents(prev => prev.map(s => (s.id === userId || s.studentCode === userId) ? { ...s, password: newPassword.trim() } : s));
+    setStudents(prev => prev.map(s => 
+      (s.id === userId || s.studentCode === userId || (targetEmail && s.email?.trim().toLowerCase() === targetEmail)) 
+        ? { ...s, password: cleanPassword } 
+        : s
+    ));
 
     if (isBackendConnected) {
       try {
-        const res = await apiService.resetUserPassword(userId, newPassword.trim());
+        const res = await apiService.resetUserPassword(userId, cleanPassword, targetEmail);
         if (!res || !res.success) {
           showToast('Reset Failed', res?.message || 'Could not reset password on server.', 'error');
           return false;
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn('Backend password reset error:', err);
+        showToast('Reset Failed', err?.message || 'Could not reset password on server.', 'error');
+        return false;
       }
     }
 
     showToast('Password Reset', 'User password has been successfully reset.', 'success');
     logActivity({
       title: 'User Password Reset',
-      description: `Super Admin reset password for account ID ${userId}.`,
+      description: `Super Admin reset password for ${targetUser?.name || userId} (${targetEmail || userId}).`,
       type: 'system',
       user: currentUser?.name || 'Super Admin',
     });

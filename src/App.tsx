@@ -58,7 +58,9 @@ const HomeRoute: React.FC = () => {
   if (hasModulePermission('leads')) return <Navigate to="/leads" replace />;
   if (hasModulePermission('students')) return <Navigate to="/students" replace />;
   if (hasModulePermission('mentors')) return <Navigate to="/mentors" replace />;
+  if (hasModulePermission('attendance')) return <Navigate to="/attendance" replace />;
   if (hasModulePermission('expenses')) return <Navigate to="/expenses" replace />;
+  if (hasModulePermission('settings')) return <Navigate to="/settings" replace />;
 
   return <Navigate to="/tickets" replace />;
 };
@@ -175,7 +177,7 @@ export const App: React.FC = () => {
             <Route
               path="settings"
               element={
-                <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'mentor', 'finance', 'program_officer', 'student']}>
+                <ProtectedRoute>
                   <SettingsPage />
                 </ProtectedRoute>
               }

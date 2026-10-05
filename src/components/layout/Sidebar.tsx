@@ -27,7 +27,7 @@ interface NavItemConfig {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
-  const { openModal, resetAllData, currentUser, logout, settings, isModuleEnabled, hasPermission, hasModulePermission, tickets } = useCRM();
+  const { openModal, resetAllData, currentUser, logout, settings, isModuleEnabled, hasPermission, hasModulePermission, hasFeaturePermission, tickets } = useCRM();
   const { isStandalone, promptInstall, isIOS, setShowIOSInstallGuide } = usePWA();
   const navigate = useNavigate();
   const location = useLocation();
@@ -45,8 +45,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   const isStudent = currentUser?.role === 'student';
   const isSuperAdmin = currentUser?.role === 'super_admin';
   const isMentor = currentUser?.role === 'mentor';
+  const canManageSettings = isSuperAdmin || hasFeaturePermission('canManageSettings') || hasModulePermission('settings');
 
-  const settingsSubItems: NavSubItem[] = isSuperAdmin ? [
+  const settingsSubItems: NavSubItem[] = canManageSettings ? [
     { to: '/settings?section=profile', label: 'My Profile & KYC', icon: 'person', section: 'profile' },
     { to: '/settings?section=general', label: 'Institutional Profile', icon: 'storefront', section: 'general' },
     { to: '/settings?section=staff', label: 'Staff Accounts', icon: 'badge', section: 'staff' },
@@ -105,8 +106,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   const visibleNavItems = allNavItems.filter(item => {
     if (!currentUser) return false;
     
-    // Support & Tickets is universal to all authenticated roles
-    if (item.to === '/tickets') return true;
+    // Support & Tickets and Settings are universal to all authenticated roles
+    if (item.to === '/tickets' || item.to === '/settings') return true;
 
     // Role filter
     let roleAllowed = false;
@@ -115,9 +116,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     } else if (isSuperAdmin) {
       roleAllowed = !item.allowedRoles?.includes('student') || item.allowedRoles?.includes('super_admin');
     } else {
-      const allowedByRole = item.allowedRoles ? hasPermission(item.allowedRoles) : true;
-      const allowedByModule = item.module ? hasModulePermission(item.module) : true;
-      roleAllowed = allowedByRole && allowedByModule;
+      if (item.to === '/' && !isStudent) {
+        roleAllowed = true;
+      } else {
+        const allowedByRole = item.allowedRoles ? hasPermission(item.allowedRoles, item.module) : true;
+        const allowedByModule = item.module ? hasModulePermission(item.module) : true;
+        roleAllowed = item.module ? (allowedByModule || allowedByRole) : allowedByRole;
+      }
     }
     if (!roleAllowed) return false;
 
