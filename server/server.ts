@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
+import webpush from 'web-push';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -76,6 +77,7 @@ interface DatabaseSchema {
   wallet?: any;
   timetables?: any[];
   payoutRequests?: any[];
+  pushSubscriptions?: any[];
 }
 
 const defaultWallet = {
@@ -117,6 +119,7 @@ const getInitialDatabase = (): DatabaseSchema => ({
   wallet: defaultWallet,
   timetables: initialTimetables,
   payoutRequests: [],
+  pushSubscriptions: [],
 });
 
 const loadDatabase = (): DatabaseSchema => {
@@ -130,6 +133,7 @@ const loadDatabase = (): DatabaseSchema => {
     const parsed = JSON.parse(data);
     if (!Array.isArray(parsed.courses)) parsed.courses = [];
     if (!Array.isArray(parsed.tickets)) parsed.tickets = initialTickets;
+    if (!Array.isArray(parsed.pushSubscriptions)) parsed.pushSubscriptions = [];
     if (!Array.isArray(parsed.customRoles)) {
       parsed.customRoles = [...defaultRoleDefinitions];
     } else {
@@ -715,6 +719,125 @@ app.post('/api/production/flush-demo-data', (req: Request, res: Response) => {
 });
 
 // ----------------------------------------------------
+// Web Push & VAPID Setup (W3C Push API / RFC 8292)
+// ----------------------------------------------------
+const vapidEmail = process.env.VAPID_EMAIL || 'mailto:admin@codelab.institute';
+let vapidPublicKey = process.env.VAPID_PUBLIC_KEY || '';
+let vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || '';
+
+if (!vapidPublicKey || !vapidPrivateKey) {
+  if (db.settings?.vapidKeys?.publicKey && db.settings?.vapidKeys?.privateKey) {
+    vapidPublicKey = db.settings.vapidKeys.publicKey;
+    vapidPrivateKey = db.settings.vapidKeys.privateKey;
+  } else {
+    try {
+      const generated = webpush.generateVAPIDKeys();
+      vapidPublicKey = generated.publicKey;
+      vapidPrivateKey = generated.privateKey;
+      if (!db.settings) db.settings = {};
+      db.settings.vapidKeys = { publicKey: vapidPublicKey, privateKey: vapidPrivateKey };
+      saveDatabase(db);
+      console.log('🔑 [VAPID] Generated new VAPID keys and stored in db.settings');
+    } catch (e) {
+      console.error('Failed to generate VAPID keys:', e);
+    }
+  }
+}
+
+if (vapidPublicKey && vapidPrivateKey) {
+  try {
+    webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey);
+    console.log('✅ [VAPID] Web Push initialized successfully');
+  } catch (e) {
+    console.error('Error setting VAPID details:', e);
+  }
+}
+
+interface PushPayload {
+  title: string;
+  body: string;
+  icon?: string;
+  badge?: string;
+  data?: {
+    url?: string;
+    [key: string]: any;
+  };
+  tag?: string;
+}
+
+const sendPushNotification = async (
+  filterFn: (sub: any) => boolean,
+  payload: PushPayload
+) => {
+  if (!Array.isArray(db.pushSubscriptions) || db.pushSubscriptions.length === 0) {
+    return;
+  }
+
+  const targets = db.pushSubscriptions.filter(filterFn);
+  if (targets.length === 0) return;
+
+  const payloadString = JSON.stringify({
+    title: payload.title,
+    body: payload.body,
+    icon: payload.icon || '/icons/icon-192.png',
+    badge: payload.badge || '/favicon.png',
+    data: payload.data || { url: '/' },
+    tag: payload.tag || `nexus-${Date.now()}`
+  });
+
+  const expiredEndpoints: string[] = [];
+
+  await Promise.all(
+    targets.map(async (sub) => {
+      try {
+        await webpush.sendNotification(
+          {
+            endpoint: sub.endpoint,
+            keys: sub.keys
+          },
+          payloadString
+        );
+      } catch (err: any) {
+        if (err.statusCode === 404 || err.statusCode === 410) {
+          expiredEndpoints.push(sub.endpoint);
+        } else {
+          console.warn('Push notification dispatch notice:', err.message || err);
+        }
+      }
+    })
+  );
+
+  if (expiredEndpoints.length > 0) {
+    db.pushSubscriptions = db.pushSubscriptions.filter(s => !expiredEndpoints.includes(s.endpoint));
+    saveDatabase(db);
+  }
+};
+
+const getApproverEmails = (): string[] => {
+  const emails = new Set<string>();
+
+  if (db.settings?.email) emails.add(db.settings.email.toLowerCase().trim());
+  emails.add('admin@codelab.institute');
+
+  if (Array.isArray(db.staffUsers)) {
+    db.staffUsers.forEach((user: any) => {
+      if (user.isActive !== false && user.status !== 'Deactivated' && user.email) {
+        if (
+          user.role === 'super_admin' ||
+          user.role === 'approver' ||
+          user.role === 'finance' ||
+          user.isApprover === true
+        ) {
+          emails.add(user.email.toLowerCase().trim());
+        }
+      }
+    });
+  }
+
+  return Array.from(emails);
+};
+
+// ----------------------------------------------------
 // Real Email & SMTP Dispatch Engine (Nodemailer)
 // ----------------------------------------------------
 const getTransporter = async (customSmtp?: any) => {
@@ -924,7 +1047,8 @@ const wrapEmailHtml = (title: string, bodyContent: string): string => {
 // 1. OpEx Requisition: Notify Approvers (Super Admin & Finance)
 const sendExpenseApprovalRequestEmail = async (expense: any) => {
   try {
-    const approverEmail = db.settings?.email || 'admin@codelab.institute';
+    const approverEmails = getApproverEmails();
+    const recipientString = approverEmails.join(', ');
     const { transporter, from, isTestAccount } = await getTransporter();
     const primaryColor = '#00236f';
     const subject = `🔔 OpEx Approval Required: ${expense.title || 'Requisition'} (₦${Number(expense.amount || 0).toLocaleString()}) - ${expense.department || 'Operations'}`;
@@ -995,8 +1119,19 @@ const sendExpenseApprovalRequestEmail = async (expense: any) => {
     `;
 
     const html = wrapEmailHtml(subject, bodyContent);
-    const info = await transporter.sendMail({ from, to: approverEmail, subject, html });
-    console.log(`✅ [EXPENSE APPROVAL EMAIL DISPATCHED] To: ${approverEmail} | MessageId: ${info?.messageId} | isTestAccount: ${isTestAccount}`);
+    const info = await transporter.sendMail({ from, to: recipientString, subject, html });
+    console.log(`✅ [EXPENSE APPROVAL EMAIL DISPATCHED] To: ${recipientString} | MessageId: ${info?.messageId} | isTestAccount: ${isTestAccount}`);
+
+    // Concurrently trigger native Web Push to all Approvers and Super Admins
+    sendPushNotification(
+      (sub) => sub.userRole === 'super_admin' || sub.userRole === 'approver' || sub.userRole === 'finance' || sub.isApprover === true,
+      {
+        title: `🔔 OpEx Approval Required: ${expense.title}`,
+        body: `₦${Number(expense.amount || 0).toLocaleString()} requested by ${expense.requestedBy || 'Staff'} (${expense.department || 'Operations'}). Tap to review.`,
+        data: { url: '/expenses' },
+        tag: `expense-${expense.id}`
+      }
+    ).catch(err => console.error('Push notification error for expense approval:', err));
   } catch (err) {
     console.error('Error dispatching expense approval email:', err);
   }
@@ -1109,6 +1244,19 @@ const sendExpenseDecisionEmail = async (expense: any, status: 'Approved' | 'Reje
     const html = wrapEmailHtml(subject, bodyContent);
     const info = await transporter.sendMail({ from, to: recipientEmail, subject, html });
     console.log(`✅ [EXPENSE DECISION EMAIL DISPATCHED] To: ${recipientEmail} | Status: ${status} | MessageId: ${info?.messageId}`);
+
+    // Concurrently trigger native Web Push to Requester
+    if (expense.requesterEmail) {
+      sendPushNotification(
+        (sub) => sub.userEmail?.toLowerCase() === expense.requesterEmail?.toLowerCase(),
+        {
+          title: `OpEx Requisition ${status}`,
+          body: `Your request "${expense.title}" (₦${Number(expense.amount || 0).toLocaleString()}) was ${status.toLowerCase()}.${reason ? ` Reason: ${reason}` : ''}`,
+          data: { url: '/expenses' },
+          tag: `expense-decision-${expense.id}`
+        }
+      ).catch(err => console.error('Push notification error for expense decision:', err));
+    }
   } catch (err) {
     console.error(`Error dispatching expense decision email to ${recipientEmail}:`, err);
   }
@@ -1816,10 +1964,11 @@ const sendTicketRaisedEmails = async (ticket: any) => {
       </div>
     `;
 
-    const adminRecipients: string[] = [adminEmail];
-    if (ticket.assignedToEmail && ticket.assignedToEmail !== adminEmail) {
-      adminRecipients.push(ticket.assignedToEmail);
-    }
+    const approverEmails = getApproverEmails();
+    const adminRecipients: string[] = Array.from(new Set([
+      ...approverEmails,
+      ...(ticket.assignedToEmail ? [ticket.assignedToEmail.toLowerCase().trim()] : [])
+    ]));
 
     await transporter.sendMail({
       from,
@@ -1827,7 +1976,18 @@ const sendTicketRaisedEmails = async (ticket: any) => {
       subject: adminSubject,
       html: wrapEmailHtml(adminSubject, adminBody),
     });
-    console.log(`✅ [TICKET ADMIN ALERT SENT] To: ${adminRecipients.join(', ')}`);
+    console.log(`✅ [TICKET ADMIN & APPROVER ALERT SENT] To: ${adminRecipients.join(', ')}`);
+
+    // Concurrently trigger native Web Push to all Approvers, Super Admins, and Assigned Staff
+    sendPushNotification(
+      (sub) => sub.userRole === 'super_admin' || sub.userRole === 'approver' || sub.isApprover === true || (ticket.assignedToEmail && sub.userEmail?.toLowerCase() === ticket.assignedToEmail.toLowerCase()),
+      {
+        title: `🎫 Ticket #${ticket.ticketNumber} Raised`,
+        body: `${ticket.title} — ${ticket.createdBy?.name || 'User'} (${String(ticket.priority).toUpperCase()}). Tap to view.`,
+        data: { url: '/tickets' },
+        tag: `ticket-${ticket.id}`
+      }
+    ).catch(err => console.error('Push notification error for ticket raised:', err));
   } catch (err) {
     console.error('Error dispatching ticket raised emails:', err);
   }
@@ -4911,6 +5071,73 @@ app.patch('/api/roles/:id', (req: Request, res: Response) => {
 
   saveDatabase(db);
   res.json({ success: true, data: db.customRoles[index] });
+});
+
+// ----------------------------------------------------
+// Web Push Notification Endpoints (W3C Push API / RFC 8292)
+// ----------------------------------------------------
+app.get('/api/push/vapid-public-key', (req: Request, res: Response) => {
+  res.json({ success: true, publicKey: vapidPublicKey });
+});
+
+app.post('/api/push/subscribe', (req: Request, res: Response) => {
+  const { subscription, userId, userRole, userEmail, userName, isApprover } = req.body;
+  if (!subscription || !subscription.endpoint || !subscription.keys) {
+    return res.status(400).json({ success: false, message: 'Invalid subscription object' });
+  }
+
+  if (!Array.isArray(db.pushSubscriptions)) db.pushSubscriptions = [];
+
+  const existingIdx = db.pushSubscriptions.findIndex(s => s.endpoint === subscription.endpoint);
+  const newSubItem = {
+    id: `sub-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    userId: userId || 'anonymous',
+    userRole: userRole || 'user',
+    userEmail: userEmail || '',
+    userName: userName || '',
+    isApprover: Boolean(isApprover),
+    endpoint: subscription.endpoint,
+    keys: subscription.keys,
+    userAgent: req.headers['user-agent'] || '',
+    updatedAt: new Date().toISOString()
+  };
+
+  if (existingIdx >= 0) {
+    db.pushSubscriptions[existingIdx] = { ...db.pushSubscriptions[existingIdx], ...newSubItem };
+  } else {
+    db.pushSubscriptions.push(newSubItem);
+  }
+
+  saveDatabase(db);
+  console.log(`[PUSH] Registered push subscription for user: ${userId || 'anonymous'} (${userEmail || 'no-email'})`);
+  res.json({ success: true, message: 'Push subscription registered successfully' });
+});
+
+app.post('/api/push/unsubscribe', (req: Request, res: Response) => {
+  const { endpoint } = req.body;
+  if (!endpoint) return res.status(400).json({ success: false, message: 'Endpoint is required' });
+
+  if (Array.isArray(db.pushSubscriptions)) {
+    db.pushSubscriptions = db.pushSubscriptions.filter(s => s.endpoint !== endpoint);
+    saveDatabase(db);
+  }
+  res.json({ success: true, message: 'Unsubscribed successfully' });
+});
+
+app.post('/api/push/test', async (req: Request, res: Response) => {
+  const { userId } = req.body;
+  try {
+    const filter = userId ? ((s: any) => s.userId === userId) : (() => true);
+    await sendPushNotification(filter, {
+      title: '🎉 Nexus CRM Mobile Push Verified!',
+      body: 'Your device is successfully connected to instant institutional alerts.',
+      data: { url: '/' },
+      tag: 'test-push'
+    });
+    res.json({ success: true, message: 'Test push notification dispatched' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message || 'Push test failed' });
+  }
 });
 
 app.listen(PORT, () => {

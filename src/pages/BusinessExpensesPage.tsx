@@ -24,7 +24,8 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
     setSelectedExpenseForDisburse,
     generateVirtualAccount,
     reconcileWalletWithPaystack,
-    isSyncingWallet
+    isSyncingWallet,
+    hasFeaturePermission
   } = useCRM();
 
   const [activeLedgerView, setActiveLedgerView] = useState<'expenses' | 'wallet_ledger'>('expenses');
@@ -48,8 +49,9 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
 
   const isSuperAdmin = currentUser?.role === 'super_admin';
   const isFinance = currentUser?.role === 'finance';
-  const canApproveExpenses = isSuperAdmin || isFinance;
-  const canManageBudget = isSuperAdmin || isFinance;
+  const isApprover = currentUser?.role === 'approver' || currentUser?.isApprover === true;
+  const canApproveExpenses = isSuperAdmin || isFinance || isApprover || hasFeaturePermission('canApproveExpenses');
+  const canManageBudget = isSuperAdmin || isFinance || isApprover;
   const showBudgetCardToUser = canManageBudget || (settings.showBudgetToStaff !== false);
 
   const effectiveSearch = globalSearch || tableSearch;
@@ -65,14 +67,99 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
     'Equipment',
   ];
 
-  // Approved vs Pending Spends
+  // Calendar Month formatting helper
+  const formatMonthLabel = (m: string) => {
+    if (m === 'all') return 'All Time (Consolidated)';
+    const [year, month] = m.split('-');
+    const date = new Date(Number(year), Number(month) - 1, 1);
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
+
+  // Current calendar month string (e.g. '2026-10')
+  const currentCalendarMonth = useMemo(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  }, []);
+
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => currentCalendarMonth);
+
+  // Discover all months present in expenses + current month
+  const availableMonths = useMemo(() => {
+    const monthsSet = new Set<string>();
+    monthsSet.add(currentCalendarMonth);
+    expenses.forEach(e => {
+      if (e.date && e.date.length >= 7) {
+        monthsSet.add(e.date.slice(0, 7));
+      }
+    });
+    return Array.from(monthsSet).sort().reverse(); // newest first
+  }, [expenses, currentCalendarMonth]);
+
+  const baseMonthlyBudget = settings.operatingBudget || 1500000;
+  const isRolloverEnabled = settings.budgetRolloverEnabled !== false;
+
+  // Calculate monthly stats and cumulative rollover
+  const { 
+    monthlyApprovedSpend, 
+    cumulativeRollover, 
+    effectiveBudget, 
+    remainingBudget, 
+    budgetUtilization,
+  } = useMemo(() => {
+    // 1. Group approved expenses by month
+    const monthlySpends: Record<string, number> = {};
+    expenses.forEach(e => {
+      if (e.status === 'Approved' || e.status === 'Paid') {
+        const m = (e.date && e.date.length >= 7) ? e.date.slice(0, 7) : currentCalendarMonth;
+        monthlySpends[m] = (monthlySpends[m] || 0) + e.amount;
+      }
+    });
+
+    // 2. Chronological calculation of unspent rollover from earliest month up to selectedMonth
+    const sortedChronologicalMonths = [...availableMonths].sort(); // oldest first
+    let runningSurplus = 0;
+    let prevSurplus = 0;
+
+    for (const m of sortedChronologicalMonths) {
+      if (m === selectedMonth) {
+        prevSurplus = runningSurplus;
+        break;
+      }
+      const spendInMonth = monthlySpends[m] || 0;
+      const unspent = Math.max(0, baseMonthlyBudget - spendInMonth);
+      runningSurplus += unspent;
+    }
+
+    const currentMonthSpend = selectedMonth === 'all' 
+      ? Object.values(monthlySpends).reduce((a, b) => a + b, 0)
+      : (monthlySpends[selectedMonth] || 0);
+
+    const rollover = isRolloverEnabled && selectedMonth !== 'all' ? prevSurplus : 0;
+    const effBudget = selectedMonth === 'all' 
+      ? baseMonthlyBudget * Math.max(1, availableMonths.length)
+      : baseMonthlyBudget + rollover;
+
+    const remaining = Math.max(0, effBudget - currentMonthSpend);
+    const utilization = effBudget > 0 ? Math.min(100, Math.round((currentMonthSpend / effBudget) * 100)) : 0;
+
+    return {
+      monthlyApprovedSpend: currentMonthSpend,
+      cumulativeRollover: rollover,
+      effectiveBudget: effBudget,
+      remainingBudget: remaining,
+      budgetUtilization: utilization,
+    };
+  }, [expenses, selectedMonth, availableMonths, baseMonthlyBudget, isRolloverEnabled, currentCalendarMonth]);
+
+  // Approved vs Pending Spends for current view
   const approvedExpenses = useMemo(() => 
-    expenses.filter(e => e.status === 'Approved' || e.status === 'Paid'), 
-    [expenses]
-  );
-  const approvedSpend = useMemo(() => 
-    approvedExpenses.reduce((acc, curr) => acc + curr.amount, 0), 
-    [approvedExpenses]
+    expenses.filter(e => {
+      const isApproved = e.status === 'Approved' || e.status === 'Paid';
+      if (!isApproved) return false;
+      if (selectedMonth === 'all') return true;
+      return (e.date && e.date.startsWith(selectedMonth));
+    }), 
+    [expenses, selectedMonth]
   );
 
   const pendingExpenses = useMemo(() => 
@@ -85,10 +172,6 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
   );
   const pendingCount = pendingExpenses.length;
 
-  const approvedBudget = settings.operatingBudget || 1500000;
-  const budgetUtilization = approvedBudget > 0 ? Math.min(100, Math.round((approvedSpend / approvedBudget) * 100)) : 0;
-  const remainingBudget = Math.max(0, approvedBudget - approvedSpend);
-
   const filteredExpenses = useMemo(() => {
     return expenses.filter((e) => {
       const matchesCat = selectedCategory === 'All' || e.category === selectedCategory;
@@ -96,6 +179,8 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
         selectedStatus === 'All' ? true :
         selectedStatus === 'Awaiting Approval' ? (e.status === 'Awaiting Approval' || e.status === 'Pending' || e.status === 'In Review') :
         e.status === selectedStatus;
+
+      const matchesMonth = selectedMonth === 'all' || !e.date || e.date.startsWith(selectedMonth);
 
       const matchesSearch =
         e.title.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
@@ -106,9 +191,9 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
         (e.requestedBy && e.requestedBy.toLowerCase().includes(effectiveSearch.toLowerCase())) ||
         (e.rejectionReason && e.rejectionReason.toLowerCase().includes(effectiveSearch.toLowerCase()));
 
-      return matchesCat && matchesStatus && matchesSearch;
+      return matchesCat && matchesStatus && matchesSearch && matchesMonth;
     });
-  }, [expenses, selectedCategory, selectedStatus, effectiveSearch]);
+  }, [expenses, selectedCategory, selectedStatus, effectiveSearch, selectedMonth]);
 
   const handleSaveBudget = (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,6 +208,16 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
     showToast(
       'Staff Budget Visibility Changed', 
       !currentVal ? 'Staff members can now view the approved budget & deductions.' : 'Budget visibility is now restricted to Super Admin only.',
+      'info'
+    );
+  };
+
+  const toggleBudgetRollover = () => {
+    const nextVal = !isRolloverEnabled;
+    updateSettings({ budgetRolloverEnabled: nextVal });
+    showToast(
+      'Budget Rollover Updated',
+      nextVal ? 'Unspent monthly budget will automatically roll over to next month.' : 'Budget rollover disabled. Each month starts with base budget only.',
       'info'
     );
   };
@@ -347,7 +442,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
           </div>
           <div>
             <div className="font-display text-2xl font-bold text-on-surface font-data-tabular">
-              {formatNaira(approvedSpend)}
+              {formatNaira(monthlyApprovedSpend)}
             </div>
             <div className="font-body-sm text-xs text-secondary mt-1 flex items-center gap-1">
               <span className="material-symbols-outlined text-[14px] text-[#166534]">check_circle</span>
@@ -392,37 +487,76 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
           </div>
         </div>
 
-        {/* Card 3: Approved Monthly Operating Budget */}
+        {/* Card 3: Approved Monthly Operating Budget with Auto-Renewal & Rollover */}
         {showBudgetCardToUser ? (
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md flex flex-col justify-between shadow-xs">
             <div className="flex justify-between items-start mb-2">
-              <div className="space-y-0.5">
-                <span className="font-label-md text-label-md text-secondary uppercase tracking-wider text-[11px]">
-                  Approved Monthly Budget
-                </span>
-                {canManageBudget && (
-                  <div className="flex items-center gap-2 pt-0.5">
-                    <button
-                      onClick={() => setIsEditingBudget(!isEditingBudget)}
-                      className="text-primary hover:underline text-[11px] font-bold cursor-pointer"
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-label-md text-label-md text-secondary uppercase tracking-wider text-[11px]">
+                    Operating Budget
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#eff6ff] text-[#1d4ed8] border border-[#bfdbfe]">
+                    Auto-Renewed Monthly
+                  </span>
+                  {isRolloverEnabled && (
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff]" title="Unspent surplus from prior months rolls over automatically">
+                      Rollover Active
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 pt-0.5 flex-wrap">
+                  {/* Calendar Month Selector */}
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-secondary font-medium">Month:</span>
+                    <select
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(e.target.value)}
+                      className="text-[11px] font-bold px-2 py-0.5 rounded bg-surface border border-outline-variant text-on-surface outline-none cursor-pointer hover:border-primary"
                     >
-                      {isEditingBudget ? 'Cancel' : 'Edit Limit'}
-                    </button>
-                    <span className="text-secondary text-[10px]">•</span>
-                    <button
-                      onClick={toggleStaffBudgetVisibility}
-                      className="text-secondary hover:text-on-surface text-[10px] font-medium cursor-pointer flex items-center gap-0.5"
-                      title="Toggle whether Admissions & Finance staff can view the budget"
-                    >
-                      <span className="material-symbols-outlined text-[12px]">
-                        {settings.showBudgetToStaff !== false ? 'visibility' : 'visibility_off'}
-                      </span>
-                      <span>{settings.showBudgetToStaff !== false ? 'Staff View: ON' : 'Staff View: OFF'}</span>
-                    </button>
+                      {availableMonths.map((m) => (
+                        <option key={m} value={m}>
+                          {formatMonthLabel(m)} {m === currentCalendarMonth ? '(Current)' : ''}
+                        </option>
+                      ))}
+                      <option value="all">All Time (Consolidated)</option>
+                    </select>
                   </div>
-                )}
+
+                  {canManageBudget && (
+                    <>
+                      <span className="text-secondary text-[10px]">•</span>
+                      <button
+                        onClick={() => setIsEditingBudget(!isEditingBudget)}
+                        className="text-primary hover:underline text-[11px] font-bold cursor-pointer"
+                      >
+                        {isEditingBudget ? 'Cancel' : 'Edit Limit'}
+                      </button>
+                      <span className="text-secondary text-[10px]">•</span>
+                      <button
+                        onClick={toggleBudgetRollover}
+                        className="text-secondary hover:text-on-surface text-[10px] font-medium cursor-pointer"
+                        title="Toggle whether unspent budget from previous months rolls over into current month"
+                      >
+                        {isRolloverEnabled ? 'Rollover: ON' : 'Rollover: OFF'}
+                      </button>
+                      <span className="text-secondary text-[10px]">•</span>
+                      <button
+                        onClick={toggleStaffBudgetVisibility}
+                        className="text-secondary hover:text-on-surface text-[10px] font-medium cursor-pointer flex items-center gap-0.5"
+                        title="Toggle whether Admissions & Finance staff can view the budget"
+                      >
+                        <span className="material-symbols-outlined text-[12px]">
+                          {settings.showBudgetToStaff !== false ? 'visibility' : 'visibility_off'}
+                        </span>
+                        <span>{settings.showBudgetToStaff !== false ? 'Staff: ON' : 'Staff: OFF'}</span>
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
-              <div className="w-8 h-8 rounded-lg bg-surface-container text-secondary flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-surface-container text-secondary flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined text-[18px]">account_balance</span>
               </div>
             </div>
@@ -460,14 +594,30 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                 </form>
               ) : (
                 <>
-                  <div className="flex justify-between items-baseline mb-2">
-                    <span className="font-display text-2xl font-bold text-on-surface font-data-tabular">
-                      {formatNaira(approvedBudget)}
-                    </span>
+                  <div className="flex justify-between items-baseline mb-1">
+                    <div>
+                      <span className="font-display text-2xl font-bold text-on-surface font-data-tabular">
+                        {formatNaira(effectiveBudget)}
+                      </span>
+                      {cumulativeRollover > 0 && selectedMonth !== 'all' && (
+                        <span className="ml-2 text-[10px] font-bold text-[#7e22ce] bg-[#f3e8ff] px-1.5 py-0.5 rounded">
+                          +{formatNaira(cumulativeRollover)} carried over
+                        </span>
+                      )}
+                    </div>
                     <span className="font-body-sm text-xs text-secondary font-data-tabular">
                       {budgetUtilization}% allocated
                     </span>
                   </div>
+
+                  {cumulativeRollover > 0 && selectedMonth !== 'all' && (
+                    <div className="text-[10px] text-secondary mb-1.5 flex items-center gap-1">
+                      <span>Base Budget: {formatNaira(baseMonthlyBudget)}</span>
+                      <span>+</span>
+                      <span className="text-[#7e22ce] font-semibold">Prior Surplus: {formatNaira(cumulativeRollover)}</span>
+                    </div>
+                  )}
+
                   <div className="w-full bg-surface-container rounded-full h-2 overflow-hidden mb-2">
                     <div 
                       className={`h-2 rounded-full transition-all duration-500 ${
@@ -477,7 +627,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                     />
                   </div>
                   <div className="flex justify-between text-[11px] text-secondary font-data-tabular">
-                    <span>Deducted: <strong className="text-on-surface">{formatNaira(approvedSpend)}</strong></span>
+                    <span>Month Spend: <strong className="text-on-surface">{formatNaira(monthlyApprovedSpend)}</strong></span>
                     <span>Remaining: <strong className="text-[#166534]">{formatNaira(remainingBudget)}</strong></span>
                   </div>
                 </>

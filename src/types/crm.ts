@@ -1,4 +1,4 @@
-export type BuiltInRole = 'super_admin' | 'program_officer' | 'admissions' | 'mentor' | 'finance' | 'student';
+export type BuiltInRole = 'super_admin' | 'program_officer' | 'admissions' | 'mentor' | 'finance' | 'student' | 'approver';
 export type UserRole = BuiltInRole | string;
 
 export interface RoleCapabilities {
@@ -123,6 +123,7 @@ export interface AuthUser {
   status?: 'Active' | 'Deactivated';
   deactivatedAt?: string;
   deactivatedReason?: string;
+  isApprover?: boolean; // Super Admin assigned official Approver authority
 }
 
 export type LeadStatus = 'Qualified' | 'Negotiation' | 'Discovery' | 'Overdue' | 'Contacted' | 'New' | 'Converted' | 'Lost';
@@ -628,6 +629,7 @@ export interface OrganizationSettings {
   autoInvoiceGeneration: boolean;
   operatingBudget?: number;
   showBudgetToStaff?: boolean;
+  budgetRolloverEnabled?: boolean; // When true, unspent monthly operating budget is rolled over to next month
   officeLocation?: {
     name: string;
     latitude: number;
@@ -837,6 +839,20 @@ export interface MentorPayoutRequest {
   disburseReference?: string;
   rejectionReason?: string;
   notes?: string;
+}
+
+export interface PushSubscriptionItem {
+  id: string;
+  userId: string;
+  userEmail?: string;
+  userRole?: string;
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+  userAgent?: string;
+  createdAt: string;
 }
 
 

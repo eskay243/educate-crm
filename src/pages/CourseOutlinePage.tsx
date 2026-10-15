@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
 import { LMSLesson, CourseDurationTrack } from '../types/crm';
@@ -54,11 +54,27 @@ export const CourseOutlinePage: React.FC = () => {
     ];
   }, [courses]);
 
-  // Filter courses by duration if selected
+  // Filter courses by duration if selected, and scope to mentor's assigned courses if isMentor
   const filteredCourses = useMemo(() => {
-    if (durationFilter === 'All') return allCourses;
-    return allCourses.filter(c => c && c.durationTrack === durationFilter);
-  }, [allCourses, durationFilter]);
+    let list = allCourses;
+    if (isMentor) {
+      const myCourseList = list.filter(c => c.leadInstructor === currentUser?.name || c.id === currentUser?.mentorId);
+      if (myCourseList.length > 0) {
+        list = myCourseList;
+      }
+    }
+    if (durationFilter === 'All') return list;
+    return list.filter(c => c && c.durationTrack === durationFilter);
+  }, [allCourses, durationFilter, isMentor, currentUser]);
+
+  useEffect(() => {
+    if (isMentor && filteredCourses.length > 0) {
+      const match = filteredCourses.find(c => c.title === activeCourseTitle);
+      if (!match) {
+        setActiveCourseTitle(filteredCourses[0].title);
+      }
+    }
+  }, [isMentor, filteredCourses, activeCourseTitle]);
 
   const activeCourse = useMemo(() => {
     const normalize = (t?: string) => (t || '').trim().toLowerCase();

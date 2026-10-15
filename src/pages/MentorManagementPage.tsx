@@ -13,7 +13,6 @@ export const MentorManagementPage: React.FC = () => {
     mentors, 
     sessions, 
     students,
-    courses,
     studentPerformanceReports,
     markSessionAttendance,
     updateReportFollowUpStatus,
@@ -111,30 +110,11 @@ export const MentorManagementPage: React.FC = () => {
     return (payoutRequests || []).filter(r => r.status === 'Pending').length;
   }, [payoutRequests]);
 
-  // Mentors are only allowed to see mentors that they share a course, student, or department with
+  // Mentors can strictly only view their own profile. Other faculty accounts & financials are private.
   const accessibleMentors = useMemo(() => {
     if (!isMentor) return mentors;
-
-    // Get courses taught by this mentor or programs taken by their students
-    const myStudents = myMentorProfile 
-      ? students.filter(s => s.mentorId === myMentorProfile.id || s.mentorName === myMentorProfile.name)
-      : [];
-    const myStudentPrograms = new Set(myStudents.map(s => s.program));
-    const myCourses = myMentorProfile
-      ? courses.filter(c => c.leadInstructor === myMentorProfile.name || myStudentPrograms.has(c.title))
-      : [];
-    const sharedInstructors = new Set(myCourses.map(c => c.leadInstructor));
-
-    return mentors.filter(m => {
-      // 1. The mentor themselves
-      if (myMentorProfile && m.id === myMentorProfile.id) return true;
-      // 2. Mentors in the same department
-      if (myMentorProfile?.department && m.department === myMentorProfile.department) return true;
-      // 3. Mentors who share a course or student
-      if (sharedInstructors.has(m.name)) return true;
-      return false;
-    });
-  }, [mentors, isMentor, myMentorProfile, students, courses]);
+    return myMentorProfile ? [myMentorProfile] : [];
+  }, [mentors, isMentor, myMentorProfile]);
 
   const filteredMentors = useMemo(() => {
     return accessibleMentors.filter((mentor) => {
@@ -238,7 +218,7 @@ export const MentorManagementPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-[20px]">security</span>
             <span className="text-on-surface font-semibold">
-              Faculty Discretion Active: You can only view co-faculty in your academic department/shared tracks. Other mentors&apos; rates &amp; earnings are confidential.
+              Faculty Privacy Active: You are viewing your personal profile, credentials, and commission ledger. All other faculty accounts are confidential.
             </span>
           </div>
           <span className="font-data-tabular text-primary font-bold">
@@ -382,10 +362,10 @@ export const MentorManagementPage: React.FC = () => {
             <span className="text-xs font-bold text-[#166534] bg-[#dcfce7] px-2 py-1 rounded">Active</span>
           </div>
           <p className="font-body-sm text-body-sm text-secondary mb-unit">
-            {isMentor ? 'Connected Faculty Pool' : 'Total Faculty Pool'}
+            {isMentor ? 'My Faculty Status' : 'Total Faculty Pool'}
           </p>
           <h3 className="font-display text-display font-bold text-on-surface">
-            {filteredMentors.length} Mentors
+            {isMentor ? (myMentorProfile?.status || 'Active') : `${filteredMentors.length} Mentors`}
           </h3>
         </div>
 
@@ -477,7 +457,7 @@ export const MentorManagementPage: React.FC = () => {
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">groups</span>
-              <span>{isMentor ? 'Co-Faculty Roster' : 'Faculty Roster'} ({filteredMentors.length})</span>
+              <span>{isMentor ? 'My Faculty Profile' : `Faculty Roster (${filteredMentors.length})`}</span>
             </button>
             <button
               onClick={() => setActiveTab('sessions')}

@@ -6,9 +6,7 @@ import { MentorAvailabilityManager } from '../components/mentors/MentorAvailabil
 export const MentorAvailabilityPage: React.FC = () => {
   const { 
     mentors, 
-    currentUser, 
-    students, 
-    courses 
+    currentUser 
   } = useCRM();
 
   const isMentor = currentUser?.role === 'mentor';
@@ -22,26 +20,11 @@ export const MentorAvailabilityPage: React.FC = () => {
     ) || null;
   }, [isMentor, mentors, currentUser]);
 
-  // Determine accessible mentors based on role
+  // Determine accessible mentors based on role (mentors only see themselves)
   const accessibleMentors = useMemo(() => {
     if (!isMentor) return mentors;
-
-    const myStudents = myMentorProfile 
-      ? students.filter(s => s.mentorId === myMentorProfile.id || s.mentorName === myMentorProfile.name)
-      : [];
-    const myStudentPrograms = new Set(myStudents.map(s => s.program));
-    const myCourses = myMentorProfile
-      ? courses.filter(c => c.leadInstructor === myMentorProfile.name || myStudentPrograms.has(c.title))
-      : [];
-    const sharedInstructors = new Set(myCourses.map(c => c.leadInstructor));
-
-    return mentors.filter(m => {
-      if (myMentorProfile && m.id === myMentorProfile.id) return true;
-      if (myMentorProfile?.department && m.department === myMentorProfile.department) return true;
-      if (sharedInstructors.has(m.name)) return true;
-      return false;
-    });
-  }, [mentors, isMentor, myMentorProfile, students, courses]);
+    return myMentorProfile ? [myMentorProfile] : [];
+  }, [mentors, isMentor, myMentorProfile]);
 
   // Aggregate metrics
   const totalActiveSlots = useMemo(() => {

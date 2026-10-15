@@ -168,3 +168,69 @@ self.addEventListener('message', (event) => {
     self.skipWaiting();
   }
 });
+
+// ------------------------------------------------------------------------------
+// Push Notification Event Listener (W3C Web Push API / RFC 8292)
+// ------------------------------------------------------------------------------
+self.addEventListener('push', (event) => {
+  let data = {
+    title: 'Nexus CRM Notification',
+    body: 'You have a new institutional update.',
+    icon: '/icons/icon-192.png',
+    badge: '/favicon.png',
+    data: { url: '/' },
+    tag: 'nexus-alert'
+  };
+
+  if (event.data) {
+    try {
+      const parsed = event.data.json();
+      data = { ...data, ...parsed };
+    } catch (e) {
+      data.body = event.data.text();
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: data.icon || '/icons/icon-192.png',
+    badge: data.badge || '/favicon.png',
+    vibrate: [200, 100, 200],
+    data: data.data || { url: '/' },
+    tag: data.tag || `nexus-${Date.now()}`,
+    renotify: true,
+    actions: [
+      { action: 'open', title: 'Open Portal' }
+    ]
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+// ------------------------------------------------------------------------------
+// Notification Click Event Listener
+// ------------------------------------------------------------------------------
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : '/';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Focus existing tab if open
+      for (const client of clientList) {
+        if (client.url && 'focus' in client) {
+          if ('navigate' in client) {
+            client.navigate(targetUrl);
+          }
+          return client.focus();
+        }
+      }
+      // Otherwise open a new window
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
+  );
+});

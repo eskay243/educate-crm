@@ -7,7 +7,43 @@ interface FacultyGradingInboxProps {
 }
 
 export const FacultyGradingInbox: React.FC<FacultyGradingInboxProps> = ({ isMentor }) => {
-  const { assignments, gradeAssignment, showToast, courses } = useCRM();
+  const { assignments, gradeAssignment, showToast, courses, currentUser, mentors, students } = useCRM();
+
+  // Find logged-in mentor profile
+  const myMentorProfile = useMemo(() => {
+    if (!isMentor) return null;
+    return mentors.find(
+      m => m.id === currentUser?.mentorId || m.name === currentUser?.name || m.email === currentUser?.email
+    ) || null;
+  }, [isMentor, mentors, currentUser]);
+
+  // Mentor's assigned students & courses
+  const myStudents = useMemo(() => {
+    if (!isMentor || !myMentorProfile) return [];
+    return students.filter(s => s.mentorId === myMentorProfile.id || s.mentorName === myMentorProfile.name);
+  }, [isMentor, myMentorProfile, students]);
+
+  const myStudentIds = useMemo(() => new Set(myStudents.map(s => s.id)), [myStudents]);
+  const myStudentNames = useMemo(() => new Set(myStudents.map(s => s.name.toLowerCase().trim())), [myStudents]);
+
+  const myCourses = useMemo(() => {
+    if (!isMentor || !myMentorProfile) return courses;
+    return courses.filter(c => c.leadInstructor === myMentorProfile.name);
+  }, [isMentor, myMentorProfile, courses]);
+
+  const myCourseTitles = useMemo(() => new Set(myCourses.map(c => c.title.toLowerCase().trim())), [myCourses]);
+
+  // Scoped assignments for mentor
+  const accessibleAssignments = useMemo(() => {
+    if (!isMentor || !myMentorProfile) return assignments;
+    return assignments.filter(a => {
+      const matchesMentorDirect = (a as any).mentorId === myMentorProfile.id || 
+        (a.reviewedBy && a.reviewedBy.toLowerCase().trim() === myMentorProfile.name.toLowerCase().trim());
+      const matchesStudent = a.studentId ? myStudentIds.has(a.studentId) : myStudentNames.has(a.studentName?.toLowerCase().trim());
+      const matchesCourse = a.courseTitle ? myCourseTitles.has(a.courseTitle.toLowerCase().trim()) : false;
+      return matchesMentorDirect || matchesStudent || matchesCourse;
+    });
+  }, [assignments, isMentor, myMentorProfile, myStudentIds, myStudentNames, myCourseTitles]);
 
   const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Needs Revision' | 'Passed' | 'Exceptional'>('All');
   const [courseFilter, setCourseFilter] = useState<string>('All');
@@ -22,7 +58,7 @@ export const FacultyGradingInbox: React.FC<FacultyGradingInboxProps> = ({ isMent
 
   // Filter assignments
   const filteredAssignments = useMemo(() => {
-    return assignments.filter(a => {
+    return accessibleAssignments.filter(a => {
       // Status filter
       if (statusFilter === 'Pending' && a.status !== 'Pending') return false;
       if (statusFilter === 'Needs Revision' && a.status !== 'Needs Revision') return false;
@@ -42,12 +78,12 @@ export const FacultyGradingInbox: React.FC<FacultyGradingInboxProps> = ({ isMent
 
       return true;
     });
-  }, [assignments, statusFilter, courseFilter, searchQuery]);
+  }, [accessibleAssignments, statusFilter, courseFilter, searchQuery]);
 
   // Counts
-  const pendingCount = useMemo(() => assignments.filter(a => a.status === 'Pending').length, [assignments]);
-  const revisionCount = useMemo(() => assignments.filter(a => a.status === 'Needs Revision').length, [assignments]);
-  const passedCount = useMemo(() => assignments.filter(a => a.status === 'Passed' || a.status === 'Exceptional').length, [assignments]);
+  const pendingCount = useMemo(() => accessibleAssignments.filter(a => a.status === 'Pending').length, [accessibleAssignments]);
+  const revisionCount = useMemo(() => accessibleAssignments.filter(a => a.status === 'Needs Revision').length, [accessibleAssignments]);
+  const passedCount = useMemo(() => accessibleAssignments.filter(a => a.status === 'Passed' || a.status === 'Exceptional').length, [accessibleAssignments]);
 
   const openGradingDrawer = (sub: StudentAssignmentSubmission) => {
     setSelectedSubmission(sub);

@@ -1132,6 +1132,27 @@ export const defaultRoleDefinitions: CustomRoleDefinition[] = [
     }
   },
   {
+    id: 'approver',
+    name: 'Institutional Approver / Authorizer',
+    description: 'Reviews and authorizes operational expenditure requisitions, verifies compliance, monitors ticket escalations, and approves budget deductions.',
+    isSystem: true,
+    badgeColor: 'bg-purple-500/10 text-purple-700 border border-purple-500/20',
+    allowedModules: ['expenses', 'tickets', 'reports', 'attendance'],
+    permissions: {
+      canAddCourses: false,
+      canAddCohorts: false,
+      canAddLeads: false,
+      canEnrollStudents: false,
+      canLogExpenses: true,
+      canApproveExpenses: true,
+      canIssueCertificates: false,
+      canViewBilling: true,
+      canManageSettings: false,
+      canManageAttendance: true,
+      canSubmitReports: true,
+    }
+  },
+  {
     id: 'student',
     name: 'Enrolled Scholar / Student',
     description: 'Scholar portal with access to curriculum tracks, interactive labs, mentor bookings, and tuition installment checkout.',

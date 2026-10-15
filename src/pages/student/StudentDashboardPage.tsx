@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useCRM, formatNaira } from '../../context/CRMContext';
 import { PerformanceMeter } from '../../components/common/PerformanceMeter';
+import { getStudentEnrolledModules } from '../../utils/courseCurriculum';
 
 export const StudentDashboardPage: React.FC = () => {
   const { 
@@ -9,6 +10,7 @@ export const StudentDashboardPage: React.FC = () => {
     currentStudentProfile, 
     mentors, 
     lmsModules, 
+    courses,
     assignments, 
     payTuitionWithPaystack, 
     invoices,
@@ -60,8 +62,13 @@ export const StudentDashboardPage: React.FC = () => {
     });
   }, [timetables, student]);
 
-  // Total lessons count
-  const totalLessons = lmsModules.reduce((acc, m) => acc + (m.lessons?.length || 0), 0) || 7;
+  // Modules strictly for this student's enrolled program
+  const enrolledModules = useMemo(() => {
+    return getStudentEnrolledModules(student.program, lmsModules, courses);
+  }, [student.program, lmsModules, courses]);
+
+  // Total lessons count for enrolled program
+  const totalLessons = enrolledModules.reduce((acc, m) => acc + (m.lessons?.length || 0), 0) || 7;
   const completedCount = student.completedLessonIds?.length || 1;
   const progressPercentage = student.progressPercent || Math.round((completedCount / totalLessons) * 100);
 
@@ -485,8 +492,8 @@ export const StudentDashboardPage: React.FC = () => {
           <div className="rounded-2xl border border-outline-variant bg-surface-container-low p-6 shadow-xs">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="font-bold text-on-surface text-lg">Current Module</h3>
-                <p className="text-xs text-on-surface-variant">Continue your hands-on track modules</p>
+                <h3 className="font-bold text-on-surface text-lg">Curriculum &amp; Course Outline</h3>
+                <p className="text-xs text-on-surface-variant font-medium">{student.program} &bull; {enrolledModules.length} Modules</p>
               </div>
               <Link 
                 to="/student/courses" 
@@ -499,31 +506,39 @@ export const StudentDashboardPage: React.FC = () => {
 
             {/* Modules List */}
             <div className="space-y-3">
-              {lmsModules.slice(0, 2).map((mod, idx) => (
-                <div key={mod.id} className="p-4 rounded-xl border border-outline-variant/80 bg-surface-container/50 hover:bg-surface-container transition-colors">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-primary">Module {mod.order || idx + 1}</span>
-                    <span className="text-xs text-on-surface-variant">{mod.lessons.length} Lessons</span>
-                  </div>
-                  <h4 className="font-bold text-sm text-on-surface mb-1">{mod.title}</h4>
-                  <p className="text-xs text-on-surface-variant line-clamp-1 mb-3">{mod.description}</p>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-xs text-on-surface-variant">
-                      <span className="material-symbols-outlined text-sm text-emerald-600">check_circle</span>
-                      <span>
-                        {mod.lessons.filter(l => student.completedLessonIds?.includes(l.id)).length} of {mod.lessons.length} completed
-                      </span>
-                    </div>
-                    <Link
-                      to="/student/courses"
-                      className="px-3 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-colors"
-                    >
-                      Study Module
-                    </Link>
-                  </div>
+              {enrolledModules.length === 0 ? (
+                <div className="p-8 text-center border border-dashed border-outline-variant rounded-xl text-xs text-on-surface-variant">
+                  No syllabus modules uploaded yet for {student.program}. Your faculty mentor will publish weekly topics shortly.
                 </div>
-              ))}
+              ) : (
+                enrolledModules.slice(0, 3).map((mod, idx) => (
+                  <div key={mod.id} className="p-4 rounded-xl border border-outline-variant/80 bg-surface-container/50 hover:bg-surface-container transition-colors">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-primary">
+                        {mod.title.startsWith('Week') ? mod.title.split(':')[0] : `Module ${mod.order || idx + 1}`}
+                      </span>
+                      <span className="text-xs text-on-surface-variant">{mod.lessons.length} Lessons</span>
+                    </div>
+                    <h4 className="font-bold text-sm text-on-surface mb-1">{mod.title}</h4>
+                    <p className="text-xs text-on-surface-variant line-clamp-1 mb-3">{mod.description}</p>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs text-on-surface-variant">
+                        <span className="material-symbols-outlined text-sm text-emerald-600">check_circle</span>
+                        <span>
+                          {mod.lessons.filter(l => student.completedLessonIds?.includes(l.id)).length} of {mod.lessons.length} completed
+                        </span>
+                      </div>
+                      <Link
+                        to="/student/courses"
+                        className="px-3 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-colors"
+                      >
+                        Study Module
+                      </Link>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 

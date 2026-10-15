@@ -90,6 +90,7 @@ export const resolveRoleTitle = (roleId: string, customRolesList?: any[]): strin
     super_admin: 'Super Admin / Managing Director',
     admissions: 'Admissions Officer',
     finance: 'Finance Officer & Bursar',
+    approver: 'Institutional Approver & Authorizer',
     instructor: 'Instructor / Faculty Lead',
     student: 'Enrolled Scholar / Student',
     program_officer: 'Academic Program Officer & Curriculum Lead',
@@ -193,6 +194,7 @@ interface CRMContextType {
   switchRole: (role: UserRole) => void;
   addStaffUser: (user: Omit<AuthUser, 'id'>) => void;
   updateUserRole: (userId: string, role: UserRole, mentorId?: string) => void;
+  toggleUserApproverStatus: (userId: string, isApprover?: boolean) => void;
   deleteStaffUser: (id: string) => Promise<boolean>;
   deleteMentorUser: (id: string) => Promise<boolean>;
   transferTasksAndDeleteUser: (sourceUserId: string, targetUserId: string) => Promise<{ success: boolean; message: string }>;
@@ -695,12 +697,41 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const currentStudentProfile = useMemo(() => {
     if (!currentUser) return null;
     if (currentUser.role === 'student') {
+      const cleanEmail = currentUser.email?.toLowerCase().trim();
       const match = students.find(s => 
         (currentUser.studentId && (s.id === currentUser.studentId || s.studentCode === currentUser.studentId)) || 
-        (currentUser.email && s.email?.toLowerCase().trim() === currentUser.email?.toLowerCase().trim())
+        (cleanEmail && s.email?.toLowerCase().trim() === cleanEmail) ||
+        (currentUser.name && s.name?.toLowerCase().trim() === currentUser.name?.toLowerCase().trim())
       );
       if (match) return match;
-      return null;
+
+      // Safe fallback using currentUser's identity rather than a hardcoded different student
+      const fallbackStudent: Student = {
+        id: currentUser.id || currentUser.studentId || 'stu-session',
+        studentCode: currentUser.studentId || `STU-${currentUser.id ? currentUser.id.slice(-4) : '2026'}`,
+        name: currentUser.name || 'Enrolled Student',
+        email: currentUser.email || 'student@codelab.institute',
+        phone: currentUser.phone || '+234 800 000 0000',
+        program: (currentUser as any).program || 'Diploma in Financial Trading',
+        cohort: (currentUser as any).cohort || 'Cohort Alpha 2026',
+        mentorId: currentUser.mentorId,
+        mentorName: (currentUser as any).mentorName || 'Faculty Mentor',
+        attendanceRate: 100,
+        attendedLearningHours: 0,
+        minimumRequiredHours: 25,
+        tuitionStatus: 'Paid',
+        tuitionAmount: 0,
+        totalFees: 0,
+        paidAmount: 0,
+        outstandingBalance: 0,
+        progressPercent: 0,
+        status: 'Active',
+        isActive: true,
+        enrolledDate: new Date().toISOString().split('T')[0],
+        courses: [],
+        installments: [],
+      };
+      return fallbackStudent;
     }
     return null;
   }, [currentUser, students]);
@@ -1160,6 +1191,9 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Direct check for Admissions having permission to add courses (per user requirement)
     if (permission === 'canAddCourses' && currentUser.role === 'admissions') return true;
 
+    // Direct check for official Approver designation and Finance controller
+    if (permission === 'canApproveExpenses' && (currentUser.role === 'approver' || currentUser.isApprover === true || currentUser.role === 'finance')) return true;
+
     const matchedRole = customRoles.find(r => r.id === currentUser.role);
     if (matchedRole && matchedRole.permissions) {
       return Boolean(matchedRole.permissions[permission]);
@@ -1359,6 +1393,57 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logActivity({
       title: 'Staff Role Reassigned',
       description: `Staff member role updated to ${newTitle}.`,
+      type: 'system',
+      user: currentUser?.name || 'Super Admin',
+    });
+  };
+
+  const toggleUserApproverStatus = (userId: string, isApprover?: boolean) => {
+    const target = staffUsers.find(u => u.id === userId);
+    if (!target) return;
+
+    const currentlyApprover = Boolean(target.isApprover || target.role === 'approver');
+    const nextVal = isApprover !== undefined ? isApprover : !currentlyApprover;
+
+    // If revoking approver authority and user's role is 'approver', revert role to 'program_officer'
+    const shouldRevertRole = !nextVal && target.role === 'approver';
+    const nextRole: UserRole = shouldRevertRole ? 'program_officer' : target.role;
+    const nextRoleTitle = shouldRevertRole ? 'Program Officer' : (target.roleTitle || resolveRoleTitle(nextRole));
+
+    setStaffUsers(prev => prev.map(u => {
+      if (u.id === userId) {
+        return {
+          ...u,
+          isApprover: nextVal,
+          role: nextRole,
+          roleTitle: nextRoleTitle,
+        };
+      }
+      return u;
+    }));
+
+    if (currentUser?.id === userId) {
+      setCurrentUser(prev => prev ? {
+        ...prev,
+        isApprover: nextVal,
+        role: nextRole,
+        roleTitle: nextRoleTitle,
+      } : null);
+    }
+
+    apiService.updateStaff(userId, { 
+      isApprover: nextVal,
+      ...(shouldRevertRole ? { role: nextRole, roleTitle: nextRoleTitle } : {})
+    });
+
+    showToast(
+      'Approver Authority Updated', 
+      `${target.name} ${nextVal ? 'granted' : 'relieved of'} official approver authority.`, 
+      'success'
+    );
+    logActivity({
+      title: 'Approver Authority Updated',
+      description: `${target.name} was ${nextVal ? 'designated as' : 'removed as'} an official Institutional Approver.`,
       type: 'system',
       user: currentUser?.name || 'Super Admin',
     });
@@ -4274,6 +4359,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         hasPermission,
         addStaffUser,
         updateUserRole,
+        toggleUserApproverStatus,
         notifications,
         toasts,
         unreadNotificationCount,

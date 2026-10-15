@@ -1,11 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useCRM } from '../../context/CRMContext';
 import { LMSLesson, LMSModule } from '../../types/crm';
+import { getStudentEnrolledModules } from '../../utils/courseCurriculum';
 
 export const StudentCoursesPage: React.FC = () => {
   const { 
     lmsModules, 
+    courses,
     currentStudentProfile, 
     completeLesson, 
     submitAssignment, 
@@ -29,11 +31,23 @@ export const StudentCoursesPage: React.FC = () => {
     mentorName: 'Dr. Chidi Okeke',
   };
 
-  const modules = lmsModules && lmsModules.length > 0 ? lmsModules : [];
+  const modules = useMemo(() => {
+    return getStudentEnrolledModules(student.program, lmsModules, courses);
+  }, [student.program, lmsModules, courses]);
   
   // Active selected module and lesson
-  const [activeModuleId, setActiveModuleId] = useState<string>(modules[0]?.id || 'mod-1');
-  const [activeLessonId, setActiveLessonId] = useState<string>(modules[0]?.lessons[0]?.id || 'les-1-1');
+  const [activeModuleId, setActiveModuleId] = useState<string>('');
+  const [activeLessonId, setActiveLessonId] = useState<string>('');
+
+  useEffect(() => {
+    if (modules.length > 0) {
+      const hasCurrent = modules.some(m => m.id === activeModuleId);
+      if (!hasCurrent) {
+        setActiveModuleId(modules[0].id);
+        setActiveLessonId(modules[0].lessons?.[0]?.id || '');
+      }
+    }
+  }, [modules, activeModuleId]);
   const [activeTab, setActiveTab] = useState<'content' | 'assignment' | 'resources'>('content');
   const [showTimetableModal, setShowTimetableModal] = useState(false);
 

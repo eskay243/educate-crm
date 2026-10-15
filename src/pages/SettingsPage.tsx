@@ -11,6 +11,7 @@ import { getDeviceCoordinates } from '../utils/geo';
 import { usePWA } from '../context/PWAContext';
 import { APP_BASE_URL } from '../utils/url';
 import { TransferTasksAndDeleteModal } from '../components/modals/TransferTasksAndDeleteModal';
+import { pushNotificationService } from '../services/pushNotificationService';
 
 const ALL_SYSTEM_MODULES: { id: string; label: string; icon: string }[] = [
   { id: 'courses', label: 'Programs & Cohorts', icon: 'menu_book' },
@@ -31,6 +32,7 @@ export const SettingsPage: React.FC = () => {
     staffUsers, 
     addStaffUser, 
     updateUserRole, 
+    toggleUserApproverStatus,
     mentors,
     students,
     currentUser,
@@ -146,6 +148,43 @@ export const SettingsPage: React.FC = () => {
   const [showSecurityPass, setShowSecurityPass] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [securityError, setSecurityError] = useState('');
+
+  // Mobile & Web Push Notification States
+  const [isPushSupported, setIsPushSupported] = useState(false);
+  const [pushPermission, setPushPermission] = useState<NotificationPermission>('default');
+  const [isPushSubscribed, setIsPushSubscribed] = useState(false);
+  const [isEnablingPush, setIsEnablingPush] = useState(false);
+  const [isTestingPush, setIsTestingPush] = useState(false);
+
+  useEffect(() => {
+    setIsPushSupported(pushNotificationService.isSupported());
+    setPushPermission(pushNotificationService.getPermission());
+    pushNotificationService.isSubscribed().then(setIsPushSubscribed);
+  }, []);
+
+  const handleEnablePush = async () => {
+    if (!currentUser) return;
+    setIsEnablingPush(true);
+    const res = await pushNotificationService.subscribe(currentUser);
+    setIsEnablingPush(false);
+    setPushPermission(pushNotificationService.getPermission());
+    pushNotificationService.isSubscribed().then(setIsPushSubscribed);
+    showToast(res.success ? 'Push Notifications Enabled' : 'Push Notification Notice', res.message, res.success ? 'success' : 'info');
+  };
+
+  const handleTestPush = async () => {
+    if (!currentUser) return;
+    setIsTestingPush(true);
+    const res = await pushNotificationService.sendTestPush(currentUser.id);
+    setIsTestingPush(false);
+    showToast(res.success ? 'Test Push Dispatched' : 'Test Push Failed', res.message, res.success ? 'success' : 'error');
+  };
+
+  const handleUnsubscribePush = async () => {
+    const res = await pushNotificationService.unsubscribe();
+    pushNotificationService.isSubscribed().then(setIsPushSubscribed);
+    showToast('Unsubscribed', res.message, 'info');
+  };
 
   // Live Nigerian KYC Metric Computation
   const kycMetrics = useMemo(() => {
@@ -1393,6 +1432,27 @@ export const SettingsPage: React.FC = () => {
                 <span>Security &amp; Password</span>
               </div>
             </button>
+
+            <button
+              onClick={() => setActiveTab('push')}
+              className={`w-full text-left px-3.5 py-2.5 rounded-xl font-medium text-xs flex items-center justify-between transition-all duration-150 cursor-pointer ${
+                effectiveSection === 'push'
+                  ? 'bg-primary text-on-primary font-bold shadow-xs'
+                  : 'text-secondary hover:text-on-surface hover:bg-surface-container-low'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-[18px]">notifications_active</span>
+                <span>Mobile &amp; Web Push</span>
+              </div>
+              {isPushSubscribed && (
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  effectiveSection === 'push' ? 'bg-white/20 text-white' : 'bg-[#dcfce7] text-[#166534]'
+                }`}>
+                  ✓ Active
+                </span>
+              )}
+            </button>
           </div>
 
           {/* Group 2: Access & Governance (Super Admin Only) */}
@@ -2382,6 +2442,135 @@ export const SettingsPage: React.FC = () => {
             </div>
           </div>
         </form>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SECTION: MOBILE & WEB PUSH NOTIFICATIONS (ALL ROLES) */}
+      {/* ========================================================================= */}
+      {effectiveSection === 'push' && (
+        <div className="space-y-stack-md animate-in fade-in duration-200 max-w-2xl">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-6">
+            <div className="border-b border-outline-variant pb-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[22px]">notifications_active</span>
+                </div>
+                <div>
+                  <h3 className="font-headline-sm text-base font-bold text-on-surface">
+                    Mobile &amp; Web Push Alerts
+                  </h3>
+                  <p className="text-xs text-secondary">
+                    Receive immediate lock-screen popups on your phone and browser when important events occur
+                  </p>
+                </div>
+              </div>
+              <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
+                isPushSubscribed
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-amber-50 text-amber-700 border-amber-200'
+              }`}>
+                {isPushSubscribed ? '● Push Connected' : '○ Not Subscribed'}
+              </span>
+            </div>
+
+            {/* Device Status Card */}
+            <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-on-surface">Platform Capabilities</span>
+                <span className="text-xs text-secondary font-medium">
+                  {isPushSupported ? '✓ Web Push API Supported' : '✕ Web Push Not Supported'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-on-surface">Browser Permission</span>
+                <span className={`text-xs font-bold uppercase tracking-wider ${
+                  pushPermission === 'granted' ? 'text-emerald-600' : pushPermission === 'denied' ? 'text-rose-600' : 'text-amber-600'
+                }`}>
+                  {pushPermission}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-on-surface">Verified Email Delivery</span>
+                <span className="text-xs text-primary font-bold">
+                  {currentUser?.email || 'admin@codelab.institute'} (Always active)
+                </span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              {!isPushSubscribed ? (
+                <button
+                  type="button"
+                  disabled={isEnablingPush}
+                  onClick={handleEnablePush}
+                  className="px-5 py-2.5 rounded-lg bg-primary text-on-primary font-bold text-xs flex items-center gap-2 hover:bg-primary/90 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-[18px]">add_alert</span>
+                  <span>{isEnablingPush ? 'Connecting...' : 'Enable Mobile Push Notifications'}</span>
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    disabled={isTestingPush}
+                    onClick={handleTestPush}
+                    className="px-4 py-2 rounded-lg bg-secondary text-on-secondary font-bold text-xs flex items-center gap-1.5 hover:bg-secondary/90 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">send</span>
+                    <span>{isTestingPush ? 'Sending...' : 'Send Test Notification to Phone'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleUnsubscribePush}
+                    className="px-3.5 py-2 rounded-lg bg-surface border border-outline-variant text-secondary hover:text-error text-xs font-medium transition-colors cursor-pointer"
+                  >
+                    Unsubscribe This Device
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Real-time Notification Event Rules */}
+            <div className="border-t border-outline-variant/60 pt-4 space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-secondary">
+                Configured Real-Time Alert Triggers
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                <div className="p-3 rounded-lg border border-outline-variant bg-surface">
+                  <div className="font-bold text-on-surface flex items-center gap-1.5 mb-1">
+                    <span className="material-symbols-outlined text-primary text-[16px]">payments</span>
+                    <span>OpEx Requisitions</span>
+                  </div>
+                  <p className="text-secondary text-[11px]">
+                    Approvers, Super Admins, and Finance controllers get immediate push &amp; email alerts when a new requisition is logged.
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg border border-outline-variant bg-surface">
+                  <div className="font-bold text-on-surface flex items-center gap-1.5 mb-1">
+                    <span className="material-symbols-outlined text-primary text-[16px]">confirmation_number</span>
+                    <span>Support Tickets</span>
+                  </div>
+                  <p className="text-secondary text-[11px]">
+                    Approvers and designated handlers receive instant push &amp; email copies when a scholar or staff member raises a support ticket.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile PWA Installation Guidance */}
+            <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-200/80 text-blue-900 text-xs space-y-2">
+              <div className="font-bold flex items-center gap-1.5 text-blue-950">
+                <span className="material-symbols-outlined text-[18px]">smartphone</span>
+                <span>iPhone / iPad &amp; Android PWA Instructions</span>
+              </div>
+              <ul className="list-disc pl-5 space-y-1 text-[11px] text-blue-900/90 leading-relaxed">
+                <li><strong>iOS (iPhone / iPad)</strong>: Apple requires installing the app to your Home Screen to allow lock-screen notifications. In Safari, tap the <strong>Share</strong> button (box with arrow) → tap <strong>Add to Home Screen</strong>. Open the app from your home screen and tap <strong>Enable Mobile Push Notifications</strong>.</li>
+                <li><strong>Android</strong>: Tap <strong>Install App</strong> or open the menu in Chrome → <strong>Add to Home screen</strong>, then grant notification permission.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ========================================================================= */}
@@ -3567,6 +3756,7 @@ export const SettingsPage: React.FC = () => {
                     <th className="p-3">Staff Member</th>
                     <th className="p-3">Email</th>
                     <th className="p-3">Role Permission</th>
+                    <th className="p-3">Approver Authority</th>
                     <th className="p-3">Department</th>
                     <th className="p-3 text-right">Actions</th>
                   </tr>
@@ -3592,19 +3782,50 @@ export const SettingsPage: React.FC = () => {
                         >
                           <optgroup label="System Roles">
                             <option value="super_admin">Super Admin</option>
+                            <option value="approver">Institutional Approver</option>
                             <option value="program_officer">Program Officer</option>
                             <option value="admissions">Admissions</option>
                             <option value="mentor">Faculty Mentor</option>
                             <option value="finance">Finance Officer</option>
                           </optgroup>
-                          {customRoles.filter(r => !['super_admin', 'admissions', 'mentor', 'finance', 'student'].includes(r.id)).length > 0 && (
+                          {customRoles.filter(r => !['super_admin', 'admissions', 'mentor', 'finance', 'student', 'approver'].includes(r.id)).length > 0 && (
                             <optgroup label="Custom Roles">
-                              {customRoles.filter(r => !['super_admin', 'admissions', 'mentor', 'finance', 'student'].includes(r.id)).map(cr => (
+                              {customRoles.filter(r => !['super_admin', 'admissions', 'mentor', 'finance', 'student', 'approver'].includes(r.id)).map(cr => (
                                 <option key={cr.id} value={cr.id}>{cr.name}</option>
                               ))}
                             </optgroup>
                           )}
                         </select>
+                      </td>
+                      <td className="p-3">
+                        {user.role === 'super_admin' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 text-[10px] font-bold border border-purple-200" title="Super Admins hold permanent institutional approval authority">
+                            <span className="material-symbols-outlined text-[12px]">verified</span>
+                            <span>Super Admin</span>
+                          </span>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={Boolean(user.isApprover || user.role === 'approver')}
+                              onClick={() => toggleUserApproverStatus(user.id)}
+                              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${
+                                (user.isApprover || user.role === 'approver') ? 'bg-primary' : 'bg-outline-variant/60'
+                              }`}
+                              title={user.isApprover || user.role === 'approver' ? "Click to toggle OFF Approver authority" : "Click to toggle ON Approver authority"}
+                            >
+                              <span
+                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                                  (user.isApprover || user.role === 'approver') ? 'translate-x-4' : 'translate-x-0'
+                                }`}
+                              />
+                            </button>
+                            <span className={`text-[11px] font-bold ${(user.isApprover || user.role === 'approver') ? 'text-primary' : 'text-secondary'}`}>
+                              {(user.isApprover || user.role === 'approver') ? 'ON' : 'OFF'}
+                            </span>
+                          </div>
+                        )}
                       </td>
                       <td className="p-3 text-secondary">{user.department || 'Executive'}</td>
                       <td className="p-3 text-right">
