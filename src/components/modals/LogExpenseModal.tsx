@@ -8,7 +8,7 @@ export interface LogExpenseModalProps {
 }
 
 export const LogExpenseModal: React.FC<LogExpenseModalProps> = ({ isOpen, onClose }) => {
-  const { logExpense, currentUser } = useCRM();
+  const { logExpense, currentUser, activeMentors } = useCRM();
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<ExpenseCategory>('Office & Ops');
@@ -19,10 +19,13 @@ export const LogExpenseModal: React.FC<LogExpenseModalProps> = ({ isOpen, onClos
       ? 'Admissions' 
       : currentUser?.role === 'finance' 
       ? 'Finance & Ops' 
+      : currentUser?.role === 'program_officer'
+      ? 'Academic'
       : 'Operations'
   );
   const [paymentMethod, setPaymentMethod] = useState('Nigerian Bank Transfer');
   const [vendor, setVendor] = useState('');
+  const [selectedMentorId, setSelectedMentorId] = useState<string>('');
   const [urgency, setUrgency] = useState<'Standard' | 'Urgent' | 'Emergency'>('Standard');
   const [description, setDescription] = useState('');
   const [receiptFileName, setReceiptFileName] = useState<string>('');
@@ -45,12 +48,39 @@ export const LogExpenseModal: React.FC<LogExpenseModalProps> = ({ isOpen, onClos
     }
   };
 
+  const handleCategoryChange = (newCat: ExpenseCategory) => {
+    setCategory(newCat);
+    if (newCat === 'Faculty Mentorship & Payout') {
+      setDepartment('Academic');
+      setPaymentMethod('Nigerian Bank Transfer');
+      if (activeMentors.length > 0 && !selectedMentorId) {
+        handleMentorSelect(activeMentors[0].id);
+      }
+    }
+  };
+
+  const handleMentorSelect = (mentorId: string) => {
+    setSelectedMentorId(mentorId);
+    const m = activeMentors.find(men => men.id === mentorId);
+    if (m) {
+      setVendor(`${m.name} (${m.email})`);
+      setTitle(`Faculty Honorarium & Mentorship Payout - ${m.name}`);
+      setDepartment(m.department || 'Academic');
+      if (m.pendingPayout && m.pendingPayout > 0) {
+        setAmount(m.pendingPayout);
+      }
+    }
+  };
+
+  const selectedMentor = activeMentors.find(m => m.id === selectedMentorId);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !amount) return;
 
+    const isMentorPayout = category === 'Faculty Mentorship & Payout' && selectedMentor;
     const hasKyc = Boolean(currentUser?.accountNumber);
-    const shouldAttachKyc = useProfileKycBank && hasKyc && paymentMethod === 'Nigerian Bank Transfer';
+    const shouldAttachKyc = !isMentorPayout && useProfileKycBank && hasKyc && paymentMethod === 'Nigerian Bank Transfer';
 
     logExpense({
       title,
@@ -60,17 +90,21 @@ export const LogExpenseModal: React.FC<LogExpenseModalProps> = ({ isOpen, onClos
       department,
       paymentMethod,
       status: 'Awaiting Approval',
-      vendor: vendor || (shouldAttachKyc && currentUser?.name ? `${currentUser.name} (Reimbursement)` : 'Corporate Vendor NG'),
+      vendor: isMentorPayout
+        ? `${selectedMentor.name} (Faculty Mentor - ${selectedMentor.mentorCode})`
+        : (vendor || (shouldAttachKyc && currentUser?.name ? `${currentUser.name} (Reimbursement)` : 'Corporate Vendor NG')),
       requestedBy: currentUser?.name ? `${currentUser.name} (${currentUser.role.replace('_', ' ')})` : 'Admissions / Finance Officer',
       requesterEmail: currentUser?.email || 'admin@codelab.institute',
       receiptName: receiptFileName || (receiptUrl ? 'proforma_invoice.pdf' : undefined),
       receiptUrl: receiptUrl || undefined,
-      description: description || undefined,
+      description: description || (isMentorPayout ? `Faculty honorarium & mentorship compensation request for ${selectedMentor.name} (${selectedMentor.courses ? selectedMentor.courses.join(', ') : selectedMentor.department || 'Academic Faculty'}).` : undefined),
       urgency,
-      disbursementBankName: shouldAttachKyc && currentUser?.bankName ? currentUser.bankName : undefined,
-      disbursementBankCode: shouldAttachKyc && currentUser?.bankCode ? currentUser.bankCode : undefined,
-      disbursementAccountNumber: shouldAttachKyc && currentUser?.accountNumber ? currentUser.accountNumber : undefined,
-      disbursementAccountName: shouldAttachKyc && currentUser?.accountName ? currentUser.accountName : undefined,
+      mentorId: isMentorPayout ? selectedMentor.id : undefined,
+      mentorName: isMentorPayout ? selectedMentor.name : undefined,
+      disbursementBankName: isMentorPayout ? selectedMentor.bankName : (shouldAttachKyc && currentUser?.bankName ? currentUser.bankName : undefined),
+      disbursementBankCode: isMentorPayout ? selectedMentor.bankCode : (shouldAttachKyc && currentUser?.bankCode ? currentUser.bankCode : undefined),
+      disbursementAccountNumber: isMentorPayout ? selectedMentor.accountNumber : (shouldAttachKyc && currentUser?.accountNumber ? currentUser.accountNumber : undefined),
+      disbursementAccountName: isMentorPayout ? (selectedMentor.accountName || selectedMentor.name) : (shouldAttachKyc && currentUser?.accountName ? currentUser.accountName : undefined),
     });
 
     onClose();
@@ -122,10 +156,11 @@ export const LogExpenseModal: React.FC<LogExpenseModalProps> = ({ isOpen, onClos
               <label className="font-label-md text-label-md text-secondary">Expense Category <span className="text-error">*</span></label>
               <select
                 value={category}
-                onChange={e => setCategory(e.target.value as ExpenseCategory)}
+                onChange={e => handleCategoryChange(e.target.value as ExpenseCategory)}
                 className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-on-surface focus:border-primary outline-none cursor-pointer"
               >
                 <option value="Office & Ops">Office &amp; Operations</option>
+                <option value="Faculty Mentorship & Payout">Faculty Mentorship &amp; Payout</option>
                 <option value="Marketing & Ads">Marketing &amp; Admissions Ads</option>
                 <option value="Facilities">Hub Facilities, Power &amp; Diesel</option>
                 <option value="Software & Tools">Software, SaaS &amp; Cloud Tools</option>
@@ -134,6 +169,50 @@ export const LogExpenseModal: React.FC<LogExpenseModalProps> = ({ isOpen, onClos
                 <option value="Equipment">Hardware &amp; Equipment</option>
               </select>
             </div>
+
+            {/* If Category is Faculty Mentorship & Payout, show Mentor Selector */}
+            {category === 'Faculty Mentorship & Payout' && (
+              <div className="space-y-1 sm:col-span-2 p-3 bg-purple-50/70 border border-purple-200 rounded-xl">
+                <div className="flex justify-between items-center mb-1">
+                  <label className="font-label-md text-xs font-bold text-purple-950 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px] text-purple-700">school</span>
+                    <span>Select Faculty Mentor Beneficiary *</span>
+                  </label>
+                  <span className="text-[10px] font-semibold text-purple-700 uppercase tracking-wider">
+                    Auto-Pulls CBN NUBAN
+                  </span>
+                </div>
+                <select
+                  value={selectedMentorId}
+                  onChange={e => handleMentorSelect(e.target.value)}
+                  className="w-full h-10 px-3 bg-white border border-purple-300 rounded font-body-md text-xs font-semibold text-on-surface focus:border-purple-600 outline-none cursor-pointer"
+                >
+                  <option value="">-- Choose Faculty Mentor --</option>
+                  {activeMentors.map(m => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.department || 'Academic Faculty'}) — Accrued: ₦{(m.pendingPayout || 0).toLocaleString()}
+                    </option>
+                  ))}
+                </select>
+                {selectedMentor && (
+                  <div className="mt-2.5 p-2.5 bg-white rounded-lg border border-purple-200 text-xs space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-on-surface">{selectedMentor.name}</span>
+                      <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-bold text-[10px]">
+                        {selectedMentor.mentorCode}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-secondary text-[11px]">
+                      <span className="material-symbols-outlined text-purple-600 text-[15px]">account_balance</span>
+                      <span>Bank: <strong className="text-on-surface">{selectedMentor.bankName || 'GTBank'}</strong></span>
+                      <span>&bull;</span>
+                      <span>NUBAN: <strong className="font-mono text-purple-900 font-bold">{selectedMentor.accountNumber || 'Not set'}</strong></span>
+                      <span>({selectedMentor.accountName || selectedMentor.name})</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="space-y-1">
               <label className="font-label-md text-label-md text-secondary">Requested Amount (₦) <span className="text-error">*</span></label>
@@ -191,7 +270,7 @@ export const LogExpenseModal: React.FC<LogExpenseModalProps> = ({ isOpen, onClos
             </div>
 
             <div className="space-y-1">
-              <label className="font-label-md text-label-md text-secondary">Vendor / Supplier</label>
+              <label className="font-label-md text-label-md text-secondary">Vendor / Payee</label>
               <input
                 type="text"
                 value={vendor}
@@ -214,7 +293,27 @@ export const LogExpenseModal: React.FC<LogExpenseModalProps> = ({ isOpen, onClos
               </select>
             </div>
 
-            {paymentMethod === 'Nigerian Bank Transfer' && currentUser?.accountNumber && (
+            {/* Mentor Settlement Callout */}
+            {category === 'Faculty Mentorship & Payout' && selectedMentor && (
+              <div className="sm:col-span-2 p-3.5 rounded-xl bg-purple-50/90 border border-purple-200 text-xs text-purple-950 flex items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-purple-200 text-purple-800 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[18px]">verified</span>
+                  </div>
+                  <div>
+                    <span className="font-bold text-purple-950">Mentor Direct NIBSS Settlement Account:</span>
+                    <p className="text-[11px] text-purple-800">
+                      {selectedMentor.bankName || 'GTBank'} &bull; Account: <span className="font-mono font-bold tracking-wider">{selectedMentor.accountNumber || 'Pending'}</span> ({selectedMentor.accountName || selectedMentor.name})
+                    </p>
+                  </div>
+                </div>
+                <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">
+                  Verified NUBAN
+                </span>
+              </div>
+            )}
+
+            {category !== 'Faculty Mentorship & Payout' && paymentMethod === 'Nigerian Bank Transfer' && currentUser?.accountNumber && (
               <div className="sm:col-span-2 p-3 rounded-xl bg-emerald-50/80 border border-emerald-200 text-xs text-emerald-950 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
@@ -239,7 +338,7 @@ export const LogExpenseModal: React.FC<LogExpenseModalProps> = ({ isOpen, onClos
               </div>
             )}
 
-            {paymentMethod === 'Nigerian Bank Transfer' && !currentUser?.accountNumber && (
+            {category !== 'Faculty Mentorship & Payout' && paymentMethod === 'Nigerian Bank Transfer' && !currentUser?.accountNumber && (
               <div className="sm:col-span-2 p-3 rounded-xl bg-surface-container border border-outline-variant text-[11px] text-secondary flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[18px] text-amber-600">account_balance</span>

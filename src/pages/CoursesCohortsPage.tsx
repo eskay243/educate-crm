@@ -21,11 +21,12 @@ export const CoursesCohortsPage: React.FC = () => {
     hasFeaturePermission,
   } = useCRM();
 
-  const [activeTab, setActiveTab] = useState<'programs' | 'cohorts' | 'timetables' | 'approvals' | 'faculty-tracker'>('programs');
+  const [activeTab, setActiveTab] = useState<'programs' | 'cohorts' | 'timetables' | 'approvals' | 'faculty-tracker' | 'pacing-governance'>('programs');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDayFilter, setSelectedDayFilter] = useState<string>('All');
   const [approvingLessonId, setApprovingLessonId] = useState<string | null>(null);
+  const [selectedPacingCourse, setSelectedPacingCourse] = useState<string>('Diploma in Financial Trading');
 
   const effectiveSearch = globalSearch || searchQuery;
 
@@ -194,13 +195,24 @@ export const CoursesCohortsPage: React.FC = () => {
           )}
 
           {canManageCourses && (
-            <button
-              onClick={() => openModal('create-course')}
-              className="btn-secondary text-xs h-10 px-3.5"
-            >
-              <span className="material-symbols-outlined text-primary text-[18px]">library_add</span>
-              <span>+ Academic Track</span>
-            </button>
+            <>
+              <button
+                onClick={() => openModal('bulk-upload-courses')}
+                className="btn-secondary text-xs h-10 px-3.5 flex items-center gap-1.5 hover:border-primary transition-colors cursor-pointer"
+                title="Bulk Upload Academic Courses via CSV or JSON"
+              >
+                <span className="material-symbols-outlined text-primary text-[18px]">upload_file</span>
+                <span>+ Bulk Upload</span>
+              </button>
+
+              <button
+                onClick={() => openModal('create-course')}
+                className="btn-secondary text-xs h-10 px-3.5"
+              >
+                <span className="material-symbols-outlined text-primary text-[18px]">library_add</span>
+                <span>+ Academic Track</span>
+              </button>
+            </>
           )}
 
           {canManageCohorts && (
@@ -339,6 +351,21 @@ export const CoursesCohortsPage: React.FC = () => {
             >
               <span className="material-symbols-outlined text-[16px]">timer</span>
               <span>Faculty Hours &amp; Payout</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('pacing-governance')}
+              className={`px-3.5 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                activeTab === 'pacing-governance'
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'text-secondary hover:text-crisp-black'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">speed</span>
+              <span>Pacing &amp; IQA Governance</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold">
+                12 Wks
+              </span>
             </button>
           </div>
 
@@ -948,6 +975,327 @@ export const CoursesCohortsPage: React.FC = () => {
                   })}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB 6: 3-MONTH PACING & IQA GOVERNANCE BOARD (VTCT LEVEL 5 REGULATOR) */}
+        {/* ========================================================================= */}
+        {activeTab === 'pacing-governance' && (
+          <div className="p-stack-md space-y-6">
+            {/* Header Banner */}
+            <div className="p-5 rounded-xl bg-gradient-to-r from-blue-900 to-indigo-900 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm">
+              <div className="space-y-1.5 max-w-2xl">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-blue-500/30 text-blue-200 text-[11px] font-bold border border-blue-400/30">
+                    VTCT Level 5 Regulation Protocol
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold border border-emerald-400/30">
+                    3-Month / 90-Day Pacing Cadence
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-white">
+                  Program Officer 12-Week Curriculum Velocity &amp; IQA Board
+                </h3>
+                <p className="text-xs text-blue-100/90 leading-relaxed">
+                  Regulate course completion speed, gatekeep weekly milestones (5, 15, and 25 trade portfolio entries), enforce essay deadlines, and record Friday Internal Quality Assurance (IQA) audit compliance for faculty mentor <strong>Abiola Adefowope</strong>.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 self-stretch md:self-auto shrink-0">
+                <Link
+                  to="/mentors/course-outlines"
+                  className="px-3.5 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all flex items-center gap-1.5 border border-white/20"
+                >
+                  <span className="material-symbols-outlined text-[16px]">play_circle</span>
+                  <span>View 12 Modules &amp; Videos</span>
+                </Link>
+                <button
+                  onClick={() => openModal('schedule-class')}
+                  className="px-3.5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
+                >
+                  <span className="material-symbols-outlined text-[16px]">calendar_add_on</span>
+                  <span>Schedule Lecture</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Program Officer Control Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-xl bg-surface border border-outline-variant space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-secondary font-semibold">Pacing Standard</span>
+                  <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-bold">12 Weeks (90 Days)</span>
+                </div>
+                <div className="text-2xl font-bold text-on-surface">22.5 hrs/wk</div>
+                <p className="text-xs text-secondary">
+                  Total 270 Guided Learning Hours (GLH) + 39 hours self-study across 3 calendar months.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-surface border border-outline-variant space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-secondary font-semibold">Lead Faculty Mentor</span>
+                  <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-bold">Accredited</span>
+                </div>
+                <div className="text-lg font-bold text-on-surface flex items-center gap-2">
+                  <span>Abiola Adefowope</span>
+                  <span className="text-xs text-secondary font-normal">(MN-5001)</span>
+                </div>
+                <p className="text-xs text-secondary">
+                  Department of Financial Markets &amp; Trading • eskay243@gmail.com
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-surface border border-outline-variant space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-secondary font-semibold">IQA Review Audits</span>
+                  <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">Mandatory</span>
+                </div>
+                <div className="text-2xl font-bold text-emerald-700">3 of 3 Required</div>
+                <p className="text-xs text-secondary">
+                  Minimum 3 formal IQA review records required before certification release to external board.
+                </p>
+              </div>
+            </div>
+
+            {/* 12-Week Milestone Roadmap & PO Gatekeeping Checkpoints */}
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h4 className="font-bold text-sm text-on-surface">12-Week Milestone Progression &amp; Assessment Gates</h4>
+                  <p className="text-xs text-secondary">Weekly breakdown of curriculum deliverables as specified in VTCT Learner Guide</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedPacingCourse}
+                    onChange={e => setSelectedPacingCourse(e.target.value)}
+                    className="h-8 px-2.5 rounded bg-surface border border-outline-variant text-xs text-on-surface outline-none"
+                  >
+                    <option value="Diploma in Financial Trading">Diploma in Financial Trading (12 Wks)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* 12-Week Progression Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                {[
+                  {
+                    week: 1,
+                    month: 'Month 1: Fundamentals',
+                    title: 'Principles & Trading Foundations',
+                    unit: 'Unit 1 & Intro',
+                    deliverables: ['Demo Broker & TradingView Setup', 'Trade Journal Entries #1 to #5', 'Essays 1-15 Draft Submission to avik@educate2trade.com'],
+                    checkpoint: 'Milestone 1: 5 Entries Target',
+                    status: 'Active Week',
+                    badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+                  },
+                  {
+                    week: 2,
+                    month: 'Month 1: Fundamentals',
+                    title: 'Equities & Futures Mechanics',
+                    unit: 'Unit 2 Part 1',
+                    deliverables: ['Exchange Specifications (CME, ICE)', 'Tick & Notional Value Calculations', 'Entries #6 to #8 Logged'],
+                    checkpoint: 'COT & Margin Check',
+                    status: 'Upcoming',
+                    badgeColor: 'bg-blue-50 text-blue-700 border-blue-200',
+                  },
+                  {
+                    week: 3,
+                    month: 'Month 1: Fundamentals',
+                    title: 'Fixed Income, Forex & Commodities',
+                    unit: 'Unit 2 Part 2',
+                    deliverables: ['Yield Curve & STIRS Assessment', 'Unit 2 Bond Essay Submission', 'Cumulative 15 Trade Entries Target Audit'],
+                    checkpoint: 'Milestone 2: 15 Entries Audit',
+                    status: 'Upcoming',
+                    badgeColor: 'bg-blue-50 text-blue-700 border-blue-200',
+                  },
+                  {
+                    week: 4,
+                    month: 'Month 1: Fundamentals',
+                    title: 'Options Markets & Derivatives Risk',
+                    unit: 'Unit 2 Part 3',
+                    deliverables: ['Options Greeks & Delta Hedging', 'Unit 1-2 Essay Drafts Lock', 'Program Officer Month 1 Audit Gate'],
+                    checkpoint: 'Milestone 3: All Essay Drafts',
+                    status: 'Upcoming',
+                    badgeColor: 'bg-blue-50 text-blue-700 border-blue-200',
+                  },
+                  {
+                    week: 5,
+                    month: 'Month 2: Execution & Macro',
+                    title: 'Crypto Markets & Digital Assets',
+                    unit: 'Unit 3',
+                    deliverables: ['Tokenomics & On-Chain Audit', 'Unit 3 Crypto Essay Submission', 'Attainment of 25 Trade Portfolio Entries'],
+                    checkpoint: 'Milestone 4: 25 Entries Target',
+                    status: 'Upcoming',
+                    badgeColor: 'bg-purple-50 text-purple-700 border-purple-200',
+                  },
+                  {
+                    week: 6,
+                    month: 'Month 2: Execution & Macro',
+                    title: 'Spread Betting, CFDs & MT4 Execution',
+                    unit: 'Unit 4 & 5',
+                    deliverables: ['MT4 Multi-Chart Workspace Profile', 'Order Types, Slippage & Margin Calculations', 'Unit 5 Execution Assessment'],
+                    checkpoint: 'MT4 Platform Proficiency',
+                    status: 'Upcoming',
+                    badgeColor: 'bg-purple-50 text-purple-700 border-purple-200',
+                  },
+                  {
+                    week: 7,
+                    month: 'Month 2: Execution & Macro',
+                    title: 'Fundamental Analysis & Central Banks',
+                    unit: 'Unit 6',
+                    deliverables: ['FOMC & Central Bank Policy Mapping', 'NFP Economic Event Trading Plan', 'Unit 6 Macro & Micro Assessment'],
+                    checkpoint: 'Macroeconomic Analysis',
+                    status: 'Upcoming',
+                    badgeColor: 'bg-purple-50 text-purple-700 border-purple-200',
+                  },
+                  {
+                    week: 8,
+                    month: 'Month 2: Execution & Macro',
+                    title: 'Technical Analysis Core & Candlesticks',
+                    unit: 'Unit 7 Part 1',
+                    deliverables: ['10 Multi-Timeframe Chart Markups', 'Support & Resistance Price Action Bounces', 'Trade Journal Entries Review'],
+                    checkpoint: 'Midway Technical Audit',
+                    status: 'Upcoming',
+                    badgeColor: 'bg-purple-50 text-purple-700 border-purple-200',
+                  },
+                  {
+                    week: 9,
+                    month: 'Month 3: Advanced & Capstone',
+                    title: 'Classical Chart Patterns & Geometry',
+                    unit: 'Unit 7 Part 2',
+                    deliverables: ['Reversal & Continuation Geometry', 'False Breakout Liquidity Traps', 'Chart Pattern Markup Dossier'],
+                    checkpoint: 'Chart Geometry Audit',
+                    status: 'Upcoming',
+                    badgeColor: 'bg-amber-50 text-amber-800 border-amber-200',
+                  },
+                  {
+                    week: 10,
+                    month: 'Month 3: Advanced & Capstone',
+                    title: 'Indicators, Volatility & ICT Order Flow',
+                    unit: 'Unit 7 Part 3',
+                    deliverables: ['Institutional Fair Value Gaps (FVG)', 'Order Blocks & Liquidity Sweeps', 'Unit 7 Technical Portfolio Dossier'],
+                    checkpoint: 'ICT / Order Flow Verification',
+                    status: 'Upcoming',
+                    badgeColor: 'bg-amber-50 text-amber-800 border-amber-200',
+                  },
+                  {
+                    week: 11,
+                    month: 'Month 3: Advanced & Capstone',
+                    title: 'Trading Psychology & Behavioral Finance',
+                    unit: 'Unit 8',
+                    deliverables: ['Trader Emotional Resilience Audit', 'Cognitive Bias Mitigation Matrix', 'Unit 8 Psychology Assessment'],
+                    checkpoint: 'Behavioral Governance',
+                    status: 'Upcoming',
+                    badgeColor: 'bg-amber-50 text-amber-800 border-amber-200',
+                  },
+                  {
+                    week: 12,
+                    month: 'Month 3: Advanced & Capstone',
+                    title: 'Risk Governance & Final Capstone',
+                    unit: 'Unit 9 & Capstone',
+                    deliverables: ['Final 25-Trade Portfolio Journal', 'Comprehensive Written Trading Plan', 'VTCT Level 5 Assessment Board Sign-off'],
+                    checkpoint: 'Final Qualification Gate',
+                    status: 'Upcoming',
+                    badgeColor: 'bg-emerald-50 text-emerald-800 border-emerald-300',
+                  },
+                ].map(item => (
+                  <div
+                    key={item.week}
+                    className="p-4 rounded-xl bg-surface border border-outline-variant hover:border-primary/50 transition-all flex flex-col justify-between space-y-3"
+                  >
+                    <div>
+                      <div className="flex justify-between items-start gap-2 mb-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-secondary">
+                          {item.month}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${item.badgeColor}`}>
+                          Week {item.week}
+                        </span>
+                      </div>
+                      <h5 className="font-bold text-xs text-on-surface line-clamp-1">{item.title}</h5>
+                      <span className="text-[11px] text-primary font-semibold">{item.unit}</span>
+
+                      <div className="mt-2.5 pt-2 border-t border-outline-variant/50 space-y-1.5">
+                        <p className="text-[10px] font-bold text-secondary uppercase tracking-wider">Required Deliverables</p>
+                        <ul className="space-y-1">
+                          {item.deliverables.map((deliv, idx) => (
+                            <li key={idx} className="flex items-start gap-1.5 text-[11px] text-on-surface">
+                              <span className="material-symbols-outlined text-[13px] text-emerald-600 shrink-0 mt-0.5">check_circle</span>
+                              <span className="line-clamp-1">{deliv}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div className="pt-2.5 border-t border-outline-variant/60 flex justify-between items-center text-xs">
+                      <span className="text-[10px] text-secondary font-medium">Gate: <strong className="text-on-surface">{item.checkpoint}</strong></span>
+                      <Link
+                        to="/mentors/course-outlines"
+                        className="text-[11px] text-primary font-bold hover:underline flex items-center gap-0.5"
+                      >
+                        <span>Inspect</span>
+                        <span className="material-symbols-outlined text-[12px]">chevron_right</span>
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Program Officer Internal Quality Assurance (IQA) Review Logger */}
+            <div className="p-5 rounded-xl bg-surface border border-outline-variant space-y-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <div>
+                  <h4 className="font-bold text-sm text-on-surface flex items-center gap-2">
+                    <span className="material-symbols-outlined text-emerald-600 text-[20px]">verified_user</span>
+                    <span>Internal Quality Assurance (IQA) Review Protocol</span>
+                  </h4>
+                  <p className="text-xs text-secondary">
+                    Weekly Friday audits and portfolio samples validation required by VTCT (UK) accreditation standard.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 rounded bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
+                    Lead Mentor: Abiola Adefowope
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+                <div className="p-3.5 rounded-lg bg-surface-container-low/60 border border-outline-variant/80 space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-on-surface">
+                    <span className="material-symbols-outlined text-[16px] text-primary">history_edu</span>
+                    <span>1. Trade Journal Quality</span>
+                  </div>
+                  <p className="text-[11px] text-secondary leading-relaxed">
+                    Verify that trade setups record entry price, stop loss, risk-to-reward ratio, and pre-trade technical/fundamental rationale.
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-lg bg-surface-container-low/60 border border-outline-variant/80 space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-on-surface">
+                    <span className="material-symbols-outlined text-[16px] text-primary">menu_book</span>
+                    <span>2. Modular Essays (1 to 15)</span>
+                  </div>
+                  <p className="text-[11px] text-secondary leading-relaxed">
+                    Audit written essays for plagiarism, academic rigor, and adherence to VTCT Level 5 assessment criteria.
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-lg bg-surface-container-low/60 border border-outline-variant/80 space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-on-surface">
+                    <span className="material-symbols-outlined text-[16px] text-primary">assignment_turned_in</span>
+                    <span>3. Faculty Attendance &amp; Hours</span>
+                  </div>
+                  <p className="text-[11px] text-secondary leading-relaxed">
+                    Cross-reference timetable lecture attendance records to satisfy the minimum 25-hour lecturing threshold.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         )}

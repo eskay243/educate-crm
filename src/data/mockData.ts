@@ -21,6 +21,7 @@ import {
   TimetableSlot,
   MentorPayoutRequest
 } from '../types/crm';
+import { financialTradingCourse, mentorAbiola, staffUserAbiola, financialTradingModules } from './financialTradingData';
 
 export const initialCampuses: CampusLocation[] = [
   {
@@ -85,6 +86,7 @@ export const initialStudentPerformanceReports: StudentPerformanceReport[] = [
 export const initialLeads: Lead[] = [];
 
 export const initialCourses: CourseProgram[] = [
+  financialTradingCourse,
   {
     id: 'course-se-01',
     code: 'CSE-101',
@@ -170,6 +172,7 @@ export const initialCohorts: Cohort[] = [
 ];
 
 export const initialMentors: Mentor[] = [
+  mentorAbiola,
   {
     id: 'user-mentor-demo',
     mentorCode: 'MEN-001',
@@ -405,6 +408,7 @@ export const initialSettings: OrganizationSettings = {
 };
 
 export const initialLMSModules: LMSModule[] = [
+  ...financialTradingModules,
   {
     id: 'mod-1',
     courseTitle: 'Full-Stack Software Engineering',
@@ -920,6 +924,7 @@ export const initialPayoutRequests: MentorPayoutRequest[] = [
 ];
 
 export const demoUsers: AuthUser[] = [
+  staffUserAbiola,
   {
     id: 'user-admin',
     name: 'Abiola Adefowope',

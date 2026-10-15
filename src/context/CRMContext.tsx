@@ -405,7 +405,17 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [mentors, setMentors] = useState<Mentor[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.MENTORS);
-    return saved ? JSON.parse(saved) : initialMentors;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const existingIds = new Set(parsed.map((m: any) => m.id || m.email));
+          const missing = initialMentors.filter(m => !existingIds.has(m.id) && !existingIds.has(m.email));
+          return [...parsed, ...missing];
+        }
+      } catch (e) {}
+    }
+    return initialMentors;
   });
 
   const [expenses, setExpenses] = useState<Expense[]>(() => {

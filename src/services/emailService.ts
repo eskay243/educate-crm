@@ -108,9 +108,35 @@ export class EmailService {
             <h3 style="color: ${primaryColor}; font-size: 15px; margin: 24px 0 10px 0;">Faculty Responsibilities &amp; Next Steps:</h3>
             <ol style="padding-left: 20px; margin: 0 0 24px 0; font-size: 13px; color: #334155;">
               <li style="margin-bottom: 8px;"><strong>Portal Authentication:</strong> Sign in to your Faculty Operations portal using your registered email (<code>${payload.to}</code>) to view assigned mentees and live cohorts.</li>
+              <li style="margin-bottom: 8px;"><strong>Course Outline &amp; Syllabus Modules:</strong> Review your assigned track's module schedule and mark topics as taught as you progress.</li>
               <li style="margin-bottom: 8px;"><strong>1-on-1 Mentorship Sessions:</strong> Log and verify coaching hours directly in the portal to credit your monthly honorarium disbursements.</li>
               <li style="margin-bottom: 8px;"><strong>Banking &amp; Settlement:</strong> Ensure your registered Nigerian bank settlement details are verified for automated payouts.</li>
             </ol>
+
+            {/* Official Academic Program Guide & Course Outline Kit */}
+            <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 18px; margin: 20px 0;">
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                <span style="font-size: 18px;">📘</span>
+                <strong style="color: #166534; font-size: 14px;">Faculty Academic Kit: Program Guide &amp; Course Outline Attached</strong>
+              </div>
+              <p style="margin: 0 0 12px 0; font-size: 12px; color: #15803d; line-height: 1.5;">
+                Your comprehensive Faculty Handbook, Grading Rubrics, and Accredited Course Outline are attached for your onboarding.
+              </p>
+              <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <tr>
+                  <td style="padding: 4px 0;">
+                    <a href="${APP_BASE_URL}/mentors/course-outlines" style="color: #166534; font-weight: bold; text-decoration: underline;">
+                      ➜ Interactive Course Outline &amp; Syllabus Portal
+                    </a>
+                  </td>
+                  <td style="padding: 4px 0; text-align: right;">
+                    <a href="${APP_BASE_URL}/Program_Officer_Module_QA_Checklist.xlsx" style="color: #166534; font-weight: bold; text-decoration: underline;">
+                      ➜ Download Program Governance &amp; IQA Guide
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </div>
 
             <div style="text-align: center; margin: 28px 0;">
               <a href="${payload.data.setupUrl || `${APP_BASE_URL}/login?role=mentor&email=` + encodeURIComponent(payload.to)}" 
@@ -167,10 +193,35 @@ export class EmailService {
               </table>
             </div>
 
+            {/* Official Academic Program Guide & Course Outline Kit */}
+            <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 18px; margin: 20px 0;">
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                <span style="font-size: 18px;">🎓</span>
+                <strong style="color: #1e40af; font-size: 14px;">Student Onboarding Kit: Program Guide &amp; Course Outline Attached</strong>
+              </div>
+              <p style="margin: 0 0 12px 0; font-size: 12px; color: #1d4ed8; line-height: 1.5;">
+                Welcome to your program! Please review your complete Academic Syllabus, Course Outline, and Student Conduct Handbook before your first lecture.
+              </p>
+              <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <tr>
+                  <td style="padding: 4px 0;">
+                    <a href="${APP_BASE_URL}/mentors/course-outlines" style="color: #1e40af; font-weight: bold; text-decoration: underline;">
+                      ➜ Open Syllabus &amp; Video Lecture Outlines
+                    </a>
+                  </td>
+                  <td style="padding: 4px 0; text-align: right;">
+                    <a href="${APP_BASE_URL}/student/curriculum" style="color: #1e40af; font-weight: bold; text-decoration: underline;">
+                      ➜ Access Student Curriculum Hub
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </div>
+
             <h3 style="color: ${primaryColor}; font-size: 15px; margin: 24px 0 10px 0;">Onboarding Next Steps:</h3>
             <ol style="padding-left: 20px; margin: 0 0 24px 0; font-size: 13px; color: #334155;">
               <li style="margin-bottom: 8px;"><strong>Student Portal Access:</strong> Log in using your registered email address (<code>${payload.to}</code>) to review course syllabus and project assignments.</li>
-              <li style="margin-bottom: 8px;"><strong>Faculty Orientation:</strong> Your mentor will contact you for your initial 1-on-1 cohort kickoff and environment configuration.</li>
+              <li style="margin-bottom: 8px;"><strong>Faculty Orientation:</strong> Your mentor (<strong>${payload.data.mentorName || 'Faculty Lead'}</strong>) will contact you for your initial 1-on-1 cohort kickoff and environment configuration.</li>
               <li style="margin-bottom: 8px;"><strong>Learning Lab Access:</strong> If enrolled for hybrid on-site access, bring your Student ID (<strong>${payload.data.studentCode || 'STU-PROD'}</strong>) to the campus security desk.</li>
             </ol>
 

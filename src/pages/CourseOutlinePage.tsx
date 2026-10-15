@@ -23,6 +23,7 @@ export const CourseOutlinePage: React.FC = () => {
   const [mentorNotes, setMentorNotes] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [expandedGuidelines, setExpandedGuidelines] = useState<Record<string, boolean>>({});
+  const [activeVideoLesson, setActiveVideoLesson] = useState<LMSLesson | null>(null);
 
   // Extract all available courses
   const allCourses = useMemo(() => {
@@ -655,6 +656,19 @@ export const CourseOutlinePage: React.FC = () => {
 
                       {/* Action Buttons */}
                       <div className="flex items-center gap-2 shrink-0">
+                        {/* Video Lecture Preview Trigger */}
+                        {lesson.videoUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setActiveVideoLesson(lesson)}
+                            className="px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                            title="Watch YouTube Lecture Video"
+                          >
+                            <span className="material-symbols-outlined text-[16px] text-red-600">play_circle</span>
+                            <span>Watch Lecture</span>
+                          </button>
+                        )}
+
                         {/* Mentor Action: Mark as Taught */}
                         {isMentor && !lesson.completedByMentor && (
                           <button
@@ -743,6 +757,75 @@ export const CourseOutlinePage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Interactive Video Lecture Modal */}
+      {activeVideoLesson && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-surface rounded-2xl max-w-3xl w-full border border-outline overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="px-5 py-3.5 border-b border-outline-variant flex items-center justify-between bg-surface-container-low">
+              <div className="flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-red-600 text-2xl">smart_display</span>
+                <div>
+                  <h3 className="font-bold text-sm text-on-surface line-clamp-1">{activeVideoLesson.title}</h3>
+                  <span className="text-[11px] text-secondary">
+                    {activeCourse.title} &bull; Day {activeVideoLesson.dayNumber || 1} &bull; {activeVideoLesson.durationMinutes || 45} mins
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {activeVideoLesson.videoUrl && (
+                  <a
+                    href={activeVideoLesson.videoUrl.replace('/embed/', '/watch?v=')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-semibold px-2.5 py-1 rounded border border-outline-variant hover:bg-surface text-secondary hover:text-primary flex items-center gap-1"
+                    title="Open video on YouTube in new tab"
+                  >
+                    <span className="material-symbols-outlined text-sm">open_in_new</span>
+                    <span>YouTube</span>
+                  </a>
+                )}
+                <button
+                  onClick={() => setActiveVideoLesson(null)}
+                  className="p-1 rounded-full text-secondary hover:text-on-surface hover:bg-surface-container transition-colors"
+                >
+                  <span className="material-symbols-outlined text-xl">close</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Video Player */}
+            <div className="aspect-video bg-black w-full relative">
+              <iframe
+                src={activeVideoLesson.videoUrl}
+                title={activeVideoLesson.title}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+
+            {/* Lesson Notes & Practical Task */}
+            <div className="p-5 overflow-y-auto max-h-56 space-y-3 bg-surface text-xs border-t border-outline-variant">
+              {activeVideoLesson.practicalLabTask && (
+                <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 space-y-1">
+                  <span className="font-bold text-primary flex items-center gap-1 text-[11px] uppercase tracking-wider">
+                    <span className="material-symbols-outlined text-sm">assignment</span>
+                    Practical Lab &amp; Journal Task:
+                  </span>
+                  <p className="text-secondary leading-relaxed">{activeVideoLesson.practicalLabTask}</p>
+                </div>
+              )}
+              {activeVideoLesson.contentMarkdown && (
+                <div className="prose dark:prose-invert max-w-none text-secondary leading-relaxed whitespace-pre-line">
+                  {activeVideoLesson.contentMarkdown}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

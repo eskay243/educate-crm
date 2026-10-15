@@ -378,6 +378,7 @@ export type ExpenseCategory =
   | 'Marketing & Ads' 
   | 'Office & Ops' 
   | 'Salaries & Stipends' 
+  | 'Faculty Mentorship & Payout'
   | 'Hosting & Cloud' 
   | 'Software' 
   | 'Payroll' 
@@ -422,6 +423,8 @@ export interface Expense {
   isDisbursedViaWallet?: boolean;
   transferReference?: string;
   disbursedAt?: string;
+  mentorId?: string;
+  mentorName?: string;
 }
 
 export type EmailTemplateType = 
@@ -807,6 +810,7 @@ export type ModalType =
   | 'course-outline'
   | 'reset-user-password'
   | 'request-payout'
+  | 'bulk-upload-courses'
   | null;
 
 export interface MentorPayoutRequest {

@@ -9,6 +9,7 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
   const { 
     students, 
     courses,
+    invoices,
     selectedStudentId, 
     setSelectedStudentId, 
     setSelectedInvoiceId, 
@@ -754,7 +755,12 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                     <>
                       <button 
                         onClick={() => {
-                          setSelectedInvoiceId(null);
+                          const existingInv = (invoices || []).find(inv => 
+                            inv.studentId === currentStudent.id || 
+                            inv.studentName === currentStudent.name || 
+                            (currentStudent.email && inv.studentEmail === currentStudent.email)
+                          );
+                          setSelectedInvoiceId(existingInv ? existingInv.id : null);
                           openModal('view-invoice');
                         }}
                         className="h-10 px-stack-md border border-outline-variant rounded font-label-md text-label-md font-semibold text-primary hover:bg-secondary-container transition-colors flex items-center gap-unit shadow-xs cursor-pointer"

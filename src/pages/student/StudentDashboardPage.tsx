@@ -113,6 +113,43 @@ export const StudentDashboardPage: React.FC = () => {
         <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
       </div>
 
+      {/* Program Guide & Course Outline Onboarding Kit Banner */}
+      <div className="p-4 rounded-xl bg-blue-50/80 border border-blue-200 text-xs text-blue-950 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-[22px]">menu_book</span>
+          </div>
+          <div>
+            <h4 className="font-bold text-sm text-blue-950 flex items-center gap-2">
+              <span>Program Guide &amp; Course Outline Kit</span>
+              <span className="px-2 py-0.5 rounded-full bg-blue-200 text-blue-900 text-[10px] font-bold">
+                Student Handbook
+              </span>
+            </h4>
+            <p className="text-secondary text-[11px] leading-relaxed">
+              Review your complete academic curriculum breakdown, weekly milestone deadlines, and student conduct guidelines.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 self-stretch md:self-auto shrink-0">
+          <Link
+            to="/mentors/course-outlines"
+            className="h-8 px-3 rounded-lg bg-white border border-blue-300 hover:bg-blue-100 text-primary font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs"
+          >
+            <span className="material-symbols-outlined text-[15px]">account_tree</span>
+            <span>View Course Outline</span>
+          </Link>
+          <a
+            href="/Program_Officer_Module_QA_Checklist.xlsx"
+            download="Program_Guide_Student_Handbook.xlsx"
+            className="h-8 px-3 rounded-lg bg-primary text-white hover:bg-primary/90 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs"
+          >
+            <span className="material-symbols-outlined text-[15px]">download</span>
+            <span>Download Guide (.xlsx)</span>
+          </a>
+        </div>
+      </div>
+
       {/* Graduation & Certificate Gatekeeping Banner */}
       {(() => {
         const minHours = student.minimumRequiredHours || settings.defaultMinimumLearningHours || 40;

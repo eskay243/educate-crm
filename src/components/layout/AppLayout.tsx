@@ -28,6 +28,7 @@ import { TakeAttendanceModal } from '../modals/TakeAttendanceModal';
 import { ResetUserPasswordModal } from '../modals/ResetUserPasswordModal';
 import { CourseOutlineModal } from '../modals/CourseOutlineModal';
 import { RequestPayoutModal } from '../modals/RequestPayoutModal';
+import { BulkUploadCoursesModal } from '../modals/BulkUploadCoursesModal';
 import { MobileBottomNav } from './MobileBottomNav';
 
 export const AppLayout: React.FC = () => {
@@ -163,6 +164,10 @@ export const AppLayout: React.FC = () => {
       />
       <RequestPayoutModal
         isOpen={activeModal === 'request-payout'}
+        onClose={closeModal}
+      />
+      <BulkUploadCoursesModal
+        isOpen={activeModal === 'bulk-upload-courses'}
         onClose={closeModal}
       />
       <ChangePasswordModal />
