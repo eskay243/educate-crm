@@ -1049,6 +1049,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                 <th className="px-stack-md py-3">Category &amp; Event</th>
                 <th className="px-stack-md py-3">Reference / NIP</th>
                 <th className="px-stack-md py-3">Beneficiary / Depositor</th>
+                <th className="px-stack-md py-3">Bank Status</th>
                 <th className="px-stack-md py-3 text-right">Inflow / Outflow</th>
                 <th className="px-stack-md py-3 text-right">Balance After</th>
                 <th className="px-stack-md py-3 text-right">Audit</th>
@@ -1120,6 +1121,54 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                         </div>
                       ) : (
                         <span className="text-secondary">{tx.initiatedBy || 'Executive Treasury'}</span>
+                      )}
+                    </td>
+                    <td className="px-stack-md py-3 align-top whitespace-nowrap text-xs">
+                      {isCredit ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#DCFCE7] text-[#166534] border border-emerald-300">
+                          <span className="material-symbols-outlined text-[12px]">verified</span>
+                          <span>Settled (DVA)</span>
+                        </span>
+                      ) : (
+                        <div className="flex flex-col gap-0.5">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                            tx.bankDeliveryStatus === 'received_by_bank' 
+                              ? 'bg-emerald-100 text-emerald-800 border-emerald-300' :
+                            tx.bankDeliveryStatus === 'disbursed_corporate_nip' 
+                              ? 'bg-blue-100 text-blue-800 border-blue-300' :
+                            tx.bankDeliveryStatus === 'processing_at_switch' 
+                              ? 'bg-amber-100 text-amber-800 border-amber-300' :
+                            tx.bankDeliveryStatus === 'failed' 
+                              ? 'bg-red-100 text-red-800 border-red-300' :
+                            tx.bankDeliveryStatus === 'reversed' 
+                              ? 'bg-purple-100 text-purple-800 border-purple-300' :
+                            tx.bankDeliveryStatus === 'simulated'
+                              ? 'bg-slate-100 text-slate-700 border-slate-300' :
+                            tx.channel === 'direct_corporate_nip'
+                              ? 'bg-blue-100 text-blue-800 border-blue-300' :
+                              'bg-emerald-100 text-emerald-800 border-emerald-300'
+                          }`}>
+                            <span className="material-symbols-outlined text-[12px]">
+                              {tx.bankDeliveryStatus === 'received_by_bank' ? 'verified' :
+                               tx.bankDeliveryStatus === 'disbursed_corporate_nip' || tx.channel === 'direct_corporate_nip' ? 'account_balance' :
+                               tx.bankDeliveryStatus === 'processing_at_switch' ? 'sync' :
+                               tx.bankDeliveryStatus === 'failed' ? 'cancel' :
+                               tx.bankDeliveryStatus === 'reversed' ? 'replay' :
+                               tx.bankDeliveryStatus === 'simulated' ? 'science' : 'verified'}
+                            </span>
+                            <span>
+                              {tx.bankDeliveryStatus === 'received_by_bank' ? 'Received (NIP)' :
+                               tx.bankDeliveryStatus === 'disbursed_corporate_nip' || tx.channel === 'direct_corporate_nip' ? 'Corporate NIP' :
+                               tx.bankDeliveryStatus === 'processing_at_switch' ? 'Processing' :
+                               tx.bankDeliveryStatus === 'failed' ? 'Failed' :
+                               tx.bankDeliveryStatus === 'reversed' ? 'Reversed' :
+                               tx.bankDeliveryStatus === 'simulated' ? 'Simulated' : 'Approved'}
+                            </span>
+                          </span>
+                          {tx.channel === 'direct_corporate_nip' && (
+                            <span className="text-[10px] text-blue-700 font-mono">1-Hop Direct</span>
+                          )}
+                        </div>
                       )}
                     </td>
                     <td className={`px-stack-md py-3 align-top text-right whitespace-nowrap font-bold text-sm font-data-tabular ${

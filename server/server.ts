@@ -4367,7 +4367,7 @@ app.post('/api/wallet/disburse-expense', async (req: Request, res: Response) => 
       return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin and Finance roles can authorize expense disbursements.' });
     }
 
-    const { expenseId, bankCode, bankName, accountNumber, accountName, reason } = req.body;
+    const { expenseId, bankCode, bankName, accountNumber, accountName, reason, disbursementMethod, nipSessionId, bankReference } = req.body;
     const expense = db.expenses.find(e => e.id === expenseId);
 
     if (!expense) {
@@ -4393,36 +4393,61 @@ app.post('/api/wallet/disburse-expense', async (req: Request, res: Response) => 
       return res.status(400).json({ success: false, message: 'Recipient 10-digit bank account number is required for disbursement' });
     }
 
+    const isCorporateNip = disbursementMethod === 'corporate_nip';
     const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
-    const transferRef = `TRF-EXP-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    let transferRef = '';
     let paystackTransferCode = '';
+    let bankDeliveryStatus = isCorporateNip ? 'disbursed_corporate_nip' : 'processing_at_switch';
+    let bankDeliveryMessage = '';
 
-    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
-      const recipientRes = await fetch('https://api.paystack.co/transferrecipient', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${secretKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: 'nuban',
-          name: targetAccName,
-          account_number: targetAccNumber,
-          bank_code: targetBankCode,
-          currency: 'NGN',
-        })
-      });
-      const recipientData = await recipientRes.json();
-      const recipientCode = recipientData?.data?.recipient_code;
+    if (isCorporateNip) {
+      transferRef = bankReference || nipSessionId || `NIP-CORP-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      bankDeliveryMessage = `Disbursed directly via Corporate Bank Account (NIP settlement).` + (nipSessionId ? ` NIP Session ID: ${nipSessionId}` : '');
+    } else {
+      transferRef = `TRF-EXP-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-      if (!recipientCode) {
-        if (secretKey.startsWith('sk_live_')) {
+      if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
+        // Pre-check Paystack Transfer balance
+        try {
+          const balRes = await fetch('https://api.paystack.co/balance', {
+            headers: { Authorization: `Bearer ${secretKey}` }
+          });
+          const balData = await balRes.json();
+          const trfBalance = (balData?.data?.[0]?.balance || 0) / 100;
+          if (trfBalance < disburseAmount) {
+            return res.status(400).json({
+              success: false,
+              message: `Insufficient Paystack Live Transfer Balance (Available: ₦${trfBalance.toLocaleString()}, Required: ₦${disburseAmount.toLocaleString()}). Please top up your transfer balance on Paystack, or choose "Direct Corporate Bank Transfer (NIP)".`
+            });
+          }
+        } catch (balErr) {
+          console.warn('Could not pre-check Paystack balance:', balErr);
+        }
+
+        const recipientRes = await fetch('https://api.paystack.co/transferrecipient', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${secretKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            type: 'nuban',
+            name: targetAccName,
+            account_number: targetAccNumber,
+            bank_code: targetBankCode,
+            currency: 'NGN',
+          })
+        });
+        const recipientData = await recipientRes.json();
+        const recipientCode = recipientData?.data?.recipient_code;
+
+        if (!recipientCode) {
           return res.status(400).json({
             success: false,
             message: recipientData?.message || 'Could not validate recipient bank account on Paystack. Please check the account number and bank.'
           });
         }
-      } else {
+
         const transferRes = await fetch('https://api.paystack.co/transfer', {
           method: 'POST',
           headers: {
@@ -4439,13 +4464,23 @@ app.post('/api/wallet/disburse-expense', async (req: Request, res: Response) => 
         });
         const transferResult = await transferRes.json();
         if (!transferResult.status) {
-          return res.status(400).json({ success: false, message: transferResult.message || 'Paystack transfer failed' });
+          return res.status(400).json({ 
+            success: false, 
+            message: transferResult.message || 'Paystack transfer failed. Please verify your Paystack transfer balance or switch to Direct Corporate Bank Transfer.' 
+          });
         }
         paystackTransferCode = transferResult.data?.transfer_code || '';
+        bankDeliveryStatus = transferResult.data?.status === 'success' ? 'received_by_bank' : 'processing_at_switch';
+        bankDeliveryMessage = transferResult.data?.status === 'success'
+          ? 'Transfer confirmed received by beneficiary bank via NIP.'
+          : 'Transfer initiated with Paystack switch; awaiting NIP delivery confirmation.';
+      } else {
+        bankDeliveryStatus = 'simulated';
+        bankDeliveryMessage = 'Offline development simulation mode.';
       }
     }
 
-    // Deduct from wallet
+    // Deduct from wallet balance
     db.wallet.balance = Math.max(0, (db.wallet.balance || 0) - disburseAmount);
 
     // Update Expense record
@@ -4457,6 +4492,8 @@ app.post('/api/wallet/disburse-expense', async (req: Request, res: Response) => 
     expense.isDisbursedViaWallet = true;
     expense.transferReference = transferRef;
     expense.disbursedAt = new Date().toISOString();
+    expense.disbursementMethod = isCorporateNip ? 'corporate_nip' : 'paystack_api';
+    expense.nipSessionId = nipSessionId || (isCorporateNip ? transferRef : undefined);
 
     db.wallet.transactions.unshift({
       id: `wtx-${Date.now()}-exp`,
@@ -4467,32 +4504,147 @@ app.post('/api/wallet/disburse-expense', async (req: Request, res: Response) => 
       description: `OpEx Disbursement: ${expense.title} (${expense.expenseCode})`,
       timestamp: new Date().toISOString(),
       balanceAfter: db.wallet.balance,
-      initiatedBy: 'Finance Controller',
+      initiatedBy: isCorporateNip ? 'Corporate Treasury (NIP)' : 'Finance Controller',
       recipientName: targetAccName,
       recipientBank: targetBankName,
       recipientAccountNumber: targetAccNumber,
-      channel: 'paystack_transfer',
+      channel: isCorporateNip ? 'direct_corporate_nip' : 'paystack_transfer',
+      disbursementMethod: isCorporateNip ? 'corporate_nip' : 'paystack_api',
       paystackTransferCode,
+      bankDeliveryStatus,
+      bankDeliveryMessage,
+      nipSessionId: nipSessionId || (isCorporateNip ? transferRef : undefined),
+      lastBankCheckAt: new Date().toISOString()
     });
 
     db.activityLogs.unshift({
       id: `act-${Date.now()}-expdisb`,
       timestamp: new Date().toISOString(),
-      title: `OpEx Requisition ₦${disburseAmount.toLocaleString()} Disbursed`,
-      description: `Disbursed for ${expense.title} to ${targetAccName} (${targetBankName} - ${targetAccNumber}) from Expense Wallet. Ref: ${transferRef}`,
+      title: `OpEx Requisition ₦${disburseAmount.toLocaleString()} Disbursed (${isCorporateNip ? 'Corporate NIP' : 'Paystack API'})`,
+      description: `Disbursed for ${expense.title} to ${targetAccName} (${targetBankName} - ${targetAccNumber}). Ref: ${transferRef}`,
       type: 'finance',
-      user: 'Finance Controller'
+      user: isCorporateNip ? 'Corporate Treasury' : 'Finance Controller'
     });
 
     saveDatabase(db);
     res.json({
       success: true,
-      message: `₦${disburseAmount.toLocaleString()} successfully disbursed from Expense Wallet to ${targetAccName}!`,
-      data: { expense, walletBalance: db.wallet.balance, transferRef }
+      message: `₦${disburseAmount.toLocaleString()} successfully disbursed to ${targetAccName}!`,
+      data: { expense, walletBalance: db.wallet.balance, transferRef, bankDeliveryStatus }
     });
   } catch (error: any) {
     console.error('OpEx disbursement error:', error);
     res.status(500).json({ success: false, message: error.message || 'OpEx disbursement failed' });
+  }
+});
+
+app.get('/api/wallet/paystack-balance', async (req: Request, res: Response) => {
+  try {
+    const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
+    if (!secretKey || !secretKey.startsWith('sk_') || secretKey.includes('sample')) {
+      return res.json({ success: true, balance: 0, currency: 'NGN', isLive: false });
+    }
+    const balRes = await fetch('https://api.paystack.co/balance', {
+      headers: { Authorization: `Bearer ${secretKey}` }
+    });
+    const balData = await balRes.json();
+    const balance = (balData?.data?.[0]?.balance || 0) / 100;
+    res.json({ success: true, balance, currency: 'NGN', isLive: secretKey.startsWith('sk_live_') });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.get('/api/wallet/verify-transfer/:reference', async (req: Request, res: Response) => {
+  try {
+    const { reference } = req.params;
+    if (!db.wallet) db.wallet = defaultWallet;
+
+    const tx = db.wallet.transactions.find(t => t.reference === reference || t.id === reference);
+
+    if (tx && (tx.channel === 'direct_corporate_nip' || tx.disbursementMethod === 'corporate_nip')) {
+      tx.lastBankCheckAt = new Date().toISOString();
+      saveDatabase(db);
+      return res.json({
+        success: true,
+        verified: true,
+        channel: 'direct_corporate_nip',
+        bankDeliveryStatus: 'disbursed_corporate_nip',
+        bankDeliveryMessage: `Disbursed directly via Corporate Bank Account (NIP settlement).` + (tx.nipSessionId ? ` Session ID: ${tx.nipSessionId}` : ''),
+        transaction: tx
+      });
+    }
+
+    const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
+    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
+      try {
+        const psRes = await fetch(`https://api.paystack.co/transfer/verify/${encodeURIComponent(reference)}`, {
+          headers: { Authorization: `Bearer ${secretKey}` }
+        });
+        const psData = await psRes.json();
+
+        if (psData.status && psData.data) {
+          const d = psData.data;
+          let newStatus = 'processing_at_switch';
+          let message = 'Transfer in progress at central switch.';
+
+          if (d.status === 'success') {
+            newStatus = 'received_by_bank';
+            message = 'Funds successfully confirmed received by destination bank via NIP.';
+          } else if (d.status === 'failed') {
+            newStatus = 'failed';
+            message = d.gateway_response || 'Transfer rejected by destination bank.';
+          } else if (d.status === 'reversed') {
+            newStatus = 'reversed';
+            message = 'Transfer reversed and refunded by bank switch.';
+          }
+
+          if (tx) {
+            tx.bankDeliveryStatus = newStatus as any;
+            tx.bankDeliveryMessage = message;
+            tx.nipSessionId = d.session_id || d.titan_code || tx.nipSessionId;
+            tx.paystackTransferCode = d.transfer_code || tx.paystackTransferCode;
+            tx.lastBankCheckAt = new Date().toISOString();
+            saveDatabase(db);
+          }
+
+          return res.json({
+            success: true,
+            verified: true,
+            channel: 'paystack_transfer',
+            bankDeliveryStatus: newStatus,
+            bankDeliveryMessage: message,
+            paystackData: d,
+            transaction: tx
+          });
+        }
+      } catch (psErr) {
+        console.warn('Paystack verify transfer error:', psErr);
+      }
+    }
+
+    if (reference.startsWith('TRF-EXP-')) {
+      return res.json({
+        success: true,
+        verified: false,
+        isSimulated: true,
+        channel: 'simulation',
+        bankDeliveryStatus: 'simulated',
+        bankDeliveryMessage: 'Local simulation record. Not transmitted over the interbank network.',
+        transaction: tx
+      });
+    }
+
+    res.json({
+      success: true,
+      verified: false,
+      bankDeliveryStatus: tx?.bankDeliveryStatus || 'processing_at_switch',
+      bankDeliveryMessage: tx?.bankDeliveryMessage || 'Status pending confirmation.',
+      transaction: tx
+    });
+  } catch (error: any) {
+    console.error('Error verifying transfer:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
@@ -4597,6 +4749,36 @@ app.post('/api/paystack/webhook', async (req: Request, res: Response) => {
         }
       }
       saveDatabase(db);
+    }
+
+    if (event.event === 'transfer.success') {
+      const data = event.data;
+      const ref = data.reference;
+      if (!db.wallet) db.wallet = defaultWallet;
+      const tx = db.wallet.transactions.find(t => t.reference === ref || t.paystackTransferCode === data.transfer_code);
+      if (tx) {
+        tx.bankDeliveryStatus = 'received_by_bank';
+        tx.bankDeliveryMessage = 'Transfer confirmed received by beneficiary bank via NIP.';
+        tx.nipSessionId = data.session_id || data.titan_code || tx.nipSessionId;
+        tx.lastBankCheckAt = new Date().toISOString();
+        saveDatabase(db);
+      }
+    }
+
+    if (event.event === 'transfer.failed' || event.event === 'transfer.reversed') {
+      const data = event.data;
+      const ref = data.reference;
+      const refundAmount = (data.amount || 0) / 100;
+      if (!db.wallet) db.wallet = defaultWallet;
+      const tx = db.wallet.transactions.find(t => t.reference === ref || t.paystackTransferCode === data.transfer_code);
+      if (tx) {
+        tx.bankDeliveryStatus = event.event === 'transfer.failed' ? 'failed' : 'reversed';
+        tx.bankDeliveryMessage = data.gateway_response || 'Transfer failed or was reversed by destination bank.';
+        tx.lastBankCheckAt = new Date().toISOString();
+        // Refund back to wallet balance
+        db.wallet.balance = (db.wallet.balance || 0) + refundAmount;
+        saveDatabase(db);
+      }
     }
 
     res.sendStatus(200);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCRM, formatNaira } from '../../context/CRMContext';
+import { apiService } from '../../services/api';
 
 interface DisburseFundsModalProps {
   isOpen: boolean;
@@ -21,15 +22,19 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
     staffUsers,
   } = useCRM();
 
+  const [disbursementMode, setDisbursementMode] = useState<'corporate_nip' | 'paystack_api'>('corporate_nip');
   const [bankName, setBankName] = useState('');
   const [bankCode, setBankCode] = useState('058');
   const [accountNumber, setAccountNumber] = useState('');
   const [accountName, setAccountName] = useState('');
+  const [nipSessionId, setNipSessionId] = useState('');
+  const [paystackBalance, setPaystackBalance] = useState<number | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [isDisbursing, setIsDisbursing] = useState(false);
   const [reason, setReason] = useState('');
   const [isKycAutoFilled, setIsKycAutoFilled] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const isMentorPayout = Boolean(selectedMentorForDisburse);
   const isExpensePayout = Boolean(selectedExpenseForDisburse);
@@ -47,6 +52,16 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
     : selectedExpenseForDisburse?.vendor || selectedExpenseForDisburse?.title;
 
   useEffect(() => {
+    if (isOpen) {
+      apiService.getPaystackBalance().then(res => {
+        if (res && typeof res.balance === 'number') {
+          setPaystackBalance(res.balance);
+        }
+      }).catch(() => setPaystackBalance(0));
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     if (selectedMentorForDisburse) {
       setBankName(selectedMentorForDisburse.bankName || 'Guaranty Trust Bank (GTBank)');
       setBankCode(selectedMentorForDisburse.bankCode || '058');
@@ -56,7 +71,6 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
       setIsKycAutoFilled(false);
       setReason(`Faculty 37% Commission Share for ${selectedMentorForDisburse.name}`);
     } else if (selectedExpenseForDisburse) {
-      // Look up requester in staffUsers to see if they have KYC bank details saved
       const requester = staffUsers.find(
         u => (selectedExpenseForDisburse.requesterEmail && u.email?.toLowerCase() === selectedExpenseForDisburse.requesterEmail.toLowerCase()) ||
              (selectedExpenseForDisburse.requestedBy && u.name?.toLowerCase() === selectedExpenseForDisburse.requestedBy.toLowerCase())
@@ -86,6 +100,13 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
   const currentWalletBalance = wallet?.balance || 0;
   const hasSufficientBalance = currentWalletBalance >= amountToDisburse;
   const balanceAfterDisbursement = Math.max(0, currentWalletBalance - amountToDisburse);
+
+  const copyField = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(label);
+    showToast('Copied', `${label} copied to clipboard`, 'info');
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   const handleVerifyAccount = async () => {
     if (!accountNumber || accountNumber.length !== 10) {
@@ -123,12 +144,21 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
     }
 
     if (!hasSufficientBalance) {
-      showToast('Insufficient Wallet Balance', `Please top up the wallet with at least ${formatNaira(amountToDisburse - currentWalletBalance)}.`, 'error');
+      showToast('Insufficient Wallet Balance', `Please fund the wallet with at least ${formatNaira(amountToDisburse - currentWalletBalance)}.`, 'error');
       return;
     }
 
     if (!accountNumber || accountNumber.length !== 10) {
       showToast('Missing Account', 'A valid 10-digit NUBAN account number is required.', 'warning');
+      return;
+    }
+
+    if (disbursementMode === 'paystack_api' && paystackBalance !== null && paystackBalance < amountToDisburse) {
+      showToast(
+        'Paystack Balance Deficit',
+        `Paystack live balance has ₦${paystackBalance.toLocaleString()}. Please top up your Paystack balance or choose "Direct Corporate Bank (NIP)".`,
+        'error'
+      );
       return;
     }
 
@@ -149,6 +179,9 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
           accountNumber,
           accountName: accountName || selectedExpenseForDisburse.vendor,
           reason,
+          disbursementMethod: disbursementMode,
+          nipSessionId: nipSessionId.trim() || undefined,
+          bankReference: nipSessionId.trim() || undefined
         });
         if (success) {
           setSelectedExpenseForDisburse(null);
@@ -247,6 +280,149 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
             </div>
           )}
 
+          {/* Disbursement Mode Selector Tabs */}
+          <div className="space-y-2">
+            <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block">
+              Select Payout Settlement Method
+            </span>
+            <div className="grid grid-cols-2 p-1 rounded-xl bg-surface-container-high border border-outline-variant">
+              <button
+                type="button"
+                onClick={() => setDisbursementMode('corporate_nip')}
+                className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  disbursementMode === 'corporate_nip'
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'text-secondary hover:text-on-surface'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">account_balance</span>
+                <span>Direct Corporate Bank (NIP)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDisbursementMode('paystack_api')}
+                className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  disbursementMode === 'paystack_api'
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'text-secondary hover:text-on-surface'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">bolt</span>
+                <span>Paystack API Payout</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Corporate NIP Guidance & 1-Click Copy Card */}
+          {disbursementMode === 'corporate_nip' ? (
+            <div className="p-3.5 rounded-xl bg-blue-50/80 border border-blue-200 text-blue-950 text-xs space-y-2.5">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-blue-600 text-[18px]">verified</span>
+                <strong className="font-bold text-blue-900">1-Hop Direct Interbank Transfer (Zero Middleman Fees)</strong>
+              </div>
+              <p className="leading-relaxed text-[11px] text-blue-800">
+                Execute this transfer directly in your corporate bank app (e.g. Wema/ALAT, GTB, Zenith, Access). Use the quick copy buttons below:
+              </p>
+              
+              <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                <div className="p-2 rounded bg-white/80 border border-blue-200/80 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] text-secondary block">Account Number</span>
+                    <strong className="font-mono text-on-surface">{accountNumber || '••••••••••'}</strong>
+                  </div>
+                  {accountNumber && (
+                    <button
+                      type="button"
+                      onClick={() => copyField(accountNumber, 'Account Number')}
+                      className="text-primary hover:text-primary-dim p-1 cursor-pointer"
+                      title="Copy Account Number"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">
+                        {copiedField === 'Account Number' ? 'check' : 'content_copy'}
+                      </span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="p-2 rounded bg-white/80 border border-blue-200/80 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] text-secondary block">Bank</span>
+                    <strong className="text-on-surface truncate block max-w-[120px]">{bankName}</strong>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => copyField(bankName, 'Bank Name')}
+                    className="text-primary hover:text-primary-dim p-1 cursor-pointer"
+                    title="Copy Bank Name"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">
+                      {copiedField === 'Bank Name' ? 'check' : 'content_copy'}
+                    </span>
+                  </button>
+                </div>
+
+                <div className="p-2 rounded bg-white/80 border border-blue-200/80 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] text-secondary block">Exact Amount</span>
+                    <strong className="font-mono text-on-surface">{formatNaira(amountToDisburse)}</strong>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => copyField(String(amountToDisburse), 'Amount')}
+                    className="text-primary hover:text-primary-dim p-1 cursor-pointer"
+                    title="Copy Amount"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">
+                      {copiedField === 'Amount' ? 'check' : 'content_copy'}
+                    </span>
+                  </button>
+                </div>
+
+                <div className="p-2 rounded bg-white/80 border border-blue-200/80 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] text-secondary block">Payee Legal Name</span>
+                    <strong className="text-on-surface truncate block max-w-[120px]">{accountName || recipientTitle}</strong>
+                  </div>
+                  {accountName && (
+                    <button
+                      type="button"
+                      onClick={() => copyField(accountName, 'Account Name')}
+                      className="text-primary hover:text-primary-dim p-1 cursor-pointer"
+                      title="Copy Account Name"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">
+                        {copiedField === 'Account Name' ? 'check' : 'content_copy'}
+                      </span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Paystack API Mode Notice */
+            <div className={`p-3.5 rounded-xl border text-xs space-y-1 ${
+              (paystackBalance ?? 0) >= amountToDisburse
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+                : 'bg-amber-50 border-amber-200 text-amber-950'
+            }`}>
+              <div className="flex items-center justify-between">
+                <strong className="font-bold flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px]">account_balance_wallet</span>
+                  <span>Paystack Live Transfer Balance:</span>
+                </strong>
+                <span className="font-mono font-bold text-sm">
+                  {paystackBalance !== null ? formatNaira(paystackBalance) : 'Checking...'}
+                </span>
+              </div>
+              {(paystackBalance ?? 0) < amountToDisburse && (
+                <p className="text-[11px] leading-relaxed pt-1">
+                  ⚠️ Your Paystack Transfer Balance is insufficient ({formatNaira(paystackBalance ?? 0)} available vs {formatNaira(amountToDisburse)} needed). 
+                  Please switch to <strong>Direct Corporate Bank (NIP)</strong> above to disburse directly from your bank with zero fees.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Beneficiary Details Form */}
           <div className="space-y-3 bg-surface-container-low p-4 rounded-xl border border-outline-variant/60">
             <div className="flex items-center justify-between">
@@ -339,6 +515,23 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
               </div>
             </div>
 
+            {/* Optional NIP Session ID for Corporate Bank Mode */}
+            {disbursementMode === 'corporate_nip' && (
+              <div className="space-y-1 text-xs">
+                <label className="text-[11px] font-semibold text-secondary flex items-center justify-between">
+                  <span>Bank Reference / NIP Session ID (Optional)</span>
+                  <span className="text-[10px] text-secondary font-normal">Found on bank transfer receipt</span>
+                </label>
+                <input
+                  type="text"
+                  value={nipSessionId}
+                  onChange={(e) => setNipSessionId(e.target.value)}
+                  placeholder="e.g. 000013261015095747005315898828"
+                  className="w-full h-9 px-2.5 rounded-lg border border-outline-variant bg-surface text-xs font-mono text-on-surface outline-none focus:border-primary"
+                />
+              </div>
+            )}
+
             <div className="space-y-1 text-xs">
               <label className="text-[11px] font-semibold text-secondary">Narration / Purpose</label>
               <input
@@ -364,22 +557,31 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
           <button
             type="button"
             onClick={handleConfirmDisburse}
-            disabled={!hasSufficientBalance || isDisbursing || !accountNumber || accountNumber.length !== 10 || !isMentorHoursEligible}
+            disabled={
+              !hasSufficientBalance ||
+              isDisbursing ||
+              !accountNumber ||
+              accountNumber.length !== 10 ||
+              !isMentorHoursEligible ||
+              (disbursementMode === 'paystack_api' && paystackBalance !== null && paystackBalance < amountToDisburse)
+            }
             className={`px-5 py-2.5 rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-2 cursor-pointer ${
-              hasSufficientBalance && accountNumber.length === 10 && isMentorHoursEligible
+              hasSufficientBalance && accountNumber.length === 10 && isMentorHoursEligible && (disbursementMode === 'corporate_nip' || (paystackBalance !== null && paystackBalance >= amountToDisburse))
                 ? 'bg-[#166534] hover:bg-[#15803d] text-white'
                 : 'bg-surface-container text-secondary cursor-not-allowed opacity-60'
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">
-              {!isMentorHoursEligible ? 'lock' : (isDisbursing ? 'progress_activity' : 'send')}
+              {!isMentorHoursEligible ? 'lock' : (isDisbursing ? 'progress_activity' : (disbursementMode === 'corporate_nip' ? 'account_balance' : 'send'))}
             </span>
             <span>
               {!isMentorHoursEligible 
                 ? 'Payout Locked (Under Minimum Hours)'
                 : isDisbursing 
-                ? 'Sending via Paystack...' 
-                : `Authorize ${formatNaira(amountToDisburse)} Payout`}
+                ? (disbursementMode === 'corporate_nip' ? 'Recording Corporate Payout...' : 'Sending via Paystack...') 
+                : (disbursementMode === 'corporate_nip'
+                  ? `Confirm Corporate Bank Disbursal (${formatNaira(amountToDisburse)})`
+                  : `Send via Paystack API (${formatNaira(amountToDisburse)})`)}
             </span>
           </button>
         </div>

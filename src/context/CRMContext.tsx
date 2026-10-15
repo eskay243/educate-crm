@@ -34,7 +34,8 @@ import {
   ExpenseAndBudgetWallet,
   VirtualAccountDetails,
   TimetableSlot,
-  MentorPayoutRequest
+  MentorPayoutRequest,
+  WalletTransaction
 } from '../types/crm';
 import { 
   initialLeads, 
@@ -164,7 +165,11 @@ interface CRMContextType {
     accountNumber: string;
     accountName: string;
     reason?: string;
+    disbursementMethod?: 'corporate_nip' | 'paystack_api';
+    nipSessionId?: string;
+    bankReference?: string;
   }) => Promise<boolean>;
+  verifyBankTransferStatus: (reference: string) => Promise<WalletTransaction | null>;
   disburseMentorFromWallet: (mentorId: string, amount: number, reason?: string, payoutRequestId?: string) => Promise<boolean>;
   updateWalletBudgetLimit: (limit: number) => Promise<void>;
   refreshWalletSummary: () => Promise<void>;
@@ -3314,12 +3319,15 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     accountNumber: string;
     accountName: string;
     reason?: string;
+    disbursementMethod?: 'corporate_nip' | 'paystack_api';
+    nipSessionId?: string;
+    bankReference?: string;
   }): Promise<boolean> => {
     const expense = expenses.find(e => e.id === payload.expenseId);
     if (!expense) return false;
 
     if (wallet.balance < expense.amount) {
-      showToast('Insufficient Wallet Balance', `Available: ${formatNaira(wallet.balance)}, Required: ${formatNaira(expense.amount)}. Please top up the wallet first.`, 'error');
+      showToast('Insufficient Wallet Balance', `Available: ${formatNaira(wallet.balance)}, Required: ${formatNaira(expense.amount)}. Please fund the wallet first.`, 'error');
       return false;
     }
 
@@ -3328,6 +3336,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (res && res.expense) {
         setExpenses(prev => prev.map(e => e.id === payload.expenseId ? res.expense : e));
         if (res.walletBalance !== undefined) {
+          const isCorporateNip = payload.disbursementMethod === 'corporate_nip';
           setWallet(prev => ({
             ...prev,
             balance: res.walletBalance,
@@ -3337,66 +3346,66 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 type: 'debit',
                 category: 'expense_payout',
                 amount: expense.amount,
-                reference: res.transferRef || `TRF-EXP-${Date.now()}`,
+                reference: res.transferRef || (payload.bankReference || payload.nipSessionId || `NIP-CORP-${Date.now()}`),
                 description: `OpEx Disbursement: ${expense.title} (${expense.expenseCode})`,
                 timestamp: new Date().toISOString(),
                 balanceAfter: res.walletBalance,
-                initiatedBy: currentUser?.name || 'Finance Controller',
+                initiatedBy: isCorporateNip ? 'Corporate Treasury (NIP)' : (currentUser?.name || 'Finance Controller'),
                 recipientName: payload.accountName,
                 recipientBank: payload.bankName,
                 recipientAccountNumber: payload.accountNumber,
-                channel: 'paystack_transfer'
+                channel: isCorporateNip ? 'direct_corporate_nip' : 'paystack_transfer',
+                disbursementMethod: isCorporateNip ? 'corporate_nip' : 'paystack_api',
+                bankDeliveryStatus: (res.bankDeliveryStatus as any) || (isCorporateNip ? 'disbursed_corporate_nip' : 'processing_at_switch'),
+                bankDeliveryMessage: isCorporateNip
+                  ? `Disbursed directly via Corporate Bank Account (NIP settlement).` + (payload.nipSessionId ? ` NIP Session ID: ${payload.nipSessionId}` : '')
+                  : 'Transfer initiated with Paystack switch; awaiting NIP delivery confirmation.',
+                nipSessionId: payload.nipSessionId || payload.bankReference,
+                lastBankCheckAt: new Date().toISOString()
               },
               ...prev.transactions
             ]
           }));
         }
-        showToast('Expense Disbursed', `₦${expense.amount.toLocaleString()} paid from Expense Wallet to ${payload.accountName} (${payload.bankName})!`, 'success');
+        const methodLabel = payload.disbursementMethod === 'corporate_nip' ? 'Corporate Bank (NIP)' : 'Paystack API';
+        showToast('Expense Disbursed', `₦${expense.amount.toLocaleString()} disbursed via ${methodLabel} to ${payload.accountName} (${payload.bankName})!`, 'success');
         return true;
       } else {
-        // Local simulation fallback
-        const newBal = Math.max(0, wallet.balance - expense.amount);
-        const trfRef = `TRF-EXP-${Date.now()}`;
-        setExpenses(prev => prev.map(e => e.id === payload.expenseId ? {
-          ...e,
-          status: 'Paid',
-          disbursementBankName: payload.bankName,
-          disbursementAccountNumber: payload.accountNumber,
-          disbursementAccountName: payload.accountName,
-          disbursementBankCode: payload.bankCode,
-          isDisbursedViaWallet: true,
-          transferReference: trfRef,
-          disbursedAt: new Date().toISOString()
-        } : e));
-        setWallet(prev => ({
-          ...prev,
-          balance: newBal,
-          transactions: [
-            {
-              id: `wtx-${Date.now()}-exp`,
-              type: 'debit',
-              category: 'expense_payout',
-              amount: expense.amount,
-              reference: trfRef,
-              description: `OpEx Disbursement: ${expense.title} (${expense.expenseCode})`,
-              timestamp: new Date().toISOString(),
-              balanceAfter: newBal,
-              initiatedBy: currentUser?.name || 'Finance Controller',
-              recipientName: payload.accountName,
-              recipientBank: payload.bankName,
-              recipientAccountNumber: payload.accountNumber,
-              channel: 'paystack_transfer'
-            },
-            ...prev.transactions
-          ]
-        }));
-        showToast('Expense Disbursed', `₦${expense.amount.toLocaleString()} paid to ${payload.accountName}!`, 'success');
-        return true;
+        const errMsg = (res as any)?.message || 'Failed to disburse expense from wallet. Please verify your balance and banking details.';
+        showToast('Disbursement Failed', errMsg, 'error');
+        return false;
       }
     } catch (e: any) {
       console.error('Error disbursing expense:', e);
       showToast('Disbursement Error', e.message || 'Failed to disburse expense from wallet', 'error');
       return false;
+    }
+  };
+
+  const verifyBankTransferStatus = async (reference: string): Promise<WalletTransaction | null> => {
+    try {
+      const res = await apiService.verifyBankTransferStatus(reference);
+      if (res && res.transaction) {
+        setWallet(prev => ({
+          ...prev,
+          transactions: prev.transactions.map(t => (t.reference === reference || t.id === reference) ? { ...t, ...res.transaction } : t)
+        }));
+        if (res.verified) {
+          showToast('Bank Status Verified', res.bankDeliveryMessage || 'Delivery confirmed by interbank settlement switch.', 'success');
+        } else if (res.isSimulated) {
+          showToast('Simulation Record', res.bankDeliveryMessage || 'Local simulation transaction (not sent to bank).', 'info');
+        } else {
+          showToast('Bank Status Pending', res.bankDeliveryMessage || 'In progress at central switch.', 'info');
+        }
+        return res.transaction;
+      } else if (res && res.bankDeliveryMessage) {
+        showToast(res.verified ? 'Bank Status Verified' : 'Bank Status', res.bankDeliveryMessage, res.verified ? 'success' : 'info');
+      }
+      return null;
+    } catch (e: any) {
+      console.error('Error verifying bank transfer status:', e);
+      showToast('Verification Error', e.message || 'Could not verify bank transfer status.', 'error');
+      return null;
     }
   };
 
@@ -4466,6 +4475,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         generateVirtualAccount,
         topUpWallet,
         disburseExpenseFromWallet,
+        verifyBankTransferStatus,
         disburseMentorFromWallet,
         updateWalletBudgetLimit,
         refreshWalletSummary,

@@ -21,7 +21,8 @@ import {
   ExpenseAndBudgetWallet,
   VirtualAccountDetails,
   TimetableSlot,
-  MentorPayoutRequest
+  MentorPayoutRequest,
+  WalletTransaction
 } from '../types/crm';
 
 const API_BASE_URL = '/api';
@@ -613,11 +614,40 @@ class ApiService {
     accountNumber: string;
     accountName: string;
     reason?: string;
+    disbursementMethod?: 'corporate_nip' | 'paystack_api';
+    nipSessionId?: string;
+    bankReference?: string;
   }) {
-    return this.request<{ expense: Expense; walletBalance: number; transferRef: string }>('/wallet/disburse-expense', {
+    return this.request<{ expense: Expense; walletBalance: number; transferRef: string; bankDeliveryStatus?: string }>('/wallet/disburse-expense', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+  }
+
+  async getPaystackBalance(): Promise<{ balance: number; currency: string; isLive: boolean } | null> {
+    return this.request<{ balance: number; currency: string; isLive: boolean }>('/wallet/paystack-balance');
+  }
+
+  async verifyBankTransferStatus(reference: string): Promise<{
+    success: boolean;
+    verified: boolean;
+    isSimulated?: boolean;
+    channel?: string;
+    bankDeliveryStatus: string;
+    bankDeliveryMessage: string;
+    transaction?: WalletTransaction;
+    paystackData?: any;
+  } | null> {
+    return this.request<{
+      success: boolean;
+      verified: boolean;
+      isSimulated?: boolean;
+      channel?: string;
+      bankDeliveryStatus: string;
+      bankDeliveryMessage: string;
+      transaction?: WalletTransaction;
+      paystackData?: any;
+    }>(`/wallet/verify-transfer/${encodeURIComponent(reference)}`);
   }
 
   async disburseMentorFromWallet(mentorId: string, amount: number, reason?: string, payoutRequestId?: string) {

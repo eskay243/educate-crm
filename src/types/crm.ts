@@ -687,6 +687,16 @@ export type WalletTransactionCategory =
   | 'refund'
   | 'adjustment';
 
+export type BankDeliveryStatus = 
+  | 'received_by_bank' 
+  | 'disbursed_corporate_nip' 
+  | 'processing_at_switch' 
+  | 'failed' 
+  | 'reversed' 
+  | 'simulated';
+
+export type DisbursementMethod = 'corporate_nip' | 'paystack_api';
+
 export interface WalletTransaction {
   id: string;
   type: WalletTransactionType;
@@ -708,6 +718,12 @@ export interface WalletTransaction {
   fee?: number;
   status?: string;
   paystackTransferCode?: string;
+  bankDeliveryStatus?: BankDeliveryStatus;
+  bankDeliveryMessage?: string;
+  nipSessionId?: string;
+  lastBankCheckAt?: string;
+  disbursementMethod?: DisbursementMethod;
+  channel?: string;
 }
 
 export interface ExpenseAndBudgetWallet {
