@@ -33,6 +33,7 @@ export const MentorManagementPage: React.FC = () => {
     deleteMentorUser,
     toggleUserActiveStatus,
     hasFeaturePermission,
+    openBiodataModal,
   } = useCRM();
 
   const navigate = useNavigate();
@@ -54,6 +55,7 @@ export const MentorManagementPage: React.FC = () => {
   const isSuperAdmin = currentUser?.role === 'super_admin';
   const isFinance = currentUser?.role === 'finance';
   const canModifyMentor = isSuperAdmin || hasFeaturePermission('canModifyMentorBiodata');
+  const canViewBiodata = isSuperAdmin || hasFeaturePermission('canViewBiodata');
 
   // Find current mentor profile if logged in as mentor
   const myMentorProfile = isMentor
@@ -742,6 +744,18 @@ export const MentorManagementPage: React.FC = () => {
 
                           <td className="px-stack-md py-3 text-right">
                             <div className="flex items-center justify-end gap-1.5">
+                              {canViewBiodata && (
+                                <button
+                                  type="button"
+                                  onClick={() => openBiodataModal({ ...mentor, category: 'mentor' })}
+                                  className="px-2.5 py-1 rounded bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary font-sans text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                                  title="View 3-Tier Nigerian KYC Biodata Dossier"
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">contact_page</span>
+                                  <span>View Biodata</span>
+                                </button>
+                              )}
+
                               {canModifyMentor && (
                                 <button 
                                   onClick={() => {

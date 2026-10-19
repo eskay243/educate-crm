@@ -136,6 +136,9 @@ interface CRMContextType {
   selectedStudentForAssignmentId: string | null;
   selectedCourseForEditId: string | null;
   selectedMentorForEditId: string | null;
+  selectedBiodataUser: { category: 'staff' | 'mentor' | 'student'; id: string; data: any } | null;
+  setSelectedBiodataUser: (user: { category: 'staff' | 'mentor' | 'student'; id: string; data: any } | null) => void;
+  openBiodataModal: (categoryOrTarget: 'staff' | 'mentor' | 'student' | any, id?: string, data?: any) => void;
   kpis: ExecutiveKPIs;
 
   // LMS & Student state
@@ -566,6 +569,11 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedStudentForAssignmentId, setSelectedStudentForAssignmentId] = useState<string | null>(null);
   const [selectedCourseForEditId, setSelectedCourseForEditId] = useState<string | null>(null);
   const [selectedMentorForEditId, setSelectedMentorForEditId] = useState<string | null>(null);
+  const [selectedBiodataUser, setSelectedBiodataUser] = useState<{
+    category: 'staff' | 'mentor' | 'student';
+    id: string;
+    data: any;
+  } | null>(null);
 
   // Timetables and Academic Administration state
   const [timetables, setTimetables] = useState<TimetableSlot[]>(() => {
@@ -1106,19 +1114,14 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         : u
     ));
 
-    // 2. If mentor, sync bank details & contact info into mentors
+    // 2. If mentor, sync KYC & bank details into mentors
     const mentorIdToSync = currentUser.mentorId;
     if (mentorIdToSync || currentUser.role === 'mentor') {
       setMentors(prev => prev.map(m => {
         if ((mentorIdToSync && m.id === mentorIdToSync) || m.id === currentUser.id || m.email.toLowerCase() === currentUser.email.toLowerCase()) {
           return {
             ...m,
-            phone: data.phone ?? m.phone,
-            avatarUrl: data.avatarUrl ?? m.avatarUrl,
-            bankName: data.bankName ?? m.bankName,
-            bankCode: data.bankCode ?? m.bankCode,
-            accountNumber: data.accountNumber ?? m.accountNumber,
-            accountName: data.accountName ?? m.accountName,
+            ...data,
             isAccountVerified: data.isBankVerified ?? m.isAccountVerified,
             bankVerified: data.isBankVerified ?? m.bankVerified,
           };
@@ -1127,14 +1130,14 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }));
     }
 
-    // 3. If student, sync phone into students
+    // 3. If student, sync KYC into students
     const studentIdToSync = currentUser.studentId;
     if (studentIdToSync || currentUser.role === 'student') {
       setStudents(prev => prev.map(s => {
         if ((studentIdToSync && s.id === studentIdToSync) || s.id === currentUser.id || s.email.toLowerCase() === currentUser.email.toLowerCase()) {
           return {
             ...s,
-            phone: data.phone ?? s.phone,
+            ...data,
           };
         }
         return s;
@@ -1816,6 +1819,38 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       url.searchParams.delete('action');
       window.history.replaceState({}, '', url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : ''));
     }
+  };
+
+  const openBiodataModal = (categoryOrTarget: 'staff' | 'mentor' | 'student' | any, id?: string, data?: any) => {
+    let resolvedCategory: 'staff' | 'mentor' | 'student' = 'student';
+    let resolvedId: string = '';
+    let resolvedData: any = null;
+
+    if (typeof categoryOrTarget === 'object' && categoryOrTarget !== null) {
+      resolvedData = categoryOrTarget;
+      resolvedId = categoryOrTarget.id || categoryOrTarget.studentCode || categoryOrTarget.mentorCode || '';
+      resolvedCategory = (categoryOrTarget.category as any) || (categoryOrTarget.role === 'mentor' ? 'mentor' : (categoryOrTarget.role === 'student' ? 'student' : 'staff'));
+    } else {
+      resolvedCategory = categoryOrTarget;
+      resolvedId = id || '';
+      resolvedData = data;
+    }
+
+    if (!resolvedData) {
+      if (resolvedCategory === 'student') {
+        resolvedData = students.find(s => s.id === resolvedId || s.studentCode === resolvedId);
+      } else if (resolvedCategory === 'mentor') {
+        resolvedData = mentors.find(m => m.id === resolvedId || m.mentorCode === resolvedId);
+      } else if (resolvedCategory === 'staff') {
+        resolvedData = staffUsers.find(u => u.id === resolvedId || u.email?.toLowerCase() === resolvedId.toLowerCase());
+      }
+    }
+    setSelectedBiodataUser({
+      category: resolvedCategory,
+      id: resolvedId,
+      data: resolvedData,
+    });
+    setActiveModal('view-biodata');
   };
 
   const logActivity = (activity: Omit<ActivityLogItem, 'id' | 'timestamp'>) => {
@@ -4498,6 +4533,9 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSelectedStudentForAssignmentId,
         setSelectedCourseForEditId,
         setSelectedMentorForEditId,
+        selectedBiodataUser,
+        setSelectedBiodataUser,
+        openBiodataModal,
         addLead,
         updateLeadStatus,
         updateLeadNotes,

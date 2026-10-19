@@ -21,7 +21,8 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
     currentUser,
     sendPaymentReminder,
     hasFeaturePermission,
-    showToast
+    showToast,
+    openBiodataModal,
   } = useCRM();
 
   const [viewMode, setViewMode] = useState<'table' | 'detail'>('table');
@@ -43,6 +44,7 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
   const isAdminOrAdmissions = isSuperAdmin || currentUser?.role === 'admissions';
   const canEnroll = isAdminOrAdmissions || hasFeaturePermission('canEnrollStudents');
   const canModifyStudent = isSuperAdmin || hasFeaturePermission('canModifyStudentBiodata');
+  const canViewBiodata = isSuperAdmin || hasFeaturePermission('canViewBiodata');
 
   // If mentor, filter strictly to their assigned students
   const displayedStudents = isMentor
@@ -510,6 +512,16 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                               <span className="material-symbols-outlined text-[18px]">workspace_premium</span>
                             </button>
 
+                            {canViewBiodata && (
+                              <button
+                                onClick={() => openBiodataModal({ ...student, category: 'student' })}
+                                className="p-1.5 rounded text-secondary hover:text-primary hover:bg-surface-container transition-colors cursor-pointer"
+                                title="View 3-Tier Nigerian KYC Biodata Dossier"
+                              >
+                                <span className="material-symbols-outlined text-[18px]">contact_page</span>
+                              </button>
+                            )}
+
                             {canModifyStudent && (
                               <button
                                 onClick={() => {
@@ -742,6 +754,18 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                 </button>
               ) : (
                 <>
+                  {/* View Full 3-Tier KYC Biodata Dossier */}
+                  {canViewBiodata && (
+                    <button 
+                      onClick={() => openBiodataModal({ ...currentStudent, category: 'student' })}
+                      className="h-10 px-stack-md bg-primary/10 border border-primary/20 rounded font-label-md text-label-md font-semibold text-primary hover:bg-primary/20 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                      title="View Full Nigerian 3-Tier KYC Biodata Dossier"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">contact_page</span>
+                      <span>View Biodata</span>
+                    </button>
+                  )}
+
                   {/* Modify Student Biodata Action */}
                   {canModifyStudent && (
                     <button 

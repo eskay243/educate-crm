@@ -46,6 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   const isSuperAdmin = currentUser?.role === 'super_admin';
   const isMentor = currentUser?.role === 'mentor';
   const canManageSettings = isSuperAdmin || hasFeaturePermission('canManageSettings') || hasModulePermission('settings');
+  const canViewBiodata = isSuperAdmin || hasFeaturePermission('canViewBiodata');
 
   const settingsSubItems: NavSubItem[] = canManageSettings ? [
     { to: '/settings?section=profile', label: 'My Profile & KYC', icon: 'person', section: 'profile' },
@@ -56,6 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     { to: '/settings?section=backups', label: 'Backup & Production', icon: 'database', section: 'backups' },
   ] : [
     { to: '/settings?section=profile', label: 'My Profile & KYC', icon: 'person', section: 'profile' },
+    ...(canViewBiodata ? [{ to: '/settings?section=users', label: 'User Directory', icon: 'manage_accounts', section: 'users' }] : []),
     { to: '/settings?section=security', label: 'Security & Password', icon: 'lock_reset', section: 'security' },
   ];
 

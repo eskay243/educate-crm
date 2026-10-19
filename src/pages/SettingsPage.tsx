@@ -57,6 +57,11 @@ export const SettingsPage: React.FC = () => {
     changePassword,
     activeMentors,
     getUserTaskFootprint,
+    openBiodataModal,
+    hasFeaturePermission,
+    hasModulePermission,
+    setSelectedStudentId,
+    setSelectedMentorForEditId,
   } = useCRM();
 
   const {
@@ -72,10 +77,22 @@ export const SettingsPage: React.FC = () => {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const isSuperAdmin = currentUser?.role === 'super_admin';
+  const canViewBiodata = isSuperAdmin || hasFeaturePermission('canViewBiodata');
+  const canModifyStudentBiodata = isSuperAdmin || hasFeaturePermission('canModifyStudentBiodata');
+  const canModifyMentorBiodata = isSuperAdmin || hasFeaturePermission('canModifyMentorBiodata');
+  const canModifyStaffBiodata = isSuperAdmin;
+  const canManageSettings = isSuperAdmin || hasFeaturePermission('canManageSettings') || hasModulePermission('settings');
+
   const rawSection = searchParams.get('section');
   const effectiveSection = isSuperAdmin
     ? (rawSection || 'general')
-    : (rawSection === 'security' ? 'security' : 'profile');
+    : (rawSection === 'security'
+        ? 'security'
+        : (rawSection === 'users' && canViewBiodata
+            ? 'users'
+            : (canManageSettings && rawSection ? rawSection : 'profile')
+          )
+      );
 
   const setActiveTab = (section: string) => {
     setSearchParams({ section });
@@ -334,6 +351,20 @@ export const SettingsPage: React.FC = () => {
 
   // Aggregated institutional users directory
   const unifiedUsers = useMemo(() => {
+    const getKycTier = (item: any): 1 | 2 | 3 => {
+      if (item.kycTier) return item.kycTier;
+      if (item.residentialAddress && item.accountNumber) return 3;
+      if (item.idNumber) return 2;
+      return 1;
+    };
+
+    const getKycStatus = (item: any): 'Verified' | 'Pending' | 'Incomplete' => {
+      if (item.kycStatus) return item.kycStatus;
+      if (item.isBankVerified && item.isIdVerified) return 'Verified';
+      if (item.idNumber || item.bvn || item.accountNumber) return 'Pending';
+      return 'Incomplete';
+    };
+
     const list: {
       id: string;
       name: string;
@@ -347,6 +378,12 @@ export const SettingsPage: React.FC = () => {
       deactivatedAt?: string;
       deactivatedReason?: string;
       joinedDate?: string;
+      kycTier?: 1 | 2 | 3;
+      kycStatus?: 'Verified' | 'Pending' | 'Incomplete';
+      isIdVerified?: boolean;
+      isBankVerified?: boolean;
+      avatarUrl?: string;
+      rawRecord: any;
     }[] = [];
 
     // 1. Staff users
@@ -363,6 +400,12 @@ export const SettingsPage: React.FC = () => {
         status: (u.isActive === false || u.status === 'Deactivated') ? 'Deactivated' : 'Active',
         deactivatedAt: u.deactivatedAt,
         deactivatedReason: u.deactivatedReason,
+        kycTier: getKycTier(u),
+        kycStatus: getKycStatus(u),
+        isIdVerified: u.isIdVerified,
+        isBankVerified: u.isBankVerified,
+        avatarUrl: u.avatarUrl,
+        rawRecord: { ...u, category: 'staff' },
       });
     });
 
@@ -381,6 +424,12 @@ export const SettingsPage: React.FC = () => {
           isActive: m.isActive !== false && m.status !== 'Deactivated',
           status: (m.isActive === false || m.status === 'Deactivated') ? 'Deactivated' : 'Active',
           joinedDate: m.joinedDate,
+          kycTier: getKycTier(m),
+          kycStatus: getKycStatus(m),
+          isIdVerified: m.isIdVerified,
+          isBankVerified: m.isBankVerified,
+          avatarUrl: m.avatarUrl,
+          rawRecord: { ...m, category: 'mentor' },
         });
       }
     });
@@ -398,6 +447,12 @@ export const SettingsPage: React.FC = () => {
         isActive: s.isActive !== false && s.status !== 'Deactivated',
         status: (s.isActive === false || s.status === 'Deactivated') ? 'Deactivated' : 'Active',
         joinedDate: s.enrolledDate,
+        kycTier: getKycTier(s),
+        kycStatus: getKycStatus(s),
+        isIdVerified: s.isIdVerified,
+        isBankVerified: s.isBankVerified,
+        avatarUrl: s.avatarUrl,
+        rawRecord: { ...s, category: 'student' },
       });
     });
 
@@ -1546,30 +1601,32 @@ export const SettingsPage: React.FC = () => {
             </button>
           </div>
 
-          {/* Group 2: Access & Governance (Super Admin Only) */}
-          {isSuperAdmin && (
+          {/* Group 2: Access & Governance */}
+          {(isSuperAdmin || canViewBiodata) && (
             <div className="space-y-1 pt-3 border-t border-outline-variant/40">
               <div className="px-3 py-1 text-[10px] font-bold text-secondary/70 uppercase tracking-wider font-label-md">
                 Access &amp; Governance
               </div>
-              <button
-                onClick={() => setActiveTab('staff')}
-                className={`w-full text-left px-3.5 py-2.5 rounded-xl font-medium text-xs flex items-center justify-between transition-all duration-150 cursor-pointer ${
-                  effectiveSection === 'staff'
-                    ? 'bg-primary text-on-primary font-bold shadow-xs'
-                    : 'text-secondary hover:text-on-surface hover:bg-surface-container-low'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="material-symbols-outlined text-[18px]">badge</span>
-                  <span>Staff Accounts</span>
-                </div>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-data-tabular font-bold ${
-                  effectiveSection === 'staff' ? 'bg-white/20 text-white' : 'bg-surface-container text-secondary'
-                }`}>
-                  {staffUsers.length}
-                </span>
-              </button>
+              {isSuperAdmin && (
+                <button
+                  onClick={() => setActiveTab('staff')}
+                  className={`w-full text-left px-3.5 py-2.5 rounded-xl font-medium text-xs flex items-center justify-between transition-all duration-150 cursor-pointer ${
+                    effectiveSection === 'staff'
+                      ? 'bg-primary text-on-primary font-bold shadow-xs'
+                      : 'text-secondary hover:text-on-surface hover:bg-surface-container-low'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className="material-symbols-outlined text-[18px]">badge</span>
+                    <span>Staff Accounts</span>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-data-tabular font-bold ${
+                    effectiveSection === 'staff' ? 'bg-white/20 text-white' : 'bg-surface-container text-secondary'
+                  }`}>
+                    {staffUsers.length}
+                  </span>
+                </button>
+              )}
 
               <button
                 onClick={() => setActiveTab('users')}
@@ -1581,7 +1638,7 @@ export const SettingsPage: React.FC = () => {
               >
                 <div className="flex items-center gap-2.5">
                   <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
-                  <span>User Directory</span>
+                  <span>User Directory &amp; Biodata</span>
                 </div>
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-data-tabular font-bold ${
                   effectiveSection === 'users' ? 'bg-white/20 text-white' : 'bg-surface-container text-secondary'
@@ -1590,24 +1647,26 @@ export const SettingsPage: React.FC = () => {
                 </span>
               </button>
 
-              <button
-                onClick={() => setActiveTab('roles')}
-                className={`w-full text-left px-3.5 py-2.5 rounded-xl font-medium text-xs flex items-center justify-between transition-all duration-150 cursor-pointer ${
-                  effectiveSection === 'roles'
-                    ? 'bg-primary text-on-primary font-bold shadow-xs'
-                    : 'text-secondary hover:text-on-surface hover:bg-surface-container-low'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
-                  <span>Roles &amp; Permissions</span>
-                </div>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-data-tabular font-bold ${
-                  effectiveSection === 'roles' ? 'bg-white/20 text-white' : 'bg-surface-container text-secondary'
-                }`}>
-                  {customRoles.length}
-                </span>
-              </button>
+              {isSuperAdmin && (
+                <button
+                  onClick={() => setActiveTab('roles')}
+                  className={`w-full text-left px-3.5 py-2.5 rounded-xl font-medium text-xs flex items-center justify-between transition-all duration-150 cursor-pointer ${
+                    effectiveSection === 'roles'
+                      ? 'bg-primary text-on-primary font-bold shadow-xs'
+                      : 'text-secondary hover:text-on-surface hover:bg-surface-container-low'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
+                    <span>Roles &amp; Permissions</span>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-data-tabular font-bold ${
+                    effectiveSection === 'roles' ? 'bg-white/20 text-white' : 'bg-surface-container text-secondary'
+                  }`}>
+                    {customRoles.length}
+                  </span>
+                </button>
+              )}
             </div>
           )}
 
@@ -4494,9 +4553,9 @@ export const SettingsPage: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* SECTION 4: UNIVERSAL USER GOVERNANCE & ACCESS CONTROL (SUPER ADMIN ONLY) */}
+      {/* SECTION 4: UNIVERSAL USER GOVERNANCE & BIODATA DIRECTORY */}
       {/* ========================================================================= */}
-      {isSuperAdmin && effectiveSection === 'users' && (
+      {(isSuperAdmin || canViewBiodata) && effectiveSection === 'users' && (
         <div className="space-y-stack-md animate-in fade-in duration-200">
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-4">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-outline-variant pb-4">
@@ -4506,7 +4565,7 @@ export const SettingsPage: React.FC = () => {
                   <h3 className="font-headline-sm text-base font-bold text-on-surface">Universal User Directory &amp; Governance</h3>
                 </div>
                 <p className="text-xs text-secondary mt-1">
-                  Super Admin centralized control to activate or deactivate user accounts, enforce security blocks, and administratively reset credentials across all Staff, Faculty Mentors, and Students.
+                  Centralized institutional roster to inspect CBN/NUBAN compliant 3-Tier KYC biodata, manage security credentials, and review compliance across Staff, Faculty Mentors, and Students.
                 </p>
               </div>
 
@@ -4518,6 +4577,10 @@ export const SettingsPage: React.FC = () => {
                 </span>
                 <span className="px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 font-semibold border border-rose-200">
                   {unifiedUsers.filter(u => !u.isActive).length} Deactivated
+                </span>
+                <span className="px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 font-semibold border border-purple-200 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[13px]">verified_user</span>
+                  {unifiedUsers.filter(u => u.kycStatus === 'Verified').length} KYC Cleared
                 </span>
               </div>
             </div>
@@ -4565,14 +4628,15 @@ export const SettingsPage: React.FC = () => {
                     <th className="p-3">User</th>
                     <th className="p-3">Account Type &amp; Role</th>
                     <th className="p-3">Contact Email</th>
+                    <th className="p-3">KYC Compliance</th>
                     <th className="p-3">Status</th>
-                    <th className="p-3 text-right">Administrative Actions</th>
+                    <th className="p-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-outline-variant/40 text-xs">
                   {filteredUnifiedUsers.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="p-8 text-center text-secondary">
+                      <td colSpan={6} className="p-8 text-center text-secondary">
                         <span className="material-symbols-outlined text-3xl opacity-40 mb-1 block">person_search</span>
                         No users match the selected filter or search query.
                       </td>
@@ -4620,6 +4684,29 @@ export const SettingsPage: React.FC = () => {
                           </td>
                           <td className="p-3 text-secondary font-data-tabular">{u.email}</td>
                           <td className="p-3">
+                            <div className="flex flex-col gap-0.5 items-start">
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border ${
+                                u.kycTier === 3 
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : u.kycTier === 2
+                                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                              }`}>
+                                <span className="material-symbols-outlined text-[12px]">verified_user</span>
+                                Tier {u.kycTier || 1}
+                              </span>
+                              <span className={`text-[10px] font-semibold ${
+                                u.kycStatus === 'Verified' 
+                                  ? 'text-emerald-700' 
+                                  : u.kycStatus === 'Pending' 
+                                  ? 'text-amber-700' 
+                                  : 'text-slate-500'
+                              }`}>
+                                {u.kycStatus === 'Verified' ? '✓ Cleared' : u.kycStatus === 'Pending' ? '○ In Review' : '● Incomplete'}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="p-3">
                             {u.isActive ? (
                               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold border border-emerald-200">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
@@ -4637,27 +4724,67 @@ export const SettingsPage: React.FC = () => {
                           </td>
                           <td className="p-3 text-right">
                             <div className="flex items-center justify-end gap-1.5">
-                              {/* Reset Password Button */}
+                              {/* View Biodata Button - Always available to permitted users */}
                               <button
-                                onClick={() => {
-                                  setSelectedUserForPasswordReset({
-                                    id: u.id,
-                                    name: u.name,
-                                    email: u.email,
-                                    role: u.role,
-                                    category: u.category,
-                                  });
-                                  openModal('reset-user-password');
-                                }}
-                                className="h-7 px-2.5 rounded bg-surface border border-outline-variant hover:bg-surface-container text-on-surface text-[11px] font-semibold transition-colors flex items-center gap-1 cursor-pointer"
-                                title="Reset / Override Password"
+                                onClick={() => openBiodataModal(u.rawRecord || u)}
+                                className="h-7 px-2.5 rounded bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-[11px] font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                                title="View 3-Tier Nigerian KYC Biodata Dossier"
                               >
-                                <span className="material-symbols-outlined text-[13px]">key</span>
-                                <span>Reset Password</span>
+                                <span className="material-symbols-outlined text-[13px]">contact_page</span>
+                                <span>View Biodata</span>
                               </button>
 
-                              {/* Activate / Deactivate Toggle (Do not deactivate self) */}
-                              {!isCurrentUser && (
+                              {/* Edit Biodata Button - Available if permitted */}
+                              {(isSuperAdmin || 
+                                (u.category === 'student' && canModifyStudentBiodata) ||
+                                (u.category === 'mentor' && canModifyMentorBiodata) ||
+                                (u.category === 'staff' && canModifyStaffBiodata)
+                              ) && (
+                                <button
+                                  onClick={() => {
+                                    if (u.category === 'student') {
+                                      setSelectedStudentId(u.id);
+                                      openModal('edit-student');
+                                    } else if (u.category === 'mentor') {
+                                      setSelectedMentorForEditId(u.id);
+                                      openModal('edit-mentor');
+                                    } else if (u.category === 'staff') {
+                                      const staffObj = staffUsers.find(s => s.id === u.id);
+                                      if (staffObj) setEditingStaffUser(staffObj);
+                                      setActiveTab('staff');
+                                    }
+                                  }}
+                                  className="h-7 px-2.5 rounded bg-surface border border-outline-variant hover:border-primary text-secondary hover:text-primary text-[11px] font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                                  title="Edit Demographic & Biodata Records"
+                                >
+                                  <span className="material-symbols-outlined text-[13px]">edit</span>
+                                  <span>Edit</span>
+                                </button>
+                              )}
+
+                              {/* Reset Password Button (Super Admin Only) */}
+                              {isSuperAdmin && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedUserForPasswordReset({
+                                      id: u.id,
+                                      name: u.name,
+                                      email: u.email,
+                                      role: u.role,
+                                      category: u.category,
+                                    });
+                                    openModal('reset-user-password');
+                                  }}
+                                  className="h-7 px-2.5 rounded bg-surface border border-outline-variant hover:bg-surface-container text-on-surface text-[11px] font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                                  title="Reset / Override Password"
+                                >
+                                  <span className="material-symbols-outlined text-[13px]">key</span>
+                                  <span>Reset</span>
+                                </button>
+                              )}
+
+                              {/* Activate / Deactivate Toggle (Super Admin Only, do not deactivate self) */}
+                              {isSuperAdmin && !isCurrentUser && (
                                 u.isActive ? (
                                   <button
                                     onClick={() => toggleUserActiveStatus(u.id, false, 'Administrative deactivation by Super Admin')}

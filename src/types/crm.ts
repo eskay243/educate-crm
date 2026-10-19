@@ -80,17 +80,36 @@ export interface SupportTicket {
   resolutionNotes?: string;
 }
 
-export interface AuthUser {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  roleTitle: string;
-  password?: string;
+// Nigerian Standard 3-Tier KYC & Civil Demographics (CBN CDD Compliance)
+export interface NigerianBiodataKYC {
+  // Tier 1: Civil Demographics
+  dateOfBirth?: string;
+  gender?: 'Male' | 'Female' | 'Other';
+  nationality?: string;
+  stateOfOrigin?: string;
+  lga?: string;
   avatarUrl?: string;
-  department?: string;
-  phone?: string;
   bio?: string;
+  phone?: string;
+  email?: string;
+
+  // Tier 2: Government Identification
+  idType?: 'NIN' | 'BVN' | 'Driver License' | 'Voter Card' | 'International Passport';
+  idNumber?: string;
+  isIdVerified?: boolean;
+  idDocumentUrl?: string;
+  idDocumentName?: string;
+
+  // Tier 3: Residential Address & Emergency Guarantor
+  residentialAddress?: string;
+  city?: string;
+  stateOfResidence?: string;
+  proofOfAddressUrl?: string;
+  proofOfAddressName?: string;
+  nextOfKinName?: string;
+  nextOfKinRelationship?: string;
+  nextOfKinPhone?: string;
+  nextOfKinAddress?: string;
 
   // Personal Settlement Bank KYC (NUBAN)
   bankName?: string;
@@ -100,35 +119,20 @@ export interface AuthUser {
   isBankVerified?: boolean;
   bvn?: string;
 
-  // Nigerian Standard Tier 2/3 KYC (CBN CDD Compliance)
-  idType?: 'NIN' | 'BVN' | 'Driver License' | 'Voter Card' | 'International Passport';
-  idNumber?: string;
-  isIdVerified?: boolean;
-  idDocumentUrl?: string;
-  idDocumentName?: string;
-  dateOfBirth?: string;
-  gender?: 'Male' | 'Female' | 'Other';
-  nationality?: string;
-  stateOfOrigin?: string;
-  lga?: string;
-
-  // Residential Address & Proof of Residence
-  residentialAddress?: string;
-  city?: string;
-  stateOfResidence?: string;
-  proofOfAddressUrl?: string;
-  proofOfAddressName?: string;
-
-  // Next of Kin / Emergency Guarantor
-  nextOfKinName?: string;
-  nextOfKinRelationship?: string;
-  nextOfKinPhone?: string;
-  nextOfKinAddress?: string;
-
   // Compliance Tracking
-  kycTier?: 'Tier 1' | 'Tier 2' | 'Tier 3';
-  kycStatus?: 'Verified' | 'Pending Review' | 'Incomplete';
+  kycTier?: 'Tier 1' | 'Tier 2' | 'Tier 3' | 1 | 2 | 3;
+  kycStatus?: 'Verified' | 'Pending Review' | 'Pending' | 'Incomplete';
   kycSubmittedAt?: string;
+}
+
+export interface AuthUser extends NigerianBiodataKYC {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  roleTitle: string;
+  password?: string;
+  department?: string;
 
   mentorId?: string; // Links to mentor profile if role is 'mentor'
   studentId?: string; // Links to student record if role is 'student'
@@ -251,7 +255,7 @@ export interface StudentAssignmentSubmission {
   reviewedAt?: string;
 }
 
-export interface Student {
+export interface Student extends NigerianBiodataKYC {
   id: string;
   studentCode: string;
   name: string;
@@ -295,7 +299,7 @@ export interface Student {
 export type MentorStatus = 'Active' | 'Available' | 'On Leave' | 'Deactivated';
 export type PayoutStatus = 'Completed' | 'Processing' | 'Pending';
 
-export interface Mentor {
+export interface Mentor extends NigerianBiodataKYC {
   id: string;
   mentorCode: string;
   name: string;
@@ -854,6 +858,7 @@ export type ModalType =
   | 'reset-user-password'
   | 'request-payout'
   | 'bulk-upload-courses'
+  | 'view-biodata'
   | null;
 
 export interface MentorPayoutRequest {
