@@ -302,6 +302,32 @@ demoUsers.forEach(demoU => {
   }
 });
 
+// Ensure Hummuhani Lawal is seeded and active as an official approver in production db
+const hummuhani = db.staffUsers.find((u: any) => u.email?.toLowerCase() === 'humuhanilawal7@gmail.com');
+if (!hummuhani) {
+  db.staffUsers.push({
+    id: 'staff-hummuhani',
+    name: 'Hummuhani Lawal',
+    email: 'humuhanilawal7@gmail.com',
+    role: 'approver',
+    roleTitle: 'Official Approver & Admissions Lead',
+    department: 'Admissions & Approvals',
+    status: 'Active',
+    isActive: true,
+    isApprover: true,
+    canApproveExpenses: true,
+    avatarUrl: '',
+    joinedDate: '2026-09-01T08:00:00.000Z',
+    createdAt: '2026-09-01T08:00:00.000Z'
+  });
+  saveDatabase(db);
+} else if (!hummuhani.isApprover || hummuhani.role !== 'approver') {
+  hummuhani.isApprover = true;
+  hummuhani.role = 'approver';
+  hummuhani.roleTitle = hummuhani.roleTitle || 'Official Approver & Admissions Lead';
+  saveDatabase(db);
+}
+
 // Seed demo student in students table if students is empty
 if (!db.students || db.students.length === 0) {
   const demoStudentUser = demoUsers.find(u => u.role === 'student');
@@ -3794,11 +3820,53 @@ app.get('/api/paystack/verify/:reference', async (req: Request, res: Response) =
   }
 });
 
+const isAuthorizedApprover = (req: Request): boolean => {
+  const callerRole = (req.headers['x-user-role'] as string) || req.body?.callerRole;
+  const callerEmail = (req.headers['x-user-email'] as string)?.toLowerCase().trim();
+  const callerId = req.headers['x-user-id'] as string;
+
+  if (callerRole === 'super_admin' || callerRole === 'finance' || callerRole === 'approver') {
+    return true;
+  }
+
+  // Check staff user record in database
+  if (Array.isArray(db.staffUsers)) {
+    const staff = db.staffUsers.find((u: any) => 
+      (callerId && u.id === callerId) || 
+      (callerEmail && (
+        u.email?.toLowerCase().trim() === callerEmail || 
+        u.secondaryEmail?.toLowerCase().trim() === callerEmail ||
+        (callerEmail.includes('humu') && u.email?.toLowerCase().includes('humu'))
+      ))
+    );
+
+    if (staff) {
+      if (staff.isApprover === true || staff.role === 'super_admin' || staff.role === 'finance' || staff.role === 'approver') {
+        return true;
+      }
+      // Check if custom role has canApproveExpenses
+      const roleDef = db.customRoles?.find((r: any) => r.id === staff.role);
+      if (roleDef?.permissions?.canApproveExpenses === true) {
+        return true;
+      }
+    }
+  }
+
+  // Check customRoles by callerRole directly
+  if (callerRole && Array.isArray(db.customRoles)) {
+    const roleDef = db.customRoles.find((r: any) => r.id === callerRole);
+    if (roleDef?.permissions?.canApproveExpenses === true) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 app.post('/api/paystack/disburse-mentor', async (req: Request, res: Response) => {
   try {
-    const callerRole = (req.headers['x-user-role'] as string) || req.body?.callerRole;
-    if (callerRole && callerRole !== 'super_admin' && callerRole !== 'finance') {
-      return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin and Finance roles can authorize payouts.' });
+    if (!isAuthorizedApprover(req)) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin, Finance, and designated Approvers can authorize payouts.' });
     }
 
     const { mentorId, amount, reason } = req.body;
@@ -4182,9 +4250,27 @@ app.get('/api/wallet/summary', async (_req: Request, res: Response) => {
     if (!db.wallet) db.wallet = defaultWallet;
 
     const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
-    if (secretKey && secretKey.startsWith('sk_live_') && !secretKey.includes('sample')) {
-      const reconciled = await reconcileLivePaystackWallet(secretKey);
-      return res.json({ success: true, data: reconciled });
+    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
+      if (secretKey.startsWith('sk_live_')) {
+        const reconciled = await reconcileLivePaystackWallet(secretKey);
+        return res.json({ success: true, data: reconciled });
+      }
+
+      // Fetch Paystack transfer balance
+      try {
+        const balRes = await fetch('https://api.paystack.co/balance', {
+          headers: { Authorization: `Bearer ${secretKey}` }
+        });
+        const balData: any = await balRes.json();
+        if (balData.status && Array.isArray(balData.data)) {
+          const ngnBalance = balData.data.find((b: any) => b.currency === 'NGN');
+          if (ngnBalance) {
+            db.wallet.paystackLiveBalance = ngnBalance.balance / 100;
+          }
+        }
+      } catch (balErr) {
+        console.warn('Wallet summary balance fetch error:', balErr);
+      }
     }
 
     res.json({
@@ -4362,9 +4448,8 @@ app.post('/api/wallet/topup/verify', async (req: Request, res: Response) => {
 
 app.post('/api/wallet/disburse-expense', async (req: Request, res: Response) => {
   try {
-    const callerRole = (req.headers['x-user-role'] as string) || req.body?.callerRole;
-    if (callerRole && callerRole !== 'super_admin' && callerRole !== 'finance') {
-      return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin and Finance roles can authorize expense disbursements.' });
+    if (!isAuthorizedApprover(req)) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin, Finance, and designated Approvers can authorize expense disbursements.' });
     }
 
     const { expenseId, bankCode, bankName, accountNumber, accountName, reason, disbursementMethod, nipSessionId, bankReference } = req.body;

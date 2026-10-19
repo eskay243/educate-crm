@@ -7,6 +7,7 @@ export interface ViewExpenseModalProps {
   onClose: () => void;
   expense: Expense | null;
   isSuperAdmin?: boolean;
+  canApprove?: boolean;
   onApprove?: (id: string) => void;
   onReject?: (expense: Expense) => void;
 }
@@ -16,10 +17,12 @@ export const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({
   onClose,
   expense,
   isSuperAdmin = false,
+  canApprove = false,
   onApprove,
   onReject,
 }) => {
   const [imageZoomed, setImageZoomed] = useState(false);
+  const canUserApprove = isSuperAdmin || canApprove;
 
   if (!isOpen || !expense) return null;
 
@@ -398,10 +401,10 @@ export const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({
         {/* Modal Footer with Governance Actions */}
         <div className="p-stack-md px-stack-lg border-t border-outline-variant bg-surface-bright flex items-center justify-between">
           <div className="text-xs text-secondary">
-            {isSuperAdmin ? (
+            {canUserApprove ? (
               <span className="flex items-center gap-1 text-primary font-medium">
                 <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
-                Super Admin Governance Mode
+                {isSuperAdmin ? 'Super Admin Governance Mode' : 'Authorized Approver Governance'}
               </span>
             ) : (
               <span>Auditing Requisition Dossier</span>
@@ -417,8 +420,8 @@ export const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({
               Close
             </button>
 
-            {/* If Super Admin & Awaiting Approval, provide instant decision buttons */}
-            {isSuperAdmin && isAwaiting && (
+            {/* If Authorized Approver & Awaiting Approval, provide instant decision buttons */}
+            {canUserApprove && isAwaiting && (
               <>
                 <button
                   type="button"

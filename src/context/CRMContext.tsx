@@ -627,6 +627,31 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             return true;
           });
           setStaffUsers(uniqueStaff);
+
+          // Dynamically synchronize active currentUser session with fresh role, isApprover, and permissions
+          setCurrentUser(prevUser => {
+            if (!prevUser) return null;
+            const normEmail = prevUser.email?.toLowerCase().trim();
+            const match = uniqueStaff.find(u => 
+              u.id === prevUser.id || 
+              (normEmail && (
+                u.email?.toLowerCase().trim() === normEmail ||
+                (u as any).secondaryEmail?.toLowerCase().trim() === normEmail ||
+                (normEmail.includes('humu') && u.email?.toLowerCase().includes('humu'))
+              ))
+            );
+            if (match) {
+              const updated = { 
+                ...prevUser, 
+                ...match, 
+                password: prevUser.password || match.password,
+                isApprover: match.isApprover ?? prevUser.isApprover
+              };
+              localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(updated));
+              return updated;
+            }
+            return prevUser;
+          });
         }
         if (data.lmsModules) setLmsModules(data.lmsModules);
         if (data.assignments) setAssignments(data.assignments);

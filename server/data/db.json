@@ -2180,11 +2180,11 @@
     {
       "title": "SIPCore Monthly subscription",
       "category": "Software & Tools",
-      "amount": 11000,
+      "amount": 1000,
       "date": "2026-09-25",
       "department": "Finance & Ops",
       "paymentMethod": "Nigerian Bank Transfer",
-      "status": "Awaiting Approval",
+      "status": "Paid",
       "vendor": "Corporate Vendor NG",
       "requestedBy": "Ndifreke Precious Henry (finance)",
       "requesterEmail": "ndifrekehenry001@gmail.com",
@@ -2192,7 +2192,16 @@
       "description": "SIPCore Monthly subscription",
       "urgency": "Standard",
       "id": "exp-1790330620562",
-      "expenseCode": "EXP-6406"
+      "expenseCode": "EXP-6406",
+      "disbursementBankName": "Wema Bank",
+      "disbursementAccountNumber": "0433264358",
+      "disbursementAccountName": "NDIFREKE PRECIOUS HENRY",
+      "disbursementBankCode": "035",
+      "isDisbursedViaWallet": true,
+      "transferReference": "000013261015095747005315898828",
+      "disbursedAt": "2026-10-15T11:17:00.532Z",
+      "disbursementMethod": "corporate_nip",
+      "nipSessionId": "000013261015095747005315898828"
     },
     {
       "title": "Storage Cabinet and Transportation ",
@@ -2962,9 +2971,21 @@
       }
     ],
     "defaultMinimumLearningHours": 40,
-    "logoUrl": ""
+    "logoUrl": "",
+    "vapidKeys": {
+      "publicKey": "BA7j5DAoel41zdFrMbLr83ddV7sJZdvF74vkgV5OPMPW-KalScHcpZG74FITCOFfzfgbIN-egcvusOKQHSN11wE",
+      "privateKey": "20GNOtXCdpoG6IJ5uh0IBdYsI1xE_je-z9sIX1O_25w"
+    }
   },
   "activityLogs": [
+    {
+      "id": "act-1792063020532-expdisb",
+      "timestamp": "2026-10-15T11:17:00.532Z",
+      "title": "OpEx Requisition ₦1,000 Disbursed (Corporate NIP)",
+      "description": "Disbursed for SIPCore Monthly subscription to NDIFREKE PRECIOUS HENRY (Wema Bank - 0433264358). Ref: 000013261015095747005315898828",
+      "type": "finance",
+      "user": "Corporate Treasury"
+    },
     {
       "id": "act-1791205365637-transfer-del",
       "timestamp": "2026-10-05T13:02:45.637Z",
@@ -3206,7 +3227,8 @@
       "department": "Admissions Office",
       "password": "password123",
       "isActive": true,
-      "status": "Active"
+      "status": "Active",
+      "isApprover": true
     },
     {
       "id": "user-finance-demo",
@@ -3215,7 +3237,8 @@
       "role": "finance",
       "roleTitle": "Bursar & Financial Controller",
       "department": "Bursary & Accounts",
-      "password": "password123"
+      "password": "password123",
+      "isApprover": false
     },
     {
       "id": "user-po-demo",
@@ -6031,13 +6054,39 @@
         "canApproveTopics": true,
         "canManageUsers": false
       }
+    },
+    {
+      "id": "approver",
+      "name": "Institutional Approver / Authorizer",
+      "description": "Reviews and authorizes operational expenditure requisitions, verifies compliance, monitors ticket escalations, and approves budget deductions.",
+      "isSystem": true,
+      "badgeColor": "bg-purple-500/10 text-purple-700 border border-purple-500/20",
+      "allowedModules": [
+        "expenses",
+        "tickets",
+        "reports",
+        "attendance"
+      ],
+      "permissions": {
+        "canAddCourses": false,
+        "canAddCohorts": false,
+        "canAddLeads": false,
+        "canEnrollStudents": false,
+        "canLogExpenses": true,
+        "canApproveExpenses": true,
+        "canIssueCertificates": false,
+        "canViewBilling": true,
+        "canManageSettings": false,
+        "canManageAttendance": true,
+        "canSubmitReports": true
+      }
     }
   ],
   "wallet": {
-    "balance": 600,
+    "balance": 2100,
     "monthlyBudgetLimit": 1500000,
-    "totalInflow": 600,
-    "totalOutflow": 0,
+    "totalInflow": 3100,
+    "totalOutflow": 1000,
     "virtualAccount": {
       "accountNumber": "9817707007",
       "accountName": "CODELABEDUCAR/WALLET NEXUS",
@@ -6050,6 +6099,60 @@
       "provider": "wema-bank"
     },
     "transactions": [
+      {
+        "id": "wtx-paystack-6663623331",
+        "type": "credit",
+        "category": "card_topup",
+        "amount": 500,
+        "fee": 7.5,
+        "reference": "CDL-WAL-TOP-1792144587351-6585",
+        "description": "Online Wallet Top-Up via Paystack Checkout",
+        "timestamp": "2026-10-16T09:57:46.000Z",
+        "balanceAfter": 500,
+        "initiatedBy": "Inbound Bank Depositor",
+        "senderName": null,
+        "senderBank": "OPay Digital Services Limited (OPay)",
+        "senderAccountNumber": null,
+        "receiverAccountNumber": "9817707007",
+        "receiverBank": "Wema Bank",
+        "channel": "bank",
+        "status": "success"
+      },
+      {
+        "id": "wtx-trf-1043600617",
+        "type": "debit",
+        "category": "expense_payout",
+        "amount": 1000,
+        "reference": "TRF-EXP-1792064494204-7352",
+        "description": "OpEx Disbursement: Admin Officer Request (EXP-3032)",
+        "timestamp": "2026-10-15T11:41:35.000Z",
+        "balanceAfter": 0,
+        "initiatedBy": "Finance / Disburse API",
+        "recipientName": "NDIFREKE PRECIOUS HENRY",
+        "recipientBank": "Wema Bank",
+        "recipientAccountNumber": "0433264358",
+        "channel": "paystack_transfer",
+        "status": "success"
+      },
+      {
+        "id": "wtx-paystack-6659790523",
+        "type": "credit",
+        "category": "dva_bank_deposit",
+        "amount": 2000,
+        "fee": 20,
+        "reference": "000003261015095747005315898828",
+        "description": "Live Bank Transfer via Dedicated NUBAN (First City Monument Bank)",
+        "timestamp": "2026-10-15T08:58:31.000Z",
+        "balanceAfter": 2000,
+        "initiatedBy": "NIP Transfer (•••• 8281)",
+        "senderName": null,
+        "senderBank": "First City Monument Bank",
+        "senderAccountNumber": "•••• 8281",
+        "receiverAccountNumber": "9817707007",
+        "receiverBank": "Wema Bank",
+        "channel": "dedicated_nuban",
+        "status": "success"
+      },
       {
         "id": "wtx-paystack-6601996994",
         "type": "credit",
@@ -6108,8 +6211,8 @@
         "status": "success"
       }
     ],
-    "lastSyncedAt": "2026-10-15T07:50:46.570Z",
-    "paystackLiveBalance": 0
+    "lastSyncedAt": "2026-10-19T13:23:41.133Z",
+    "paystackLiveBalance": 200990
   },
   "timetables": [
     {
@@ -6588,5 +6691,6 @@
       "createdAt": "2026-09-11T10:00:00Z"
     }
   ],
-  "payoutRequests": []
+  "payoutRequests": [],
+  "pushSubscriptions": []
 }

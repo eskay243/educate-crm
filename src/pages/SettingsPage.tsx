@@ -218,6 +218,78 @@ export const SettingsPage: React.FC = () => {
     isProfileBankVerified,
   ]);
 
+  const [activeKycStep, setActiveKycStep] = useState<1 | 2 | 3>(1);
+
+  // Progressive tier gating completion checks
+  const isTier1Complete = useMemo(() => {
+    return Boolean(
+      profileAvatarUrl &&
+      profileName.trim() &&
+      profilePhone.trim() &&
+      profileDob &&
+      profileGender &&
+      profileStateOfOrigin &&
+      profileLga.trim()
+    );
+  }, [profileAvatarUrl, profileName, profilePhone, profileDob, profileGender, profileStateOfOrigin, profileLga]);
+
+  const isTier2Complete = useMemo(() => {
+    return Boolean(
+      isTier1Complete &&
+      profileIdType &&
+      profileIdNumber.trim().length >= 10 &&
+      (isProfileIdVerified || profileIdDocUrl) &&
+      (profileIdDocUrl || profileIdDocName)
+    );
+  }, [isTier1Complete, profileIdType, profileIdNumber, isProfileIdVerified, profileIdDocUrl, profileIdDocName]);
+
+  const isTier3Complete = useMemo(() => {
+    return Boolean(
+      isTier2Complete &&
+      profileAddress.trim() &&
+      profileCity.trim() &&
+      profileStateOfResidence &&
+      (profileProofOfAddressUrl || profileProofOfAddressName) &&
+      profileNextOfKinName.trim() &&
+      profileNextOfKinPhone.trim() &&
+      profileAccountNumber.trim().length === 10 &&
+      isProfileBankVerified
+    );
+  }, [isTier2Complete, profileAddress, profileCity, profileStateOfResidence, profileProofOfAddressUrl, profileProofOfAddressName, profileNextOfKinName, profileNextOfKinPhone, profileAccountNumber, isProfileBankVerified]);
+
+  const tier1MissingFields = useMemo(() => {
+    const missing: string[] = [];
+    if (!profileAvatarUrl) missing.push('Official Passport Photograph upload');
+    if (!profileName.trim()) missing.push('Legal Full Name');
+    if (!profilePhone.trim()) missing.push('Phone Number');
+    if (!profileDob) missing.push('Date of Birth');
+    if (!profileGender) missing.push('Gender');
+    if (!profileStateOfOrigin) missing.push('State of Origin');
+    if (!profileLga.trim()) missing.push('Local Government Area (LGA)');
+    return missing;
+  }, [profileAvatarUrl, profileName, profilePhone, profileDob, profileGender, profileStateOfOrigin, profileLga]);
+
+  const tier2MissingFields = useMemo(() => {
+    const missing: string[] = [];
+    if (!profileIdNumber.trim() || profileIdNumber.trim().length < 10) missing.push(`Valid 10-11 digit ${profileIdType} Number`);
+    if (!isProfileIdVerified && !profileIdDocUrl) missing.push('Government ID Validation');
+    if (!profileIdDocUrl && !profileIdDocName) missing.push('ID Document Proof upload (PDF/Image)');
+    return missing;
+  }, [profileIdType, profileIdNumber, isProfileIdVerified, profileIdDocUrl, profileIdDocName]);
+
+  const tier3MissingFields = useMemo(() => {
+    const missing: string[] = [];
+    if (!profileAddress.trim()) missing.push('Residential Street Address');
+    if (!profileCity.trim()) missing.push('City / Town');
+    if (!profileStateOfResidence) missing.push('State of Residence');
+    if (!profileProofOfAddressUrl && !profileProofOfAddressName) missing.push('Utility Bill / Proof of Address upload');
+    if (!profileNextOfKinName.trim()) missing.push('Next of Kin Full Name');
+    if (!profileNextOfKinPhone.trim()) missing.push('Next of Kin Phone Number');
+    if (profileAccountNumber.trim().length !== 10) missing.push('10-Digit NUBAN Account Number');
+    if (!isProfileBankVerified) missing.push('NUBAN Account Verification');
+    return missing;
+  }, [profileAddress, profileCity, profileStateOfResidence, profileProofOfAddressUrl, profileProofOfAddressName, profileNextOfKinName, profileNextOfKinPhone, profileAccountNumber, isProfileBankVerified]);
+
   // Synchronize profile states if currentUser changes
   useEffect(() => {
     if (currentUser) {
@@ -1316,7 +1388,7 @@ export const SettingsPage: React.FC = () => {
         accountName: profileAccountName,
         bvn: profileBvn,
         isBankVerified: isProfileBankVerified,
-        kycTier: kycMetrics.percentage >= 85 ? 'Tier 3' : kycMetrics.percentage >= 50 ? 'Tier 2' : 'Tier 1',
+        kycTier: isTier3Complete ? 'Tier 3' : isTier2Complete ? 'Tier 2' : 'Tier 1',
         kycStatus: isProfileBankVerified ? 'Verified' : 'Pending Review',
         kycSubmittedAt: new Date().toISOString(),
       });
@@ -1648,680 +1720,1005 @@ export const SettingsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* 1. Official Passport Photograph & Identity Card */}
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-6">
-            <div className="border-b border-outline-variant pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[22px]">badge</span>
+          {/* Progressive 3-Tier Stepper Navigation Bar */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* Step 1 Tab */}
+            <button
+              type="button"
+              onClick={() => setActiveKycStep(1)}
+              className={`p-4 rounded-xl border text-left transition-all flex items-start gap-3 cursor-pointer ${
+                activeKycStep === 1
+                  ? 'bg-primary/10 border-primary shadow-xs'
+                  : isTier1Complete
+                  ? 'bg-surface-container-lowest border-emerald-500/40 hover:bg-surface-container-low'
+                  : 'bg-surface-container-lowest border-outline-variant hover:bg-surface-container-low'
+              }`}
+            >
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-bold text-xs ${
+                isTier1Complete
+                  ? 'bg-emerald-500 text-white'
+                  : activeKycStep === 1
+                  ? 'bg-primary text-on-primary'
+                  : 'bg-surface-container-high text-secondary'
+              }`}>
+                {isTier1Complete ? <span className="material-symbols-outlined text-[18px]">check</span> : '1'}
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-on-surface">Tier 1: Demographics</span>
+                  {isTier1Complete && (
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                      Completed
+                    </span>
+                  )}
                 </div>
-                <div>
-                  <h3 className="font-headline-sm text-base font-bold text-on-surface">
-                    Tier 1: Official Passport Photograph &amp; Personal Demographics
-                  </h3>
-                  <p className="text-xs text-secondary">
-                    Standard Nigerian regulatory biometric photo and civil registration details
+                <p className="text-[11px] text-secondary truncate mt-0.5">Biometric Photo &amp; Civil Info</p>
+              </div>
+            </button>
+
+            {/* Step 2 Tab */}
+            <button
+              type="button"
+              onClick={() => {
+                if (!isTier1Complete) {
+                  showToast('Tier 2 Locked', `Please complete Tier 1 first: ${tier1MissingFields.join(', ')}`, 'warning');
+                  return;
+                }
+                setActiveKycStep(2);
+              }}
+              className={`p-4 rounded-xl border text-left transition-all flex items-start gap-3 ${
+                !isTier1Complete
+                  ? 'opacity-60 bg-surface-container-low/50 border-outline-variant/60 cursor-not-allowed'
+                  : activeKycStep === 2
+                  ? 'bg-primary/10 border-primary shadow-xs cursor-pointer'
+                  : isTier2Complete
+                  ? 'bg-surface-container-lowest border-emerald-500/40 hover:bg-surface-container-low cursor-pointer'
+                  : 'bg-surface-container-lowest border-outline-variant hover:bg-surface-container-low cursor-pointer'
+              }`}
+            >
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-bold text-xs ${
+                !isTier1Complete
+                  ? 'bg-surface-container text-secondary/60'
+                  : isTier2Complete
+                  ? 'bg-emerald-500 text-white'
+                  : activeKycStep === 2
+                  ? 'bg-primary text-on-primary'
+                  : 'bg-surface-container-high text-secondary'
+              }`}>
+                {!isTier1Complete ? (
+                  <span className="material-symbols-outlined text-[18px]">lock</span>
+                ) : isTier2Complete ? (
+                  <span className="material-symbols-outlined text-[18px]">check</span>
+                ) : (
+                  '2'
+                )}
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-on-surface">Tier 2: Government ID</span>
+                  {isTier2Complete ? (
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                      Completed
+                    </span>
+                  ) : !isTier1Complete ? (
+                    <span className="text-[10px] font-medium text-secondary bg-surface-container px-1.5 py-0.5 rounded">
+                      Locked
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-[11px] text-secondary truncate mt-0.5">NIN/BVN &amp; ID Document Proof</p>
+              </div>
+            </button>
+
+            {/* Step 3 Tab */}
+            <button
+              type="button"
+              onClick={() => {
+                if (!isTier2Complete) {
+                  showToast('Tier 3 Locked', `Please complete Tier 2 first: ${tier2MissingFields.join(', ')}`, 'warning');
+                  return;
+                }
+                setActiveKycStep(3);
+              }}
+              className={`p-4 rounded-xl border text-left transition-all flex items-start gap-3 ${
+                !isTier2Complete
+                  ? 'opacity-60 bg-surface-container-low/50 border-outline-variant/60 cursor-not-allowed'
+                  : activeKycStep === 3
+                  ? 'bg-primary/10 border-primary shadow-xs cursor-pointer'
+                  : isTier3Complete
+                  ? 'bg-surface-container-lowest border-emerald-500/40 hover:bg-surface-container-low cursor-pointer'
+                  : 'bg-surface-container-lowest border-outline-variant hover:bg-surface-container-low cursor-pointer'
+              }`}
+            >
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-bold text-xs ${
+                !isTier2Complete
+                  ? 'bg-surface-container text-secondary/60'
+                  : isTier3Complete
+                  ? 'bg-emerald-500 text-white'
+                  : activeKycStep === 3
+                  ? 'bg-primary text-on-primary'
+                  : 'bg-surface-container-high text-secondary'
+              }`}>
+                {!isTier2Complete ? (
+                  <span className="material-symbols-outlined text-[18px]">lock</span>
+                ) : isTier3Complete ? (
+                  <span className="material-symbols-outlined text-[18px]">check</span>
+                ) : (
+                  '3'
+                )}
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-on-surface">Tier 3: Residence &amp; NUBAN</span>
+                  {isTier3Complete ? (
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                      Completed
+                    </span>
+                  ) : !isTier2Complete ? (
+                    <span className="text-[10px] font-medium text-secondary bg-surface-container px-1.5 py-0.5 rounded">
+                      Locked
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-[11px] text-secondary truncate mt-0.5">Utility Bill &amp; Bank Settlement</p>
+              </div>
+            </button>
+          </div>
+
+          {/* STEP 1: TIER 1 BIOMETRIC PHOTO & PERSONAL DEMOGRAPHICS */}
+          {activeKycStep === 1 && (
+            <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-6">
+              <div className="border-b border-outline-variant pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                    <span className="material-symbols-outlined text-[22px]">badge</span>
+                  </div>
+                  <div>
+                    <h3 className="font-headline-sm text-base font-bold text-on-surface">
+                      Tier 1: Official Passport Photograph &amp; Personal Demographics
+                    </h3>
+                    <p className="text-xs text-secondary">
+                      Standard Nigerian regulatory biometric photo and civil registration details
+                    </p>
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold capitalize">
+                  {currentUser?.role?.replace('_', ' ') || 'Staff Member'}
+                </span>
+              </div>
+
+              {/* Passport Photograph Upload Area */}
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 p-4 rounded-xl bg-surface-container-low border border-outline-variant/60">
+                <div className="relative group shrink-0">
+                  <div className="w-28 h-28 rounded-2xl overflow-hidden bg-surface-container border-2 border-primary/30 flex items-center justify-center shadow-inner">
+                    {profileAvatarUrl ? (
+                      <img 
+                        src={profileAvatarUrl} 
+                        alt="Official Passport Photograph" 
+                        className="w-full h-full object-cover" 
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-secondary p-2 text-center">
+                        <span className="material-symbols-outlined text-4xl text-primary/40 mb-1">add_a_photo</span>
+                        <span className="text-[10px] font-semibold leading-tight">No Passport Photo</span>
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    ref={avatarFileInputRef}
+                    onChange={handleAvatarUpload}
+                    accept="image/png, image/jpeg, image/webp"
+                    className="hidden"
+                  />
+                </div>
+
+                <div className="flex-1 space-y-2 text-center sm:text-left">
+                  <div className="flex items-center justify-center sm:justify-start gap-2">
+                    <h4 className="text-sm font-bold text-on-surface">Official Passport Photograph</h4>
+                    <span className="text-[11px] font-bold text-error">* Required for Tier 1</span>
+                  </div>
+                  <p className="text-xs text-secondary leading-relaxed">
+                    Upload a clear, forward-facing color headshot on a plain white or off-white background (PNG, JPG, max 3MB). This photo is mandatory to unlock subsequent KYC tiers.
                   </p>
+                  <div className="flex flex-wrap items-center gap-2 pt-1 justify-center sm:justify-start">
+                    <button
+                      type="button"
+                      onClick={() => avatarFileInputRef.current?.click()}
+                      className="px-3.5 h-9 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">upload</span>
+                      <span>{profileAvatarUrl ? 'Change Passport Photo' : 'Upload Passport Photo'}</span>
+                    </button>
+                    {profileAvatarUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setProfileAvatarUrl('')}
+                        className="px-3 h-9 rounded-lg border border-outline-variant text-xs text-secondary hover:text-error hover:bg-surface-container transition-colors flex items-center gap-1 cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">delete</span>
+                        <span>Remove</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-              <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold capitalize">
-                {currentUser?.role?.replace('_', ' ') || 'Staff Member'}
-              </span>
-            </div>
 
-            {/* Passport Photograph Upload Area */}
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 p-4 rounded-xl bg-surface-container-low border border-outline-variant/60">
-              <div className="relative group shrink-0">
-                <div className="w-28 h-28 rounded-2xl overflow-hidden bg-surface-container border-2 border-primary/30 flex items-center justify-center shadow-inner">
-                  {profileAvatarUrl ? (
-                    <img 
-                      src={profileAvatarUrl} 
-                      alt="Official Passport Photograph" 
-                      className="w-full h-full object-cover" 
-                    />
+              {/* Demographic Inputs */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <label className="font-label-md text-xs font-semibold text-on-surface">
+                    Legal Full Name <span className="text-error">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={profileName}
+                    onChange={e => setProfileName(e.target.value)}
+                    placeholder="e.g. Dr. Arthur Pendelton"
+                    className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-label-md text-xs font-semibold text-on-surface">
+                    Phone Number <span className="text-error">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={profilePhone}
+                    onChange={e => setProfilePhone(e.target.value)}
+                    placeholder="+234 801 234 5678"
+                    className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-label-md text-xs font-semibold text-on-surface">
+                    Date of Birth <span className="text-error">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={profileDob}
+                    onChange={e => setProfileDob(e.target.value)}
+                    className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-label-md text-xs font-semibold text-on-surface">
+                    Gender
+                  </label>
+                  <select
+                    value={profileGender}
+                    onChange={e => setProfileGender(e.target.value as any)}
+                    className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
+                  >
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other / Prefer not to say</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-label-md text-xs font-semibold text-on-surface">
+                    Nationality
+                  </label>
+                  <input
+                    type="text"
+                    value={profileNationality}
+                    onChange={e => setProfileNationality(e.target.value)}
+                    placeholder="Nigerian"
+                    className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-label-md text-xs font-semibold text-on-surface">
+                    State of Origin (Nigeria) <span className="text-error">*</span>
+                  </label>
+                  <select
+                    value={profileStateOfOrigin}
+                    onChange={e => setProfileStateOfOrigin(e.target.value)}
+                    className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
+                  >
+                    {NIGERIAN_STATES.map(s => (
+                      <option key={`origin-${s}`} value={s}>{s} State</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-label-md text-xs font-semibold text-on-surface">
+                    Local Government Area (LGA) <span className="text-error">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={profileLga}
+                    onChange={e => setProfileLga(e.target.value)}
+                    placeholder="e.g. Ikeja, Eti-Osa, Ibadan North"
+                    className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="font-label-md text-xs font-semibold text-on-surface">
+                    Institutional Email (Secured)
+                  </label>
+                  <input
+                    type="email"
+                    disabled
+                    value={currentUser?.email || ''}
+                    className="w-full h-10 px-3 bg-surface-container text-secondary border border-outline-variant rounded-lg font-body-md text-sm cursor-not-allowed outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1 sm:col-span-3">
+                  <label className="font-label-md text-xs font-semibold text-on-surface">
+                    Professional Biography &amp; Academic Summary
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={profileBio}
+                    onChange={e => setProfileBio(e.target.value)}
+                    placeholder="Brief summary of your professional background, certifications, and academic duties..."
+                    className="w-full p-3 bg-surface border border-outline-variant rounded-lg font-body-md text-xs text-on-surface focus:border-primary outline-none resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Tier 1 Completion Feedback Banner */}
+              {isTier1Complete ? (
+                <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-2.5">
+                  <span className="material-symbols-outlined text-emerald-600 text-[20px] shrink-0 mt-0.5">verified</span>
+                  <div className="text-xs text-emerald-800 leading-relaxed">
+                    <strong className="font-bold">Tier 1 Requirements Met!</strong> Biometric passport photograph and all personal demographics are filled. You are eligible to unlock Tier 2.
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5">
+                  <span className="material-symbols-outlined text-amber-600 text-[20px] shrink-0 mt-0.5">warning</span>
+                  <div className="text-xs text-amber-800 leading-relaxed">
+                    <strong className="font-bold">Tier 1 Incomplete:</strong> You must upload a passport photograph and provide: {tier1MissingFields.join(', ')} before advancing to Tier 2.
+                  </div>
+                </div>
+              )}
+
+              {/* Navigation Footer */}
+              <div className="pt-4 border-t border-outline-variant/60 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={handleSaveProfile}
+                  disabled={isSavingProfile}
+                  className="w-full sm:w-auto px-5 h-10 rounded-xl border border-outline-variant text-xs font-bold text-on-surface hover:bg-surface-container transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">save</span>
+                  <span>Save Progress</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isTier1Complete) {
+                      showToast('Tier 1 Incomplete', `Please upload your passport photo and fill all required fields: ${tier1MissingFields.join(', ')}`, 'warning');
+                      return;
+                    }
+                    setActiveKycStep(2);
+                  }}
+                  disabled={!isTier1Complete}
+                  className="w-full sm:w-auto px-6 h-10 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                >
+                  <span>Proceed to Tier 2: Government ID</span>
+                  <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2: TIER 2 GOVERNMENT ID & PROOF SCAN */}
+          {activeKycStep === 2 && (
+            !isTier1Complete ? (
+              <div className="bg-surface-container-lowest border border-amber-500/30 rounded-xl p-8 text-center space-y-4">
+                <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center mx-auto">
+                  <span className="material-symbols-outlined text-3xl">lock</span>
+                </div>
+                <div className="max-w-md mx-auto space-y-2">
+                  <h3 className="font-headline-sm text-lg font-bold text-on-surface">Tier 2 is Locked</h3>
+                  <p className="text-xs text-secondary leading-relaxed">
+                    Under Nigerian regulatory standards, all Tier 1 requirements must be satisfied before government identity credentials can be submitted.
+                  </p>
+                  <div className="p-3 bg-amber-500/10 rounded-lg text-[11px] text-amber-800 text-left">
+                    <strong>Pending Tier 1 Requirements:</strong> {tier1MissingFields.join(', ')}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveKycStep(1)}
+                  className="px-5 h-10 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-all inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                  <span>Return to Tier 1</span>
+                </button>
+              </div>
+            ) : (
+              <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-5">
+                <div className="border-b border-outline-variant pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-[22px]">fingerprint</span>
+                    </div>
+                    <div>
+                      <h3 className="font-headline-sm text-base font-bold text-on-surface">
+                        Tier 2: Government Identification &amp; Document Verification
+                      </h3>
+                      <p className="text-xs text-secondary">
+                        Verification of Federal Government ID issued by NIMC, CBN, FRSC, or Nigerian Immigration
+                      </p>
+                    </div>
+                  </div>
+
+                  {isProfileIdVerified ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#dcfce7] border border-[#86efac] text-[#166534] text-xs font-bold">
+                      <span className="material-symbols-outlined text-[16px]">verified</span>
+                      <span>ID Validated</span>
+                    </span>
                   ) : (
-                    <div className="flex flex-col items-center justify-center text-secondary p-2 text-center">
-                      <span className="material-symbols-outlined text-4xl text-primary/40 mb-1">add_a_photo</span>
-                      <span className="text-[10px] font-semibold leading-tight">No Passport Photo</span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-700 text-xs font-bold">
+                      <span className="material-symbols-outlined text-[16px]">pending</span>
+                      <span>Verification Pending</span>
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="space-y-1">
+                    <label className="font-label-md text-xs font-semibold text-on-surface">
+                      Identity Document Type <span className="text-error">*</span>
+                    </label>
+                    <select
+                      value={profileIdType}
+                      onChange={e => {
+                        setProfileIdType(e.target.value as any);
+                        setIsProfileIdVerified(false);
+                      }}
+                      className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
+                    >
+                      <option value="NIN">National Identity Number (NIN - 11 Digits)</option>
+                      <option value="BVN">Bank Verification Number (BVN - 11 Digits)</option>
+                      <option value="Driver License">FRSC National Driver's License</option>
+                      <option value="International Passport">Nigerian International Passport</option>
+                      <option value="Voter Card">INEC Permanent Voter's Card (PVC)</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="font-label-md text-xs font-semibold text-on-surface">
+                      {profileIdType} Number (Identification Code) <span className="text-error">*</span>
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={profileIdNumber}
+                        onChange={e => {
+                          setProfileIdNumber(e.target.value.trim());
+                          setIsProfileIdVerified(false);
+                        }}
+                        placeholder={`Enter your ${profileIdType} number (e.g. 11 digits for NIN/BVN)`}
+                        className="flex-1 h-10 px-3 bg-surface border border-outline-variant rounded-lg font-data-tabular font-bold text-sm text-on-surface focus:border-primary outline-none tracking-wider"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleVerifyId}
+                        disabled={isVerifyingId || profileIdNumber.length < 10}
+                        className="px-4 h-10 rounded-lg bg-primary text-on-primary font-bold text-xs hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+                      >
+                        {isVerifyingId ? (
+                          <>
+                            <span className="material-symbols-outlined text-[16px] animate-spin">sync</span>
+                            <span>Verifying...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="material-symbols-outlined text-[16px]">verified_user</span>
+                            <span>Validate ID</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* ID Document Proof Upload */}
+                  <div className="space-y-1 sm:col-span-3">
+                    <div className="flex items-center justify-between">
+                      <label className="font-label-md text-xs font-semibold text-on-surface">
+                        ID Card / Bio-Data Page Document Scan (Proof Upload) <span className="text-error">* Required</span>
+                      </label>
+                    </div>
+                    <input
+                      type="file"
+                      ref={idDocFileInputRef}
+                      onChange={handleIdDocUpload}
+                      accept=".pdf,image/png,image/jpeg,image/webp"
+                      className="hidden"
+                    />
+                    <div className="flex flex-col sm:flex-row items-center gap-3 p-3.5 rounded-xl border border-dashed border-outline-variant bg-surface-container-low">
+                      <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary shrink-0">
+                        <span className="material-symbols-outlined text-[22px]">upload_file</span>
+                      </div>
+                      <div className="flex-1 text-center sm:text-left">
+                        <span className="text-xs font-bold text-on-surface block">
+                          {profileIdDocName || 'Attach Clear Copy of Government ID'}
+                        </span>
+                        <span className="text-[11px] text-secondary">
+                          PDF, JPG, PNG format accepted (Max 5MB). Scanned copy of National ID card, passport page, or driver's license.
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => idDocFileInputRef.current?.click()}
+                        className="px-3.5 h-9 rounded-lg bg-surface border border-outline-variant text-xs font-semibold text-on-surface hover:bg-surface-container transition-colors cursor-pointer shrink-0"
+                      >
+                        {profileIdDocName ? 'Replace Document' : 'Browse File'}
+                      </button>
+                      {profileIdDocName && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProfileIdDocName('');
+                            setProfileIdDocUrl('');
+                          }}
+                          className="p-1.5 text-error hover:bg-error-container/20 rounded cursor-pointer"
+                          title="Remove attachment"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">close</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tier 2 Feedback Banner */}
+                {isTier2Complete ? (
+                  <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-2.5">
+                    <span className="material-symbols-outlined text-emerald-600 text-[20px] shrink-0 mt-0.5">verified</span>
+                    <div className="text-xs text-emerald-800 leading-relaxed">
+                      <strong className="font-bold">Tier 2 Requirements Met!</strong> Federal Government ID validated and scanned document attached. You can now advance to Tier 3.
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5">
+                    <span className="material-symbols-outlined text-amber-600 text-[20px] shrink-0 mt-0.5">warning</span>
+                    <div className="text-xs text-amber-800 leading-relaxed">
+                      <strong className="font-bold">Tier 2 Incomplete:</strong> You must validate your ID number and upload an ID document scan: {tier2MissingFields.join(', ')}.
+                    </div>
+                  </div>
+                )}
+
+                {/* Navigation Footer */}
+                <div className="pt-4 border-t border-outline-variant/60 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setActiveKycStep(1)}
+                    className="w-full sm:w-auto px-4 h-10 rounded-xl border border-outline-variant text-xs font-bold text-on-surface hover:bg-surface-container transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                    <span>Back to Tier 1</span>
+                  </button>
+                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <button
+                      type="button"
+                      onClick={handleSaveProfile}
+                      disabled={isSavingProfile}
+                      className="px-5 h-10 rounded-xl border border-outline-variant text-xs font-bold text-on-surface hover:bg-surface-container transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">save</span>
+                      <span>Save Progress</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isTier2Complete) {
+                          showToast('Tier 2 Incomplete', `Please validate your ID and attach proof document: ${tier2MissingFields.join(', ')}`, 'warning');
+                          return;
+                        }
+                        setActiveKycStep(3);
+                      }}
+                      disabled={!isTier2Complete}
+                      className="w-full sm:w-auto px-6 h-10 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                    >
+                      <span>Proceed to Tier 3: Residence &amp; NUBAN</span>
+                      <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
+          )}
+
+          {/* STEP 3: TIER 3 RESIDENTIAL ADDRESS, NEXT OF KIN & SETTLEMENT NUBAN */}
+          {activeKycStep === 3 && (
+            !isTier2Complete ? (
+              <div className="bg-surface-container-lowest border border-amber-500/30 rounded-xl p-8 text-center space-y-4">
+                <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center mx-auto">
+                  <span className="material-symbols-outlined text-3xl">lock</span>
+                </div>
+                <div className="max-w-md mx-auto space-y-2">
+                  <h3 className="font-headline-sm text-lg font-bold text-on-surface">Tier 3 is Locked</h3>
+                  <p className="text-xs text-secondary leading-relaxed">
+                    Tier 3 settlement verification requires that your Tier 2 Government ID is validated and documented.
+                  </p>
+                  <div className="p-3 bg-amber-500/10 rounded-lg text-[11px] text-amber-800 text-left">
+                    <strong>Pending Tier 2 Requirements:</strong> {tier2MissingFields.join(', ')}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveKycStep(2)}
+                  className="px-5 h-10 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-all inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                  <span>Return to Tier 2</span>
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* 3. Tier 3: Residential Address & Proof of Residence */}
+                <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-5">
+                  <div className="border-b border-outline-variant pb-3 flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-violet-500/10 text-violet-600 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-[22px]">home_pin</span>
+                    </div>
+                    <div>
+                      <h3 className="font-headline-sm text-base font-bold text-on-surface">
+                        Tier 3: Residential Address &amp; Proof of Residence
+                      </h3>
+                      <p className="text-xs text-secondary">
+                        Physical location verification compliant with Nigerian anti-fraud and banking mandates
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="font-label-md text-xs font-semibold text-on-surface">
+                        Residential Street Address <span className="text-error">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={profileAddress}
+                        onChange={e => setProfileAddress(e.target.value)}
+                        placeholder="e.g. Plot 14, Adeola Odeku Street, Victoria Island"
+                        className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-label-md text-xs font-semibold text-on-surface">
+                        City / Town <span className="text-error">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={profileCity}
+                        onChange={e => setProfileCity(e.target.value)}
+                        placeholder="e.g. Lagos, Ikeja, Abuja"
+                        className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-label-md text-xs font-semibold text-on-surface">
+                        State of Residence <span className="text-error">*</span>
+                      </label>
+                      <select
+                        value={profileStateOfResidence}
+                        onChange={e => setProfileStateOfResidence(e.target.value)}
+                        className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
+                      >
+                        {NIGERIAN_STATES.map(s => (
+                          <option key={`residence-${s}`} value={s}>{s} State</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Utility Bill / Proof of Address Upload */}
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="font-label-md text-xs font-semibold text-on-surface">
+                        Utility Bill / Tenancy Receipt (Proof of Address) <span className="text-error">* Required</span>
+                      </label>
+                      <input
+                        type="file"
+                        ref={proofAddressFileInputRef}
+                        onChange={handleProofAddressUpload}
+                        accept=".pdf,image/png,image/jpeg,image/webp"
+                        className="hidden"
+                      />
+                      <div className="flex items-center gap-3 p-2.5 rounded-lg border border-outline-variant bg-surface">
+                        <span className="material-symbols-outlined text-primary text-[20px]">receipt_long</span>
+                        <div className="flex-1 truncate">
+                          <span className="text-xs font-semibold text-on-surface block truncate">
+                            {profileProofOfAddressName || 'Attach electricity bill (EKEDC/IBEDC/AEDC) or tenancy receipt'}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => proofAddressFileInputRef.current?.click()}
+                          className="px-3 h-8 rounded bg-surface-container hover:bg-surface-container-high text-xs font-semibold text-on-surface cursor-pointer shrink-0"
+                        >
+                          {profileProofOfAddressName ? 'Replace' : 'Upload Proof'}
+                        </button>
+                        {profileProofOfAddressName && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProfileProofOfAddressName('');
+                              setProfileProofOfAddressUrl('');
+                            }}
+                            className="p-1 text-error hover:bg-error-container/20 rounded cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">close</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Next of Kin / Emergency Guarantor */}
+                <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-5">
+                  <div className="border-b border-outline-variant pb-3 flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-[22px]">contact_emergency</span>
+                    </div>
+                    <div>
+                      <h3 className="font-headline-sm text-base font-bold text-on-surface">
+                        Next of Kin &amp; Emergency Contact Details
+                      </h3>
+                      <p className="text-xs text-secondary">
+                        Mandatory in Nigerian institutional and banking regulations for emergency correspondence and legal welfare
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="space-y-1">
+                      <label className="font-label-md text-xs font-semibold text-on-surface">
+                        Next of Kin Full Name <span className="text-error">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={profileNextOfKinName}
+                        onChange={e => setProfileNextOfKinName(e.target.value)}
+                        placeholder="e.g. Folake Pendelton"
+                        className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-label-md text-xs font-semibold text-on-surface">
+                        Relationship <span className="text-error">*</span>
+                      </label>
+                      <select
+                        value={profileNextOfKinRel}
+                        onChange={e => setProfileNextOfKinRel(e.target.value)}
+                        className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
+                      >
+                        <option value="Spouse">Spouse</option>
+                        <option value="Sibling">Sibling (Brother / Sister)</option>
+                        <option value="Parent">Parent (Mother / Father)</option>
+                        <option value="Child">Child (Son / Daughter)</option>
+                        <option value="Guardian">Guardian / Legal Representative</option>
+                        <option value="Next of Kin">Next of Kin / Relative</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-label-md text-xs font-semibold text-on-surface">
+                        Next of Kin Phone Number <span className="text-error">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={profileNextOfKinPhone}
+                        onChange={e => setProfileNextOfKinPhone(e.target.value)}
+                        placeholder="+234 802 345 6789"
+                        className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-label-md text-xs font-semibold text-on-surface">
+                        Contact Address
+                      </label>
+                      <input
+                        type="text"
+                        value={profileNextOfKinAddress}
+                        onChange={e => setProfileNextOfKinAddress(e.target.value)}
+                        placeholder="City, State"
+                        className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5. Nigerian Bank Settlement & Payout KYC (NUBAN & NIBSS) */}
+                <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-5">
+                  <div className="border-b border-outline-variant pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                        <span className="material-symbols-outlined text-[22px]">account_balance</span>
+                      </div>
+                      <div>
+                        <h3 className="font-headline-sm text-base font-bold text-on-surface">
+                          Nigerian Bank Settlement Account &amp; Disbursement KYC
+                        </h3>
+                        <p className="text-xs text-secondary">
+                          Live NIBSS verified account for OpEx reimbursements, travel allowances, and faculty 37% payouts
+                        </p>
+                      </div>
+                    </div>
+
+                    {isProfileBankVerified ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#dcfce7] border border-[#86efac] text-[#166534] text-xs font-bold">
+                        <span className="material-symbols-outlined text-[16px]">verified</span>
+                        <span>NUBAN Verified via NIBSS</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-700 text-xs font-bold">
+                        <span className="material-symbols-outlined text-[16px]">warning</span>
+                        <span>Unverified Bank Account</span>
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                      <label className="font-label-md text-xs font-semibold text-on-surface">
+                        Financial Institution (Bank) <span className="text-error">*</span>
+                      </label>
+                      <select
+                        value={profileBankName}
+                        onChange={e => {
+                          const selectedName = e.target.value;
+                          setProfileBankName(selectedName);
+                          const matchedBank = NIGERIAN_BANKS.find(b => b.name === selectedName);
+                          if (matchedBank) {
+                            setProfileBankCode(matchedBank.code);
+                          }
+                          setIsProfileBankVerified(false);
+                        }}
+                        className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
+                      >
+                        {NIGERIAN_BANKS.map(b => (
+                          <option key={`${b.code}-${b.name}`} value={b.name}>
+                            {b.name} ({b.category})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-label-md text-xs font-semibold text-on-surface">
+                        10-Digit NUBAN Account Number <span className="text-error">*</span>
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          maxLength={10}
+                          value={profileAccountNumber}
+                          onChange={e => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            setProfileAccountNumber(val);
+                            if (val !== profileAccountNumber) {
+                              setIsProfileBankVerified(false);
+                            }
+                          }}
+                          placeholder="0123456789"
+                          className="flex-1 h-10 px-3 bg-surface border border-outline-variant rounded-lg font-data-tabular font-bold text-sm text-on-surface focus:border-primary outline-none tracking-wider"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleVerifyProfileBank}
+                          disabled={isVerifyingBank || profileAccountNumber.length !== 10}
+                          className="px-4 h-10 rounded-lg bg-primary text-on-primary font-bold text-xs hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+                        >
+                          {isVerifyingBank ? (
+                            <>
+                              <span className="material-symbols-outlined text-[16px] animate-spin">sync</span>
+                              <span>Verifying...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="material-symbols-outlined text-[16px]">verified</span>
+                              <span>Verify NUBAN</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-label-md text-xs font-semibold text-on-surface">
+                        Bank Verification Number (BVN) <span className="text-secondary font-normal">(Cross-check)</span>
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={11}
+                        value={profileBvn}
+                        onChange={e => setProfileBvn(e.target.value.replace(/\D/g, ''))}
+                        placeholder="11-Digit BVN (Optional)"
+                        className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-data-tabular text-sm text-on-surface focus:border-primary outline-none tracking-wider"
+                      />
+                    </div>
+
+                    <div className="space-y-1 sm:col-span-3">
+                      <label className="font-label-md text-xs font-semibold text-on-surface">
+                        Verified Beneficiary Account Name
+                      </label>
+                      <input
+                        type="text"
+                        value={profileAccountName}
+                        onChange={e => setProfileAccountName(e.target.value)}
+                        placeholder="Official name registered with your bank"
+                        className={`w-full h-10 px-3 rounded-lg font-body-md text-sm outline-none ${
+                          isProfileBankVerified
+                            ? 'bg-emerald-50 text-emerald-900 border border-emerald-300 font-bold'
+                            : 'bg-surface border border-outline-variant text-on-surface focus:border-primary'
+                        }`}
+                      />
+                      {isProfileBankVerified && (
+                        <p className="text-[11px] text-emerald-700 font-medium flex items-center gap-1 mt-1">
+                          <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                          <span>Account name verified against NIBSS / CBN electronic registry. Automatic payouts enabled.</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Tier 3 Feedback Banner */}
+                  {isTier3Complete ? (
+                    <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-2.5">
+                      <span className="material-symbols-outlined text-emerald-600 text-[20px] shrink-0 mt-0.5">verified</span>
+                      <div className="text-xs text-emerald-800 leading-relaxed">
+                        <strong className="font-bold">Full 3-Tier Nigerian KYC Complete!</strong> Your profile meets all CBN compliance mandates and is fully active for direct automated disbursements.
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5">
+                      <span className="material-symbols-outlined text-amber-600 text-[20px] shrink-0 mt-0.5">warning</span>
+                      <div className="text-xs text-amber-800 leading-relaxed">
+                        <strong className="font-bold">Pending Requirements:</strong> {tier3MissingFields.join(', ')}. You can save progress at any time.
+                      </div>
                     </div>
                   )}
-                </div>
-                <input
-                  type="file"
-                  ref={avatarFileInputRef}
-                  onChange={handleAvatarUpload}
-                  accept="image/png, image/jpeg, image/webp"
-                  className="hidden"
-                />
-              </div>
 
-              <div className="flex-1 space-y-2 text-center sm:text-left">
-                <h4 className="text-sm font-bold text-on-surface">Official Passport Photograph</h4>
-                <p className="text-xs text-secondary leading-relaxed">
-                  Upload a clear, forward-facing color headshot on a plain white or off-white background (PNG, JPG, max 3MB). This photo is affixed to your institutional credentials, digital ID, and faculty profile.
-                </p>
-                <div className="flex flex-wrap items-center gap-2 pt-1 justify-center sm:justify-start">
-                  <button
-                    type="button"
-                    onClick={() => avatarFileInputRef.current?.click()}
-                    className="px-3.5 h-9 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">upload</span>
-                    <span>{profileAvatarUrl ? 'Change Passport Photo' : 'Upload Passport Photo'}</span>
-                  </button>
-                  {profileAvatarUrl && (
+                  <div className="pt-4 border-t border-outline-variant/60 flex flex-col sm:flex-row items-center justify-between gap-3">
                     <button
                       type="button"
-                      onClick={() => setProfileAvatarUrl('')}
-                      className="px-3 h-9 rounded-lg border border-outline-variant text-xs text-secondary hover:text-error hover:bg-surface-container transition-colors flex items-center gap-1 cursor-pointer"
+                      onClick={() => setActiveKycStep(2)}
+                      className="w-full sm:w-auto px-4 h-10 rounded-xl border border-outline-variant text-xs font-bold text-on-surface hover:bg-surface-container transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-[16px]">delete</span>
-                      <span>Remove</span>
+                      <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                      <span>Back to Tier 2</span>
                     </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Demographic Inputs */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  Legal Full Name <span className="text-error">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={profileName}
-                  onChange={e => setProfileName(e.target.value)}
-                  placeholder="e.g. Dr. Arthur Pendelton"
-                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  Phone Number <span className="text-error">*</span>
-                </label>
-                <input
-                  type="tel"
-                  required
-                  value={profilePhone}
-                  onChange={e => setProfilePhone(e.target.value)}
-                  placeholder="+234 801 234 5678"
-                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  Date of Birth <span className="text-error">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={profileDob}
-                  onChange={e => setProfileDob(e.target.value)}
-                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  Gender
-                </label>
-                <select
-                  value={profileGender}
-                  onChange={e => setProfileGender(e.target.value as any)}
-                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
-                >
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other / Prefer not to say</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  Nationality
-                </label>
-                <input
-                  type="text"
-                  value={profileNationality}
-                  onChange={e => setProfileNationality(e.target.value)}
-                  placeholder="Nigerian"
-                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  State of Origin (Nigeria)
-                </label>
-                <select
-                  value={profileStateOfOrigin}
-                  onChange={e => setProfileStateOfOrigin(e.target.value)}
-                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
-                >
-                  {NIGERIAN_STATES.map(s => (
-                    <option key={`origin-${s}`} value={s}>{s} State</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  Local Government Area (LGA)
-                </label>
-                <input
-                  type="text"
-                  value={profileLga}
-                  onChange={e => setProfileLga(e.target.value)}
-                  placeholder="e.g. Ikeja, Eti-Osa, Ibadan North"
-                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
-                />
-              </div>
-
-              <div className="space-y-1 sm:col-span-2">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  Institutional Email (Secured)
-                </label>
-                <input
-                  type="email"
-                  disabled
-                  value={currentUser?.email || ''}
-                  className="w-full h-10 px-3 bg-surface-container text-secondary border border-outline-variant rounded-lg font-body-md text-sm cursor-not-allowed outline-none"
-                />
-              </div>
-
-              <div className="space-y-1 sm:col-span-3">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  Professional Biography &amp; Academic Summary
-                </label>
-                <textarea
-                  rows={2}
-                  value={profileBio}
-                  onChange={e => setProfileBio(e.target.value)}
-                  placeholder="Brief summary of your professional background, certifications, and academic duties..."
-                  className="w-full p-3 bg-surface border border-outline-variant rounded-lg font-body-md text-xs text-on-surface focus:border-primary outline-none resize-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 2. Tier 2: Government Identity Verification (NIN / BVN / ID Doc) */}
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-5">
-            <div className="border-b border-outline-variant pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[22px]">fingerprint</span>
-                </div>
-                <div>
-                  <h3 className="font-headline-sm text-base font-bold text-on-surface">
-                    Tier 2: Government Identification &amp; Document Verification
-                  </h3>
-                  <p className="text-xs text-secondary">
-                    Verification of Federal Government ID issued by NIMC, CBN, FRSC, or Nigerian Immigration
-                  </p>
-                </div>
-              </div>
-
-              {isProfileIdVerified ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#dcfce7] border border-[#86efac] text-[#166534] text-xs font-bold">
-                  <span className="material-symbols-outlined text-[16px]">verified</span>
-                  <span>ID Validated</span>
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-700 text-xs font-bold">
-                  <span className="material-symbols-outlined text-[16px]">pending</span>
-                  <span>Verification Pending</span>
-                </span>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  Identity Document Type <span className="text-error">*</span>
-                </label>
-                <select
-                  value={profileIdType}
-                  onChange={e => {
-                    setProfileIdType(e.target.value as any);
-                    setIsProfileIdVerified(false);
-                  }}
-                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
-                >
-                  <option value="NIN">National Identity Number (NIN - 11 Digits)</option>
-                  <option value="BVN">Bank Verification Number (BVN - 11 Digits)</option>
-                  <option value="Driver License">FRSC National Driver's License</option>
-                  <option value="International Passport">Nigerian International Passport</option>
-                  <option value="Voter Card">INEC Permanent Voter's Card (PVC)</option>
-                </select>
-              </div>
-
-              <div className="space-y-1 sm:col-span-2">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  {profileIdType} Number (Identification Code) <span className="text-error">*</span>
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={profileIdNumber}
-                    onChange={e => {
-                      setProfileIdNumber(e.target.value.trim());
-                      setIsProfileIdVerified(false);
-                    }}
-                    placeholder={`Enter your ${profileIdType} number (e.g. 11 digits for NIN/BVN)`}
-                    className="flex-1 h-10 px-3 bg-surface border border-outline-variant rounded-lg font-data-tabular font-bold text-sm text-on-surface focus:border-primary outline-none tracking-wider"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleVerifyId}
-                    disabled={isVerifyingId || profileIdNumber.length < 10}
-                    className="px-4 h-10 rounded-lg bg-primary text-on-primary font-bold text-xs hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
-                  >
-                    {isVerifyingId ? (
-                      <>
-                        <span className="material-symbols-outlined text-[16px] animate-spin">sync</span>
-                        <span>Verifying...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="material-symbols-outlined text-[16px]">verified_user</span>
-                        <span>Validate ID</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* ID Document Proof Upload */}
-              <div className="space-y-1 sm:col-span-3">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  ID Card / Bio-Data Page Document Scan (Proof Upload)
-                </label>
-                <input
-                  type="file"
-                  ref={idDocFileInputRef}
-                  onChange={handleIdDocUpload}
-                  accept=".pdf,image/png,image/jpeg,image/webp"
-                  className="hidden"
-                />
-                <div className="flex flex-col sm:flex-row items-center gap-3 p-3.5 rounded-xl border border-dashed border-outline-variant bg-surface-container-low">
-                  <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary shrink-0">
-                    <span className="material-symbols-outlined text-[22px]">upload_file</span>
-                  </div>
-                  <div className="flex-1 text-center sm:text-left">
-                    <span className="text-xs font-bold text-on-surface block">
-                      {profileIdDocName || 'Attach Clear Copy of Government ID'}
-                    </span>
-                    <span className="text-[11px] text-secondary">
-                      PDF, JPG, PNG format accepted (Max 5MB). Scanned copy of National ID card, passport page, or driver's license.
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => idDocFileInputRef.current?.click()}
-                    className="px-3.5 h-9 rounded-lg bg-surface border border-outline-variant text-xs font-semibold text-on-surface hover:bg-surface-container transition-colors cursor-pointer shrink-0"
-                  >
-                    {profileIdDocName ? 'Replace Document' : 'Browse File'}
-                  </button>
-                  {profileIdDocName && (
                     <button
-                      type="button"
-                      onClick={() => {
-                        setProfileIdDocName('');
-                        setProfileIdDocUrl('');
-                      }}
-                      className="p-1.5 text-error hover:bg-error-container/20 rounded cursor-pointer"
-                      title="Remove attachment"
+                      type="submit"
+                      disabled={isSavingProfile}
+                      className="w-full sm:w-auto px-8 h-11 bg-primary text-on-primary rounded-xl text-sm font-bold hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
                     >
-                      <span className="material-symbols-outlined text-[18px]">close</span>
+                      {isSavingProfile ? (
+                        <>
+                          <span className="material-symbols-outlined text-[18px] animate-spin">sync</span>
+                          <span>Saving KYC Profile...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined text-[18px]">verified</span>
+                          <span>Save &amp; Persist KYC Information</span>
+                        </>
+                      )}
                     </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 3. Tier 3: Residential Address & Proof of Residence */}
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-5">
-            <div className="border-b border-outline-variant pb-3 flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-violet-500/10 text-violet-600 flex items-center justify-center">
-                <span className="material-symbols-outlined text-[22px]">home_pin</span>
-              </div>
-              <div>
-                <h3 className="font-headline-sm text-base font-bold text-on-surface">
-                  Tier 3: Residential Address &amp; Proof of Residence
-                </h3>
-                <p className="text-xs text-secondary">
-                  Physical location verification compliant with Nigerian anti-fraud and banking mandates
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-1 sm:col-span-2">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  Residential Street Address <span className="text-error">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={profileAddress}
-                  onChange={e => setProfileAddress(e.target.value)}
-                  placeholder="e.g. Plot 14, Adeola Odeku Street, Victoria Island"
-                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  City / Town <span className="text-error">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={profileCity}
-                  onChange={e => setProfileCity(e.target.value)}
-                  placeholder="e.g. Lagos, Ikeja, Abuja"
-                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  State of Residence <span className="text-error">*</span>
-                </label>
-                <select
-                  value={profileStateOfResidence}
-                  onChange={e => setProfileStateOfResidence(e.target.value)}
-                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
-                >
-                  {NIGERIAN_STATES.map(s => (
-                    <option key={`residence-${s}`} value={s}>{s} State</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Utility Bill / Proof of Address Upload */}
-              <div className="space-y-1 sm:col-span-2">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  Utility Bill / Tenancy Receipt (Proof of Address)
-                </label>
-                <input
-                  type="file"
-                  ref={proofAddressFileInputRef}
-                  onChange={handleProofAddressUpload}
-                  accept=".pdf,image/png,image/jpeg,image/webp"
-                  className="hidden"
-                />
-                <div className="flex items-center gap-3 p-2.5 rounded-lg border border-outline-variant bg-surface">
-                  <span className="material-symbols-outlined text-primary text-[20px]">receipt_long</span>
-                  <div className="flex-1 truncate">
-                    <span className="text-xs font-semibold text-on-surface block truncate">
-                      {profileProofOfAddressName || 'Attach electricity bill (EKEDC/IBEDC/AEDC) or tenancy receipt'}
-                    </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => proofAddressFileInputRef.current?.click()}
-                    className="px-3 h-8 rounded bg-surface-container hover:bg-surface-container-high text-xs font-semibold text-on-surface cursor-pointer shrink-0"
-                  >
-                    {profileProofOfAddressName ? 'Replace' : 'Upload Proof'}
-                  </button>
-                  {profileProofOfAddressName && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setProfileProofOfAddressName('');
-                        setProfileProofOfAddressUrl('');
-                      }}
-                      className="p-1 text-error hover:bg-error-container/20 rounded cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">close</span>
-                    </button>
-                  )}
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* 4. Next of Kin / Emergency Guarantor */}
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-5">
-            <div className="border-b border-outline-variant pb-3 flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
-                <span className="material-symbols-outlined text-[22px]">contact_emergency</span>
-              </div>
-              <div>
-                <h3 className="font-headline-sm text-base font-bold text-on-surface">
-                  Next of Kin &amp; Emergency Contact Details
-                </h3>
-                <p className="text-xs text-secondary">
-                  Mandatory in Nigerian institutional and banking regulations for emergency correspondence and legal welfare
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="space-y-1">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  Next of Kin Full Name <span className="text-error">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={profileNextOfKinName}
-                  onChange={e => setProfileNextOfKinName(e.target.value)}
-                  placeholder="e.g. Folake Pendelton"
-                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  Relationship <span className="text-error">*</span>
-                </label>
-                <select
-                  value={profileNextOfKinRel}
-                  onChange={e => setProfileNextOfKinRel(e.target.value)}
-                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
-                >
-                  <option value="Spouse">Spouse</option>
-                  <option value="Sibling">Sibling (Brother / Sister)</option>
-                  <option value="Parent">Parent (Mother / Father)</option>
-                  <option value="Child">Child (Son / Daughter)</option>
-                  <option value="Guardian">Guardian / Legal Representative</option>
-                  <option value="Next of Kin">Next of Kin / Relative</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  Next of Kin Phone Number <span className="text-error">*</span>
-                </label>
-                <input
-                  type="tel"
-                  required
-                  value={profileNextOfKinPhone}
-                  onChange={e => setProfileNextOfKinPhone(e.target.value)}
-                  placeholder="+234 802 345 6789"
-                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  Contact Address
-                </label>
-                <input
-                  type="text"
-                  value={profileNextOfKinAddress}
-                  onChange={e => setProfileNextOfKinAddress(e.target.value)}
-                  placeholder="City, State"
-                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 5. Nigerian Bank Settlement & Payout KYC (NUBAN & NIBSS) */}
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-5">
-            <div className="border-b border-outline-variant pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[22px]">account_balance</span>
-                </div>
-                <div>
-                  <h3 className="font-headline-sm text-base font-bold text-on-surface">
-                    Nigerian Bank Settlement Account &amp; Disbursement KYC
-                  </h3>
-                  <p className="text-xs text-secondary">
-                    Live NIBSS verified account for OpEx reimbursements, travel allowances, and faculty 37% payouts
-                  </p>
-                </div>
-              </div>
-
-              {isProfileBankVerified ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#dcfce7] border border-[#86efac] text-[#166534] text-xs font-bold">
-                  <span className="material-symbols-outlined text-[16px]">verified</span>
-                  <span>NUBAN Verified via NIBSS</span>
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-700 text-xs font-bold">
-                  <span className="material-symbols-outlined text-[16px]">warning</span>
-                  <span>Unverified Bank Account</span>
-                </span>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  Financial Institution (Bank) <span className="text-error">*</span>
-                </label>
-                <select
-                  value={profileBankName}
-                  onChange={e => {
-                    const selectedName = e.target.value;
-                    setProfileBankName(selectedName);
-                    const matchedBank = NIGERIAN_BANKS.find(b => b.name === selectedName);
-                    if (matchedBank) {
-                      setProfileBankCode(matchedBank.code);
-                    }
-                    setIsProfileBankVerified(false);
-                  }}
-                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
-                >
-                  {NIGERIAN_BANKS.map(b => (
-                    <option key={`${b.code}-${b.name}`} value={b.name}>
-                      {b.name} ({b.category})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  10-Digit NUBAN Account Number <span className="text-error">*</span>
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    maxLength={10}
-                    value={profileAccountNumber}
-                    onChange={e => {
-                      const val = e.target.value.replace(/\D/g, '');
-                      setProfileAccountNumber(val);
-                      if (val !== profileAccountNumber) {
-                        setIsProfileBankVerified(false);
-                      }
-                    }}
-                    placeholder="0123456789"
-                    className="flex-1 h-10 px-3 bg-surface border border-outline-variant rounded-lg font-data-tabular font-bold text-sm text-on-surface focus:border-primary outline-none tracking-wider"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleVerifyProfileBank}
-                    disabled={isVerifyingBank || profileAccountNumber.length !== 10}
-                    className="px-4 h-10 rounded-lg bg-primary text-on-primary font-bold text-xs hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
-                  >
-                    {isVerifyingBank ? (
-                      <>
-                        <span className="material-symbols-outlined text-[16px] animate-spin">sync</span>
-                        <span>Verifying...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="material-symbols-outlined text-[16px]">verified</span>
-                        <span>Verify NUBAN</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  Bank Verification Number (BVN) <span className="text-secondary font-normal">(Cross-check)</span>
-                </label>
-                <input
-                  type="text"
-                  maxLength={11}
-                  value={profileBvn}
-                  onChange={e => setProfileBvn(e.target.value.replace(/\D/g, ''))}
-                  placeholder="11-Digit BVN (Optional)"
-                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-data-tabular text-sm text-on-surface focus:border-primary outline-none tracking-wider"
-                />
-              </div>
-
-              <div className="space-y-1 sm:col-span-3">
-                <label className="font-label-md text-xs font-semibold text-on-surface">
-                  Verified Beneficiary Account Name
-                </label>
-                <input
-                  type="text"
-                  value={profileAccountName}
-                  onChange={e => setProfileAccountName(e.target.value)}
-                  placeholder="Official name registered with your bank"
-                  className={`w-full h-10 px-3 rounded-lg font-body-md text-sm outline-none ${
-                    isProfileBankVerified
-                      ? 'bg-emerald-50 text-emerald-900 border border-emerald-300 font-bold'
-                      : 'bg-surface border border-outline-variant text-on-surface focus:border-primary'
-                  }`}
-                />
-                {isProfileBankVerified && (
-                  <p className="text-[11px] text-emerald-700 font-medium flex items-center gap-1 mt-1">
-                    <span className="material-symbols-outlined text-[14px]">check_circle</span>
-                    <span>Account name verified against NIBSS / CBN electronic registry. Automatic payouts enabled.</span>
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-outline-variant/60 flex items-center justify-between">
-              <span className="text-xs text-secondary">
-                Ready to save your verified Nigerian Standard KYC profile?
-              </span>
-              <button
-                type="submit"
-                disabled={isSavingProfile}
-                className="px-8 h-11 bg-primary text-on-primary rounded-xl text-sm font-bold hover:bg-primary/90 transition-colors flex items-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
-              >
-                {isSavingProfile ? (
-                  <>
-                    <span className="material-symbols-outlined text-[18px] animate-spin">sync</span>
-                    <span>Saving KYC Profile...</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="material-symbols-outlined text-[18px]">verified</span>
-                    <span>Save &amp; Persist KYC Information</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
+            )
+          )}
         </form>
       )}
 

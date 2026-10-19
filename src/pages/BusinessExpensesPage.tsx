@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useCRM, formatNaira } from '../context/CRMContext';
 import { Expense, ExpenseStatus, WalletTransaction } from '../types/crm';
 import { RejectExpenseModal } from '../components/modals/RejectExpenseModal';
 import { ViewExpenseModal } from '../components/modals/ViewExpenseModal';
 import { WalletTransactionDetailsModal } from '../components/modals/WalletTransactionDetailsModal';
 import { CrispStatusBadge } from '../components/common/CrispStatusBadge';
+import { apiService } from '../services/api';
 
 export interface BusinessExpensesPageProps {}
 
@@ -24,6 +25,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
     setSelectedExpenseForDisburse,
     generateVirtualAccount,
     reconcileWalletWithPaystack,
+    refreshWalletSummary,
     isSyncingWallet,
     hasFeaturePermission
   } = useCRM();
@@ -35,6 +37,24 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   const [newBudgetValue, setNewBudgetValue] = useState<number>(settings.operatingBudget || 1500000);
   const [copiedNuban, setCopiedNuban] = useState(false);
+  const [livePaystackBal, setLivePaystackBal] = useState<number | null>(null);
+
+  useEffect(() => {
+    refreshWalletSummary();
+    apiService.getPaystackBalance().then(res => {
+      if (res && typeof res.balance === 'number') {
+        setLivePaystackBal(res.balance);
+      }
+    }).catch(() => {});
+  }, []);
+
+  const handleSyncWallet = async () => {
+    await reconcileWalletWithPaystack();
+    const res = await apiService.getPaystackBalance();
+    if (res && typeof res.balance === 'number') {
+      setLivePaystackBal(res.balance);
+    }
+  };
   
   // Rejection modal state
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -293,44 +313,46 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
 
       {/* Operational Expense & Budget Wallet Hero Card */}
       <div className="bg-crisp-black text-white rounded-xl p-6 border border-[#D9E6E8]/20 relative overflow-hidden">
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
           {/* Left Column: Wallet Liquid Balance */}
-          <div className="lg:col-span-6 space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                Operational Expense &amp; Budget Wallet
-              </span>
-              <span className="text-white/60 text-xs">• Paystack NIBSS</span>
-            </div>
+          <div className="lg:col-span-5 space-y-3 flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  Operational Expense &amp; Budget Wallet
+                </span>
+                <span className="text-white/60 text-xs">• Paystack NIBSS</span>
+              </div>
 
-            <div>
-              <span className="text-white/70 text-xs font-medium">Available Liquid Balance</span>
-              <div className="font-display text-3xl sm:text-4xl font-bold font-data-tabular text-white tracking-tight flex items-baseline gap-2 mt-0.5">
-                <span>{formatNaira(wallet?.balance || 0)}</span>
-                <span className="text-xs text-emerald-300 font-sans font-semibold bg-white/10 px-2 py-0.5 rounded-full">
-                  Liquid Funds
+              <div>
+                <span className="text-white/70 text-xs font-medium">Available Liquid Balance</span>
+                <div className="font-display text-3xl sm:text-4xl font-bold font-data-tabular text-white tracking-tight flex items-baseline gap-2 mt-0.5">
+                  <span>{formatNaira(wallet?.balance || 0)}</span>
+                  <span className="text-xs text-emerald-300 font-sans font-semibold bg-white/10 px-2 py-0.5 rounded-full">
+                    Liquid Funds
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-0.5 text-xs text-white/80 flex-wrap">
+                <span className="flex items-center gap-1">
+                  <span className="text-white/50">Total Inflows Funded:</span> 
+                  <strong className="text-emerald-300 font-data-tabular">{formatNaira(wallet?.totalInflow ?? wallet?.balance ?? 0)}</strong>
+                </span>
+                <span>•</span>
+                <span className="flex items-center gap-1">
+                  <span className="text-white/50">Total Outflows:</span> 
+                  <strong className="text-white font-data-tabular">{formatNaira(wallet?.totalOutflow || 0)}</strong>
                 </span>
               </div>
+
+              <p className="text-white/75 text-xs max-w-md">
+                All approved office expenses, hardware procurements, and faculty mentor 37% revenue shares are disbursed directly from this wallet.
+              </p>
             </div>
 
-            <div className="flex items-center gap-3 pt-0.5 text-xs text-white/80 flex-wrap">
-              <span className="flex items-center gap-1">
-                <span className="text-white/50">Total Inflows Funded:</span> 
-                <strong className="text-emerald-300 font-data-tabular">{formatNaira(wallet?.totalInflow ?? wallet?.balance ?? 0)}</strong>
-              </span>
-              <span>•</span>
-              <span className="flex items-center gap-1">
-                <span className="text-white/50">Total Outflows:</span> 
-                <strong className="text-white font-data-tabular">{formatNaira(wallet?.totalOutflow || 0)}</strong>
-              </span>
-            </div>
-
-            <p className="text-white/75 text-xs max-w-md">
-              All approved office expenses, hardware procurements, and faculty mentor 37% revenue shares are disbursed directly from this wallet.
-            </p>
-
-            <div className="flex items-center gap-2.5 pt-1 flex-wrap">
+            <div className="flex items-center gap-2.5 pt-2 flex-wrap">
               <button
                 type="button"
                 onClick={() => openModal('top-up-wallet')}
@@ -342,7 +364,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
 
               <button
                 type="button"
-                onClick={reconcileWalletWithPaystack}
+                onClick={handleSyncWallet}
                 disabled={isSyncingWallet}
                 className="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold transition-all border border-white/20 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
@@ -361,69 +383,106 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
             </div>
           </div>
 
-          {/* Right Column: Dedicated Virtual Account (NUBAN) Card */}
-          <div className="lg:col-span-6 bg-white/10 backdrop-blur-md rounded-xl p-4.5 border border-white/15 space-y-3">
-            <div className="flex justify-between items-start">
+          {/* Right Column: Outbound Disbursement & Inflow Virtual Account Cards */}
+          <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {/* Account Card 1: Outbound Disbursement Account (Live Paystack Balance) */}
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/15 flex flex-col justify-between space-y-3">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300 block">
-                  Dedicated Inflow Virtual Account (DVA)
-                </span>
-                <div className="font-semibold text-sm text-white flex items-center gap-1 mt-0.5">
-                  <span className="material-symbols-outlined text-[16px] text-emerald-400">verified</span>
-                  <span>{wallet?.virtualAccount?.bankName || 'Wema Bank (Paystack DVA)'}</span>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300 block">
+                      Outbound Disbursement Account
+                    </span>
+                    <div className="font-semibold text-xs text-white flex items-center gap-1 mt-0.5">
+                      <span className="material-symbols-outlined text-[15px] text-emerald-400">bolt</span>
+                      <span>Paystack API Payout Engine</span>
+                    </div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-400/20 text-emerald-200 border border-emerald-300/30 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Live Active
+                  </span>
+                </div>
+
+                <div className="bg-black/30 rounded-lg p-3 border border-white/10 mt-3">
+                  <span className="text-[10px] text-white/70 block">Paystack Live Transfer Balance</span>
+                  <div className="font-mono text-xl font-bold tracking-tight text-emerald-300 font-data-tabular mt-0.5">
+                    {formatNaira(wallet?.paystackLiveBalance ?? livePaystackBal ?? 0)}
+                  </div>
+                  <span className="text-[10px] text-white/60 block mt-0.5">Available for instant NIBSS bank transfers</span>
                 </div>
               </div>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-400/20 text-emerald-200 border border-emerald-300/30">
-                Auto-Credit 24/7
-              </span>
+
+              <div className="text-[11px] text-white/75 border-t border-white/10 pt-2 flex items-center justify-between">
+                <span>100% Automated Paystack API</span>
+                <span className="text-emerald-300 font-medium">Direct Settlement</span>
+              </div>
             </div>
 
-            {wallet?.virtualAccount ? (
-              <>
-                <div className="bg-black/25 rounded-lg p-3 flex items-center justify-between border border-white/10">
+            {/* Account Card 2: Dedicated Inflow Virtual Account (DVA) */}
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/15 flex flex-col justify-between space-y-3">
+              <div>
+                <div className="flex justify-between items-start">
                   <div>
-                    <span className="text-[10px] text-white/70 block">NUBAN Account Number</span>
-                    <span className="font-mono text-xl sm:text-2xl font-bold tracking-widest text-emerald-300 font-data-tabular">
-                      {wallet.virtualAccount.accountNumber}
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300 block">
+                      Dedicated Inflow Virtual Account (DVA)
                     </span>
+                    <div className="font-semibold text-xs text-white flex items-center gap-1 mt-0.5">
+                      <span className="material-symbols-outlined text-[15px] text-emerald-400">verified</span>
+                      <span>{wallet?.virtualAccount?.bankName || 'Wema Bank (Paystack DVA)'}</span>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!wallet.virtualAccount?.accountNumber) return;
-                      navigator.clipboard.writeText(wallet.virtualAccount.accountNumber);
-                      setCopiedNuban(true);
-                      showToast('NUBAN Copied', `${wallet.virtualAccount.accountNumber} copied to clipboard.`, 'info');
-                      setTimeout(() => setCopiedNuban(false), 2000);
-                    }}
-                    className={`px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer ${
-                      copiedNuban ? 'bg-emerald-500 text-white' : 'bg-white/20 hover:bg-white/30 text-white'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[14px]">
-                      {copiedNuban ? 'done' : 'content_copy'}
-                    </span>
-                    <span>{copiedNuban ? 'Copied' : 'Copy'}</span>
-                  </button>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-400/20 text-emerald-200 border border-emerald-300/30">
+                    Auto-Credit 24/7
+                  </span>
                 </div>
 
-                <div className="flex justify-between items-center text-[11px] text-white/80 pt-0.5">
-                  <span>Beneficiary: <strong className="text-white font-medium">{wallet.virtualAccount.accountName}</strong></span>
-                  <span className="text-white/60">Any Nigerian Bank App via NIP</span>
-                </div>
-              </>
-            ) : (
-              <div className="py-3 text-center space-y-2">
-                <p className="text-xs text-white/80">No dedicated virtual account created yet.</p>
-                <button
-                  type="button"
-                  onClick={() => generateVirtualAccount()}
-                  className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded text-xs font-bold cursor-pointer"
-                >
-                  Generate Dedicated NUBAN
-                </button>
+                {wallet?.virtualAccount ? (
+                  <div className="bg-black/30 rounded-lg p-3 flex items-center justify-between border border-white/10 mt-3">
+                    <div>
+                      <span className="text-[10px] text-white/70 block">NUBAN Inflow Account</span>
+                      <span className="font-mono text-xl font-bold tracking-widest text-emerald-300 font-data-tabular">
+                        {wallet.virtualAccount.accountNumber}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!wallet.virtualAccount?.accountNumber) return;
+                        navigator.clipboard.writeText(wallet.virtualAccount.accountNumber);
+                        setCopiedNuban(true);
+                        showToast('NUBAN Copied', `${wallet.virtualAccount.accountNumber} copied to clipboard.`, 'info');
+                        setTimeout(() => setCopiedNuban(false), 2000);
+                      }}
+                      className={`px-2.5 py-1.5 rounded text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer ${
+                        copiedNuban ? 'bg-emerald-500 text-white' : 'bg-white/20 hover:bg-white/30 text-white'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[13px]">
+                        {copiedNuban ? 'done' : 'content_copy'}
+                      </span>
+                      <span>{copiedNuban ? 'Copied' : 'Copy'}</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="py-3 text-center space-y-1.5 mt-2">
+                    <p className="text-xs text-white/80">No dedicated virtual account created yet.</p>
+                    <button
+                      type="button"
+                      onClick={() => generateVirtualAccount()}
+                      className="px-3 py-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded text-xs font-bold cursor-pointer"
+                    >
+                      Generate Dedicated NUBAN
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
+
+              <div className="text-[11px] text-white/75 border-t border-white/10 pt-2 flex items-center justify-between">
+                <span>Beneficiary: <strong className="text-white font-medium">{wallet?.virtualAccount?.accountName || 'Expenses Wallet'}</strong></span>
+                <span className="text-white/60">Any Bank via NIP</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1208,6 +1267,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
         }}
         expense={currentViewingExpense}
         isSuperAdmin={isSuperAdmin}
+        canApprove={canApproveExpenses}
         onApprove={(id) => {
           approveExpense(id);
         }}
