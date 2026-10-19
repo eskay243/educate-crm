@@ -627,6 +627,9 @@ export interface EnabledModules {
   mentors: boolean;    // Faculty Mentors Hub & 37% Revenue Share (/mentors, /student/mentor)
   attendance: boolean; // Geofenced Staff Attendance & Clock-In (/attendance)
   expenses: boolean;   // OpEx Requisitions & Financial Approvals (/expenses)
+  tickets: boolean;    // Support & Tickets Feedback Hub (/tickets)
+  reports: boolean;    // Executive Reports & Analytics (/reports)
+  billing: boolean;    // Student Tuition & Invoicing Portal (/student/billing)
 }
 
 export interface OrganizationSettings {

@@ -22,6 +22,8 @@ const ALL_SYSTEM_MODULES: { id: string; label: string; icon: string }[] = [
   { id: 'expenses', label: 'Expenses & Budget', icon: 'payments' },
   { id: 'lms', label: 'LMS & Classroom', icon: 'local_library' },
   { id: 'tickets', label: 'Support & Tickets', icon: 'confirmation_number' },
+  { id: 'reports', label: 'Executive Reports', icon: 'monitoring' },
+  { id: 'billing', label: 'Student Billing & Tuition', icon: 'receipt_long' },
 ];
 
 export const SettingsPage: React.FC = () => {
@@ -451,17 +453,19 @@ export const SettingsPage: React.FC = () => {
   const [capturingGpsForCampus, setCapturingGpsForCampus] = useState<string | null>(null);
 
   // Module enablement feature flags
-  const [enabledModules, setEnabledModules] = useState<EnabledModules>(
-    settings.enabledModules || {
-      lms: true,
-      leads: true,
-      courses: true,
-      students: true,
-      mentors: true,
-      attendance: true,
-      expenses: true,
-    }
-  );
+  const [enabledModules, setEnabledModules] = useState<EnabledModules>({
+    lms: true,
+    leads: true,
+    courses: true,
+    students: true,
+    mentors: true,
+    attendance: true,
+    expenses: true,
+    tickets: true,
+    reports: true,
+    billing: true,
+    ...(settings.enabledModules || {}),
+  });
 
   const [logoUrl, setLogoUrl] = useState(settings.logoUrl || '');
   const logoFileInputRef = useRef<HTMLInputElement>(null);
@@ -1051,6 +1055,9 @@ export const SettingsPage: React.FC = () => {
       mentors: enableAll,
       attendance: enableAll,
       expenses: enableAll,
+      tickets: enableAll,
+      reports: enableAll,
+      billing: enableAll,
     };
     setEnabledModules(updated);
     updateSettings({
@@ -1059,7 +1066,7 @@ export const SettingsPage: React.FC = () => {
     });
     showToast(
       enableAll ? 'All Modules Enabled' : 'Admissions Core Activated',
-      enableAll ? 'All institutional modules are now active.' : 'LMS, Mentors, Attendance & Expenses set to upcoming launch status.',
+      enableAll ? 'All 10 institutional modules are now active.' : 'LMS, Mentors, Attendance, Expenses, Tickets, Reports & Billing set to upcoming launch status.',
       'success'
     );
   };
@@ -4063,6 +4070,144 @@ export const SettingsPage: React.FC = () => {
                   {enabledModules.expenses ? '● Active & Live' : '○ Scheduled for Launch'}
                 </span>
                 <span className="text-secondary">Route: <code>/expenses</code></span>
+              </div>
+            </div>
+
+            {/* 8. Support & Tickets Feedback Hub */}
+            <div className={`p-5 rounded-2xl border transition-all ${
+              enabledModules.tickets
+                ? 'bg-surface border-outline-variant shadow-xs'
+                : 'bg-surface-container-lowest border-outline-variant/60 opacity-80'
+            }`}>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    enabledModules.tickets ? 'bg-primary/10 text-primary' : 'bg-surface-container text-secondary'
+                  }`}>
+                    <span className="material-symbols-outlined text-[22px]">confirmation_number</span>
+                  </div>
+                  <div>
+                    <h4 className="font-title-md text-base font-bold text-on-surface">Support &amp; Tickets Feedback Hub</h4>
+                    <p className="text-[11px] text-secondary">Helpdesk tickets, system bug reports, observations, attachments &amp; operational feedback tracking</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleModule('tickets')}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    enabledModules.tickets ? 'bg-primary' : 'bg-outline-variant'
+                  }`}
+                  role="switch"
+                  aria-checked={enabledModules.tickets}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      enabledModules.tickets ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-outline-variant/60 text-[11px]">
+                <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[10px] ${
+                  enabledModules.tickets ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                }`}>
+                  {enabledModules.tickets ? '● Active & Live' : '○ Scheduled for Launch'}
+                </span>
+                <span className="text-secondary">Route: <code>/tickets</code></span>
+              </div>
+            </div>
+
+            {/* 9. Executive Reports & Analytics */}
+            <div className={`p-5 rounded-2xl border transition-all ${
+              enabledModules.reports
+                ? 'bg-surface border-outline-variant shadow-xs'
+                : 'bg-surface-container-lowest border-outline-variant/60 opacity-80'
+            }`}>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    enabledModules.reports ? 'bg-primary/10 text-primary' : 'bg-surface-container text-secondary'
+                  }`}>
+                    <span className="material-symbols-outlined text-[22px]">monitoring</span>
+                  </div>
+                  <div>
+                    <h4 className="font-title-md text-base font-bold text-on-surface">Executive Reports &amp; Analytics</h4>
+                    <p className="text-[11px] text-secondary">Institutional KPI dashboards, CAC, cohort completion velocity, student retention &amp; financial metrics</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleModule('reports')}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    enabledModules.reports ? 'bg-primary' : 'bg-outline-variant'
+                  }`}
+                  role="switch"
+                  aria-checked={enabledModules.reports}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      enabledModules.reports ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-outline-variant/60 text-[11px]">
+                <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[10px] ${
+                  enabledModules.reports ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                }`}>
+                  {enabledModules.reports ? '● Active & Live' : '○ Scheduled for Launch'}
+                </span>
+                <span className="text-secondary">Route: <code>/reports</code></span>
+              </div>
+            </div>
+
+            {/* 10. Student Tuition & Billing Portal */}
+            <div className={`p-5 rounded-2xl border transition-all ${
+              enabledModules.billing
+                ? 'bg-surface border-outline-variant shadow-xs'
+                : 'bg-surface-container-lowest border-outline-variant/60 opacity-80'
+            }`}>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    enabledModules.billing ? 'bg-primary/10 text-primary' : 'bg-surface-container text-secondary'
+                  }`}>
+                    <span className="material-symbols-outlined text-[22px]">receipt_long</span>
+                  </div>
+                  <div>
+                    <h4 className="font-title-md text-base font-bold text-on-surface">Student Tuition &amp; Billing Portal</h4>
+                    <p className="text-[11px] text-secondary">Paystack online tuition checkout, installment schedule generator, bank transfer receipts &amp; student invoices</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleModule('billing')}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    enabledModules.billing ? 'bg-primary' : 'bg-outline-variant'
+                  }`}
+                  role="switch"
+                  aria-checked={enabledModules.billing}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      enabledModules.billing ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-outline-variant/60 text-[11px]">
+                <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[10px] ${
+                  enabledModules.billing ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                }`}>
+                  {enabledModules.billing ? '● Active & Live' : '○ Scheduled for Launch'}
+                </span>
+                <span className="text-secondary">Route: <code>/student/billing</code></span>
               </div>
             </div>
           </div>

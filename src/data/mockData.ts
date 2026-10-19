@@ -401,6 +401,9 @@ export const initialSettings: OrganizationSettings = {
     mentors: true,
     attendance: true,
     expenses: true,
+    tickets: true,
+    reports: true,
+    billing: true,
   },
   defaultMinimumLearningHours: 40,
   mentorMinimumLecturedHours: 20,
@@ -1158,7 +1161,7 @@ export const defaultRoleDefinitions: CustomRoleDefinition[] = [
     description: 'Scholar portal with access to curriculum tracks, interactive labs, mentor bookings, and tuition installment checkout.',
     isSystem: true,
     badgeColor: 'bg-amber-500/10 text-amber-700 border border-amber-500/20',
-    allowedModules: ['lms', 'tickets'],
+    allowedModules: ['lms', 'tickets', 'billing', 'mentors'],
     permissions: {
       canAddCourses: false,
       canAddCohorts: false,

@@ -101,11 +101,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
           This institutional module has been scheduled for upcoming launch or is currently undergoing administrative review. Please check back shortly.
         </p>
         <Link
-          to={currentUser.role === 'student' ? "/student/billing" : "/"}
+          to={currentUser.role === 'student' ? "/student/dashboard" : "/"}
           className="px-4 h-10 rounded bg-primary text-on-primary font-label-md text-xs font-bold hover:bg-primary-container transition-colors shadow-xs flex items-center gap-1.5"
         >
           <span className="material-symbols-outlined text-[16px]">arrow_back</span>
-          <span>{currentUser.role === 'student' ? 'View Tuition & Billing' : 'Return to Dashboard'}</span>
+          <span>Return to Dashboard</span>
         </Link>
       </div>
     );

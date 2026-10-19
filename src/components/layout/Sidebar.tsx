@@ -72,6 +72,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   const allNavItems: NavItemConfig[] = [
     // Staff & Admin Links
     { to: '/', label: 'Dashboard', icon: 'dashboard', exact: true, allowedRoles: ['super_admin', 'admissions', 'finance', 'program_officer'] },
+    { to: '/reports', label: 'Executive Reports', icon: 'monitoring', allowedRoles: ['super_admin', 'program_officer'], module: 'reports' },
     { to: '/courses', label: 'Programs & Cohorts', icon: 'menu_book', allowedRoles: ['super_admin', 'admissions', 'program_officer'], module: 'courses' },
     { to: '/leads', label: 'Leads Pipeline', icon: 'leaderboard', allowedRoles: ['super_admin', 'admissions'], module: 'leads' },
     { to: '/students', label: 'Students & Billing', icon: 'school', allowedRoles: ['super_admin', 'admissions', 'mentor', 'finance', 'program_officer'], module: 'students' },
@@ -97,17 +98,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     { to: '/student/dashboard', label: 'Student Dashboard', icon: 'dashboard', exact: true, allowedRoles: ['student'] },
     { to: '/student/courses', label: 'Classroom & LMS', icon: 'local_library', allowedRoles: ['student'], module: 'lms' },
     { to: '/student/mentor', label: '1-on-1 Faculty Mentor', icon: 'support_agent', allowedRoles: ['student'], module: 'mentors' },
-    { to: '/student/billing', label: 'Tuition & Invoicing', icon: 'receipt_long', allowedRoles: ['student'] },
+    { to: '/student/billing', label: 'Tuition & Invoicing', icon: 'receipt_long', allowedRoles: ['student'], module: 'billing' },
 
     // Universal Support & Feedback Module for all roles
-    { to: '/tickets', label: 'Support & Tickets', icon: 'confirmation_number' },
+    { to: '/tickets', label: 'Support & Tickets', icon: 'confirmation_number', module: 'tickets' },
   ];
 
   const visibleNavItems = allNavItems.filter(item => {
     if (!currentUser) return false;
     
-    // Support & Tickets and Settings are universal to all authenticated roles
-    if (item.to === '/tickets' || item.to === '/settings') return true;
+    // Module enablement filter: non-super_admin users don't see disabled modules
+    if (!isSuperAdmin && item.module && !isModuleEnabled(item.module)) {
+      return false;
+    }
+
+    // Settings is universal to all authenticated roles
+    if (item.to === '/settings') return true;
+
+    // Support & Tickets is universal to all authenticated roles (when module is enabled or for super admin)
+    if (item.to === '/tickets') return true;
 
     // Role filter
     let roleAllowed = false;
@@ -125,11 +134,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
       }
     }
     if (!roleAllowed) return false;
-
-    // Module enablement filter: non-super_admin users don't see disabled modules
-    if (!isSuperAdmin && item.module && !isModuleEnabled(item.module)) {
-      return false;
-    }
 
     return true;
   });

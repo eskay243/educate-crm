@@ -29,7 +29,7 @@ import { PWAInstallPrompt } from './components/common/PWAInstallPrompt';
 import { OfflineIndicator } from './components/common/OfflineIndicator';
 
 const HomeRoute: React.FC = () => {
-  const { currentUser, hasModulePermission } = useCRM();
+  const { currentUser, hasModulePermission, isModuleEnabled } = useCRM();
   if (!currentUser) {
     return <Navigate to="/login" replace />;
   }
@@ -53,16 +53,17 @@ const HomeRoute: React.FC = () => {
   }
 
   // Fallback for custom configured roles based on enabled modules
-  if (hasModulePermission('reports')) return <ExecutiveReportPage />;
-  if (hasModulePermission('courses')) return <Navigate to="/courses" replace />;
-  if (hasModulePermission('leads')) return <Navigate to="/leads" replace />;
-  if (hasModulePermission('students')) return <Navigate to="/students" replace />;
-  if (hasModulePermission('mentors')) return <Navigate to="/mentors" replace />;
-  if (hasModulePermission('attendance')) return <Navigate to="/attendance" replace />;
-  if (hasModulePermission('expenses')) return <Navigate to="/expenses" replace />;
+  if (hasModulePermission('reports') && isModuleEnabled('reports')) return <ExecutiveReportPage />;
+  if (hasModulePermission('courses') && isModuleEnabled('courses')) return <Navigate to="/courses" replace />;
+  if (hasModulePermission('leads') && isModuleEnabled('leads')) return <Navigate to="/leads" replace />;
+  if (hasModulePermission('students') && isModuleEnabled('students')) return <Navigate to="/students" replace />;
+  if (hasModulePermission('mentors') && isModuleEnabled('mentors')) return <Navigate to="/mentors" replace />;
+  if (hasModulePermission('attendance') && isModuleEnabled('attendance')) return <Navigate to="/attendance" replace />;
+  if (hasModulePermission('expenses') && isModuleEnabled('expenses')) return <Navigate to="/expenses" replace />;
   if (hasModulePermission('settings')) return <Navigate to="/settings" replace />;
 
-  return <Navigate to="/tickets" replace />;
+  if (isModuleEnabled('tickets')) return <Navigate to="/tickets" replace />;
+  return <Navigate to="/settings" replace />;
 };
 
 export const App: React.FC = () => {
@@ -87,7 +88,7 @@ export const App: React.FC = () => {
             <Route 
               path="reports" 
               element={
-                <ProtectedRoute allowedRoles={['super_admin', 'program_officer']}>
+                <ProtectedRoute allowedRoles={['super_admin', 'program_officer']} requiredModule="reports">
                   <ExecutiveReportPage />
                 </ProtectedRoute>
               } 
@@ -211,7 +212,7 @@ export const App: React.FC = () => {
             <Route
               path="student/billing"
               element={
-                <ProtectedRoute allowedRoles={['student', 'super_admin']}>
+                <ProtectedRoute allowedRoles={['student', 'super_admin']} requiredModule="billing">
                   <StudentBillingPage />
                 </ProtectedRoute>
               }
@@ -220,7 +221,7 @@ export const App: React.FC = () => {
             <Route
               path="tickets"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredModule="tickets">
                   <TicketsPage />
                 </ProtectedRoute>
               }
