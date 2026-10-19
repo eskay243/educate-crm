@@ -28,6 +28,8 @@ import {
   EnabledModules,
   StudentPerformanceReport,
   SupportTicket,
+  TicketAttachment,
+  TicketComment,
   CustomRoleDefinition,
   RoleCapabilities,
   TicketStatus,
@@ -251,7 +253,8 @@ interface CRMContextType {
   updateLeadNotes: (id: string, notes: string) => void;
   convertLeadToStudent: (leadId: string, program: string, mentorName: string) => void;
   
-  enrollStudent: (student: Omit<Student, 'id' | 'enrolledDate' | 'studentCode'>) => void;
+  enrollStudent: (student: Omit<Student, 'id' | 'enrolledDate' | 'studentCode'>) => Student;
+  updateStudent: (id: string, updatedData: Partial<Student>) => void;
   updateStudentStatus: (id: string, status: StudentStatus) => void;
   assignMentorToStudent: (studentId: string, mentorId: string) => void;
   
@@ -291,7 +294,7 @@ interface CRMContextType {
   createTicket: (ticketData: Omit<SupportTicket, 'id' | 'ticketNumber' | 'createdAt' | 'updatedAt' | 'comments'>) => Promise<void>;
   updateTicketStatus: (ticketId: string, status: TicketStatus, resolutionNotes?: string) => Promise<void>;
   assignTicket: (ticketId: string, assignedToRole: string, assignedToName?: string, assignedToEmail?: string) => Promise<void>;
-  addTicketComment: (ticketId: string, content: string) => Promise<void>;
+  addTicketComment: (ticketId: string, content: string, attachments?: TicketAttachment[]) => Promise<void>;
 
   // Custom Roles & Permission Architecture
   customRoles: CustomRoleDefinition[];
@@ -1330,15 +1333,16 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Ticket Reassigned', `Ticket assigned to ${assignedToName || assignedToRole.toUpperCase().replace('_', ' ')}.`, 'info');
   };
 
-  const addTicketComment = async (ticketId: string, content: string) => {
-    if (!currentUser || !content.trim()) return;
-    const commentData = {
+  const addTicketComment = async (ticketId: string, content: string, attachments?: TicketAttachment[]) => {
+    if (!currentUser || (!content.trim() && (!attachments || attachments.length === 0))) return;
+    const commentData: TicketComment = {
       id: `comm-${Date.now()}`,
       ticketId,
       authorName: currentUser.name,
       authorEmail: currentUser.email,
       authorRole: currentUser.roleTitle,
       content,
+      attachments: attachments && attachments.length > 0 ? attachments : undefined,
       createdAt: new Date().toISOString(),
     };
 
@@ -1902,9 +1906,20 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const effectiveMentorName = mentorName || matchedMentor?.name || matchedCourse?.leadInstructor || 'Faculty Mentor Assigned';
     const effectiveCohortName = matchedCohort ? `${matchedCohort.name} (${matchedCohort.cohortCode})` : `Cohort ${new Date().getFullYear()}-Q${Math.floor((new Date().getMonth() + 3) / 3)}`;
 
+    const studentCode = `STU-${Math.floor(1000 + Math.random() * 9000)}`;
+    const randomDigits = Math.floor(1000 + Math.random() * 9000);
+    const defaultPassword = `Edu#${studentCode.replace('STU-', '')}!${randomDigits}`;
+    const curriculumUrl = matchedCourse?.curriculumDriveUrl || settings.defaultCurriculumUrl;
+    const handbookUrl = settings.studentHandbookUrl;
+
     const newStudent: Student = {
       id: `stu-${Date.now()}`,
-      studentCode: `STU-${Math.floor(1000 + Math.random() * 9000)}`,
+      studentCode,
+      defaultPassword,
+      password: defaultPassword,
+      mustResetPassword: true,
+      curriculumDriveUrl: curriculumUrl,
+      handbookDriveUrl: handbookUrl,
       name: lead.name,
       email: lead.email,
       phone: lead.phone,
@@ -1975,6 +1990,10 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           mentorName: newStudent.mentorName,
           paidAmount: feeAmount,
           balance: 0,
+          defaultPassword: newStudent.defaultPassword,
+          mustResetPassword: true,
+          curriculumDriveUrl: newStudent.curriculumDriveUrl,
+          handbookDriveUrl: newStudent.handbookDriveUrl,
           portalUrl: `${APP_BASE_URL}/login?role=student&email=${encodeURIComponent(lead.email || '')}`,
         }
       }).catch(err => console.error('Error sending student welcome email:', err));
@@ -2003,14 +2022,27 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Student mutations
   const enrollStudent = (studentData: Omit<Student, 'id' | 'enrolledDate' | 'studentCode'>) => {
+    const studentCode = `STU-${Math.floor(1000 + Math.random() * 9000)}`;
+    const randomChars = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const defaultPassword = studentData.password || `Edu#${studentCode.replace(/\D/g, '')}!${randomChars}`;
+
+    const matchedCourse = courses.find(c => c.title?.toLowerCase() === studentData.program?.toLowerCase() || (c as any).name?.toLowerCase() === studentData.program?.toLowerCase());
+    const curriculumUrl = studentData.curriculumDriveUrl || matchedCourse?.curriculumDriveUrl || settings.defaultCurriculumUrl;
+    const handbookUrl = studentData.handbookDriveUrl || settings.studentHandbookUrl;
+
     const newStudent: Student = {
       ...studentData,
       id: `stu-${Date.now()}`,
-      studentCode: `STU-${Math.floor(1000 + Math.random() * 9000)}`,
+      studentCode,
+      defaultPassword,
+      password: studentData.password || defaultPassword,
+      mustResetPassword: studentData.mustResetPassword !== undefined ? studentData.mustResetPassword : true,
+      curriculumDriveUrl: curriculumUrl,
+      handbookDriveUrl: handbookUrl,
       enrolledDate: new Date().toISOString().split('T')[0],
     };
     setStudents(prev => [newStudent, ...prev]);
-    apiService.createStudent(studentData);
+    apiService.createStudent(newStudent);
 
     // Dispatch automated student onboarding welcome email via Zoho SMTP
     if (newStudent.email) {
@@ -2026,6 +2058,10 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           mentorName: newStudent.mentorName,
           paidAmount: (newStudent.totalFees || 0) - (newStudent.outstandingBalance || 0),
           balance: newStudent.outstandingBalance || 0,
+          defaultPassword: newStudent.defaultPassword,
+          mustResetPassword: newStudent.mustResetPassword,
+          curriculumDriveUrl: newStudent.curriculumDriveUrl,
+          handbookDriveUrl: newStudent.handbookDriveUrl,
           portalUrl: `${APP_BASE_URL}/login?role=student&email=${encodeURIComponent(newStudent.email || '')}`,
         }
       }).catch(err => console.error('Error sending student welcome email:', err));
@@ -2067,6 +2103,18 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       description: `${newStudent.name} admitted with ID #${newStudent.studentCode}.`,
       type: 'student',
       user: 'Admissions Office',
+    });
+
+    return newStudent;
+  };
+
+  const updateStudent = (id: string, updatedData: Partial<Student>) => {
+    setStudents(prev => prev.map(s => s.id === id ? { ...s, ...updatedData } : s));
+    apiService.updateStudent(id, updatedData);
+    addNotification({
+      title: 'Student Biodata Updated',
+      message: 'Student profile information was successfully updated.',
+      type: 'admissions',
     });
   };
 
@@ -4304,15 +4352,15 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // 1. Update in-memory state for currentUser if matches
     if (currentUser && (currentUser.email.toLowerCase() === targetEmail || (currentUser as any).secondaryEmail?.toLowerCase() === targetEmail)) {
-      const updatedUser = { ...currentUser, password: cleanPassword };
-      setCurrentUser(updatedUser);
+      const updatedUser = { ...currentUser, password: cleanPassword, mustResetPassword: false };
+      setCurrentUser(updatedUser as any);
       localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(updatedUser));
     }
 
     // 2. Update staffUsers
     setStaffUsers(prev => prev.map(u => 
       (u.email?.toLowerCase().trim() === targetEmail || (u as any).secondaryEmail?.toLowerCase().trim() === targetEmail || (u.name?.toLowerCase().includes('oyinkonsola') && (targetEmail === 'oyinojobo@gmail.com' || targetEmail === 'oyinojobor@gmail.com')))
-        ? { ...u, password: cleanPassword }
+        ? { ...u, password: cleanPassword, mustResetPassword: false }
         : u
     ));
 
@@ -4326,7 +4374,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 4. Update students
     setStudents(prev => prev.map(s => 
       (s.email?.toLowerCase().trim() === targetEmail || (s as any).secondaryEmail?.toLowerCase().trim() === targetEmail)
-        ? { ...s, password: cleanPassword }
+        ? { ...s, password: cleanPassword, mustResetPassword: false }
         : s
     ));
 
@@ -4455,6 +4503,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateLeadNotes,
         convertLeadToStudent,
         enrollStudent,
+        updateStudent,
         updateStudentStatus,
         assignMentorToStudent,
         recruitMentor,

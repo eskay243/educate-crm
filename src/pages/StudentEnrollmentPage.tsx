@@ -39,8 +39,10 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
 
   const isMentor = currentUser?.role === 'mentor';
   const isFinance = currentUser?.role === 'finance';
-  const isAdminOrAdmissions = currentUser?.role === 'super_admin' || currentUser?.role === 'admissions';
+  const isSuperAdmin = currentUser?.role === 'super_admin';
+  const isAdminOrAdmissions = isSuperAdmin || currentUser?.role === 'admissions';
   const canEnroll = isAdminOrAdmissions || hasFeaturePermission('canEnrollStudents');
+  const canModifyStudent = isSuperAdmin || hasFeaturePermission('canModifyStudentBiodata');
 
   // If mentor, filter strictly to their assigned students
   const displayedStudents = isMentor
@@ -508,6 +510,19 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                               <span className="material-symbols-outlined text-[18px]">workspace_premium</span>
                             </button>
 
+                            {canModifyStudent && (
+                              <button
+                                onClick={() => {
+                                  setSelectedStudentId(student.id);
+                                  openModal('edit-student');
+                                }}
+                                className="p-1.5 rounded text-secondary hover:text-primary hover:bg-surface-container transition-colors cursor-pointer"
+                                title="Modify Student Biodata"
+                              >
+                                <span className="material-symbols-outlined text-[18px]">edit</span>
+                              </button>
+                            )}
+
                             {!isMentor && (
                               <button
                                 onClick={() => {
@@ -727,6 +742,21 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                 </button>
               ) : (
                 <>
+                  {/* Modify Student Biodata Action */}
+                  {canModifyStudent && (
+                    <button 
+                      onClick={() => {
+                        setSelectedStudentId(currentStudent.id);
+                        openModal('edit-student');
+                      }}
+                      className="h-10 px-stack-md bg-surface-container border border-outline-variant rounded font-label-md text-label-md font-semibold text-primary hover:bg-surface-container-high transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                      title="Modify Student Demographic & Biodata Records"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">edit_note</span>
+                      <span>Edit Biodata</span>
+                    </button>
+                  )}
+
                   {/* Admin & Admissions Actions */}
                   {canEnroll && (
                     <>

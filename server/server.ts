@@ -567,6 +567,7 @@ app.post('/api/auth/reset-password', (req: Request, res: Response) => {
   );
   if (staff) {
     staff.password = cleanPassword;
+    staff.mustResetPassword = false;
     found = true;
   }
 
@@ -590,6 +591,7 @@ app.post('/api/auth/reset-password', (req: Request, res: Response) => {
     );
     if (student) {
       student.password = cleanPassword;
+      student.mustResetPassword = false;
       found = true;
     }
   }
@@ -915,28 +917,56 @@ const sendStudentWelcomeEmail = async (student: any) => {
     let subject = customTemplate?.subject || `🎓 Welcome to CODELAB EDUCARE LTD — Admission Confirmation (${student.studentCode || 'STU'})`;
     subject = subject.replace(/\{\{name\}\}/g, student.name || '').replace(/\{\{studentCode\}\}/g, student.studentCode || '');
 
+    const curriculumLink = student.curriculumDriveUrl || `${APP_BASE_URL}/student/curriculum`;
+    const handbookLink = student.handbookDriveUrl || db.settings?.studentHandbookUrl || `${APP_BASE_URL}/student/curriculum`;
+    const defaultPwd = student.defaultPassword || student.password || 'Edu#2026!Pro';
+
     const defaultHtml = `
       <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
         <div style="background-color: #00236f; padding: 26px 20px; text-align: center;">
+          <span style="background-color: #ecfdf5; color: #047857; font-weight: 700; font-size: 11px; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; display: inline-block; margin-bottom: 8px;">
+            ✓ Official Letter of Provisional Admission
+          </span>
           <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: bold; letter-spacing: -0.5px;">CODELAB EDUCARE LTD</h1>
-          <p style="color: #93c5fd; margin: 4px 0 0 0; font-size: 12px;">Official Student Admission &amp; Onboarding Confirmation</p>
+          <p style="color: #93c5fd; margin: 4px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Directorate of Admissions &amp; Academic Affairs</p>
         </div>
         <div style="padding: 28px 24px; color: #1e293b; line-height: 1.6;">
-          <h2 style="color: #00236f; margin-top: 0; font-size: 18px;">Welcome to CODELAB EDUCARE LTD, ${student.name}!</h2>
-          <p>Your student admission has been approved and your academic profile is now officially active.</p>
-          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 16px; margin: 20px 0;">
+          <h2 style="color: #00236f; margin-top: 0; font-size: 18px;">Offer of Provisional Admission</h2>
+          <p style="font-size: 13px; color: #334155;">Dear <strong>${student.name}</strong>,<br/>We are pleased to inform you that your provisional admission into <strong>CODELAB EDUCARE LTD</strong> has been confirmed for the <strong>${student.program || 'Technology Track'}</strong>.</p>
+          
+          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 16px; margin: 18px 0; font-size: 13px;">
             <p style="margin: 0 0 6px 0;"><strong>Student ID:</strong> <span style="font-family: monospace; font-weight: bold; color: #00236f;">${student.studentCode || 'STU-PROD'}</span></p>
             <p style="margin: 0 0 6px 0;"><strong>Course Track:</strong> ${student.program || 'Technology Track'}</p>
             <p style="margin: 0 0 6px 0;"><strong>Cohort / Batch:</strong> ${student.cohort || 'Executive Cohort'}</p>
             <p style="margin: 0 0 6px 0;"><strong>Assigned Mentor:</strong> ${student.mentorName || 'Academic Faculty Pool'}</p>
             <p style="margin: 0;"><strong>Tuition Status:</strong> ${student.outstandingBalance > 0 ? `₦${Number(student.outstandingBalance).toLocaleString()} Outstanding` : 'Settled / In Good Standing'}</p>
           </div>
-          <h3 style="color: #00236f; font-size: 14px; margin-bottom: 8px;">Onboarding Steps:</h3>
-          <p style="margin: 0 0 16px 0; font-size: 13px;">Please log in to your Student Operations Portal using your email (<strong>${student.email}</strong>) to access course materials, live lab schedules, and mentor assignments.</p>
-          <div style="text-align: center; margin: 24px 0;">
-            <a href="${portalUrl}" style="background-color: #00236f; color: #ffffff; padding: 12px 26px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">Access Student Portal →</a>
+
+          <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 14px 16px; margin: 18px 0; font-size: 13px;">
+            <strong style="color: #166534; display: block; margin-bottom: 6px;">🔐 Student Portal Login Credentials</strong>
+            <p style="margin: 0 0 4px 0;"><strong>Username / Email:</strong> ${student.email}</p>
+            <p style="margin: 0 0 8px 0;"><strong>Default Password:</strong> <span style="font-family: monospace; background: #ffffff; padding: 2px 8px; border-radius: 4px; border: 1px solid #86efac; font-weight: bold; color: #166534;">${defaultPwd}</span></p>
+            <p style="margin: 0; font-size: 11px; color: #92400e; background: #fef3c7; padding: 6px 10px; border-radius: 4px;">⚠️ <strong>Security Recommendation:</strong> This is a temporary system default password. Please reset your password upon initial login.</p>
           </div>
-          <p style="font-size: 12px; color: #64748b;">For assistance, reach our Admissions Directorate directly at <a href="mailto:admin@codelab.institute" style="color: #00236f;">admin@codelab.institute</a>.</p>
+
+          <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 14px 16px; margin: 18px 0; font-size: 13px;">
+            <strong style="color: #1e40af; display: block; margin-bottom: 8px;">📁 Official Onboarding Documentation (Google Drive)</strong>
+            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+              <tr>
+                <td style="padding: 4px 0;">📘 <strong>Course Curriculum:</strong></td>
+                <td style="padding: 4px 0; text-align: right;"><a href="${curriculumLink}" target="_blank" style="color: #2563eb; font-weight: bold; text-decoration: underline;">Open Google Drive ➜</a></td>
+              </tr>
+              <tr>
+                <td style="padding: 4px 0;">📕 <strong>Student Handbook:</strong></td>
+                <td style="padding: 4px 0; text-align: right;"><a href="${handbookLink}" target="_blank" style="color: #0284c7; font-weight: bold; text-decoration: underline;">Open Google Drive ➜</a></td>
+              </tr>
+            </table>
+          </div>
+
+          <div style="text-align: center; margin: 26px 0;">
+            <a href="${portalUrl}" style="background-color: #00236f; color: #ffffff; padding: 12px 28px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">Access Student Portal →</a>
+          </div>
+          <p style="font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 12px;">For assistance, reach our Admissions Directorate directly at <a href="mailto:admin@codelab.institute" style="color: #00236f;">admin@codelab.institute</a>.</p>
         </div>
       </div>
     `;
@@ -3825,7 +3855,7 @@ const isAuthorizedApprover = (req: Request): boolean => {
   const callerEmail = (req.headers['x-user-email'] as string)?.toLowerCase().trim();
   const callerId = req.headers['x-user-id'] as string;
 
-  if (callerRole === 'super_admin' || callerRole === 'finance' || callerRole === 'approver') {
+  if (callerRole === 'super_admin' || callerRole === 'finance' || callerRole === 'approver' || callerRole === 'admissions') {
     return true;
   }
 
@@ -3841,12 +3871,20 @@ const isAuthorizedApprover = (req: Request): boolean => {
     );
 
     if (staff) {
-      if (staff.isApprover === true || staff.role === 'super_admin' || staff.role === 'finance' || staff.role === 'approver') {
+      if (
+        staff.isApprover === true || 
+        staff.role === 'super_admin' || 
+        staff.role === 'finance' || 
+        staff.role === 'approver' ||
+        staff.role === 'admissions' ||
+        staff.roleTitle?.toLowerCase().includes('admission') ||
+        staff.roleTitle?.toLowerCase().includes('enrollment')
+      ) {
         return true;
       }
-      // Check if custom role has canApproveExpenses
+      // Check if custom role has canApproveExpenses or canDisburseApprovedFunds
       const roleDef = db.customRoles?.find((r: any) => r.id === staff.role);
-      if (roleDef?.permissions?.canApproveExpenses === true) {
+      if (roleDef?.permissions?.canApproveExpenses === true || roleDef?.permissions?.canDisburseApprovedFunds === true) {
         return true;
       }
     }
@@ -3855,7 +3893,7 @@ const isAuthorizedApprover = (req: Request): boolean => {
   // Check customRoles by callerRole directly
   if (callerRole && Array.isArray(db.customRoles)) {
     const roleDef = db.customRoles.find((r: any) => r.id === callerRole);
-    if (roleDef?.permissions?.canApproveExpenses === true) {
+    if (roleDef?.permissions?.canApproveExpenses === true || roleDef?.permissions?.canDisburseApprovedFunds === true) {
       return true;
     }
   }
@@ -4449,7 +4487,7 @@ app.post('/api/wallet/topup/verify', async (req: Request, res: Response) => {
 app.post('/api/wallet/disburse-expense', async (req: Request, res: Response) => {
   try {
     if (!isAuthorizedApprover(req)) {
-      return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin, Finance, and designated Approvers can authorize expense disbursements.' });
+      return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin, Finance, and designated Approvers/Disbursers can authorize expense disbursements.' });
     }
 
     const { expenseId, bankCode, bankName, accountNumber, accountName, reason, disbursementMethod, nipSessionId, bankReference } = req.body;
@@ -4457,6 +4495,14 @@ app.post('/api/wallet/disburse-expense', async (req: Request, res: Response) => 
 
     if (!expense) {
       return res.status(404).json({ success: false, message: 'Expense record not found' });
+    }
+
+    // STRICT GOVERNANCE: Expense must be approved by Super Admin before funds can be disbursed
+    if (expense.status !== 'Approved') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot disburse funds: Requisition is currently '${expense.status}'. It must be reviewed and approved by the Super Admin before funds can be released.`
+      });
     }
 
     const disburseAmount = Number(expense.amount);
@@ -5237,6 +5283,7 @@ app.post('/api/tickets/:id/comments', async (req: Request, res: Response) => {
     authorEmail: req.body.authorEmail || 'staff@codelab.institute',
     authorRole: req.body.authorRole || 'Support',
     content: req.body.content || '',
+    attachments: Array.isArray(req.body.attachments) ? req.body.attachments : [],
     createdAt: new Date().toISOString(),
   };
 

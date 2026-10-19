@@ -34,6 +34,7 @@ export const CreateCourseModal: React.FC<CreateCourseModalProps> = ({ isOpen, on
     'Applied Industry Capstone & System Design',
   ]);
   const [newModuleText, setNewModuleText] = useState('');
+  const [curriculumDriveUrl, setCurriculumDriveUrl] = useState('');
 
   const handleSaveNewCategory = () => {
     const trimmed = newCategoryInput.trim();
@@ -72,6 +73,7 @@ export const CreateCourseModal: React.FC<CreateCourseModalProps> = ({ isOpen, on
       syllabusModules: modules.length > 0 ? modules : ['Curriculum Overview & Practical Labs'],
       leadInstructor,
       status: 'Active',
+      curriculumDriveUrl: curriculumDriveUrl.trim() || undefined,
     });
 
     onClose();
@@ -248,6 +250,23 @@ export const CreateCourseModal: React.FC<CreateCourseModalProps> = ({ isOpen, on
                 placeholder="Key outcomes, technologies taught, and prerequisites..."
                 className="w-full p-2.5 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none"
               />
+            </div>
+
+            <div className="space-y-1 sm:col-span-2">
+              <label className="font-label-md text-xs text-secondary font-semibold flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[15px] text-primary">link</span>
+                Official Course Curriculum (Google Drive URL)
+              </label>
+              <input
+                type="url"
+                placeholder="https://drive.google.com/file/d/..."
+                value={curriculumDriveUrl}
+                onChange={e => setCurriculumDriveUrl(e.target.value)}
+                className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none"
+              />
+              <span className="text-[10px] text-secondary">
+                This Google Drive link is automatically attached to student admission letters &amp; welcome emails.
+              </span>
             </div>
 
             {/* Syllabus Modules Dynamic List */}

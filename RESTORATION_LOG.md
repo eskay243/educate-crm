@@ -6,6 +6,33 @@ This log is strictly maintained before every deployment or production update. It
 If any issue occurs after a deployment, execute the **Rollback Command** documented in the corresponding snapshot entry below.
 
 ---
+### 📦 Backup Snapshot: `db_backup_20261019172037.json`
+- **Timestamp**: `2026-10-19T17:20:37.957Z`
+- **Git Commit**: `f2ad8db`
+- **Backup Location**: `/Users/abiolaadefowope/cursor 2.0/educate crm/server/backups/db_backup_20261019172037.json`
+- **SHA-256 Checksum**: `02b43c6f54d04e68...`
+- **File Size**: `252 KB`
+
+| Metric | Count / Value |
+| :--- | :--- |
+| **Students** | `47` |
+| **Mentors** | `9` |
+| **Leads** | `8` |
+| **Expenses** | `2` |
+| **Courses & Cohorts** | `19 courses / 5 cohorts` |
+| **Invoices** | `4` |
+| **Support Tickets** | `10` |
+| **Attendance Logs** | `20` |
+| **Wallet Balance** | `₦2,100` |
+| **DVA Account Number** | `9817707007` |
+
+**Rollback Command**:
+```bash
+cp "/Users/abiolaadefowope/cursor 2.0/educate crm/server/backups/db_backup_20261019172037.json" "/Users/abiolaadefowope/cursor 2.0/educate crm/server/data/db.json" && pm2 restart nexus-crm-api
+```
+
+---
+---
 ### 📦 Backup Snapshot: `db_backup_20261004145347.json`
 - **Timestamp**: `2026-10-04T14:53:47.194Z`
 - **Git Commit**: `121d3d1`

@@ -563,7 +563,7 @@ class ApiService {
     });
   }
 
-  async addTicketComment(ticketId: string, commentData: { authorName: string; authorEmail: string; authorRole: string; content: string }): Promise<TicketComment | null> {
+  async addTicketComment(ticketId: string, commentData: { authorName: string; authorEmail: string; authorRole: string; content: string; attachments?: any[] }): Promise<TicketComment | null> {
     return this.request<TicketComment>(`/tickets/${ticketId}/comments`, {
       method: 'POST',
       body: JSON.stringify(commentData),

@@ -69,8 +69,10 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
 
   const isSuperAdmin = currentUser?.role === 'super_admin';
   const isFinance = currentUser?.role === 'finance';
+  const isAdmissions = currentUser?.role === 'admissions' || currentUser?.roleTitle?.toLowerCase().includes('admission') || currentUser?.roleTitle?.toLowerCase().includes('enrollment');
   const isApprover = currentUser?.role === 'approver' || currentUser?.isApprover === true;
-  const canApproveExpenses = isSuperAdmin || isFinance || isApprover || hasFeaturePermission('canApproveExpenses');
+  const canApproveExpenses = isSuperAdmin; // Strictly Super Admin can approve/reject pending requisitions
+  const canDisburseApprovedFunds = isSuperAdmin || isFinance || isAdmissions || isApprover || hasFeaturePermission('canDisburseApprovedFunds') || hasFeaturePermission('canApproveExpenses');
   const canManageBudget = isSuperAdmin || isFinance || isApprover;
   const showBudgetCardToUser = canManageBudget || (settings.showBudgetToStaff !== false);
 
@@ -970,9 +972,9 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                         <CrispStatusBadge status={expense.status} />
                       </td>
 
-                      {/* Governance Decision (Approve / Reject) */}
+                      {/* Governance Decision (Approve / Reject / Disburse) */}
                       <td className="px-stack-md py-3 align-top text-right whitespace-nowrap">
-                        {canApproveExpenses ? (
+                        {(canApproveExpenses || canDisburseApprovedFunds) ? (
                           <div className="flex items-center justify-end gap-1.5">
                             <button
                               type="button"
@@ -985,7 +987,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                             </button>
 
                             {/* Disburse from Wallet button for Approved expenses */}
-                            {isApproved && (
+                            {isApproved && canDisburseApprovedFunds && (
                               <button
                                 type="button"
                                 onClick={() => {
@@ -993,7 +995,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                                   openModal('disburse-expense');
                                 }}
                                 className="h-8 px-2.5 rounded bg-[#166534] hover:bg-[#15803d] text-white text-xs font-bold flex items-center gap-1 shadow-2xs transition-all cursor-pointer"
-                                title="Disburse approved funds directly to recipient bank account from Expense Wallet via NIBSS"
+                                title="Disburse approved funds directly to recipient bank account from Expense Wallet"
                               >
                                 <span className="material-symbols-outlined text-[15px]">send_money</span>
                                 <span>Disburse</span>
@@ -1001,45 +1003,53 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                             )}
 
                             {isAwaiting ? (
-                              <>
-                                <button
-                                  onClick={() => approveExpense(expense.id)}
-                                  className="h-8 px-2.5 rounded bg-[#DCFCE7] hover:bg-[#bbf7d0] text-[#166534] text-xs font-bold flex items-center gap-1 border border-[#166534]/30 transition-all cursor-pointer shadow-2xs"
-                                  title="Approve funds release and deduct from approved monthly budget"
-                                >
-                                  <span className="material-symbols-outlined text-[16px]">check</span>
-                                  <span>Approve</span>
-                                </button>
-                                <button
-                                  onClick={() => handleOpenRejectModal(expense)}
-                                  className="h-8 px-2.5 rounded bg-[#FEE2E2] hover:bg-[#fecaca] text-[#991B1B] text-xs font-bold flex items-center gap-1 border border-[#991B1B]/30 transition-all cursor-pointer shadow-2xs"
-                                  title="Reject this requisition with a required feedback side note"
-                                >
-                                  <span className="material-symbols-outlined text-[16px]">close</span>
-                                  <span>Reject</span>
-                                </button>
-                              </>
+                              isSuperAdmin ? (
+                                <>
+                                  <button
+                                    onClick={() => approveExpense(expense.id)}
+                                    className="h-8 px-2.5 rounded bg-[#DCFCE7] hover:bg-[#bbf7d0] text-[#166534] text-xs font-bold flex items-center gap-1 border border-[#166534]/30 transition-all cursor-pointer shadow-2xs"
+                                    title="Approve funds release and deduct from approved monthly budget"
+                                  >
+                                    <span className="material-symbols-outlined text-[16px]">check</span>
+                                    <span>Approve</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleOpenRejectModal(expense)}
+                                    className="h-8 px-2.5 rounded bg-[#FEE2E2] hover:bg-[#fecaca] text-[#991B1B] text-xs font-bold flex items-center gap-1 border border-[#991B1B]/30 transition-all cursor-pointer shadow-2xs"
+                                    title="Reject this requisition with a required feedback side note"
+                                  >
+                                    <span className="material-symbols-outlined text-[16px]">close</span>
+                                    <span>Reject</span>
+                                  </button>
+                                </>
+                              ) : (
+                                <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                                  Pending SA Approval
+                                </span>
+                              )
                             ) : (
-                              <select
-                                value={expense.status}
-                                onChange={(e) => {
-                                  const newStatus = e.target.value as ExpenseStatus;
-                                  if (newStatus === 'Rejected') {
-                                    handleOpenRejectModal(expense);
-                                  } else if (newStatus === 'Approved') {
-                                    approveExpense(expense.id);
-                                  } else {
-                                    updateExpenseStatus(expense.id, newStatus);
-                                  }
-                                }}
-                                className="text-xs font-semibold px-2 py-1 rounded-lg border border-outline-variant bg-surface outline-none cursor-pointer"
-                              >
-                                <option value="Approved">Approved</option>
-                                <option value="Awaiting Approval">Awaiting Approval</option>
-                                <option value="Rejected">Rejected</option>
-                                <option value="In Review">In Review</option>
-                                <option value="Paid">Paid</option>
-                              </select>
+                              isSuperAdmin && (
+                                <select
+                                  value={expense.status}
+                                  onChange={(e) => {
+                                    const newStatus = e.target.value as ExpenseStatus;
+                                    if (newStatus === 'Rejected') {
+                                      handleOpenRejectModal(expense);
+                                    } else if (newStatus === 'Approved') {
+                                      approveExpense(expense.id);
+                                    } else {
+                                      updateExpenseStatus(expense.id, newStatus);
+                                    }
+                                  }}
+                                  className="text-xs font-semibold px-2 py-1 rounded-lg border border-outline-variant bg-surface outline-none cursor-pointer"
+                                >
+                                  <option value="Approved">Approved</option>
+                                  <option value="Awaiting Approval">Awaiting Approval</option>
+                                  <option value="Rejected">Rejected</option>
+                                  <option value="In Review">In Review</option>
+                                  <option value="Paid">Paid</option>
+                                </select>
+                              )
                             )}
                           </div>
                         ) : (
@@ -1268,11 +1278,16 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
         expense={currentViewingExpense}
         isSuperAdmin={isSuperAdmin}
         canApprove={canApproveExpenses}
+        canDisburse={canDisburseApprovedFunds}
         onApprove={(id) => {
           approveExpense(id);
         }}
         onReject={(exp) => {
           handleOpenRejectModal(exp);
+        }}
+        onDisburse={(exp) => {
+          setSelectedExpenseForDisburse(exp);
+          openModal('disburse-expense');
         }}
       />
 

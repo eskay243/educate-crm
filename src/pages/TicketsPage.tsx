@@ -1,7 +1,54 @@
 import React, { useState, useMemo } from 'react';
 import { useCRM } from '../context/CRMContext';
-import { TicketCategory, TicketPriority, TicketStatus } from '../types/crm';
+import { TicketCategory, TicketPriority, TicketStatus, TicketAttachment } from '../types/crm';
 import { CrispStatusBadge } from '../components/common/CrispStatusBadge';
+
+const formatTicketDateTime = (isoDate?: string) => {
+  if (!isoDate) return 'Just now';
+  try {
+    const d = new Date(isoDate);
+    if (isNaN(d.getTime())) return isoDate;
+    return new Intl.DateTimeFormat('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    }).format(d);
+  } catch {
+    return isoDate;
+  }
+};
+
+const formatFileSize = (bytes?: number) => {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const handleFilesSelected = (files: FileList | null, callback: (attachments: TicketAttachment[]) => void) => {
+  if (!files || files.length === 0) return;
+  const readers: Promise<TicketAttachment>[] = Array.from(files).map(file => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        resolve({
+          name: file.name,
+          url: (e.target?.result as string) || '',
+          size: file.size,
+          type: file.type,
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+
+  Promise.all(readers).then(results => {
+    callback(results);
+  });
+};
 
 export const TicketsPage: React.FC = () => {
   const { 
@@ -48,9 +95,11 @@ export const TicketsPage: React.FC = () => {
   const [newPriority, setNewPriority] = useState<TicketPriority>('medium');
   const [newDescription, setNewDescription] = useState('');
   const [newAssignedRole, setNewAssignedRole] = useState<string>('super_admin');
+  const [newAttachments, setNewAttachments] = useState<TicketAttachment[]>([]);
 
   // Comment Input State
   const [replyText, setReplyText] = useState('');
+  const [replyAttachments, setReplyAttachments] = useState<TicketAttachment[]>([]);
 
   const defaultRolesList = [
     { id: 'super_admin', name: 'Super Admin / Operations' },
@@ -127,6 +176,7 @@ export const TicketsPage: React.FC = () => {
       status: 'open',
       assignedToRole: targetRole,
       assignedToName: roleObj?.name || 'Super Admin / Operations',
+      attachments: newAttachments.length > 0 ? newAttachments : undefined,
       createdBy: {
         id: currentUser?.id || `usr-${Date.now()}`,
         name: currentUser?.name || 'Authorized User',
@@ -141,15 +191,17 @@ export const TicketsPage: React.FC = () => {
     setNewCategory('observation');
     setNewPriority('medium');
     setNewAssignedRole('super_admin');
+    setNewAttachments([]);
     setIsCreateModalOpen(false);
   };
 
   const handleSendReply = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTicketId || !replyText.trim()) return;
+    if (!selectedTicketId || (!replyText.trim() && replyAttachments.length === 0)) return;
 
-    addTicketComment(selectedTicketId, replyText.trim());
+    addTicketComment(selectedTicketId, replyText.trim(), replyAttachments.length > 0 ? replyAttachments : undefined);
     setReplyText('');
+    setReplyAttachments([]);
   };
 
   const getCategoryLabel = (cat: TicketCategory) => {
@@ -432,8 +484,14 @@ export const TicketsPage: React.FC = () => {
                   </td>
 
                   <td className="p-3 max-w-sm">
-                    <div className="font-bold text-on-surface hover:text-primary transition-colors cursor-pointer" onClick={() => setSelectedTicketId(ticket.id)}>
-                      {ticket.title}
+                    <div className="font-bold text-on-surface hover:text-primary transition-colors cursor-pointer flex items-center gap-1.5" onClick={() => setSelectedTicketId(ticket.id)}>
+                      <span>{ticket.title}</span>
+                      {ticket.attachments && ticket.attachments.length > 0 && (
+                        <span title={`${ticket.attachments.length} attachment(s)`} className="inline-flex items-center text-primary text-[11px] font-semibold">
+                          <span className="material-symbols-outlined text-[14px]">attach_file</span>
+                          <span>{ticket.attachments.length}</span>
+                        </span>
+                      )}
                     </div>
                     <p className="text-secondary text-[11px] line-clamp-1 mt-0.5">
                       {ticket.description}
@@ -469,7 +527,7 @@ export const TicketsPage: React.FC = () => {
                   </td>
 
                   <td className="p-3 text-secondary text-[11px] whitespace-nowrap font-mono">
-                    {ticket.updatedAt?.split('T')[0] || ticket.createdAt?.split('T')[0] || 'Today'}
+                    {formatTicketDateTime(ticket.updatedAt || ticket.createdAt)}
                   </td>
 
                   <td className="p-3 pr-4 text-right whitespace-nowrap">
@@ -602,6 +660,51 @@ export const TicketsPage: React.FC = () => {
                 />
               </div>
 
+              {/* Attachments Section */}
+              <div className="space-y-1.5 pt-1">
+                <label className="block text-secondary font-semibold">Attachments (Screenshots, PDFs, Logs)</label>
+                <div className="flex items-center gap-2">
+                  <label className="h-8 px-3 rounded-lg border border-outline-variant bg-surface hover:bg-surface-container flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-secondary hover:text-on-surface transition-colors shadow-2xs">
+                    <span className="material-symbols-outlined text-[16px] text-primary">attach_file</span>
+                    <span>Choose Files</span>
+                    <input
+                      type="file"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => {
+                        handleFilesSelected(e.target.files, (files) => {
+                          setNewAttachments(prev => [...prev, ...files]);
+                        });
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                  <span className="text-[11px] text-secondary">Attach screenshots, error receipts, or documents</span>
+                </div>
+
+                {newAttachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-1.5">
+                    {newAttachments.map((att, idx) => (
+                      <div
+                        key={idx}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container border border-outline-variant text-[11px] text-on-surface"
+                      >
+                        <span className="material-symbols-outlined text-[14px] text-primary">description</span>
+                        <span className="font-medium max-w-[150px] truncate">{att.name}</span>
+                        {att.size && <span className="text-[10px] text-secondary font-mono">({formatFileSize(att.size)})</span>}
+                        <button
+                          type="button"
+                          onClick={() => setNewAttachments(prev => prev.filter((_, i) => i !== idx))}
+                          className="text-secondary hover:text-error ml-1 cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">close</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="flex justify-end gap-2 pt-3 border-t border-outline-variant">
                 <button
                   type="button"
@@ -650,16 +753,45 @@ export const TicketsPage: React.FC = () => {
                 <h3 className="font-headline-md text-headline-md font-bold text-on-surface">
                   {activeTicket.title}
                 </h3>
-                <div className="flex items-center gap-2 text-xs text-secondary mt-1">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-secondary mt-1">
                   <span>Submitted by <strong className="text-on-surface">{activeTicket.createdBy.name}</strong> ({activeTicket.createdBy.roleTitle || activeTicket.createdBy.role})</span>
                   <span>•</span>
-                  <span>{activeTicket.createdAt?.split('T')[0] || 'Today'}</span>
+                  <span className="font-mono text-primary font-semibold">{formatTicketDateTime(activeTicket.createdAt)}</span>
                 </div>
               </div>
 
               <div className="p-3 rounded-lg bg-surface border border-outline-variant/60 text-xs text-on-surface leading-relaxed whitespace-pre-wrap">
                 {activeTicket.description}
               </div>
+
+              {/* Ticket Main Attachments */}
+              {activeTicket.attachments && activeTicket.attachments.length > 0 && (
+                <div className="space-y-1.5 p-3 rounded-lg bg-surface border border-outline-variant/60">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-secondary">
+                    <span className="material-symbols-outlined text-[16px] text-primary">attach_file</span>
+                    <span>Attached Evidence ({activeTicket.attachments.length})</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {activeTicket.attachments.map((att, idx) => (
+                      <a
+                        key={idx}
+                        href={att.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download={att.name}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-lowest border border-outline-variant hover:border-primary text-xs text-on-surface transition-colors group cursor-pointer shadow-2xs"
+                      >
+                        <span className="material-symbols-outlined text-[16px] text-primary group-hover:scale-110 transition-transform">
+                          {att.type?.startsWith('image/') ? 'image' : 'description'}
+                        </span>
+                        <span className="font-semibold max-w-[180px] truncate">{att.name}</span>
+                        {att.size && <span className="text-[10px] text-secondary font-mono">({formatFileSize(att.size)})</span>}
+                        <span className="material-symbols-outlined text-[14px] text-secondary group-hover:text-primary">download</span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Assignment & Routing Card */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-lg bg-surface border border-outline-variant text-xs">
@@ -721,7 +853,7 @@ export const TicketsPage: React.FC = () => {
             {/* Conversation / Comments Stream */}
             <div className="p-stack-md flex-1 overflow-y-auto space-y-3 bg-surface/30">
               <h4 className="text-xs font-bold text-secondary uppercase tracking-wider">
-                Conversation History ({activeTicket.comments?.length || 0})
+                Conversation History &amp; Responses ({activeTicket.comments?.length || 0})
               </h4>
 
               {(!activeTicket.comments || activeTicket.comments.length === 0) ? (
@@ -733,7 +865,7 @@ export const TicketsPage: React.FC = () => {
                   {activeTicket.comments.map((comment) => (
                     <div 
                       key={comment.id}
-                      className="p-3 rounded-lg bg-surface-container-lowest border border-outline-variant/60 shadow-2xs space-y-1 text-xs"
+                      className="p-3 rounded-lg bg-surface-container-lowest border border-outline-variant/60 shadow-2xs space-y-1.5 text-xs"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -743,10 +875,33 @@ export const TicketsPage: React.FC = () => {
                           </span>
                         </div>
                         <span className="text-[10px] text-secondary font-mono">
-                          {comment.createdAt ? new Date(comment.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}
+                          {formatTicketDateTime(comment.createdAt)}
                         </span>
                       </div>
                       <p className="text-on-surface leading-relaxed whitespace-pre-wrap">{comment.content}</p>
+
+                      {/* Comment Attachments */}
+                      {comment.attachments && comment.attachments.length > 0 && (
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {comment.attachments.map((att, idx) => (
+                            <a
+                              key={idx}
+                              href={att.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              download={att.name}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface border border-outline-variant hover:border-primary text-[11px] text-on-surface transition-colors group cursor-pointer"
+                            >
+                              <span className="material-symbols-outlined text-[14px] text-primary group-hover:scale-110 transition-transform">
+                                {att.type?.startsWith('image/') ? 'image' : 'attach_file'}
+                              </span>
+                              <span className="font-medium max-w-[150px] truncate">{att.name}</span>
+                              {att.size && <span className="text-[10px] text-secondary font-mono">({formatFileSize(att.size)})</span>}
+                              <span className="material-symbols-outlined text-[13px] text-secondary group-hover:text-primary">download</span>
+                            </a>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -754,21 +909,65 @@ export const TicketsPage: React.FC = () => {
             </div>
 
             {/* Reply Input Box */}
-            <form onSubmit={handleSendReply} className="p-stack-md border-t border-outline-variant bg-surface-container-lowest flex gap-2">
-              <input
-                type="text"
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                placeholder="Type a response or update note..."
-                className="flex-1 p-2.5 text-xs bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none"
-              />
-              <button
-                type="submit"
-                className="px-4 py-2 bg-primary text-on-primary rounded-lg text-xs font-bold hover:bg-primary/90 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[16px]">send</span>
-                <span>Send</span>
-              </button>
+            <form onSubmit={handleSendReply} className="p-stack-md border-t border-outline-variant bg-surface-container-lowest space-y-2">
+              {replyAttachments.length > 0 && (
+                <div className="flex flex-wrap gap-2 pb-1">
+                  {replyAttachments.map((att, idx) => (
+                    <div
+                      key={idx}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface border border-outline-variant text-[11px] text-on-surface"
+                    >
+                      <span className="material-symbols-outlined text-[14px] text-primary">attach_file</span>
+                      <span className="font-medium max-w-[140px] truncate">{att.name}</span>
+                      {att.size && <span className="text-[10px] text-secondary font-mono">({formatFileSize(att.size)})</span>}
+                      <button
+                        type="button"
+                        onClick={() => setReplyAttachments(prev => prev.filter((_, i) => i !== idx))}
+                        className="text-secondary hover:text-error ml-1 cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">close</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-2 items-center">
+                <label 
+                  title="Attach file"
+                  className="w-10 h-10 rounded-lg border border-outline-variant bg-surface hover:bg-surface-container flex items-center justify-center cursor-pointer text-secondary hover:text-primary transition-colors shrink-0"
+                >
+                  <span className="material-symbols-outlined text-[20px]">attach_file</span>
+                  <input
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      handleFilesSelected(e.target.files, (files) => {
+                        setReplyAttachments(prev => [...prev, ...files]);
+                      });
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+
+                <input
+                  type="text"
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  placeholder="Type a response or update note..."
+                  className="flex-1 h-10 px-3 text-xs bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none"
+                />
+
+                <button
+                  type="submit"
+                  disabled={!replyText.trim() && replyAttachments.length === 0}
+                  className="h-10 px-4 bg-primary text-on-primary rounded-lg text-xs font-bold hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">send</span>
+                  <span>Send</span>
+                </button>
+              </div>
             </form>
           </div>
         </div>

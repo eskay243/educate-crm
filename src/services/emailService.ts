@@ -149,91 +149,143 @@ export class EmailService {
         break;
 
       case 'student_welcome':
+        const curriculumLink = payload.data.curriculumDriveUrl || `${APP_BASE_URL}/student/curriculum`;
+        const handbookLink = payload.data.handbookDriveUrl || `${APP_BASE_URL}/student/curriculum`;
+        const defaultPwd = payload.data.defaultPassword || 'Edu#2026!Pro';
+
         bodyContent = `
           <div style="padding: 32px 24px; font-family: 'Inter', sans-serif; color: #1e293b; line-height: 1.6;">
-            <div style="text-align: center; margin-bottom: 24px;">
-              <span style="background-color: #ecfdf5; color: #047857; font-weight: 700; font-size: 11px; padding: 6px 14px; border-radius: 20px; border: 1px solid #a7f3d0; text-transform: uppercase; letter-spacing: 0.5px;">
-                ✓ Official Admission Confirmed
+            {/* Official Admission Letterhead */}
+            <div style="border-bottom: 2px solid ${primaryColor}; padding-bottom: 16px; margin-bottom: 24px; text-align: center;">
+              <span style="background-color: #ecfdf5; color: #047857; font-weight: 700; font-size: 11px; padding: 6px 14px; border-radius: 20px; border: 1px solid #a7f3d0; text-transform: uppercase; letter-spacing: 0.5px; display: inline-block; margin-bottom: 10px;">
+                ✓ Official Letter of Provisional Admission
               </span>
-              <h2 style="color: ${primaryColor}; margin: 12px 0 6px 0; font-size: 20px; font-weight: 800;">
-                Congratulations &amp; Welcome, ${payload.recipientName}!
+              <h2 style="color: ${primaryColor}; margin: 6px 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px;">
+                CODELAB EDUCARE LTD
               </h2>
-              <p style="margin: 0; color: #64748b; font-size: 14px;">
-                We are excited to welcome you to <strong>CODELAB EDUCARE LTD</strong>. Your student profile is officially enrolled and active.
+              <p style="margin: 0; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">
+                Directorate of Admissions &amp; Academic Affairs • Lagos Hub
               </p>
             </div>
 
-            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
-              <h3 style="margin: 0 0 14px 0; font-size: 13px; color: ${primaryColor}; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
-                Academic &amp; Enrollment Summary
+            {/* Formal Admission Letter Body */}
+            <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+              <p style="margin-top: 0; font-size: 14px; color: #334155;">
+                <strong>Date:</strong> ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}<br/>
+                <strong>Candidate:</strong> ${payload.recipientName}<br/>
+                <strong>Application Ref:</strong> <span style="font-family: monospace; color: ${primaryColor}; font-weight: bold;">${payload.data.studentCode || 'STU-PROD'}</span>
+              </p>
+
+              <h3 style="color: ${primaryColor}; font-size: 16px; margin: 18px 0 10px 0; border-top: 1px dashed #e2e8f0; padding-top: 14px;">
+                Offer of Provisional Admission
               </h3>
+
+              <p style="font-size: 13px; color: #334155; line-height: 1.7;">
+                Dear ${payload.recipientName},<br/><br/>
+                Following your application and academic assessment, the Admissions Committee is pleased to inform you that you have been offered provisional admission into <strong>CODELAB EDUCARE LTD</strong> to undertake the rigorous professional diploma in <strong>${payload.data.program || 'Technology Track'}</strong>.
+              </p>
+
+              <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px 16px; margin: 16px 0; font-size: 13px;">
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 4px 0; color: #64748b; width: 42%;">Matriculation Number:</td>
+                    <td style="padding: 4px 0; font-family: monospace; font-weight: bold; color: ${primaryColor};">${payload.data.studentCode || 'STU-PROD'}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 4px 0; color: #64748b;">Academic Track:</td>
+                    <td style="padding: 4px 0; font-weight: 600; color: #1e293b;">${payload.data.program || 'Technology Track'}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 4px 0; color: #64748b;">Cohort / Session:</td>
+                    <td style="padding: 4px 0; color: #1e293b;">${payload.data.cohort || 'Executive Cohort'}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 4px 0; color: #64748b;">Assigned Academic Mentor:</td>
+                    <td style="padding: 4px 0; color: #1e293b;"><strong>${payload.data.mentorName || 'Academic Faculty Pool'}</strong></td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 4px 0; color: #64748b;">Tuition Status:</td>
+                    <td style="padding: 4px 0; color: #166534; font-weight: 600;">${payload.data.paymentStatus || 'Verified / Active'}</td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+
+            {/* Student Portal Account Credentials & Password Reset Warning */}
+            <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                <span style="font-size: 18px;">🔐</span>
+                <h4 style="margin: 0; color: #166534; font-size: 14px; font-weight: 700;">Student Portal Login Credentials</h4>
+              </div>
+              
+              <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 12px;">
+                <tr>
+                  <td style="padding: 4px 0; color: #475569; width: 35%;">Portal Login Email:</td>
+                  <td style="padding: 4px 0; font-weight: bold; color: #0f172a;">${payload.to}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; color: #475569;">Default Password:</td>
+                  <td style="padding: 4px 0;">
+                    <span style="font-family: monospace; background-color: #ffffff; padding: 4px 10px; border-radius: 4px; border: 1px solid #86efac; font-weight: bold; color: #166534; font-size: 14px;">
+                      ${defaultPwd}
+                    </span>
+                  </td>
+                </tr>
+              </table>
+
+              <div style="background-color: #fef3c7; border: 1px solid #fde68a; border-radius: 6px; padding: 10px 14px; font-size: 12px; color: #92400e; display: flex; align-items: center; gap: 8px;">
+                <span>⚠️</span>
+                <span><strong>Security Recommendation:</strong> This is a temporary system default password. You are strongly advised to reset your password immediately upon your first login.</span>
+              </div>
+            </div>
+
+            {/* Official Onboarding Documentation & Google Drive Links */}
+            <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                <span style="font-size: 18px;">📁</span>
+                <h4 style="margin: 0; color: #1e40af; font-size: 14px; font-weight: 700;">Official Onboarding Assets (Google Drive)</h4>
+              </div>
+              <p style="margin: 0 0 14px 0; font-size: 12px; color: #1d4ed8; line-height: 1.5;">
+                Please review and bookmark your official academic curriculum and student code of conduct handbook prior to your orientation session:
+              </p>
+
               <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
                 <tr>
-                  <td style="padding: 6px 0; color: #64748b; width: 40%;">Student Matric ID:</td>
-                  <td style="padding: 6px 0; font-family: monospace; font-weight: bold; color: ${primaryColor}; font-size: 14px;">${payload.data.studentCode || 'STU-PROD'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 6px 0; color: #64748b;">Academic Track:</td>
-                  <td style="padding: 6px 0; font-weight: 600; color: #1e293b;">${payload.data.program || 'Technology Track'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 6px 0; color: #64748b;">Cohort / Schedule:</td>
-                  <td style="padding: 6px 0; color: #1e293b;">${payload.data.cohort || 'Executive Cohort'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 6px 0; color: #64748b;">Assigned Faculty Mentor:</td>
-                  <td style="padding: 6px 0; color: #1e293b;"><strong>${payload.data.mentorName || 'Academic Mentor Pool'}</strong></td>
-                </tr>
-                <tr>
-                  <td style="padding: 6px 0; color: #64748b;">Tuition Billing Status:</td>
-                  <td style="padding: 6px 0; color: #166534; font-weight: 600;">
-                    ${payload.data.paymentStatus || 'Verified / Active'}
+                  <td style="padding: 8px 0; border-bottom: 1px solid #dbeafe;">
+                    <strong style="color: #1e3a8a;">📘 Course Curriculum (Google Drive):</strong><br/>
+                    <span style="font-size: 11px; color: #64748b;">Comprehensive weekly syllabus, laboratory objectives, and grading milestones.</span>
                   </td>
-                </tr>
-              </table>
-            </div>
-
-            {/* Official Academic Program Guide & Course Outline Kit */}
-            <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 18px; margin: 20px 0;">
-              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                <span style="font-size: 18px;">🎓</span>
-                <strong style="color: #1e40af; font-size: 14px;">Student Onboarding Kit: Program Guide &amp; Course Outline Attached</strong>
-              </div>
-              <p style="margin: 0 0 12px 0; font-size: 12px; color: #1d4ed8; line-height: 1.5;">
-                Welcome to your program! Please review your complete Academic Syllabus, Course Outline, and Student Conduct Handbook before your first lecture.
-              </p>
-              <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                <tr>
-                  <td style="padding: 4px 0;">
-                    <a href="${APP_BASE_URL}/mentors/course-outlines" style="color: #1e40af; font-weight: bold; text-decoration: underline;">
-                      ➜ Open Syllabus &amp; Video Lecture Outlines
+                  <td style="padding: 8px 0; text-align: right; border-bottom: 1px solid #dbeafe; vertical-align: middle;">
+                    <a href="${curriculumLink}" target="_blank" style="background-color: #2563eb; color: #ffffff; padding: 8px 16px; border-radius: 5px; text-decoration: none; font-size: 12px; font-weight: bold; display: inline-block;">
+                      Open Curriculum ➜
                     </a>
                   </td>
-                  <td style="padding: 4px 0; text-align: right;">
-                    <a href="${APP_BASE_URL}/student/curriculum" style="color: #1e40af; font-weight: bold; text-decoration: underline;">
-                      ➜ Access Student Curriculum Hub
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0;">
+                    <strong style="color: #1e3a8a;">📕 Student Conduct Handbook (Google Drive):</strong><br/>
+                    <span style="font-size: 11px; color: #64748b;">Institute regulations, academic integrity guidelines, and support policies.</span>
+                  </td>
+                  <td style="padding: 8px 0; text-align: right; vertical-align: middle;">
+                    <a href="${handbookLink}" target="_blank" style="background-color: #0284c7; color: #ffffff; padding: 8px 16px; border-radius: 5px; text-decoration: none; font-size: 12px; font-weight: bold; display: inline-block;">
+                      Open Handbook ➜
                     </a>
                   </td>
                 </tr>
               </table>
             </div>
 
-            <h3 style="color: ${primaryColor}; font-size: 15px; margin: 24px 0 10px 0;">Onboarding Next Steps:</h3>
-            <ol style="padding-left: 20px; margin: 0 0 24px 0; font-size: 13px; color: #334155;">
-              <li style="margin-bottom: 8px;"><strong>Student Portal Access:</strong> Log in using your registered email address (<code>${payload.to}</code>) to review course syllabus and project assignments.</li>
-              <li style="margin-bottom: 8px;"><strong>Faculty Orientation:</strong> Your mentor (<strong>${payload.data.mentorName || 'Faculty Lead'}</strong>) will contact you for your initial 1-on-1 cohort kickoff and environment configuration.</li>
-              <li style="margin-bottom: 8px;"><strong>Learning Lab Access:</strong> If enrolled for hybrid on-site access, bring your Student ID (<strong>${payload.data.studentCode || 'STU-PROD'}</strong>) to the campus security desk.</li>
-            </ol>
-
-            <div style="text-align: center; margin: 30px 0;">
+            {/* Launch Student Portal Action Button */}
+            <div style="text-align: center; margin: 32px 0;">
               <a href="${payload.data.portalUrl || `${APP_BASE_URL}/login?role=student&email=` + encodeURIComponent(payload.to)}" 
-                 style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 28px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block; box-shadow: 0 2px 4px rgba(0,35,111,0.2);">
-                Launch Student Portal →
+                 style="background-color: ${primaryColor}; color: #ffffff; padding: 15px 36px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 15px; display: inline-block; box-shadow: 0 4px 6px rgba(0,35,111,0.25);">
+                Access Student Portal →
               </a>
             </div>
 
-            <p style="font-size: 12px; color: #64748b; margin-top: 24px; border-top: 1px solid #f1f5f9; padding-top: 12px;">
-              If you have any questions or need assistance setting up your environment, reply directly to this email or reach the Admissions Office at <a href="mailto:admin@codelab.institute" style="color: ${primaryColor};">admin@codelab.institute</a>.
+            <p style="font-size: 12px; color: #64748b; margin-top: 24px; border-top: 1px solid #f1f5f9; padding-top: 14px; text-align: center;">
+              Admissions Directorate • CODELAB EDUCARE LTD • Lagos Hub<br/>
+              Need assistance? Email our help desk at <a href="mailto:admin@codelab.institute" style="color: ${primaryColor}; font-weight: bold;">admin@codelab.institute</a>.
             </p>
           </div>
         `;

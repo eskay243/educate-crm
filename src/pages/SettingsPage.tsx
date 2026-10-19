@@ -436,6 +436,8 @@ export const SettingsPage: React.FC = () => {
   const [showPaystackSecret, setShowPaystackSecret] = useState(false);
   const [testingPaystack, setTestingPaystack] = useState(false);
   const [paystackTestResult, setPaystackTestResult] = useState<{ success: boolean; message: string; banksCount?: number; isLive?: boolean } | null>(null);
+  const [studentHandbookUrl, setStudentHandbookUrl] = useState(settings.studentHandbookUrl || '');
+  const [defaultCurriculumUrl, setDefaultCurriculumUrl] = useState(settings.defaultCurriculumUrl || '');
 
   // Academic Gatekeeping & Multi-Campus Geofencing State
   const [defaultMinimumLearningHours, setDefaultMinimumLearningHours] = useState<number>(
@@ -590,6 +592,10 @@ export const SettingsPage: React.FC = () => {
     canManageSettings: false,
     canManageAttendance: false,
     canSubmitReports: false,
+    canViewBiodata: false,
+    canModifyStudentBiodata: false,
+    canModifyMentorBiodata: false,
+    canDisburseApprovedFunds: false,
   });
 
   // SMTP Settings State - configured for Zoho Mail
@@ -1010,7 +1016,9 @@ export const SettingsPage: React.FC = () => {
         pass: smtpPass,
         from: smtpFrom,
         secure: smtpSecure,
-      }
+      },
+      studentHandbookUrl: studentHandbookUrl.trim() || undefined,
+      defaultCurriculumUrl: defaultCurriculumUrl.trim() || undefined,
     });
 
     setSavedSuccess(true);
@@ -1190,6 +1198,10 @@ export const SettingsPage: React.FC = () => {
       canManageSettings: false,
       canManageAttendance: false,
       canSubmitReports: false,
+      canViewBiodata: false,
+      canModifyStudentBiodata: false,
+      canModifyMentorBiodata: false,
+      canDisburseApprovedFunds: false,
     });
     setShowCreateRoleModal(false);
   };
@@ -3192,6 +3204,57 @@ export const SettingsPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Student Onboarding & Orientation Assets (Google Drive) */}
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-4">
+            <div className="flex items-center gap-2 border-b border-outline-variant pb-2">
+              <span className="material-symbols-outlined text-primary text-xl">folder_shared</span>
+              <div>
+                <h3 className="font-headline-sm text-base font-bold text-on-surface">
+                  Student Onboarding &amp; Orientation Assets (Google Drive)
+                </h3>
+                <p className="text-xs text-secondary">
+                  Official Google Drive document links automatically attached to student admission letters, welcome emails, and LMS dashboard.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block font-label-md text-xs font-semibold text-on-surface mb-1 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[15px] text-primary">menu_book</span>
+                  Global Student Handbook (Google Drive URL)
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://drive.google.com/file/d/..."
+                  value={studentHandbookUrl}
+                  onChange={(e) => setStudentHandbookUrl(e.target.value)}
+                  className="w-full h-10 px-3 rounded bg-surface border border-outline-variant text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                />
+                <span className="text-[10px] text-secondary mt-1 block">
+                  Universal student code of conduct, grading scale, attendance policies, and campus rules.
+                </span>
+              </div>
+
+              <div>
+                <label className="block font-label-md text-xs font-semibold text-on-surface mb-1 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[15px] text-primary">school</span>
+                  Default Course Curriculum (Google Drive URL)
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://drive.google.com/file/d/..."
+                  value={defaultCurriculumUrl}
+                  onChange={(e) => setDefaultCurriculumUrl(e.target.value)}
+                  className="w-full h-10 px-3 rounded bg-surface border border-outline-variant text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                />
+                <span className="text-[10px] text-secondary mt-1 block">
+                  Fallback curriculum outline link attached to admission emails when a specific course does not have its own Drive URL.
+                </span>
+              </div>
+            </div>
+          </div>
+
           {/* Paystack Payment Gateway Card */}
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-4">
             <div className="flex items-center justify-between border-b border-outline-variant pb-2">
@@ -4227,14 +4290,16 @@ export const SettingsPage: React.FC = () => {
                       <td className="p-3 text-secondary">{user.department || 'Executive'}</td>
                       <td className="p-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => handleOpenEditStaff(user)}
-                            className="px-2 py-1 rounded bg-surface border border-outline-variant hover:bg-surface-container font-semibold text-[11px] text-on-surface transition-colors inline-flex items-center gap-1 cursor-pointer"
-                            title="Edit Staff Information"
-                          >
-                            <span className="material-symbols-outlined text-[13px]">edit</span>
-                            <span>Edit</span>
-                          </button>
+                          {isSuperAdmin && (
+                            <button
+                              onClick={() => handleOpenEditStaff(user)}
+                              className="px-2 py-1 rounded bg-surface border border-outline-variant hover:bg-surface-container font-semibold text-[11px] text-on-surface transition-colors inline-flex items-center gap-1 cursor-pointer"
+                              title="Edit Staff Information (Super Admin Only)"
+                            >
+                              <span className="material-symbols-outlined text-[13px]">edit</span>
+                              <span>Edit</span>
+                            </button>
+                          )}
 
                           {!(user.role === 'super_admin' && (user.id === 'user-admin' || staffUsers.filter(u => u.role === 'super_admin').length <= 1)) && (
                             <button
@@ -4615,6 +4680,10 @@ export const SettingsPage: React.FC = () => {
                         { key: 'canManageSettings' as const, label: 'Manage Settings', icon: 'settings' },
                         { key: 'canManageAttendance' as const, label: 'Staff Attendance', icon: 'schedule' },
                         { key: 'canSubmitReports' as const, label: 'Submit Evaluations', icon: 'assessment' },
+                        { key: 'canViewBiodata' as const, label: 'View Biodata (Staff, Mentor, Student)', icon: 'badge' },
+                        { key: 'canModifyStudentBiodata' as const, label: 'Modify Student Biodata', icon: 'edit_square' },
+                        { key: 'canModifyMentorBiodata' as const, label: 'Modify Mentor Biodata', icon: 'manage_accounts' },
+                        { key: 'canDisburseApprovedFunds' as const, label: 'Disburse Approved Funds', icon: 'payments' },
                       ].map(({ key, label, icon }) => {
                         const isGranted = role.id === 'super_admin' || Boolean(role.permissions?.[key]);
                         const isImmutable = role.id === 'super_admin';
@@ -4629,7 +4698,8 @@ export const SettingsPage: React.FC = () => {
                               const currentPerms = role.permissions || {
                                 canAddCourses: false, canAddCohorts: false, canAddLeads: false, canEnrollStudents: false,
                                 canLogExpenses: false, canApproveExpenses: false, canIssueCertificates: false, canViewBilling: false,
-                                canManageSettings: false, canManageAttendance: false, canSubmitReports: false
+                                canManageSettings: false, canManageAttendance: false, canSubmitReports: false,
+                                canViewBiodata: false, canModifyStudentBiodata: false, canModifyMentorBiodata: false, canDisburseApprovedFunds: false,
                               };
                               updateRolePermissions(role.id, {
                                 permissions: {
@@ -4745,6 +4815,10 @@ export const SettingsPage: React.FC = () => {
                         { key: 'canIssueCertificates' as const, label: 'Issue Certificates' },
                         { key: 'canManageAttendance' as const, label: 'Staff Attendance' },
                         { key: 'canSubmitReports' as const, label: 'Submit Evaluations' },
+                        { key: 'canViewBiodata' as const, label: 'View Biodata (Staff, Mentor, Student)' },
+                        { key: 'canModifyStudentBiodata' as const, label: 'Modify Student Biodata' },
+                        { key: 'canModifyMentorBiodata' as const, label: 'Modify Mentor Biodata' },
+                        { key: 'canDisburseApprovedFunds' as const, label: 'Disburse Approved Funds' },
                       ].map(({ key, label }) => (
                         <label key={key} className="flex items-center gap-2 p-2 rounded border border-outline-variant/60 cursor-pointer hover:bg-surface">
                           <input

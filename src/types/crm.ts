@@ -16,6 +16,10 @@ export interface RoleCapabilities {
   canScheduleClasses?: boolean;
   canApproveTopics?: boolean;
   canManageUsers?: boolean;
+  canViewBiodata?: boolean;
+  canModifyStudentBiodata?: boolean;
+  canModifyMentorBiodata?: boolean;
+  canDisburseApprovedFunds?: boolean;
 }
 
 export interface CustomRoleDefinition {
@@ -32,6 +36,13 @@ export type TicketCategory = 'bug' | 'feature_request' | 'academic' | 'billing' 
 export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
 
+export interface TicketAttachment {
+  name: string;
+  url: string;
+  size?: number;
+  type?: string;
+}
+
 export interface TicketComment {
   id: string;
   ticketId: string;
@@ -39,6 +50,7 @@ export interface TicketComment {
   authorEmail: string;
   authorRole: string;
   content: string;
+  attachments?: TicketAttachment[];
   createdAt: string;
 }
 
@@ -50,6 +62,7 @@ export interface SupportTicket {
   category: TicketCategory;
   priority: TicketPriority;
   status: TicketStatus;
+  attachments?: TicketAttachment[];
   createdBy: {
     id: string;
     name: string;
@@ -272,6 +285,11 @@ export interface Student {
   certificateIssued?: boolean;
   certificateNumber?: string;
   certificateIssuedAt?: string;
+  defaultPassword?: string;
+  mustResetPassword?: boolean;
+  curriculumDriveUrl?: string;
+  handbookDriveUrl?: string;
+  admissionLetterUrl?: string;
 }
 
 export type MentorStatus = 'Active' | 'Available' | 'On Leave' | 'Deactivated';
@@ -483,6 +501,7 @@ export interface CourseProgram {
   theoryHours?: number; // e.g. 25h (30% Theory)
   practicalHours?: number; // e.g. 60h (70% Practical Hands-on Labs)
   learningGuidelinesSummary?: string;
+  curriculumDriveUrl?: string; // Google Drive link to official course curriculum
 }
 
 export interface Cohort {
@@ -664,6 +683,8 @@ export interface OrganizationSettings {
   campusLocationsList?: CampusLocation[];
   customRoles?: CustomRoleDefinition[];
   expenseWallet?: ExpenseAndBudgetWallet;
+  studentHandbookUrl?: string; // Google Drive link to universal student handbook
+  defaultCurriculumUrl?: string; // Fallback Google Drive link for course curriculum
 }
 
 export interface VirtualAccountDetails {
@@ -811,6 +832,7 @@ export type ModalType =
   | 'edit-course' 
   | 'assign-mentor' 
   | 'edit-mentor' 
+  | 'edit-student' 
   | 'change-password'
   | 'clock-in'
   | 'clock-out'

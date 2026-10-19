@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useCRM, formatNaira } from '../../context/CRMContext';
+import { Student } from '../../types/crm';
 import { PerformanceMeter } from '../../components/common/PerformanceMeter';
 import { getStudentEnrolledModules } from '../../utils/courseCurriculum';
 
@@ -14,12 +15,12 @@ export const StudentDashboardPage: React.FC = () => {
     assignments, 
     payTuitionWithPaystack, 
     invoices,
-    openModal,
+    openModal, 
     settings,
     timetables,
   } = useCRM();
 
-  const student = currentStudentProfile || {
+  const student: Student = currentStudentProfile || {
     id: 'stu-demo',
     studentCode: 'STU-8492',
     name: currentUser?.name || 'Scholar Student',
@@ -43,6 +44,12 @@ export const StudentDashboardPage: React.FC = () => {
     mentorId: 'men-demo-001',
     completedLessonIds: ['les-1-1'],
     assignmentSubmissions: [],
+    mustResetPassword: false,
+    phone: '+234 800 000 0000',
+    status: 'Active',
+    enrolledDate: '2026-01-15',
+    courses: [],
+    installments: [],
   };
 
   const assignedMentor = mentors.find(m => m.id === student.mentorId || m.name === student.mentorName) || mentors[0];
@@ -120,42 +127,93 @@ export const StudentDashboardPage: React.FC = () => {
         <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
       </div>
 
+      {/* Recommended Password Reset Banner */}
+      {(student.mustResetPassword || (currentUser as any)?.mustResetPassword) && (
+        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-950 dark:text-amber-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shadow-xs animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-[24px]">lock_reset</span>
+            </div>
+            <div>
+              <h4 className="font-bold text-sm text-amber-950 dark:text-amber-100 flex items-center gap-2">
+                <span>Action Recommended: Update Your Default Password</span>
+                <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300 text-[10px] font-bold">
+                  Security Advisory
+                </span>
+              </h4>
+              <p className="text-secondary dark:text-secondary text-xs leading-relaxed">
+                You are currently using your temporary admission password. For your account security, we recommend setting a personal password.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => openModal('change-password')}
+            className="h-9 px-4 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs shrink-0 cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[16px]">key</span>
+            <span>Reset Password Now</span>
+          </button>
+        </div>
+      )}
+
       {/* Program Guide & Course Outline Onboarding Kit Banner */}
-      <div className="p-4 rounded-xl bg-blue-50/80 border border-blue-200 text-xs text-blue-950 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-[22px]">menu_book</span>
+      {(() => {
+        const matchedCourse = courses.find(c => c.title?.toLowerCase() === student.program?.toLowerCase() || (c as any).name?.toLowerCase() === student.program?.toLowerCase());
+        const effectiveCurriculumUrl = student.curriculumDriveUrl || matchedCourse?.curriculumDriveUrl || settings.defaultCurriculumUrl;
+        const effectiveHandbookUrl = student.handbookDriveUrl || settings.studentHandbookUrl;
+
+        return (
+          <div className="p-4 rounded-xl bg-blue-50/80 border border-blue-200 text-xs text-blue-950 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[22px]">menu_book</span>
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-blue-950 flex items-center gap-2">
+                  <span>Program Guide, Curriculum &amp; Student Handbook</span>
+                  <span className="px-2 py-0.5 rounded-full bg-blue-200 text-blue-900 text-[10px] font-bold">
+                    Official Onboarding Assets
+                  </span>
+                </h4>
+                <p className="text-secondary text-[11px] leading-relaxed">
+                  Review your complete academic curriculum breakdown, weekly milestone deadlines, and student conduct handbook.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 self-stretch md:self-auto shrink-0">
+              {effectiveCurriculumUrl && (
+                <a
+                  href={effectiveCurriculumUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-8 px-3 rounded-lg bg-white border border-blue-300 hover:bg-blue-100 text-primary font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs"
+                >
+                  <span className="material-symbols-outlined text-[15px]">folder_open</span>
+                  <span>Course Curriculum (Drive)</span>
+                </a>
+              )}
+              {effectiveHandbookUrl && (
+                <a
+                  href={effectiveHandbookUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-8 px-3 rounded-lg bg-white border border-blue-300 hover:bg-blue-100 text-primary font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs"
+                >
+                  <span className="material-symbols-outlined text-[15px]">import_contacts</span>
+                  <span>Student Handbook (Drive)</span>
+                </a>
+              )}
+              <Link
+                to="/mentors/course-outlines"
+                className="h-8 px-3 rounded-lg bg-white border border-blue-300 hover:bg-blue-100 text-primary font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs"
+              >
+                <span className="material-symbols-outlined text-[15px]">account_tree</span>
+                <span>Course Outline</span>
+              </Link>
+            </div>
           </div>
-          <div>
-            <h4 className="font-bold text-sm text-blue-950 flex items-center gap-2">
-              <span>Program Guide &amp; Course Outline Kit</span>
-              <span className="px-2 py-0.5 rounded-full bg-blue-200 text-blue-900 text-[10px] font-bold">
-                Student Handbook
-              </span>
-            </h4>
-            <p className="text-secondary text-[11px] leading-relaxed">
-              Review your complete academic curriculum breakdown, weekly milestone deadlines, and student conduct guidelines.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 self-stretch md:self-auto shrink-0">
-          <Link
-            to="/mentors/course-outlines"
-            className="h-8 px-3 rounded-lg bg-white border border-blue-300 hover:bg-blue-100 text-primary font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs"
-          >
-            <span className="material-symbols-outlined text-[15px]">account_tree</span>
-            <span>View Course Outline</span>
-          </Link>
-          <a
-            href="/Program_Officer_Module_QA_Checklist.xlsx"
-            download="Program_Guide_Student_Handbook.xlsx"
-            className="h-8 px-3 rounded-lg bg-primary text-white hover:bg-primary/90 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs"
-          >
-            <span className="material-symbols-outlined text-[15px]">download</span>
-            <span>Download Guide (.xlsx)</span>
-          </a>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* Graduation & Certificate Gatekeeping Banner */}
       {(() => {

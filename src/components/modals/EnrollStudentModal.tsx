@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCRM, formatNaira } from '../../context/CRMContext';
+import { Student } from '../../types/crm';
 
 export interface EnrollStudentModalProps {
   isOpen: boolean;
@@ -7,7 +8,7 @@ export interface EnrollStudentModalProps {
 }
 
 export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose }) => {
-  const { enrollStudent, activeMentors, courses, cohorts } = useCRM();
+  const { enrollStudent, activeMentors, courses, cohorts, settings } = useCRM();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -24,12 +25,20 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
   const [selectedCohortCode, setSelectedCohortCode] = useState<string>(cohorts[0]?.cohortCode || '__custom__');
   const [customCohortName, setCustomCohortName] = useState(`Cohort ${new Date().getFullYear()}-Q${Math.floor((new Date().getMonth() + 3) / 3)} (Lagos Hub)`);
 
+  // Onboarding Materials (Google Drive)
+  const [curriculumDriveUrl, setCurriculumDriveUrl] = useState('');
+  const [handbookDriveUrl, setHandbookDriveUrl] = useState('');
+
   // Financial fields
   const [totalCourseFee, setTotalCourseFee] = useState<number>(courses[0]?.tuitionFee || 850000);
   const [initialPayment, setInitialPayment] = useState<number>(courses[0]?.tuitionFee ? Math.round(courses[0].tuitionFee / 2) : 425000);
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
   const [proofFileName, setProofFileName] = useState<string | null>(null);
+
+  // Success view state
+  const [createdStudent, setCreatedStudent] = useState<Student | null>(null);
+  const [copiedPassword, setCopiedPassword] = useState(false);
 
   // Reset form to blank on modal open
   const resetForm = () => {
@@ -40,15 +49,20 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
     setProofFileName(null);
     setPaymentDate(new Date().toISOString().split('T')[0]);
     setPaymentMethod('bank_transfer');
+    setCreatedStudent(null);
+    setCopiedPassword(false);
     if (courses.length > 0) {
       setSelectedCourseId(courses[0].id);
       setTotalCourseFee(courses[0].tuitionFee);
       setInitialPayment(Math.round(courses[0].tuitionFee / 2));
+      setCurriculumDriveUrl(courses[0].curriculumDriveUrl || settings.defaultCurriculumUrl || '');
     } else {
       setSelectedCourseId('__custom__');
       setTotalCourseFee(850000);
       setInitialPayment(425000);
+      setCurriculumDriveUrl(settings.defaultCurriculumUrl || '');
     }
+    setHandbookDriveUrl(settings.studentHandbookUrl || '');
     if (activeMentors.length > 0) {
       setMentorName(activeMentors[0].name);
     }
@@ -65,16 +79,21 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
     }
   }, [isOpen]);
 
-  // Sync fee when selected course changes
+  // Sync fee and curriculum when selected course changes
   useEffect(() => {
     if (selectedCourseId !== '__custom__') {
       const course = courses.find(c => c.id === selectedCourseId);
       if (course) {
         setTotalCourseFee(course.tuitionFee);
         setInitialPayment(Math.round(course.tuitionFee / 2));
+        if (course.curriculumDriveUrl) {
+          setCurriculumDriveUrl(course.curriculumDriveUrl);
+        } else if (settings.defaultCurriculumUrl) {
+          setCurriculumDriveUrl(settings.defaultCurriculumUrl);
+        }
       }
     }
-  }, [selectedCourseId, courses]);
+  }, [selectedCourseId, courses, settings]);
 
   if (!isOpen) return null;
 
@@ -98,7 +117,7 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
 
     const outstanding = Math.max(0, totalCourseFee - initialPayment);
 
-    enrollStudent({
+    const created = enrollStudent({
       name,
       email,
       phone: phone || '+234 800 000 0000',
@@ -108,6 +127,8 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
       attendanceRate: 100,
       tuitionStatus: outstanding === 0 ? 'Paid' : initialPayment > 0 ? 'Partial' : 'Overdue',
       cohort: effectiveCohortName,
+      curriculumDriveUrl: curriculumDriveUrl.trim() || undefined,
+      handbookDriveUrl: handbookDriveUrl.trim() || undefined,
       totalFees: Number(totalCourseFee),
       outstandingBalance: outstanding,
       courses: [
@@ -139,8 +160,7 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
       ]
     });
 
-    resetForm();
-    onClose();
+    setCreatedStudent(created);
   };
 
   const outstanding = Math.max(0, totalCourseFee - initialPayment);
@@ -154,11 +174,17 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
         {/* Header */}
         <div className="flex items-center justify-between p-stack-md px-stack-lg border-b border-outline-variant bg-surface-bright">
           <div>
-            <h2 className="font-headline-lg text-headline-lg font-bold text-on-surface">Enroll New Student</h2>
-            <p className="font-body-md text-body-md text-secondary">Record candidate profile, course assignment, and initial Naira payment ledger.</p>
+            <h2 className="font-headline-lg text-headline-lg font-bold text-on-surface">
+              {createdStudent ? '🎉 Student Admitted & Onboarded' : 'Enroll New Student'}
+            </h2>
+            <p className="font-body-md text-body-md text-secondary">
+              {createdStudent 
+                ? 'Candidate credentials generated. Email dispatched with admission letter & drive links.' 
+                : 'Record candidate profile, course assignment, and initial Naira payment ledger.'}
+            </p>
           </div>
           <button
-            onClick={onClose}
+            onClick={() => { resetForm(); onClose(); }}
             aria-label="Close"
             className="text-secondary hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-container cursor-pointer"
           >
@@ -166,8 +192,160 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
           </button>
         </div>
 
-        {/* Form Body with 2 Columns */}
-        <form onSubmit={handleSubmit} className="overflow-y-auto p-stack-lg flex-1">
+        {createdStudent ? (
+          /* Success Screen */
+          <div className="overflow-y-auto p-stack-lg space-y-5 flex-1">
+            <div className="bg-[#166534]/10 border border-[#166534]/30 rounded-xl p-5 flex items-start gap-4">
+              <div className="w-12 h-12 rounded-full bg-[#166534] text-white flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[28px]">check_circle</span>
+              </div>
+              <div>
+                <h3 className="font-headline-md font-bold text-on-surface">Provisional Admission Confirmed</h3>
+                <p className="text-body-md text-secondary mt-1">
+                  <strong>{createdStudent.name}</strong> ({createdStudent.studentCode}) has been admitted into <strong>{createdStudent.program}</strong> ({createdStudent.cohort}).
+                </p>
+                <p className="text-xs text-secondary mt-0.5">
+                  An official admission confirmation email including the formal admission letter and curriculum links has been sent to <strong>{createdStudent.email}</strong>.
+                </p>
+              </div>
+            </div>
+
+            {/* Generated Credentials Card */}
+            <div className="bg-surface rounded-xl border border-outline-variant p-5 space-y-4">
+              <div className="flex items-center justify-between border-b border-outline-variant/60 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">key</span>
+                  <h4 className="font-headline-sm font-bold text-on-surface">Default Student Portal Credentials</h4>
+                </div>
+                <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                  Password Reset Recommended
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-3 bg-surface-container-lowest rounded-lg border border-outline-variant/60">
+                  <span className="text-[11px] text-secondary font-medium">Student Code</span>
+                  <p className="font-data-tabular font-bold text-primary text-base mt-0.5">{createdStudent.studentCode}</p>
+                </div>
+
+                <div className="p-3 bg-surface-container-lowest rounded-lg border border-outline-variant/60">
+                  <span className="text-[11px] text-secondary font-medium">Username / Login Email</span>
+                  <p className="font-medium text-on-surface text-sm mt-0.5 truncate">{createdStudent.email}</p>
+                </div>
+
+                <div className="p-3 bg-surface-container-lowest rounded-lg border border-outline-variant/60 relative">
+                  <span className="text-[11px] text-secondary font-medium">Default Password</span>
+                  <div className="flex items-center justify-between mt-0.5">
+                    <code className="font-mono font-bold text-on-surface text-sm">{createdStudent.defaultPassword}</code>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (createdStudent.defaultPassword) {
+                          navigator.clipboard.writeText(createdStudent.defaultPassword);
+                          setCopiedPassword(true);
+                          setTimeout(() => setCopiedPassword(false), 2000);
+                        }
+                      }}
+                      className="text-primary hover:text-primary/80 text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">
+                        {copiedPassword ? 'done' : 'content_copy'}
+                      </span>
+                      <span>{copiedPassword ? 'Copied' : 'Copy'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Password Reset Notice */}
+              <div className="flex items-start gap-2.5 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-200">
+                <span className="material-symbols-outlined text-[18px] text-amber-600 shrink-0">lock_reset</span>
+                <p>
+                  <strong>Mandatory Security Prompt:</strong> This student has been flagged with a recommended password reset upon first signing in to the student portal.
+                </p>
+              </div>
+            </div>
+
+            {/* Academic Onboarding Assets */}
+            {(createdStudent.curriculumDriveUrl || createdStudent.handbookDriveUrl) && (
+              <div className="bg-surface rounded-xl border border-outline-variant p-5 space-y-3">
+                <div className="flex items-center gap-2 border-b border-outline-variant/60 pb-3">
+                  <span className="material-symbols-outlined text-primary">cloud_done</span>
+                  <h4 className="font-headline-sm font-bold text-on-surface">Attached Academic Google Drive Links</h4>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {createdStudent.curriculumDriveUrl && (
+                    <a
+                      href={createdStudent.curriculumDriveUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-3 rounded-lg border border-outline-variant/80 hover:border-primary bg-surface-container-lowest flex items-center justify-between transition-colors group cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">menu_book</span>
+                        <div>
+                          <p className="font-bold text-xs text-on-surface">Course Curriculum</p>
+                          <p className="text-[11px] text-secondary truncate max-w-[200px]">{createdStudent.curriculumDriveUrl}</p>
+                        </div>
+                      </div>
+                      <span className="material-symbols-outlined text-secondary group-hover:text-primary text-[18px]">open_in_new</span>
+                    </a>
+                  )}
+
+                  {createdStudent.handbookDriveUrl && (
+                    <a
+                      href={createdStudent.handbookDriveUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-3 rounded-lg border border-outline-variant/80 hover:border-primary bg-surface-container-lowest flex items-center justify-between transition-colors group cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">import_contacts</span>
+                        <div>
+                          <p className="font-bold text-xs text-on-surface">Student Handbook</p>
+                          <p className="text-[11px] text-secondary truncate max-w-[200px]">{createdStudent.handbookDriveUrl}</p>
+                        </div>
+                      </div>
+                      <span className="material-symbols-outlined text-secondary group-hover:text-primary text-[18px]">open_in_new</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-3 border-t border-outline-variant">
+              <button
+                type="button"
+                onClick={() => {
+                  const summaryText = `🎓 CODELAB EDUCARE ADMISSION DETAILS\n\nStudent: ${createdStudent.name}\nStudent ID: ${createdStudent.studentCode}\nProgram: ${createdStudent.program}\nCohort: ${createdStudent.cohort || 'Executive'}\n\nPORTAL LOGIN:\nURL: ${window.location.origin}/login?role=student\nUsername: ${createdStudent.email}\nDefault Password: ${createdStudent.defaultPassword}\n\n*Note: You are recommended to reset your default password upon first login.*\n\nACADEMIC RESOURCES:\n${createdStudent.curriculumDriveUrl ? `Course Curriculum: ${createdStudent.curriculumDriveUrl}\n` : ''}${createdStudent.handbookDriveUrl ? `Student Handbook: ${createdStudent.handbookDriveUrl}\n` : ''}`;
+                  navigator.clipboard.writeText(summaryText);
+                  setCopiedPassword(true);
+                  setTimeout(() => setCopiedPassword(false), 2000);
+                }}
+                className="w-full sm:w-auto px-4 h-10 border border-outline-variant rounded-lg font-label-md text-xs font-semibold text-on-surface hover:bg-surface-container transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">share</span>
+                <span>Copy Full Onboarding Slip (WhatsApp/SMS)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  resetForm();
+                  onClose();
+                }}
+                className="w-full sm:w-auto px-6 h-10 bg-primary text-on-primary rounded-lg font-label-md text-xs font-bold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">done_all</span>
+                <span>Done &amp; Return to Directory</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* Form Body with 2 Columns */
+          <form onSubmit={handleSubmit} className="overflow-y-auto p-stack-lg flex-1">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
             {/* Left 8 Cols: Student & Payment Details */}
             <div className="lg:col-span-8 space-y-stack-md">
@@ -288,6 +466,47 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
                         />
                       </div>
                     )}
+                  </div>
+
+                  {/* Academic Onboarding Materials (Google Drive Links) */}
+                  <div className="space-y-3 sm:col-span-2 pt-3 border-t border-outline-variant/60">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
+                      <span className="material-symbols-outlined text-[16px]">folder_shared</span>
+                      <span>Onboarding Materials &amp; Academic Drive Assets</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="font-label-md text-xs font-semibold text-secondary flex items-center justify-between">
+                          <span>Course Curriculum (Google Drive)</span>
+                          {curriculumDriveUrl && <span className="text-[10px] text-[#166534] font-medium">Link Set</span>}
+                        </label>
+                        <input
+                          type="url"
+                          value={curriculumDriveUrl}
+                          onChange={e => setCurriculumDriveUrl(e.target.value)}
+                          placeholder="https://drive.google.com/file/d/.../view"
+                          className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded font-body-sm text-xs text-on-surface focus:border-primary outline-none"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-label-md text-xs font-semibold text-secondary flex items-center justify-between">
+                          <span>Student Handbook (Google Drive)</span>
+                          {handbookDriveUrl && <span className="text-[10px] text-[#166534] font-medium">Link Set</span>}
+                        </label>
+                        <input
+                          type="url"
+                          value={handbookDriveUrl}
+                          onChange={e => setHandbookDriveUrl(e.target.value)}
+                          placeholder="https://drive.google.com/file/d/.../view"
+                          className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded font-body-sm text-xs text-on-surface focus:border-primary outline-none"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-secondary">
+                      These links will be attached to the student's admission letter email and made available on their student portal.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -468,6 +687,7 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
             </div>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

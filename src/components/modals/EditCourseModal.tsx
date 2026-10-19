@@ -34,6 +34,7 @@ export const EditCourseModal: React.FC<EditCourseModalProps> = ({ isOpen, onClos
   const [modules, setModules] = useState<string[]>([]);
   const [newModuleText, setNewModuleText] = useState('');
   const [status, setStatus] = useState<'Active' | 'Draft'>('Active');
+  const [curriculumDriveUrl, setCurriculumDriveUrl] = useState('');
 
   const handleSaveNewCategory = () => {
     const trimmed = newCategoryInput.trim();
@@ -56,6 +57,7 @@ export const EditCourseModal: React.FC<EditCourseModalProps> = ({ isOpen, onClos
       setLeadInstructor(currentCourse.leadInstructor || (activeMentors[0]?.name || ''));
       setModules(currentCourse.syllabusModules || []);
       setStatus(currentCourse.status || 'Active');
+      setCurriculumDriveUrl(currentCourse.curriculumDriveUrl || '');
     }
   }, [currentCourse, isOpen]);
 
@@ -86,6 +88,7 @@ export const EditCourseModal: React.FC<EditCourseModalProps> = ({ isOpen, onClos
       syllabusModules: modules.length > 0 ? modules : ['Curriculum Overview'],
       leadInstructor,
       status,
+      curriculumDriveUrl: curriculumDriveUrl.trim() || undefined,
     });
 
     onClose();
@@ -259,6 +262,23 @@ export const EditCourseModal: React.FC<EditCourseModalProps> = ({ isOpen, onClos
                 onChange={e => setDescription(e.target.value)}
                 className="w-full p-2.5 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none"
               />
+            </div>
+
+            <div className="space-y-1 sm:col-span-2">
+              <label className="font-label-md text-xs text-secondary font-semibold flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[15px] text-primary">link</span>
+                Official Course Curriculum (Google Drive URL)
+              </label>
+              <input
+                type="url"
+                placeholder="https://drive.google.com/file/d/..."
+                value={curriculumDriveUrl}
+                onChange={e => setCurriculumDriveUrl(e.target.value)}
+                className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none"
+              />
+              <span className="text-[10px] text-secondary">
+                This Google Drive link is automatically attached to student admission letters &amp; welcome emails.
+              </span>
             </div>
 
             {/* Syllabus Modules Dynamic List */}

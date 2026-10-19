@@ -8,8 +8,10 @@ export interface ViewExpenseModalProps {
   expense: Expense | null;
   isSuperAdmin?: boolean;
   canApprove?: boolean;
+  canDisburse?: boolean;
   onApprove?: (id: string) => void;
   onReject?: (expense: Expense) => void;
+  onDisburse?: (expense: Expense) => void;
 }
 
 export const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({
@@ -18,11 +20,14 @@ export const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({
   expense,
   isSuperAdmin = false,
   canApprove = false,
+  canDisburse = false,
   onApprove,
   onReject,
+  onDisburse,
 }) => {
   const [imageZoomed, setImageZoomed] = useState(false);
-  const canUserApprove = isSuperAdmin || canApprove;
+  // Requisition approval is strictly reserved for Super Admin
+  const canUserDisburse = isSuperAdmin || canDisburse || canApprove;
 
   if (!isOpen || !expense) return null;
 
@@ -399,12 +404,17 @@ export const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({
         </div>
 
         {/* Modal Footer with Governance Actions */}
-        <div className="p-stack-md px-stack-lg border-t border-outline-variant bg-surface-bright flex items-center justify-between">
+        <div className="p-stack-md px-stack-lg border-t border-outline-variant bg-surface-bright flex flex-wrap items-center justify-between gap-3">
           <div className="text-xs text-secondary">
-            {canUserApprove ? (
+            {isSuperAdmin ? (
               <span className="flex items-center gap-1 text-primary font-medium">
                 <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
-                {isSuperAdmin ? 'Super Admin Governance Mode' : 'Authorized Approver Governance'}
+                Super Admin Governance (Approval &amp; Rejection Authority)
+              </span>
+            ) : canUserDisburse ? (
+              <span className="flex items-center gap-1 text-emerald-700 font-medium">
+                <span className="material-symbols-outlined text-[16px]">payments</span>
+                Authorized Disburser (Can Disburse Approved Requisitions)
               </span>
             ) : (
               <span>Auditing Requisition Dossier</span>
@@ -420,8 +430,16 @@ export const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({
               Close
             </button>
 
-            {/* If Authorized Approver & Awaiting Approval, provide instant decision buttons */}
-            {canUserApprove && isAwaiting && (
+            {/* Non-superadmin notice when awaiting approval */}
+            {!isSuperAdmin && isAwaiting && (
+              <span className="text-xs text-amber-700 font-medium bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[16px]">lock_clock</span>
+                <span>Awaiting Super Admin Approval (Disbursement Locked)</span>
+              </span>
+            )}
+
+            {/* If Super Admin & Awaiting Approval, provide decision buttons */}
+            {isSuperAdmin && isAwaiting && (
               <>
                 <button
                   type="button"
@@ -448,9 +466,27 @@ export const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({
                   className="px-4 h-9 rounded-lg bg-[#DCFCE7] hover:bg-[#bbf7d0] text-[#166534] text-xs font-bold flex items-center gap-1.5 border border-[#166534]/30 transition-all cursor-pointer shadow-xs"
                 >
                   <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                  <span>Approve &amp; Release Funds</span>
+                  <span>Approve Requisition</span>
                 </button>
               </>
+            )}
+
+            {/* Disburse Approved Funds button for Authorized Disbursers */}
+            {expense.status === 'Approved' && canUserDisburse && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (onDisburse) {
+                    onDisburse(expense);
+                    onClose();
+                  }
+                }}
+                className="px-4 h-9 rounded-lg bg-[#166534] hover:bg-[#15803d] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                title="Disburse approved funds directly to recipient bank account"
+              >
+                <span className="material-symbols-outlined text-[16px]">send_money</span>
+                <span>Disburse Approved Funds</span>
+              </button>
             )}
           </div>
         </div>

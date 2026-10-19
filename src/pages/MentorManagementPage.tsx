@@ -32,6 +32,7 @@ export const MentorManagementPage: React.FC = () => {
     getUserTaskFootprint,
     deleteMentorUser,
     toggleUserActiveStatus,
+    hasFeaturePermission,
   } = useCRM();
 
   const navigate = useNavigate();
@@ -52,6 +53,7 @@ export const MentorManagementPage: React.FC = () => {
   const isMentor = currentUser?.role === 'mentor';
   const isSuperAdmin = currentUser?.role === 'super_admin';
   const isFinance = currentUser?.role === 'finance';
+  const canModifyMentor = isSuperAdmin || hasFeaturePermission('canModifyMentorBiodata');
 
   // Find current mentor profile if logged in as mentor
   const myMentorProfile = isMentor
@@ -740,19 +742,21 @@ export const MentorManagementPage: React.FC = () => {
 
                           <td className="px-stack-md py-3 text-right">
                             <div className="flex items-center justify-end gap-1.5">
+                              {canModifyMentor && (
+                                <button 
+                                  onClick={() => {
+                                    setSelectedMentorForEditId(mentor.id);
+                                    openModal('edit-mentor');
+                                  }}
+                                  className="px-2.5 py-1 rounded border border-outline-variant hover:border-primary text-secondary hover:text-primary font-sans text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                                  title="Edit Faculty Mentor Profile"
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">edit</span>
+                                  <span>Edit</span>
+                                </button>
+                              )}
+
                               {isSuperAdmin && (
-                                <>
-                                  <button 
-                                    onClick={() => {
-                                      setSelectedMentorForEditId(mentor.id);
-                                      openModal('edit-mentor');
-                                    }}
-                                    className="px-2.5 py-1 rounded border border-outline-variant hover:border-primary text-secondary hover:text-primary font-sans text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
-                                    title="Edit Faculty Mentor Profile"
-                                  >
-                                    <span className="material-symbols-outlined text-[14px]">edit</span>
-                                    <span>Edit</span>
-                                  </button>
 
                                   <button
                                     type="button"
@@ -770,7 +774,6 @@ export const MentorManagementPage: React.FC = () => {
                                     <span className="material-symbols-outlined text-[14px]">delete</span>
                                     <span>Delete</span>
                                   </button>
-                                </>
                               )}
 
                               <button 
