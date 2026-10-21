@@ -2345,6 +2345,8 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: expenseData.status || 'Awaiting Approval',
       id: `exp-${Date.now()}`,
       expenseCode: `EXP-${Math.floor(1000 + Math.random() * 9000)}`,
+      createdAt: expenseData.createdAt || new Date().toISOString(),
+      date: expenseData.date || new Date().toISOString().split('T')[0],
     };
     setExpenses(prev => [newExpense, ...prev]);
     apiService.createExpense(newExpense);
@@ -2415,7 +2417,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!expense) return;
 
     const reviewer = currentUser?.name || 'Super Admin';
-    const timestamp = new Date().toISOString().split('T')[0];
+    const timestamp = new Date().toISOString();
 
     setExpenses(prev => prev.map(e => e.id === id ? {
       ...e,
@@ -2466,7 +2468,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!expense) return;
 
     const reviewer = currentUser?.name || 'Super Admin';
-    const timestamp = new Date().toISOString().split('T')[0];
+    const timestamp = new Date().toISOString();
 
     setExpenses(prev => prev.map(e => e.id === id ? {
       ...e,

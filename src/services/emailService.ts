@@ -1030,22 +1030,38 @@ export class EmailService {
 
     this.logs.unshift(logEntry);
 
-    // Also send to backend API for live SMTP delivery
-    try {
-      await fetch('/api/email/send-test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: payload.to,
-          subject: payload.subject,
-          html,
-          recipientName: payload.recipientName,
-          type: payload.type,
-          logEntry,
-        }),
-      });
-    } catch (e) {
-      console.warn('Backend email test endpoint offline, using local dispatch simulator.');
+    const isTestDomain = (email: string) => {
+      const lower = (email || '').toLowerCase();
+      return (
+        lower.endsWith('@test.com') ||
+        lower.endsWith('@example.com') ||
+        lower.endsWith('@example.org') ||
+        lower.endsWith('@mock.com') ||
+        lower.endsWith('@invalid') ||
+        lower.endsWith('@localhost') ||
+        lower.includes('.qa.') ||
+        lower.startsWith('test.')
+      );
+    };
+
+    // Also send to backend API for live SMTP delivery if not a dummy test address
+    if (!isTestDomain(payload.to)) {
+      try {
+        await fetch('/api/email/send-test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: payload.to,
+            subject: payload.subject,
+            html,
+            recipientName: payload.recipientName,
+            type: payload.type,
+            logEntry,
+          }),
+        });
+      } catch (e) {
+        console.warn('Backend email test endpoint offline, using local dispatch simulator.');
+      }
     }
 
     return logEntry;

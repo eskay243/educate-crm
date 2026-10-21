@@ -866,6 +866,67 @@ const getApproverEmails = (): string[] => {
 };
 
 // ----------------------------------------------------
+// SafeMail Sandbox Guard — Intercepts dummy/QA test domains
+// ----------------------------------------------------
+const isDummyOrTestEmail = (email?: string): boolean => {
+  if (!email || typeof email !== 'string') return true;
+  const normalized = email.trim().toLowerCase();
+  const testDomains = [
+    '@test.com',
+    '@example.com',
+    '@example.org',
+    '@example.net',
+    '@invalid',
+    '@localhost',
+    '@mock.com',
+    '@dummy.com',
+  ];
+  if (testDomains.some(domain => normalized.endsWith(domain))) return true;
+  if (
+    normalized.includes('.qa.') ||
+    normalized.includes('qa.') ||
+    normalized.startsWith('test.') ||
+    normalized.startsWith('fake.') ||
+    normalized.startsWith('dummy.')
+  ) {
+    return true;
+  }
+  return false;
+};
+
+const wrapWithSafeMailGuard = (rawTransporter: any) => {
+  const originalSendMail = rawTransporter.sendMail.bind(rawTransporter);
+  rawTransporter.sendMail = async (mailOptions: any) => {
+    const rawTo = mailOptions.to;
+    const recipients = Array.isArray(rawTo)
+      ? rawTo
+      : String(rawTo || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+
+    const validRecipients = recipients.filter((r: string) => !isDummyOrTestEmail(r));
+    const dummyRecipients = recipients.filter((r: string) => isDummyOrTestEmail(r));
+
+    if (dummyRecipients.length > 0) {
+      console.log(`🛡️ [SafeMail Sandbox Guard] Suppressed live SMTP dispatch to dummy/test address: ${dummyRecipients.join(', ')}`);
+    }
+
+    if (validRecipients.length === 0) {
+      return {
+        messageId: `simulated-sandbox-${Date.now()}`,
+        response: '250 Message simulated in sandbox mode (non-routable test domain)',
+        accepted: dummyRecipients,
+        rejected: []
+      };
+    }
+
+    return await originalSendMail({
+      ...mailOptions,
+      to: validRecipients.length === 1 ? validRecipients[0] : validRecipients.join(', ')
+    });
+  };
+  return rawTransporter;
+};
+
+// ----------------------------------------------------
 // Real Email & SMTP Dispatch Engine (Nodemailer)
 // ----------------------------------------------------
 const getTransporter = async (customSmtp?: any) => {
@@ -877,14 +938,15 @@ const getTransporter = async (customSmtp?: any) => {
   const fromAddress = customSmtp?.from || db.settings?.smtp?.from || process.env.SMTP_FROM || (user ? `"CODELAB EDUCARE LTD" <${user}>` : '"CODELAB EDUCARE LTD" <admin@codelab.institute>');
 
   if (host && user && pass) {
+    const rawTransporter = nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      auth: { user, pass },
+      tls: { rejectUnauthorized: false },
+    });
     return {
-      transporter: nodemailer.createTransport({
-        host,
-        port,
-        secure,
-        auth: { user, pass },
-        tls: { rejectUnauthorized: false },
-      }),
+      transporter: wrapWithSafeMailGuard(rawTransporter),
       from: fromAddress,
       isTestAccount: false,
     };
@@ -892,16 +954,17 @@ const getTransporter = async (customSmtp?: any) => {
 
   // Fallback to test sandbox (Ethereal Email)
   const testAccount = await nodemailer.createTestAccount();
+  const rawTransporter = nodemailer.createTransport({
+    host: 'smtp.ethereal.email',
+    port: 587,
+    secure: false,
+    auth: {
+      user: testAccount.user,
+      pass: testAccount.pass,
+    },
+  });
   return {
-    transporter: nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
-      secure: false,
-      auth: {
-        user: testAccount.user,
-        pass: testAccount.pass,
-      },
-    }),
+    transporter: wrapWithSafeMailGuard(rawTransporter),
     from: '"CODELAB EDUCARE LTD" <admin@codelab.institute>',
     isTestAccount: true,
   };
@@ -2649,6 +2712,7 @@ app.post('/api/expenses', (req: Request, res: Response) => {
     id: `exp-${Date.now()}`,
     expenseCode: `EXP-${Math.floor(1000 + Math.random() * 9000)}`,
     status: req.body.status || 'Pending Approval',
+    date: req.body.date || new Date().toISOString().split('T')[0],
     createdAt: req.body.createdAt || new Date().toISOString(),
   };
   db.expenses.unshift(newExpense);
@@ -2663,7 +2727,11 @@ app.patch('/api/expenses/:id', (req: Request, res: Response) => {
   if (index === -1) return res.status(404).json({ success: false, message: 'Expense not found' });
 
   const oldStatus = db.expenses[index].status;
-  db.expenses[index] = { ...db.expenses[index], ...req.body };
+  const updates = { ...req.body };
+  if ((updates.status === 'Approved' || updates.status === 'Rejected') && !updates.reviewedAt) {
+    updates.reviewedAt = new Date().toISOString();
+  }
+  db.expenses[index] = { ...db.expenses[index], ...updates };
   saveDatabase(db);
 
   if (req.body.status && req.body.status !== oldStatus) {

@@ -14,6 +14,24 @@ export interface ViewExpenseModalProps {
   onDisburse?: (expense: Expense) => void;
 }
 
+const formatDossierTimestamp = (isoString?: string): string => {
+  if (!isoString) return '';
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return isoString;
+    return d.toLocaleString('en-NG', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+  } catch {
+    return isoString;
+  }
+};
+
 export const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({
   isOpen,
   onClose,
@@ -89,7 +107,7 @@ export const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({
                 )}
               </div>
               <p className="font-body-md text-xs text-secondary mt-0.5">
-                Submitted on {expense.date} • Department: {expense.department}
+                Submitted on {expense.createdAt ? formatDossierTimestamp(expense.createdAt) : expense.date} • Department: {expense.department}
               </p>
             </div>
           </div>
@@ -183,13 +201,23 @@ export const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({
                 <div className="p-3.5 rounded-xl bg-[#DCFCE7]/60 border border-[#166534]/30 space-y-1 text-xs text-[#166534]">
                   <div className="flex items-center gap-1.5 font-bold">
                     <span className="material-symbols-outlined text-[18px]">verified</span>
-                    <span>Requisition Approved &amp; Disbursed</span>
+                    <span>
+                      {expense.status === 'Paid' ? 'Requisition Approved & Disbursed' : 'Requisition Approved'}
+                    </span>
                   </div>
                   <p className="text-[11px] leading-relaxed">
-                    Approved by <strong className="text-on-surface">{expense.reviewedBy || 'Super Admin'}</strong> {expense.reviewedAt && `on ${expense.reviewedAt}`}.
+                    Approved by <strong className="text-on-surface">{expense.reviewedBy || 'Super Admin'}</strong>
+                    {expense.reviewedAt && ` on ${formatDossierTimestamp(expense.reviewedAt)}`}.
                   </p>
+                  {expense.disbursedAt && (
+                    <p className="text-[11px] leading-relaxed text-primary">
+                      Disbursed on <strong>{formatDossierTimestamp(expense.disbursedAt)}</strong>
+                      {expense.disbursementMethod === 'corporate_nip' ? ' via Corporate NIP' : ' via Paystack API'}.
+                      {expense.transferReference && ` (Ref: ${expense.transferReference})`}
+                    </p>
+                  )}
                   <p className="text-[10px] text-[#166534]/80">
-                    Funds released and deducted from approved monthly operating budget.
+                    Funds allocated from approved monthly operating budget.
                   </p>
                 </div>
               )}
@@ -207,7 +235,7 @@ export const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({
                   )}
                   {expense.reviewedBy && (
                     <p className="text-[10px] text-[#991B1B]/80 pt-0.5">
-                      Reviewed by {expense.reviewedBy} {expense.reviewedAt && `on ${expense.reviewedAt}`}
+                      Reviewed by {expense.reviewedBy} {expense.reviewedAt && `on ${formatDossierTimestamp(expense.reviewedAt)}`}
                     </p>
                   )}
                 </div>

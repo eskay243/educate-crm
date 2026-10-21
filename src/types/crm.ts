@@ -426,6 +426,7 @@ export interface Expense {
   category: ExpenseCategory;
   amount: number;
   date: string;
+  createdAt?: string;
   department: string;
   paymentMethod: string;
   status: ExpenseStatus;
@@ -446,6 +447,8 @@ export interface Expense {
   isDisbursedViaWallet?: boolean;
   transferReference?: string;
   disbursedAt?: string;
+  disbursementMethod?: 'corporate_nip' | 'paystack_api';
+  nipSessionId?: string;
   mentorId?: string;
   mentorName?: string;
 }

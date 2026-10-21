@@ -30,6 +30,39 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
     hasFeaturePermission
   } = useCRM();
 
+  const formatLedgerTimestamp = (isoString?: string): string => {
+    if (!isoString) return '';
+    try {
+      const d = new Date(isoString);
+      if (isNaN(d.getTime())) return isoString;
+      return d.toLocaleString('en-NG', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } catch {
+      return isoString;
+    }
+  };
+
+  const formatLedgerTime = (isoString?: string): string => {
+    if (!isoString) return '';
+    try {
+      const d = new Date(isoString);
+      if (isNaN(d.getTime())) return '';
+      return d.toLocaleTimeString('en-NG', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } catch {
+      return '';
+    }
+  };
+
   const [activeLedgerView, setActiveLedgerView] = useState<'expenses' | 'wallet_ledger'>('expenses');
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -875,6 +908,12 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                         <span className="text-[10px] text-secondary font-data-tabular block">
                           {expense.date}
                         </span>
+                        {expense.createdAt && formatLedgerTime(expense.createdAt) && (
+                          <span className="text-[9px] text-secondary/80 font-data-tabular flex items-center gap-0.5 mt-0.5">
+                            <span className="material-symbols-outlined text-[10px]">schedule</span>
+                            <span>{formatLedgerTime(expense.createdAt)}</span>
+                          </span>
+                        )}
                         {expense.urgency && expense.urgency !== 'Standard' && (
                           <span className={`inline-block mt-1 px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider ${
                             expense.urgency === 'Emergency' ? 'bg-error text-white' : 'bg-[#FEF9C3] text-[#854D0E]'
@@ -926,7 +965,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                             <p className="italic">"{expense.rejectionReason}"</p>
                             {expense.reviewedBy && (
                               <p className="text-[9px] text-[#991B1B]/80 pt-0.5">
-                                Reviewed by: {expense.reviewedBy} {expense.reviewedAt && `on ${expense.reviewedAt}`}
+                                Reviewed by: {expense.reviewedBy} {expense.reviewedAt && `on ${formatLedgerTimestamp(expense.reviewedAt)}`}
                               </p>
                             )}
                           </div>
@@ -934,9 +973,28 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
 
                         {/* Approval note */}
                         {isApproved && expense.reviewedBy && (
-                          <div className="mt-1 text-[10px] text-[#166534] font-medium flex items-center gap-1">
+                          <div className="mt-1 text-[10px] text-[#166534] font-medium flex items-center gap-1 flex-wrap">
                             <span className="material-symbols-outlined text-[12px]">verified</span>
-                            <span>Approved by {expense.reviewedBy} (Deducted from budget)</span>
+                            <span>
+                              Approved by {expense.reviewedBy}
+                              {expense.reviewedAt && (
+                                <strong className="ml-1 text-on-surface/80 font-normal">
+                                  on {formatLedgerTimestamp(expense.reviewedAt)}
+                                </strong>
+                              )}
+                              {' '}(Deducted from budget)
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Disbursement note */}
+                        {expense.status === 'Paid' && expense.disbursedAt && (
+                          <div className="mt-0.5 text-[10px] text-primary font-medium flex items-center gap-1 flex-wrap">
+                            <span className="material-symbols-outlined text-[12px]">payments</span>
+                            <span>
+                              Disbursed on {formatLedgerTimestamp(expense.disbursedAt)}
+                              {expense.disbursementMethod === 'corporate_nip' ? ' (Corporate NIP)' : ' (Paystack API)'}
+                            </span>
                           </div>
                         )}
                       </td>
