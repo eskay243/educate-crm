@@ -572,14 +572,14 @@ export const TicketsPage: React.FC = () => {
       {/* RAISE TICKET MODAL                                                        */}
       {/* ========================================================================= */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-margin-page animate-in fade-in duration-150">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-xl p-stack-lg max-w-lg w-full space-y-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-150">
+          <div className="relative bg-surface-container-lowest border border-outline-variant rounded-t-2xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 max-w-lg w-full max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] overflow-y-auto overscroll-contain space-y-4">
             <div className="flex justify-between items-center border-b border-outline-variant pb-3">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-[22px]">add_task</span>
                 <h3 className="font-headline-md text-headline-md font-bold text-on-surface">Raise Support Ticket</h3>
               </div>
-              <button onClick={() => setIsCreateModalOpen(false)} className="text-secondary hover:text-on-surface">
+              <button onClick={() => setIsCreateModalOpen(false)} className="text-secondary hover:text-on-surface p-1 rounded hover:bg-surface-container cursor-pointer">
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
@@ -729,10 +729,10 @@ export const TicketsPage: React.FC = () => {
       {/* TICKET DETAILS & REPLY DRAWER                                             */}
       {/* ========================================================================= */}
       {activeTicket && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-margin-page animate-in fade-in duration-150">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-150">
+          <div className="relative bg-surface-container-lowest border border-outline-variant rounded-t-2xl sm:rounded-2xl shadow-2xl max-w-2xl w-full max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] flex flex-col overflow-hidden">
             {/* Drawer Header */}
-            <div className="p-stack-md border-b border-outline-variant flex items-center justify-between bg-surface">
+            <div className="shrink-0 p-3.5 sm:p-4 border-b border-outline-variant flex items-center justify-between bg-surface">
               <div className="flex items-center gap-2">
                 <span className="font-mono text-xs font-bold text-primary px-2 py-0.5 bg-primary/10 rounded">
                   {activeTicket.ticketNumber}
@@ -742,13 +742,13 @@ export const TicketsPage: React.FC = () => {
                   {activeTicket.priority}
                 </span>
               </div>
-              <button onClick={() => setSelectedTicketId(null)} className="text-secondary hover:text-on-surface">
+              <button onClick={() => setSelectedTicketId(null)} className="text-secondary hover:text-on-surface p-1 rounded hover:bg-surface-container cursor-pointer">
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
 
             {/* Ticket Subject & Main Post */}
-            <div className="p-stack-md border-b border-outline-variant bg-surface-container-lowest overflow-y-auto space-y-3">
+            <div className="shrink-0 max-h-[35dvh] overflow-y-auto overscroll-contain p-4 border-b border-outline-variant bg-surface-container-lowest space-y-3">
               <div>
                 <h3 className="font-headline-md text-headline-md font-bold text-on-surface">
                   {activeTicket.title}
@@ -851,7 +851,7 @@ export const TicketsPage: React.FC = () => {
             </div>
 
             {/* Conversation / Comments Stream */}
-            <div className="p-stack-md flex-1 overflow-y-auto space-y-3 bg-surface/30">
+            <div className="p-4 flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-3 bg-surface/30">
               <h4 className="text-xs font-bold text-secondary uppercase tracking-wider">
                 Conversation History &amp; Responses ({activeTicket.comments?.length || 0})
               </h4>
@@ -909,7 +909,7 @@ export const TicketsPage: React.FC = () => {
             </div>
 
             {/* Reply Input Box */}
-            <form onSubmit={handleSendReply} className="p-stack-md border-t border-outline-variant bg-surface-container-lowest space-y-2">
+            <form onSubmit={handleSendReply} className="shrink-0 p-3 sm:p-4 border-t border-outline-variant bg-surface-container-lowest space-y-2">
               {replyAttachments.length > 0 && (
                 <div className="flex flex-wrap gap-2 pb-1">
                   {replyAttachments.map((att, idx) => (

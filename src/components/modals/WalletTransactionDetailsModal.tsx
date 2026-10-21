@@ -98,14 +98,14 @@ export const WalletTransactionDetailsModal: React.FC<WalletTransactionDetailsMod
   const badgeInfo = getStatusBadge(currentTx.bankDeliveryStatus);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/50 backdrop-blur-xs p-margin-page animate-in fade-in duration-200">
-      <div className="absolute inset-0" onClick={onClose} />
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+      <div className="fixed inset-0" onClick={onClose} />
 
-      <div className="glass-panel relative w-full max-w-xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden bg-surface-container-lowest border border-outline-variant z-10">
+      <div className="relative w-full max-w-xl max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden bg-surface-container-lowest border border-outline-variant z-10 animate-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="flex items-center justify-between p-stack-md px-stack-lg border-b border-outline-variant bg-surface-bright">
+        <div className="shrink-0 flex items-center justify-between p-4 sm:p-5 border-b border-outline-variant bg-surface-bright">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
               isCredit ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-red-100 text-red-700'
             }`}>
               <span className="material-symbols-outlined text-[24px]">
@@ -113,7 +113,7 @@ export const WalletTransactionDetailsModal: React.FC<WalletTransactionDetailsMod
               </span>
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="font-headline-lg text-lg font-bold text-on-surface">
                   {isCredit ? 'Inbound Inflow Audit Record' : 'Disbursement Audit Record'}
                 </h2>
@@ -131,14 +131,14 @@ export const WalletTransactionDetailsModal: React.FC<WalletTransactionDetailsMod
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-secondary hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-secondary hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-stack-lg overflow-y-auto space-y-5">
+        <div className="flex-1 min-h-0 p-4 sm:p-6 overflow-y-auto overscroll-contain space-y-5">
           {/* Main Amount Callout */}
           <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant text-center">
             <span className="text-xs uppercase tracking-wider font-semibold text-secondary block mb-1">
@@ -334,7 +334,7 @@ export const WalletTransactionDetailsModal: React.FC<WalletTransactionDetailsMod
         </div>
 
         {/* Footer */}
-        <div className="p-stack-md px-stack-lg border-t border-outline-variant bg-surface flex items-center justify-between">
+        <div className="shrink-0 p-3 sm:p-4 px-4 sm:px-6 border-t border-outline-variant bg-surface flex items-center justify-between">
           <span className="text-[11px] text-secondary">
             Nexus Internal Audit Engine • Paystack Live Verified
           </span>

@@ -55,18 +55,18 @@ export const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/50 backdrop-blur-xs p-margin-page animate-in fade-in duration-200">
-      <div className="absolute inset-0" onClick={onClose} />
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+      <div className="fixed inset-0" onClick={onClose} />
 
-      <div className="glass-panel relative w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden bg-surface-container-lowest border border-outline-variant z-10">
+      <div className="relative w-full max-w-4xl max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden bg-surface-container-lowest border border-outline-variant z-10 animate-in zoom-in-95 duration-150">
         {/* Modal Header */}
-        <div className="flex items-center justify-between p-stack-md px-stack-lg border-b border-outline-variant bg-surface-bright">
+        <div className="shrink-0 flex items-center justify-between p-4 sm:p-5 border-b border-outline-variant bg-surface-bright">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
               <span className="material-symbols-outlined text-[24px]">receipt_long</span>
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="font-headline-lg text-lg font-bold text-on-surface">Requisition Dossier</h2>
                 <span className="font-data-tabular font-bold px-2 py-0.5 rounded bg-primary/10 text-primary text-xs border border-primary/20">
                   #{expense.expenseCode}
@@ -96,14 +96,14 @@ export const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({
           <button
             onClick={onClose}
             aria-label="Close"
-            className="text-secondary hover:text-primary transition-colors p-1.5 rounded-full hover:bg-surface-container cursor-pointer"
+            className="text-secondary hover:text-primary transition-colors p-1.5 rounded-full hover:bg-surface-container cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>close</span>
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="overflow-y-auto p-stack-lg space-y-stack-md flex-1">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4">
           {/* Main Title & Amount Highlight Card */}
           <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1">
@@ -404,7 +404,7 @@ export const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({
         </div>
 
         {/* Modal Footer with Governance Actions */}
-        <div className="p-stack-md px-stack-lg border-t border-outline-variant bg-surface-bright flex flex-wrap items-center justify-between gap-3">
+        <div className="shrink-0 p-3 sm:p-4 px-4 sm:px-6 border-t border-outline-variant bg-surface-bright flex flex-wrap items-center justify-between gap-3">
           <div className="text-xs text-secondary">
             {isSuperAdmin ? (
               <span className="flex items-center gap-1 text-primary font-medium">

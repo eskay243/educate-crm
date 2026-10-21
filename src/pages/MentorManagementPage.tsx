@@ -1471,8 +1471,8 @@ export const MentorManagementPage: React.FC = () => {
 
       {/* Simple Delete Confirmation Modal for Zero Tasks */}
       {mentorToDeleteSimple && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-surface rounded-xl border border-outline shadow-xl max-w-md w-full p-6 space-y-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-black/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-150">
+          <div className="relative bg-surface rounded-t-2xl sm:rounded-xl border border-outline shadow-2xl max-w-md w-full max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4">
             <div className="flex items-center gap-3 text-rose-600">
               <span className="material-symbols-outlined text-3xl">warning</span>
               <h3 className="text-lg font-bold">Delete Faculty Member</h3>
@@ -1480,12 +1480,12 @@ export const MentorManagementPage: React.FC = () => {
             <p className="text-sm text-secondary">
               Are you sure you want to delete <strong className="text-on-surface">{mentorToDeleteSimple.name}</strong>? This user has no active assigned tasks or cohort leadership roles.
             </p>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 pt-2 border-t border-outline-variant">
               <button
                 type="button"
                 onClick={() => setMentorToDeleteSimple(null)}
                 disabled={isDeletingMentor}
-                className="px-4 py-2 rounded-lg border border-outline text-secondary hover:bg-surface-variant text-sm font-semibold transition-colors"
+                className="px-4 py-2 rounded-lg border border-outline text-secondary hover:bg-surface-variant text-sm font-semibold transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -1501,7 +1501,7 @@ export const MentorManagementPage: React.FC = () => {
                     setIsDeletingMentor(false);
                   }
                 }}
-                className="px-4 py-2 rounded-lg bg-rose-600 text-white hover:bg-rose-700 text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                className="px-4 py-2 rounded-lg bg-rose-600 text-white hover:bg-rose-700 text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
               >
                 {isDeletingMentor ? 'Deleting...' : 'Delete Mentor'}
               </button>

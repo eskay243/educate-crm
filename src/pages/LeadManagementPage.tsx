@@ -472,14 +472,14 @@ export const LeadManagementPage: React.FC = () => {
 
       {/* Note / Activity Dialog Modal */}
       {noteModalLeadId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-margin-page">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-lg p-stack-lg max-w-md w-full space-y-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-150">
+          <div className="relative bg-surface-container-lowest border border-outline-variant rounded-t-2xl sm:rounded-xl shadow-2xl p-4 sm:p-6 max-w-md w-full max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain space-y-4">
             <div className="flex justify-between items-center border-b border-outline-variant pb-3">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-[20px]">edit_note</span>
                 <h3 className="font-headline-md text-headline-md font-bold text-on-surface">Discovery Notes &amp; Background</h3>
               </div>
-              <button onClick={() => setNoteModalLeadId(null)} className="text-secondary hover:text-on-surface">
+              <button onClick={() => setNoteModalLeadId(null)} className="text-secondary hover:text-on-surface p-1 rounded hover:bg-surface-container cursor-pointer">
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
@@ -498,7 +498,7 @@ export const LeadManagementPage: React.FC = () => {
             <div className="flex justify-end gap-2 pt-2 border-t border-outline-variant">
               <button 
                 onClick={() => setNoteModalLeadId(null)}
-                className="px-4 py-2 rounded border border-outline-variant text-secondary text-xs font-semibold hover:bg-surface-container"
+                className="px-4 py-2 rounded border border-outline-variant text-secondary text-xs font-semibold hover:bg-surface-container cursor-pointer"
               >
                 Cancel
               </button>
@@ -509,7 +509,7 @@ export const LeadManagementPage: React.FC = () => {
                   }
                   setNoteModalLeadId(null);
                 }}
-                className="px-4 py-2 rounded bg-primary text-on-primary text-xs font-bold hover:bg-primary-container"
+                className="px-4 py-2 rounded bg-primary text-on-primary text-xs font-bold hover:bg-primary-container cursor-pointer"
               >
                 Save Discovery Notes
               </button>
@@ -520,14 +520,14 @@ export const LeadManagementPage: React.FC = () => {
 
       {/* Loss Reason Dialog Modal */}
       {lossModalLeadId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-margin-page">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-lg p-stack-lg max-w-md w-full space-y-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-150">
+          <div className="relative bg-surface-container-lowest border border-outline-variant rounded-t-2xl sm:rounded-xl shadow-2xl p-4 sm:p-6 max-w-md w-full max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain space-y-4">
             <div className="flex justify-between items-center border-b border-outline-variant pb-3">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-rose-600 text-[20px]">cancel</span>
                 <h3 className="font-headline-md text-headline-md font-bold text-on-surface">Disqualification Reason</h3>
               </div>
-              <button onClick={() => setLossModalLeadId(null)} className="text-secondary hover:text-on-surface">
+              <button onClick={() => setLossModalLeadId(null)} className="text-secondary hover:text-on-surface p-1 rounded hover:bg-surface-container cursor-pointer">
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
@@ -553,13 +553,13 @@ export const LeadManagementPage: React.FC = () => {
             <div className="flex justify-end gap-2 pt-2 border-t border-outline-variant">
               <button 
                 onClick={() => setLossModalLeadId(null)}
-                className="px-4 py-2 rounded border border-outline-variant text-secondary text-xs font-semibold hover:bg-surface-container"
+                className="px-4 py-2 rounded border border-outline-variant text-secondary text-xs font-semibold hover:bg-surface-container cursor-pointer"
               >
                 Cancel
               </button>
               <button 
                 onClick={confirmLossReason}
-                className="px-4 py-2 rounded bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 shadow-xs"
+                className="px-4 py-2 rounded bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 shadow-xs cursor-pointer"
               >
                 Confirm Disqualification
               </button>

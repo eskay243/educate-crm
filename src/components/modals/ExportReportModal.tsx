@@ -267,8 +267,5 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, on
       </div>
     </div>
   );
-      </div>
-    </div>
-  );
 };
 

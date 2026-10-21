@@ -84,12 +84,12 @@ export const ViewBiodataModal: React.FC<ViewBiodataModalProps> = ({ isOpen, onCl
     : 'Student Scholar';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/50 backdrop-blur-xs p-margin-page animate-in fade-in duration-200">
-      <div className="absolute inset-0" onClick={onClose} />
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+      <div className="fixed inset-0" onClick={onClose} />
 
-      <div className="glass-panel relative w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden bg-surface-container-lowest border border-outline-variant z-10">
+      <div className="relative w-full max-w-3xl max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden bg-surface-container-lowest border border-outline-variant z-10 animate-in zoom-in-95 duration-150">
         {/* Header Hero Banner */}
-        <div className="p-stack-lg bg-surface border-b border-outline-variant">
+        <div className="shrink-0 p-4 sm:p-6 bg-surface border-b border-outline-variant">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-4">
               {/* Passport Photograph / Avatar */}
@@ -178,11 +178,11 @@ export const ViewBiodataModal: React.FC<ViewBiodataModalProps> = ({ isOpen, onCl
           </div>
 
           {/* Dossier Tabs */}
-          <div className="flex items-center gap-1 mt-6 border-b border-outline-variant -mb-stack-lg pt-1">
+          <div className="flex items-center gap-1 mt-6 border-b border-outline-variant -mb-4 sm:-mb-6 pt-1 overflow-x-auto scrollbar-none">
             <button
               type="button"
               onClick={() => setActiveTab('demographics')}
-              className={`px-3.5 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3.5 py-2.5 text-xs font-bold border-b-2 whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'demographics'
                   ? 'border-primary text-primary'
                   : 'border-transparent text-secondary hover:text-on-surface'
@@ -195,7 +195,7 @@ export const ViewBiodataModal: React.FC<ViewBiodataModalProps> = ({ isOpen, onCl
             <button
               type="button"
               onClick={() => setActiveTab('identity')}
-              className={`px-3.5 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3.5 py-2.5 text-xs font-bold border-b-2 whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'identity'
                   ? 'border-primary text-primary'
                   : 'border-transparent text-secondary hover:text-on-surface'
@@ -208,7 +208,7 @@ export const ViewBiodataModal: React.FC<ViewBiodataModalProps> = ({ isOpen, onCl
             <button
               type="button"
               onClick={() => setActiveTab('address')}
-              className={`px-3.5 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3.5 py-2.5 text-xs font-bold border-b-2 whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'address'
                   ? 'border-primary text-primary'
                   : 'border-transparent text-secondary hover:text-on-surface'
@@ -221,7 +221,7 @@ export const ViewBiodataModal: React.FC<ViewBiodataModalProps> = ({ isOpen, onCl
             <button
               type="button"
               onClick={() => setActiveTab('bank')}
-              className={`px-3.5 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3.5 py-2.5 text-xs font-bold border-b-2 whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'bank'
                   ? 'border-primary text-primary'
                   : 'border-transparent text-secondary hover:text-on-surface'
@@ -234,7 +234,7 @@ export const ViewBiodataModal: React.FC<ViewBiodataModalProps> = ({ isOpen, onCl
         </div>
 
         {/* Tab Content Body */}
-        <div className="overflow-y-auto p-stack-lg flex-1 space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4">
           {/* TAB 1: CIVIL DEMOGRAPHICS */}
           {activeTab === 'demographics' && (
             <div className="space-y-4 animate-in fade-in duration-150">
@@ -623,7 +623,7 @@ export const ViewBiodataModal: React.FC<ViewBiodataModalProps> = ({ isOpen, onCl
         </div>
 
         {/* Footer Actions */}
-        <div className="p-stack-md px-stack-lg border-t border-outline-variant bg-surface flex items-center justify-between gap-3">
+        <div className="shrink-0 p-3 sm:p-4 px-4 sm:px-6 border-t border-outline-variant bg-surface flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={() => window.print()}
@@ -640,7 +640,7 @@ export const ViewBiodataModal: React.FC<ViewBiodataModalProps> = ({ isOpen, onCl
                 type="button"
                 onClick={handleEdit}
                 className="px-4 py-2 rounded-lg bg-secondary-container text-primary text-xs font-bold hover:bg-secondary-container/80 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-                title="Modify Biodata & Demographic Details"
+                title="Modify Biodata &amp; Demographic Details"
               >
                 <span className="material-symbols-outlined text-[16px]">edit_note</span>
                 <span>Edit Biodata</span>

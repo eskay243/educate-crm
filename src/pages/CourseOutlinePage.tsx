@@ -721,8 +721,8 @@ export const CourseOutlinePage: React.FC = () => {
 
       {/* Teaching Notes & Classroom Completion Modal */}
       {teachingNotesLesson && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-inverse-surface/70 backdrop-blur-xs">
-          <div className="bg-surface-container-lowest rounded-2xl max-w-lg w-full border border-outline-variant p-6 space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-60 overflow-y-auto overscroll-contain bg-inverse-surface/70 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-150">
+          <div className="relative bg-surface-container-lowest rounded-t-2xl sm:rounded-2xl max-w-lg w-full max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] border border-outline-variant p-4 sm:p-6 space-y-4 shadow-2xl overflow-y-auto overscroll-contain">
             <div className="flex items-center justify-between border-b border-outline-variant pb-3">
               <h3 className="font-bold text-sm text-on-surface flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-[20px]">assignment_turned_in</span>
@@ -730,7 +730,7 @@ export const CourseOutlinePage: React.FC = () => {
               </h3>
               <button
                 onClick={() => setTeachingNotesLesson(null)}
-                className="text-secondary hover:text-on-surface p-1 rounded hover:bg-surface-container"
+                className="text-secondary hover:text-on-surface p-1 rounded hover:bg-surface-container cursor-pointer"
               >
                 <span className="material-symbols-outlined text-lg">close</span>
               </button>
@@ -760,7 +760,7 @@ export const CourseOutlinePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setTeachingNotesLesson(null)}
-                  className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-secondary hover:text-on-surface"
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-secondary hover:text-on-surface cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -779,10 +779,10 @@ export const CourseOutlinePage: React.FC = () => {
 
       {/* Interactive Video Lecture Modal */}
       {activeVideoLesson && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-surface rounded-2xl max-w-3xl w-full border border-outline overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-60 overflow-y-auto overscroll-contain bg-black/80 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+          <div className="relative bg-surface rounded-t-2xl sm:rounded-2xl max-w-3xl w-full border border-outline overflow-hidden shadow-2xl flex flex-col max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)]">
             {/* Modal Header */}
-            <div className="px-5 py-3.5 border-b border-outline-variant flex items-center justify-between bg-surface-container-low">
+            <div className="shrink-0 px-4 sm:px-5 py-3.5 border-b border-outline-variant flex items-center justify-between bg-surface-container-low">
               <div className="flex items-center gap-2.5">
                 <span className="material-symbols-outlined text-red-600 text-2xl">smart_display</span>
                 <div>
@@ -807,7 +807,7 @@ export const CourseOutlinePage: React.FC = () => {
                 )}
                 <button
                   onClick={() => setActiveVideoLesson(null)}
-                  className="p-1 rounded-full text-secondary hover:text-on-surface hover:bg-surface-container transition-colors"
+                  className="p-1 rounded-full text-secondary hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-xl">close</span>
                 </button>
@@ -815,7 +815,7 @@ export const CourseOutlinePage: React.FC = () => {
             </div>
 
             {/* Video Player */}
-            <div className="aspect-video bg-black w-full relative">
+            <div className="shrink-0 aspect-video bg-black w-full relative">
               <iframe
                 src={activeVideoLesson.videoUrl}
                 title={activeVideoLesson.title}
@@ -826,7 +826,7 @@ export const CourseOutlinePage: React.FC = () => {
             </div>
 
             {/* Lesson Notes & Practical Task */}
-            <div className="p-5 overflow-y-auto max-h-56 space-y-3 bg-surface text-xs border-t border-outline-variant">
+            <div className="flex-1 min-h-0 p-4 sm:p-5 overflow-y-auto overscroll-contain space-y-3 bg-surface text-xs border-t border-outline-variant">
               {activeVideoLesson.practicalLabTask && (
                 <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 space-y-1">
                   <span className="font-bold text-primary flex items-center gap-1 text-[11px] uppercase tracking-wider">
