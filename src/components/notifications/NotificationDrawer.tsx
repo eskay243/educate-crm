@@ -59,7 +59,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
         <div className="w-screen max-w-md bg-surface-container-lowest border-l border-outline-variant shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
           
           {/* Header */}
-          <div className="p-4 border-b border-outline-variant flex items-center justify-between bg-surface-bright">
+          <div className="shrink-0 p-4 border-b border-outline-variant flex items-center justify-between bg-surface-bright">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-primary text-[22px]">notifications_active</span>
               <div>
@@ -80,7 +80,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
           </div>
 
           {/* Quick Actions & Filters */}
-          <div className="p-3 border-b border-outline-variant bg-surface space-y-2">
+          <div className="shrink-0 p-3 border-b border-outline-variant bg-surface space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="font-bold text-secondary uppercase tracking-wider text-[10px]">Filter Channel</span>
               <div className="flex gap-2">
@@ -121,7 +121,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
           </div>
 
           {/* Notifications List */}
-          <div className="flex-1 overflow-y-auto divide-y divide-outline-variant/60">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain divide-y divide-outline-variant/60">
             {filteredNotifications.length === 0 ? (
               <div className="p-8 text-center text-secondary space-y-2">
                 <span className="material-symbols-outlined text-[36px] text-outline">notifications_off</span>

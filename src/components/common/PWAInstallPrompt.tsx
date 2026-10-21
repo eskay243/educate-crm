@@ -106,13 +106,13 @@ export const PWAInstallPrompt: React.FC = () => {
 
       {/* iOS Safari Step-by-Step Install Drawer Modal */}
       {showIOSInstallGuide && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-inverse-surface/60 backdrop-blur-xs animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain flex min-h-[100dvh] items-end sm:items-center justify-center p-0 sm:p-4 bg-inverse-surface/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div 
-            className="absolute inset-0"
+            className="fixed inset-0 -z-10"
             onClick={() => setShowIOSInstallGuide(false)}
           />
 
-          <div className="relative w-full sm:max-w-md bg-surface-container-lowest border border-outline-variant rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl z-10 space-y-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom duration-300">
+          <div className="relative w-full sm:max-w-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-surface-container-lowest border border-outline-variant rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl z-10 space-y-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom duration-300">
             {/* Header */}
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
@@ -199,13 +199,13 @@ export const PWAInstallPrompt: React.FC = () => {
 
       {/* Android / Chrome / Mobile Browser Step-by-Step Install Modal */}
       {showBrowserGuide && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-inverse-surface/60 backdrop-blur-xs animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain flex min-h-[100dvh] items-end sm:items-center justify-center p-0 sm:p-4 bg-inverse-surface/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div 
-            className="absolute inset-0"
+            className="fixed inset-0 -z-10"
             onClick={() => setShowBrowserGuide(false)}
           />
 
-          <div className="relative w-full sm:max-w-md bg-surface-container-lowest border border-outline-variant rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl z-10 space-y-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom duration-300">
+          <div className="relative w-full sm:max-w-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-surface-container-lowest border border-outline-variant rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl z-10 space-y-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom duration-300">
             {/* Header */}
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">

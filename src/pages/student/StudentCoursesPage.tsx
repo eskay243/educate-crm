@@ -569,14 +569,14 @@ export const StudentCoursesPage: React.FC = () => {
       </div>
       {/* Cohort Timetable Modal */}
       {showTimetableModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-inverse-surface/60 backdrop-blur-xs animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/60 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
           <div 
-            className="w-full max-w-2xl bg-surface border border-outline rounded-xl shadow-modal overflow-hidden flex flex-col max-h-[85vh]"
+            className="relative w-full max-w-2xl bg-surface border border-outline rounded-t-2xl sm:rounded-xl shadow-modal overflow-hidden flex flex-col max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-5 bg-crisp-black text-white flex justify-between items-center border-b border-outline">
+            <div className="shrink-0 p-4 sm:p-5 bg-crisp-black text-white flex justify-between items-center border-b border-outline">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
                   <span className="material-symbols-outlined text-[24px]">calendar_month</span>
                 </div>
                 <div>
@@ -586,13 +586,13 @@ export const StudentCoursesPage: React.FC = () => {
               </div>
               <button
                 onClick={() => setShowTimetableModal(false)}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer shrink-0"
               >
                 <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
             </div>
 
-            <div className="p-6 space-y-4 overflow-y-auto">
+            <div className="flex-1 min-h-0 p-4 sm:p-6 space-y-4 overflow-y-auto overscroll-contain">
               {cohortTimetable.length === 0 ? (
                 <div className="p-8 text-center text-secondary text-xs">
                   <span className="material-symbols-outlined text-3xl opacity-40 mb-2 block">event_available</span>
@@ -653,7 +653,7 @@ export const StudentCoursesPage: React.FC = () => {
               )}
             </div>
 
-            <div className="p-4 bg-surface-bright border-t border-outline-variant flex justify-end">
+            <div className="shrink-0 p-3 sm:p-4 bg-surface-bright border-t border-outline-variant flex justify-end">
               <button
                 onClick={() => setShowTimetableModal(false)}
                 className="h-9 px-4 rounded-lg bg-surface border border-outline-variant hover:bg-surface-container text-xs font-bold transition-colors cursor-pointer"
