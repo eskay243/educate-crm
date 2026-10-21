@@ -572,8 +572,8 @@ export const TicketsPage: React.FC = () => {
       {/* RAISE TICKET MODAL                                                        */}
       {/* ========================================================================= */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-150">
-          <div className="relative bg-surface-container-lowest border border-outline-variant rounded-t-2xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 max-w-lg w-full max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] overflow-y-auto overscroll-contain space-y-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex flex-col justify-start items-center animate-in fade-in duration-150">
+          <div className="my-auto relative bg-surface-container-lowest border border-outline-variant rounded-t-2xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 max-w-lg w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-3rem)] overflow-y-auto overscroll-contain space-y-4">
             <div className="flex justify-between items-center border-b border-outline-variant pb-3">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-[22px]">add_task</span>
@@ -729,8 +729,8 @@ export const TicketsPage: React.FC = () => {
       {/* TICKET DETAILS & REPLY DRAWER                                             */}
       {/* ========================================================================= */}
       {activeTicket && (
-        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-150">
-          <div className="relative bg-surface-container-lowest border border-outline-variant rounded-t-2xl sm:rounded-2xl shadow-2xl max-w-2xl w-full max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex flex-col justify-start items-center animate-in fade-in duration-150">
+          <div className="my-auto relative bg-surface-container-lowest border border-outline-variant rounded-t-2xl sm:rounded-2xl shadow-2xl max-w-2xl w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-3rem)] flex flex-col overflow-hidden">
             {/* Drawer Header */}
             <div className="shrink-0 p-3.5 sm:p-4 border-b border-outline-variant flex items-center justify-between bg-surface">
               <div className="flex items-center gap-2">

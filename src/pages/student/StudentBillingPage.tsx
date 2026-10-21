@@ -417,8 +417,8 @@ export const StudentBillingPage: React.FC = () => {
 
       {/* Official Receipt Modal */}
       {activeReceipt && (
-        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-black/60 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-150">
-          <div className="relative bg-surface-container-low border border-outline-variant rounded-t-2xl sm:rounded-2xl max-w-lg w-full max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] p-4 sm:p-6 space-y-4 sm:space-y-5 shadow-2xl overflow-y-auto overscroll-contain">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-black/60 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex flex-col justify-start items-center animate-in fade-in duration-150">
+          <div className="my-auto relative bg-surface-container-low border border-outline-variant rounded-t-2xl sm:rounded-2xl max-w-lg w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-3rem)] p-4 sm:p-6 space-y-4 sm:space-y-5 shadow-2xl overflow-y-auto overscroll-contain">
             <div className="flex items-start justify-between border-b border-outline-variant pb-4">
               <div className="flex items-center gap-3">
                 <BrandLogo size="sm" logoUrl={settings.logoUrl} />

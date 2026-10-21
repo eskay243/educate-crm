@@ -5005,9 +5005,9 @@ export const SettingsPage: React.FC = () => {
 
           {/* Create Custom Role Modal */}
           {showCreateRoleModal && (
-            <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-150">
+            <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex flex-col justify-start items-center animate-in fade-in duration-150">
               <div className="fixed inset-0 -z-10" onClick={() => setShowCreateRoleModal(false)} aria-hidden="true" />
-              <div className="bg-surface-container-lowest border border-outline-variant rounded-t-2xl sm:rounded-2xl shadow-xl max-w-lg w-full max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] flex flex-col overflow-hidden z-10 animate-in zoom-in-95 duration-150">
+              <div className="my-auto bg-surface-container-lowest border border-outline-variant rounded-t-2xl sm:rounded-2xl shadow-xl max-w-lg w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-3rem)] flex flex-col overflow-hidden z-10 animate-in zoom-in-95 duration-150">
                 <div className="shrink-0 flex justify-between items-center border-b border-outline-variant p-4 sm:p-5 bg-surface-bright">
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-primary text-[22px]">add_moderator</span>
@@ -5993,9 +5993,9 @@ export const SettingsPage: React.FC = () => {
       {/* EDIT STAFF MODAL */}
       {/* ========================================================================= */}
       {editingStaffUser && (
-        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex flex-col justify-start items-center animate-in fade-in duration-150">
           <div className="fixed inset-0 -z-10" onClick={() => setEditingStaffUser(null)} aria-hidden="true" />
-          <div className="relative w-full max-w-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] bg-surface border border-outline-variant rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden z-10 animate-in zoom-in-95">
+          <div className="my-auto relative w-full max-w-md max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-3rem)] bg-surface border border-outline-variant rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden z-10 animate-in zoom-in-95">
             <div className="shrink-0 flex justify-between items-center border-b border-outline-variant p-4 sm:p-5 bg-surface-bright">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-[22px]">badge</span>
@@ -6091,9 +6091,9 @@ export const SettingsPage: React.FC = () => {
       {/* DELETE STAFF CONFIRMATION MODAL */}
       {/* ========================================================================= */}
       {deletingStaffUser && (
-        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex flex-col justify-start items-center animate-in fade-in duration-150">
           <div className="fixed inset-0 -z-10" onClick={() => setDeletingStaffUser(null)} aria-hidden="true" />
-          <div className="relative w-full max-w-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] bg-surface border border-outline-variant rounded-t-2xl sm:rounded-2xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 z-10">
+          <div className="my-auto relative w-full max-w-md max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-3rem)] bg-surface border border-outline-variant rounded-t-2xl sm:rounded-2xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 z-10">
             <div className="w-12 h-12 rounded-full bg-error/10 text-error flex items-center justify-center mx-auto shrink-0">
               <span className="material-symbols-outlined text-[32px]">person_remove</span>
             </div>
@@ -6137,9 +6137,9 @@ export const SettingsPage: React.FC = () => {
       {/* RENAME CUSTOM ROLE MODAL */}
       {/* ========================================================================= */}
       {renamingRole && (
-        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex flex-col justify-start items-center animate-in fade-in duration-150">
           <div className="fixed inset-0 -z-10" onClick={() => setRenamingRole(null)} aria-hidden="true" />
-          <div className="relative w-full max-w-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] bg-surface border border-outline-variant rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden z-10 animate-in zoom-in-95">
+          <div className="my-auto relative w-full max-w-md max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-3rem)] bg-surface border border-outline-variant rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden z-10 animate-in zoom-in-95">
             <div className="shrink-0 flex justify-between items-center border-b border-outline-variant p-4 sm:p-5 bg-surface-bright">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-[22px]">edit_square</span>
@@ -6205,9 +6205,9 @@ export const SettingsPage: React.FC = () => {
       {/* PRODUCTION FLUSH CONFIRMATION MODAL */}
       {/* ========================================================================= */}
       {showFlushConfirm && (
-        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex flex-col justify-start items-center animate-in fade-in">
           <div className="fixed inset-0 -z-10" onClick={() => setShowFlushConfirm(false)} aria-hidden="true" />
-          <div className="relative w-full max-w-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] bg-surface-container-lowest border border-outline-variant rounded-t-2xl sm:rounded-2xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 z-10">
+          <div className="my-auto relative w-full max-w-md max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-3rem)] bg-surface-container-lowest border border-outline-variant rounded-t-2xl sm:rounded-2xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 z-10">
             <div className="w-12 h-12 rounded-full bg-error/10 text-error flex items-center justify-center mx-auto shrink-0">
               <span className="material-symbols-outlined text-[32px]">warning</span>
             </div>

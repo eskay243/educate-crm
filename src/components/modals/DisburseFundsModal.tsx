@@ -182,10 +182,10 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex flex-col justify-start items-center animate-in fade-in duration-200">
       <div className="fixed inset-0 -z-10" onClick={onClose} aria-hidden="true" />
       <div 
-        className="w-full max-w-lg max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] bg-surface border border-outline rounded-t-2xl sm:rounded-xl shadow-modal overflow-hidden flex flex-col z-10 animate-in zoom-in-95 duration-150"
+        className="my-auto w-full max-w-lg max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-3rem)] bg-surface border border-outline rounded-t-2xl sm:rounded-xl shadow-modal overflow-hidden flex flex-col z-10 animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

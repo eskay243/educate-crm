@@ -1471,7 +1471,7 @@ export const MentorManagementPage: React.FC = () => {
 
       {/* Simple Delete Confirmation Modal for Zero Tasks */}
       {mentorToDeleteSimple && (
-        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-black/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-black/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex flex-col justify-start items-center animate-in fade-in duration-150">
           <div className="relative bg-surface rounded-t-2xl sm:rounded-xl border border-outline shadow-2xl max-w-md w-full max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4">
             <div className="flex items-center gap-3 text-rose-600">
               <span className="material-symbols-outlined text-3xl">warning</span>

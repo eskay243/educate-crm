@@ -47,12 +47,12 @@ export const CreateRecordHubModal: React.FC<CreateRecordHubModalProps> = ({ isOp
   ];
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex flex-col justify-start items-center animate-in fade-in duration-200">
       {/* Click outside backdrop */}
       <div className="fixed inset-0 -z-10" onClick={onClose} aria-hidden="true" />
 
       {/* Modal Container */}
-      <div className="relative w-full max-w-3xl max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] rounded-t-2xl sm:rounded-xl shadow-modal flex flex-col overflow-hidden transform transition-all bg-surface border border-border-subtle z-10 animate-in zoom-in-95 duration-150">
+      <div className="my-auto relative w-full max-w-3xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-3rem)] rounded-t-2xl sm:rounded-xl shadow-modal flex flex-col overflow-hidden transform transition-all bg-surface border border-border-subtle z-10 animate-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="shrink-0 flex items-center justify-between p-4 sm:p-6 border-b border-border-subtle bg-surface">
           <div>

@@ -472,7 +472,7 @@ export const LeadManagementPage: React.FC = () => {
 
       {/* Note / Activity Dialog Modal */}
       {noteModalLeadId && (
-        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex flex-col justify-start items-center animate-in fade-in duration-150">
           <div className="relative bg-surface-container-lowest border border-outline-variant rounded-t-2xl sm:rounded-xl shadow-2xl p-4 sm:p-6 max-w-md w-full max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain space-y-4">
             <div className="flex justify-between items-center border-b border-outline-variant pb-3">
               <div className="flex items-center gap-2">
@@ -520,7 +520,7 @@ export const LeadManagementPage: React.FC = () => {
 
       {/* Loss Reason Dialog Modal */}
       {lossModalLeadId && (
-        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex flex-col justify-start items-center animate-in fade-in duration-150">
           <div className="relative bg-surface-container-lowest border border-outline-variant rounded-t-2xl sm:rounded-xl shadow-2xl p-4 sm:p-6 max-w-md w-full max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain space-y-4">
             <div className="flex justify-between items-center border-b border-outline-variant pb-3">
               <div className="flex items-center gap-2">

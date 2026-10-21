@@ -83,8 +83,8 @@ export const TransferTasksAndDeleteModal: React.FC<TransferTasksAndDeleteModalPr
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-150">
-      <div className="relative bg-surface border border-outline-variant rounded-t-2xl sm:rounded-2xl max-w-xl w-full shadow-2xl flex flex-col max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] overflow-hidden z-10 animate-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex flex-col justify-start items-center animate-in fade-in duration-150">
+      <div className="my-auto relative bg-surface border border-outline-variant rounded-t-2xl sm:rounded-2xl max-w-xl w-full shadow-2xl flex flex-col max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-3rem)] overflow-hidden z-10 animate-in zoom-in-95 duration-150">
         
         {/* Header */}
         <div className="shrink-0 flex items-start gap-3 border-b border-outline-variant p-4 sm:p-6 bg-surface-container-low">

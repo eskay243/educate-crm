@@ -124,10 +124,10 @@ Email: ${student.email} | Phone: ${student.phone || 'N/A'}
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex flex-col justify-start items-center animate-in fade-in duration-200">
       <div className="fixed inset-0 -z-10" onClick={onClose} aria-hidden="true" />
 
-      <div className="glass-panel relative w-full max-w-xl max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden bg-surface border border-outline-variant z-10 animate-in zoom-in-95 duration-150">
+      <div className="my-auto glass-panel relative w-full max-w-xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-3rem)] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden bg-surface border border-outline-variant z-10 animate-in zoom-in-95 duration-150">
         {/* Header with Urgency Alert Styling */}
         <div className="shrink-0 p-4 px-5 sm:px-6 border-b border-rose-500/20 bg-rose-500/10 flex items-center justify-between">
           <div className="flex items-center gap-2.5">

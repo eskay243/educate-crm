@@ -569,9 +569,9 @@ export const StudentCoursesPage: React.FC = () => {
       </div>
       {/* Cohort Timetable Modal */}
       {showTimetableModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/60 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/60 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex flex-col justify-start items-center animate-in fade-in duration-200">
           <div 
-            className="relative w-full max-w-2xl bg-surface border border-outline rounded-t-2xl sm:rounded-xl shadow-modal overflow-hidden flex flex-col max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)]"
+            className="my-auto relative w-full max-w-2xl bg-surface border border-outline rounded-t-2xl sm:rounded-xl shadow-modal overflow-hidden flex flex-col max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-3rem)]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="shrink-0 p-4 sm:p-5 bg-crisp-black text-white flex justify-between items-center border-b border-outline">

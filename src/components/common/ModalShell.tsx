@@ -59,7 +59,7 @@ export const ModalShell: React.FC<ModalShellProps> = ({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex flex-col justify-start items-center animate-in fade-in duration-200"
     >
       {/* Backdrop click dismiss */}
       <div
@@ -72,7 +72,7 @@ export const ModalShell: React.FC<ModalShellProps> = ({
       <div
         ref={dialogRef}
         onClick={(e) => e.stopPropagation()}
-        className={`relative w-full ${maxWidthClass} max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] flex flex-col rounded-t-2xl sm:rounded-2xl shadow-2xl bg-surface-container-lowest border border-outline-variant overflow-hidden z-10 animate-in zoom-in-95 duration-150`}
+        className={`my-auto relative w-full ${maxWidthClass} max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-3rem)] flex flex-col rounded-t-2xl sm:rounded-2xl shadow-2xl bg-surface-container-lowest border border-outline-variant overflow-hidden z-10 animate-in zoom-in-95 duration-150`}
       >
         {/* Fixed Header */}
         {!hideHeader && (

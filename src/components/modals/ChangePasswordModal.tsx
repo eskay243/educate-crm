@@ -55,9 +55,9 @@ export const ChangePasswordModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex flex-col justify-start items-center animate-in fade-in duration-200">
       <div className="fixed inset-0 -z-10" onClick={closeModal} aria-hidden="true" />
-      <div className="relative w-full max-w-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] bg-surface-container-lowest border border-outline-variant rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden z-10 animate-in zoom-in-95 duration-150">
+      <div className="my-auto relative w-full max-w-md max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-3rem)] bg-surface-container-lowest border border-outline-variant rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden z-10 animate-in zoom-in-95 duration-150">
         {/* Fixed Header */}
         <div className="shrink-0 flex justify-between items-start border-b border-outline-variant p-4 sm:p-5 bg-surface-bright">
           <div className="flex items-center gap-2.5">

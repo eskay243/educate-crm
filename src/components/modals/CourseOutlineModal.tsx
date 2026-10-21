@@ -107,8 +107,8 @@ export const CourseOutlineModal: React.FC<CourseOutlineModalProps> = ({ isOpen, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/60 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
-      <div className="relative bg-surface-container-lowest rounded-t-2xl sm:rounded-2xl max-w-5xl w-full border border-outline-variant shadow-2xl overflow-hidden flex flex-col max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] z-10 animate-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/60 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex flex-col justify-start items-center animate-in fade-in duration-200">
+      <div className="my-auto relative bg-surface-container-lowest rounded-t-2xl sm:rounded-2xl max-w-5xl w-full border border-outline-variant shadow-2xl overflow-hidden flex flex-col max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-3rem)] z-10 animate-in zoom-in-95 duration-150">
         {/* Modal Header */}
         <div className="shrink-0 px-5 sm:px-6 py-4 border-b border-outline-variant flex items-center justify-between bg-surface-container-low flex-wrap gap-3">
           <div className="flex items-center gap-3">
@@ -531,7 +531,7 @@ export const CourseOutlineModal: React.FC<CourseOutlineModalProps> = ({ isOpen, 
 
       {/* Teaching Notes & Classroom Completion Modal */}
       {teachingNotesModalLesson && (
-        <div className="fixed inset-0 z-60 overflow-y-auto overscroll-contain bg-inverse-surface/70 backdrop-blur-xs p-2 sm:p-4 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-60 overflow-y-auto overscroll-contain bg-inverse-surface/70 backdrop-blur-xs p-2 sm:p-4 flex flex-col justify-start items-center animate-in fade-in duration-150">
           <div className="relative w-full max-w-lg max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] rounded-t-2xl sm:rounded-xl bg-surface-container-lowest border border-outline-variant p-4 sm:p-6 space-y-4 shadow-2xl overflow-y-auto overscroll-contain">
             <div className="flex items-center justify-between border-b border-outline-variant pb-3">
               <h3 className="font-bold text-sm text-on-surface flex items-center gap-2">
@@ -589,8 +589,8 @@ export const CourseOutlineModal: React.FC<CourseOutlineModalProps> = ({ isOpen, 
 
       {/* Interactive Video Lecture Modal */}
       {activeVideoLesson && (
-        <div className="fixed inset-0 z-70 overflow-y-auto overscroll-contain bg-black/80 backdrop-blur-xs p-2 sm:p-4 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
-          <div className="relative bg-surface rounded-t-2xl sm:rounded-2xl max-w-3xl w-full border border-outline overflow-hidden shadow-2xl flex flex-col max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)]">
+        <div className="fixed inset-0 z-70 overflow-y-auto overscroll-contain bg-black/80 backdrop-blur-xs p-2 sm:p-4 flex flex-col justify-start items-center animate-in fade-in duration-200">
+          <div className="my-auto relative bg-surface rounded-t-2xl sm:rounded-2xl max-w-3xl w-full border border-outline overflow-hidden shadow-2xl flex flex-col max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-3rem)]">
             {/* Modal Header */}
             <div className="shrink-0 px-4 sm:px-5 py-3.5 border-b border-outline-variant flex items-center justify-between bg-surface-container-low">
               <div className="flex items-center gap-2.5">
