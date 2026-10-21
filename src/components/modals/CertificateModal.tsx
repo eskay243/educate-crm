@@ -29,10 +29,10 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
 
   if (!student) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-4">
-        <div className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant max-w-sm w-full text-center">
+      <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 flex min-h-[100dvh] items-end sm:items-center justify-center">
+        <div className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant max-w-sm w-full text-center shadow-xl">
           <p className="text-secondary text-sm mb-4">No student record found for certificate generation.</p>
-          <button onClick={onClose} className="px-4 py-2 bg-primary text-on-primary rounded-lg text-sm font-semibold">
+          <button onClick={onClose} className="px-4 py-2 bg-primary text-on-primary rounded-lg text-sm font-semibold cursor-pointer">
             Close
           </button>
         </div>
@@ -78,20 +78,20 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/60 backdrop-blur-sm p-2 sm:p-6 overflow-y-auto print:p-0 print:bg-transparent">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/60 backdrop-blur-sm p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center print:p-0 print:bg-transparent">
       {/* Backdrop */}
-      <div className="fixed inset-0 print:hidden" onClick={onClose} />
+      <div className="fixed inset-0 print:hidden -z-10" onClick={onClose} aria-hidden="true" />
 
-      <div className="relative w-full max-w-5xl rounded-2xl shadow-2xl flex flex-col max-h-[96vh] overflow-hidden bg-surface-container-lowest border border-outline-variant z-10 print:max-h-none print:shadow-none print:border-none print:w-full print:rounded-none">
+      <div className="relative w-full max-w-5xl max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(94dvh,900px)] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden bg-surface-container-lowest border border-outline-variant z-10 print:max-h-none print:shadow-none print:border-none print:w-full print:rounded-none animate-in zoom-in-95 duration-150">
         {/* Modal Toolbar (hidden on print) */}
-        <div className="flex items-center justify-between p-4 px-6 border-b border-outline-variant bg-surface-bright print:hidden">
+        <div className="shrink-0 flex items-center justify-between p-4 px-5 sm:px-6 border-b border-outline-variant bg-surface-bright print:hidden">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-[24px]">workspace_premium</span>
             <div>
-              <h3 className="font-bold text-base text-on-surface">
+              <h3 className="font-bold text-sm sm:text-base text-on-surface">
                 Official Academic Certificate of Completion
               </h3>
-              <p className="text-xs text-secondary">
+              <p className="text-[11px] sm:text-xs text-secondary">
                 CODELAB EDUCARE Academic Senate &amp; Faculty Board
               </p>
             </div>
@@ -130,7 +130,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
         </div>
 
         {/* Modal Body / Certificate Container */}
-        <div className="p-4 sm:p-8 overflow-y-auto bg-surface print:p-0 print:overflow-visible">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-8 bg-surface print:p-0 print:overflow-visible">
           {!isIssued && !isEligible ? (
             /* Graduation Requirements Not Met Card */
             <div className="p-8 rounded-2xl bg-surface-container-low border border-outline-variant text-center max-w-xl mx-auto my-6 shadow-sm">

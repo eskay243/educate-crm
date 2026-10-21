@@ -809,10 +809,11 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                     <>
                       <button 
                         onClick={() => {
+                          setSelectedStudentId(currentStudent.id);
                           const existingInv = (invoices || []).find(inv => 
                             inv.studentId === currentStudent.id || 
-                            inv.studentName === currentStudent.name || 
-                            (currentStudent.email && inv.studentEmail === currentStudent.email)
+                            (inv.studentName && currentStudent.name && inv.studentName.toLowerCase() === currentStudent.name.toLowerCase()) || 
+                            (currentStudent.email && inv.studentEmail && inv.studentEmail.toLowerCase() === currentStudent.email.toLowerCase())
                           );
                           setSelectedInvoiceId(existingInv ? existingInv.id : null);
                           openModal('view-invoice');

@@ -78,31 +78,33 @@ export const TakeAttendanceModal: React.FC<TakeAttendanceModalProps> = ({ isOpen
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-inverse-surface/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-surface-container-lowest rounded-xl max-w-2xl w-full border border-outline-variant shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/60 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+      <div className="fixed inset-0 -z-10" onClick={onClose} aria-hidden="true" />
+
+      <div className="relative w-full max-w-2xl max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] rounded-t-2xl sm:rounded-xl bg-surface-container-lowest border border-outline-variant shadow-2xl flex flex-col overflow-hidden z-10 animate-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-outline-variant flex items-center justify-between bg-surface-container-low">
+        <div className="shrink-0 px-4 sm:px-6 py-3 sm:py-4 border-b border-outline-variant flex items-center justify-between bg-surface-container-low">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-700 flex items-center justify-center">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-emerald-500/10 text-emerald-700 flex items-center justify-center shrink-0">
               <span className="material-symbols-outlined text-xl">fact_check</span>
             </div>
             <div>
-              <h2 className="font-title-md font-bold text-on-surface">Record Class Attendance</h2>
-              <p className="font-body-sm text-on-surface-variant">
+              <h2 className="font-title-md font-bold text-sm sm:text-base text-on-surface">Record Class Attendance</h2>
+              <p className="font-body-sm text-[11px] sm:text-xs text-on-surface-variant">
                 {selectedSlotForAttendance.courseTitle} &bull; {selectedSlotForAttendance.cohortName}
               </p>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors"
+            className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
 
         {/* Slot Summary Banner */}
-        <div className="bg-surface-container px-6 py-3 border-b border-outline-variant grid grid-cols-2 sm:grid-cols-4 gap-3 text-label-sm">
+        <div className="shrink-0 bg-surface-container px-4 sm:px-6 py-3 border-b border-outline-variant grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-label-sm">
           <div>
             <span className="text-on-surface-variant text-label-xs block">Lecture Topic:</span>
             <span className="font-semibold text-on-surface truncate block" title={selectedSlotForAttendance.topic}>
@@ -130,7 +132,8 @@ export const TakeAttendanceModal: React.FC<TakeAttendanceModalProps> = ({ isOpen
         </div>
 
         {/* Attendance Form */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 flex flex-col space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="font-label-md font-semibold text-on-surface">
@@ -226,36 +229,37 @@ export const TakeAttendanceModal: React.FC<TakeAttendanceModalProps> = ({ isOpen
               <strong className="font-semibold">Dual Governance Impact:</strong> Marking this class awards <strong>{durationHours} learning hours</strong> to each present scholar towards the graduation threshold, and credits <strong>{durationHours} lecturing hours</strong> to <strong>{selectedSlotForAttendance.mentorName}</strong> towards payout eligibility.
             </div>
           </div>
+        </div>
 
-          {/* Action Buttons */}
-          <div className="pt-2 border-t border-outline-variant flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg border border-outline text-on-surface hover:bg-surface-container text-label-md font-semibold transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-5 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 font-bold text-label-md flex items-center gap-2 shadow-xs disabled:opacity-50 transition-all"
-            >
-              {isSubmitting ? (
-                <>
-                  <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>
-                  <span>Saving Attendance...</span>
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined text-lg">verified</span>
-                  <span>Finalize & Credit Hours</span>
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
+        {/* Sticky Action Footer */}
+        <div className="shrink-0 p-3 sm:p-4 bg-surface-bright border-t border-outline-variant flex items-center justify-end gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg border border-outline text-on-surface hover:bg-surface-container text-label-md font-semibold transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="px-5 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 font-bold text-label-md flex items-center gap-2 shadow-xs disabled:opacity-50 transition-all cursor-pointer"
+          >
+            {isSubmitting ? (
+              <>
+                <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>
+                <span>Saving Attendance...</span>
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-lg">verified</span>
+                <span>Finalize & Credit Hours</span>
+              </>
+            )}
+          </button>
+        </div>
+      </form>
     </div>
+  </div>
   );
 };

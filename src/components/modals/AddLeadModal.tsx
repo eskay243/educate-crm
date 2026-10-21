@@ -53,32 +53,33 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/50 backdrop-blur-xs p-4 sm:p-margin-page animate-in fade-in duration-200">
-      <div className="absolute inset-0" onClick={onClose} />
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+      <div className="fixed inset-0 -z-10" onClick={onClose} aria-hidden="true" />
 
-      <div className="glass-panel relative w-full max-w-xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden bg-surface-container-lowest border border-outline-variant/60 z-10">
+      <div className="glass-panel relative w-full max-w-xl max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden bg-surface-container-lowest border border-outline-variant/60 z-10 animate-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="flex items-center justify-between p-stack-md px-stack-lg border-b border-outline-variant/40 bg-surface-container-lowest">
+        <div className="shrink-0 flex items-center justify-between p-4 sm:p-5 border-b border-outline-variant/40 bg-surface-container-lowest">
           <div className="flex items-center gap-stack-sm">
-            <div className="w-10 h-10 rounded-xl bg-tertiary-container/30 text-tertiary flex items-center justify-center">
-              <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>person_add</span>
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-tertiary-container/30 text-tertiary flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-[20px] sm:text-[22px]">person_add</span>
             </div>
             <div>
-              <h2 className="font-headline-md text-headline-md font-bold text-on-surface">Add Prospective Lead</h2>
+              <h2 className="font-headline-md text-base sm:text-lg font-bold text-on-surface">Add Prospective Lead</h2>
               <p className="text-xs text-on-surface-variant">Capture inquiry details and assign to intake sales rep</p>
             </div>
           </div>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="text-on-surface-variant hover:text-primary transition-colors p-1.5 rounded-full hover:bg-surface-container cursor-pointer"
+            className="text-on-surface-variant hover:text-primary transition-colors p-1.5 rounded-full hover:bg-surface-container cursor-pointer shrink-0"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>close</span>
+            <span className="material-symbols-outlined text-[20px] sm:text-[22px]">close</span>
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="overflow-y-auto p-stack-lg space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
@@ -257,26 +258,27 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) =
               className="w-full p-3 border border-outline-variant/80 rounded-md bg-surface text-body-md focus:border-primary focus:ring-1 focus:ring-primary outline-hidden resize-none"
             />
           </div>
+        </div>
 
-          {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-outline-variant/40">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-on-surface-variant hover:text-on-surface rounded-md hover:bg-surface-container transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-2 bg-primary text-on-primary text-xs font-bold rounded-md hover:bg-primary/90 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>save</span>
-              <span>Save Lead Record</span>
-            </button>
-          </div>
-        </form>
-      </div>
+        {/* Sticky Footer Actions */}
+        <div className="shrink-0 p-3 sm:p-4 border-t border-outline-variant/40 bg-surface-bright flex items-center justify-end gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-xs font-semibold text-on-surface-variant hover:text-on-surface rounded-lg hover:bg-surface-container transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="px-6 py-2 bg-primary text-on-primary text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>save</span>
+            <span>Save Lead Record</span>
+          </button>
+        </div>
+      </form>
     </div>
+  </div>
   );
 };

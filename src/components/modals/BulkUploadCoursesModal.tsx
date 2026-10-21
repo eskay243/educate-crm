@@ -258,18 +258,18 @@ export const BulkUploadCoursesModal: React.FC<BulkUploadCoursesModalProps> = ({ 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-margin-page animate-in fade-in duration-200">
-      <div className="absolute inset-0" onClick={onClose} />
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+      <div className="fixed inset-0 -z-10" onClick={onClose} aria-hidden="true" />
 
-      <div className="glass-panel relative w-full max-w-4xl rounded-xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden bg-surface-container-lowest border border-outline-variant z-10">
+      <div className="glass-panel relative w-full max-w-4xl max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden bg-surface-container-lowest border border-outline-variant z-10 animate-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="flex items-center justify-between p-stack-md px-stack-lg border-b border-outline-variant bg-surface-bright">
+        <div className="shrink-0 flex items-center justify-between p-4 sm:p-5 border-b border-outline-variant bg-surface-bright">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-              <span className="material-symbols-outlined text-[22px]">upload_file</span>
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-[20px] sm:text-[22px]">upload_file</span>
             </div>
             <div>
-              <h2 className="font-headline-lg text-lg font-bold text-on-surface">Bulk Upload Academic Courses</h2>
+              <h2 className="font-headline-lg text-base sm:text-lg font-bold text-on-surface">Bulk Upload Academic Courses</h2>
               <p className="font-body-sm text-xs text-secondary">
                 Upload multiple courses, syllabus modules, tuition pricing in ₦, and faculty leads using CSV or JSON format.
               </p>
@@ -278,14 +278,14 @@ export const BulkUploadCoursesModal: React.FC<BulkUploadCoursesModalProps> = ({ 
           <button
             onClick={onClose}
             aria-label="Close"
-            className="text-secondary hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-container cursor-pointer"
+            className="text-secondary hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-container cursor-pointer shrink-0"
           >
-            <span className="material-symbols-outlined text-[24px]">close</span>
+            <span className="material-symbols-outlined text-[20px] sm:text-[24px]">close</span>
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="overflow-y-auto p-stack-lg space-y-5 flex-1">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5">
           {/* Download Templates Banner */}
           <div className="p-4 rounded-xl bg-blue-50/80 border border-blue-200 text-xs text-blue-950 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div className="space-y-0.5">
@@ -407,16 +407,16 @@ export const BulkUploadCoursesModal: React.FC<BulkUploadCoursesModalProps> = ({ 
           )}
         </div>
 
-        {/* Modal Footer */}
-        <div className="p-stack-md px-stack-lg border-t border-outline-variant flex justify-between items-center bg-surface-bright">
+        {/* Modal Sticky Footer */}
+        <div className="shrink-0 p-3 sm:p-4 border-t border-outline-variant flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 bg-surface-bright">
           <p className="text-xs text-secondary">
             {validCount > 0 ? `${validCount} courses ready for immediate catalog integration.` : 'Upload a formatted file to begin.'}
           </p>
-          <div className="flex gap-2">
+          <div className="flex gap-2 justify-end">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 h-9 rounded border border-outline-variant text-xs font-semibold text-secondary hover:bg-surface-container transition-colors cursor-pointer"
+              className="px-4 h-9 rounded-lg border border-outline-variant text-xs font-semibold text-secondary hover:bg-surface-container transition-colors cursor-pointer"
             >
               Cancel
             </button>
@@ -424,7 +424,7 @@ export const BulkUploadCoursesModal: React.FC<BulkUploadCoursesModalProps> = ({ 
               type="button"
               disabled={validCount === 0 || isProcessing}
               onClick={handleImportCourses}
-              className="px-5 h-9 rounded bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className="px-5 h-9 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-[16px]">publish</span>
               <span>{isProcessing ? 'Importing...' : `Import ${validCount} Courses`}</span>

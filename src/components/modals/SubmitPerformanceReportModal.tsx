@@ -79,21 +79,21 @@ export const SubmitPerformanceReportModal: React.FC<SubmitPerformanceReportModal
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/50 backdrop-blur-xs p-4 sm:p-6 overflow-y-auto">
-      <div className="fixed inset-0" onClick={onClose} />
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+      <div className="fixed inset-0 -z-10" onClick={onClose} aria-hidden="true" />
 
-      <div className="relative w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden bg-surface-container-lowest border border-outline-variant z-10 animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-2xl max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden bg-surface-container-lowest border border-outline-variant z-10 animate-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="flex items-center justify-between p-5 px-6 border-b border-outline-variant bg-surface-bright">
+        <div className="shrink-0 flex items-center justify-between p-4 sm:p-5 border-b border-outline-variant bg-surface-bright">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-              <span className="material-symbols-outlined text-[24px]">assessment</span>
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-[20px] sm:text-[24px]">assessment</span>
             </div>
             <div>
-              <h3 className="font-bold text-base text-on-surface">
+              <h3 className="font-bold text-sm sm:text-base text-on-surface">
                 Submit Student Performance &amp; Welfare Report
               </h3>
-              <p className="text-xs text-secondary">
+              <p className="text-[11px] sm:text-xs text-secondary">
                 Formal faculty evaluation dispatched to Admissions Head &amp; Super Admin
               </p>
             </div>
@@ -101,14 +101,15 @@ export const SubmitPerformanceReportModal: React.FC<SubmitPerformanceReportModal
           <button
             onClick={onClose}
             aria-label="Close"
-            className="text-secondary hover:text-on-surface p-1.5 rounded-full hover:bg-surface-container transition-colors"
+            className="text-secondary hover:text-on-surface p-1.5 rounded-full hover:bg-surface-container transition-colors cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5">
+        <form onSubmit={handleSubmit} className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5">
           {/* Target Student Selection */}
           <div>
             <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-2">
@@ -232,19 +233,21 @@ export const SubmitPerformanceReportModal: React.FC<SubmitPerformanceReportModal
             />
           </div>
 
-          {/* Submission Buttons */}
-          <div className="pt-3 border-t border-outline-variant flex items-center justify-end gap-3">
+          </div>
+
+          {/* Sticky Submission Footer */}
+          <div className="shrink-0 p-3 sm:p-4 bg-surface-bright border-t border-outline-variant flex items-center justify-end gap-2 sm:gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-outline-variant text-sm font-semibold text-secondary hover:bg-surface-container transition-colors"
+              className="px-4 py-2 sm:py-2.5 rounded-xl border border-outline-variant text-xs sm:text-sm font-semibold text-secondary hover:bg-surface-container transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2.5 rounded-xl bg-primary text-on-primary text-sm font-bold shadow-md hover:opacity-95 transition-all flex items-center gap-2"
+              className="px-5 py-2 sm:py-2.5 rounded-xl bg-primary text-on-primary text-xs sm:text-sm font-bold shadow-md hover:opacity-95 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-[18px]">send</span>
               <span>{submitting ? 'Submitting Evaluation...' : 'Submit Evaluation Report'}</span>

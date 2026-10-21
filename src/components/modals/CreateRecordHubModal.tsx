@@ -47,43 +47,43 @@ export const CreateRecordHubModal: React.FC<CreateRecordHubModalProps> = ({ isOp
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/50 backdrop-blur-xs p-4 sm:p-margin-page animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
       {/* Click outside backdrop */}
-      <div className="absolute inset-0" onClick={onClose} />
+      <div className="fixed inset-0 -z-10" onClick={onClose} aria-hidden="true" />
 
       {/* Modal Container */}
-      <div className="relative w-full max-w-3xl rounded-xl shadow-modal flex flex-col max-h-[90vh] overflow-hidden transform transition-all bg-surface border border-border-subtle z-10">
+      <div className="relative w-full max-w-3xl max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] rounded-t-2xl sm:rounded-xl shadow-modal flex flex-col overflow-hidden transform transition-all bg-surface border border-border-subtle z-10 animate-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border-subtle bg-surface">
+        <div className="shrink-0 flex items-center justify-between p-4 sm:p-6 border-b border-border-subtle bg-surface">
           <div>
-            <h2 className="font-headline-lg text-xl font-bold text-crisp-black">Create New Record</h2>
+            <h2 className="font-headline-lg text-lg sm:text-xl font-bold text-crisp-black">Create New Record</h2>
             <p className="font-sans text-xs text-on-surface-variant mt-0.5">Select the type of record you want to add to the CRM.</p>
           </div>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container"
+            className="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container cursor-pointer shrink-0"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>close</span>
+            <span className="material-symbols-outlined text-[20px] sm:text-[24px]">close</span>
           </button>
         </div>
 
         {/* Bento Grid Body */}
-        <div className="p-stack-lg overflow-y-auto bg-surface/40">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-stack-md">
+        <div className="flex-1 min-h-0 p-4 sm:p-6 overflow-y-auto overscroll-contain bg-surface/40">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             {actions.map((act) => (
               <button
                 key={act.id}
                 onClick={() => openModal(act.id as any)}
-                className={`group flex flex-col items-start p-stack-md rounded-xl border border-outline-variant/60 bg-surface-container-lowest hover:shadow-md transition-all text-left ${act.borderHover} cursor-pointer active:scale-[0.99]`}
+                className={`group flex flex-col items-start p-4 sm:p-5 rounded-xl border border-outline-variant/60 bg-surface-container-lowest hover:shadow-md transition-all text-left ${act.borderHover} cursor-pointer active:scale-[0.99]`}
               >
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-stack-sm transition-all duration-200 shadow-xs ${act.colorClass}`}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '26px' }}>{act.icon}</span>
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center mb-3 transition-all duration-200 shadow-xs ${act.colorClass}`}>
+                  <span className="material-symbols-outlined text-[22px] sm:text-[26px]">{act.icon}</span>
                 </div>
-                <h3 className="font-headline-md text-headline-md font-semibold text-on-surface mb-1 group-hover:text-primary transition-colors">
+                <h3 className="font-headline-md text-sm sm:text-base font-semibold text-on-surface mb-1 group-hover:text-primary transition-colors">
                   {act.title}
                 </h3>
-                <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+                <p className="font-body-md text-xs sm:text-sm text-on-surface-variant leading-relaxed">
                   {act.desc}
                 </p>
               </button>
@@ -92,11 +92,11 @@ export const CreateRecordHubModal: React.FC<CreateRecordHubModalProps> = ({ isOp
         </div>
 
         {/* Footer */}
-        <div className="p-4 px-stack-lg border-t border-outline-variant/30 bg-surface-container-low flex justify-between items-center text-xs text-secondary">
-          <span>Need bulk import? CSV Upload supported in Settings.</span>
+        <div className="shrink-0 p-3 sm:p-4 px-4 sm:px-6 border-t border-outline-variant/30 bg-surface-container-low flex justify-between items-center text-xs text-secondary">
+          <span className="truncate pr-2">Need bulk import? CSV Upload supported in Settings.</span>
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-md border border-outline-variant hover:bg-surface font-semibold text-on-surface transition-colors"
+            className="px-4 py-2 rounded-lg border border-outline-variant hover:bg-surface font-semibold text-on-surface transition-colors cursor-pointer shrink-0"
           >
             Cancel
           </button>

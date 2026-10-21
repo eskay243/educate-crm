@@ -124,14 +124,14 @@ Email: ${student.email} | Phone: ${student.phone || 'N/A'}
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/50 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-      <div className="absolute inset-0" onClick={onClose} />
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+      <div className="fixed inset-0 -z-10" onClick={onClose} aria-hidden="true" />
 
-      <div className="glass-panel relative w-full max-w-xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden bg-surface border border-outline-variant z-10">
+      <div className="glass-panel relative w-full max-w-xl max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden bg-surface border border-outline-variant z-10 animate-in zoom-in-95 duration-150">
         {/* Header with Urgency Alert Styling */}
-        <div className="p-4 px-6 border-b border-rose-500/20 bg-rose-500/10 flex items-center justify-between">
+        <div className="shrink-0 p-4 px-5 sm:px-6 border-b border-rose-500/20 bg-rose-500/10 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-xs">
+            <div className="w-9 h-9 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-xs shrink-0">
               <span className="material-symbols-outlined text-[20px]">emergency_home</span>
             </div>
             <div>
@@ -146,14 +146,15 @@ Email: ${student.email} | Phone: ${student.phone || 'N/A'}
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-full text-secondary hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
+            className="p-1 rounded-full text-secondary hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
 
         {/* Modal Form */}
-        <form onSubmit={handleSubmit} className="overflow-y-auto p-6 space-y-4 text-xs flex-1">
+        <form onSubmit={handleSubmit} className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4 text-xs">
           {/* Student Selector */}
           <div>
             <label className="block font-bold text-secondary mb-1">Select Student Mentee *</label>
@@ -259,27 +260,28 @@ Email: ${student.email} | Phone: ${student.phone || 'N/A'}
               ))}
             </div>
           </div>
+        </div>
 
-          {/* Actions Bar */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-outline-variant">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 h-9 rounded-lg border border-outline-variant text-secondary hover:text-on-surface text-xs font-bold cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-5 h-9 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[16px]">priority_high</span>
-              <span>{isSubmitting ? 'Dispatching Alert...' : 'Dispatch Welfare Alert'}</span>
-            </button>
-          </div>
-        </form>
-      </div>
+        {/* Sticky Actions Bar */}
+        <div className="shrink-0 p-3 sm:p-4 bg-surface-bright border-t border-outline-variant flex items-center justify-end gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 h-9 rounded-lg border border-outline-variant text-secondary hover:text-on-surface text-xs font-bold cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="px-5 h-9 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined text-[16px]">priority_high</span>
+            <span>{isSubmitting ? 'Dispatching Alert...' : 'Dispatch Welfare Alert'}</span>
+          </button>
+        </div>
+      </form>
     </div>
+  </div>
   );
 };

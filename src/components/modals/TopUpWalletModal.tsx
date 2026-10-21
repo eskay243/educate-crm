@@ -63,19 +63,20 @@ export const TopUpWalletModal: React.FC<TopUpWalletModalProps> = ({ isOpen, onCl
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+      <div className="fixed inset-0 -z-10" onClick={onClose} aria-hidden="true" />
       <div 
-        className="w-full max-w-lg bg-surface border border-outline rounded-xl shadow-modal overflow-hidden flex flex-col"
+        className="w-full max-w-lg max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] bg-surface border border-outline rounded-t-2xl sm:rounded-xl shadow-modal overflow-hidden flex flex-col z-10 animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-6 bg-crisp-black text-white flex justify-between items-start border-b border-outline">
+        <div className="shrink-0 p-4 sm:p-5 bg-crisp-black text-white flex justify-between items-start border-b border-outline">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white">
-              <span className="material-symbols-outlined text-[24px]">account_balance_wallet</span>
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/10 flex items-center justify-center text-white shrink-0">
+              <span className="material-symbols-outlined text-[22px] sm:text-[24px]">account_balance_wallet</span>
             </div>
             <div>
-              <h3 className="font-display text-lg font-bold">Fund Expense &amp; Budget Wallet</h3>
+              <h3 className="font-display text-base sm:text-lg font-bold">Fund Expense &amp; Budget Wallet</h3>
               <p className="text-white/80 text-xs">
                 Current liquid balance: <strong className="text-sea-green font-data-tabular">{formatNaira(wallet?.balance || 0)}</strong>
               </p>
@@ -83,14 +84,14 @@ export const TopUpWalletModal: React.FC<TopUpWalletModalProps> = ({ isOpen, onCl
           </div>
           <button 
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
 
         {/* Tab Switcher */}
-        <div className="grid grid-cols-2 p-1.5 m-5 mb-3 bg-canvas rounded-lg border border-outline">
+        <div className="shrink-0 grid grid-cols-2 p-1.5 m-3 sm:m-4 mb-2 bg-canvas rounded-lg border border-outline">
           <button
             onClick={() => setActiveTab('dva')}
             className={`py-2 px-3 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-2 cursor-pointer ${
@@ -100,7 +101,7 @@ export const TopUpWalletModal: React.FC<TopUpWalletModalProps> = ({ isOpen, onCl
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">account_balance</span>
-            <span>Bank Transfer (Dedicated NUBAN)</span>
+            <span className="truncate">Dedicated NUBAN</span>
           </button>
           <button
             onClick={() => setActiveTab('card')}
@@ -111,13 +112,15 @@ export const TopUpWalletModal: React.FC<TopUpWalletModalProps> = ({ isOpen, onCl
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">credit_card</span>
-            <span>Instant Paystack Checkout</span>
+            <span className="truncate">Instant Paystack</span>
           </button>
         </div>
 
-        {/* Tab 1: Dedicated Virtual Account (Bank Transfer) */}
-        {activeTab === 'dva' && (
-          <div className="p-6 pt-2 space-y-4">
+        {/* Scrollable Tab Content Container */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+          {/* Tab 1: Dedicated Virtual Account (Bank Transfer) */}
+          {activeTab === 'dva' && (
+            <div className="p-4 sm:p-6 pt-1 space-y-4">
             {virtualAccount ? (
               <div className="space-y-4">
                 <div className="bg-surface border border-outline rounded-xl p-5 relative overflow-hidden">
@@ -209,76 +212,77 @@ export const TopUpWalletModal: React.FC<TopUpWalletModalProps> = ({ isOpen, onCl
 
         {/* Tab 2: Instant Card / USSD Top-Up (Paystack Pop) */}
         {activeTab === 'card' && (
-          <div className="p-6 pt-2 space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-secondary uppercase tracking-wider">
-                Top-Up Amount (₦)
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-secondary">₦</span>
-                <input
-                  type="number"
-                  step="50000"
-                  min="5000"
-                  value={customAmount}
-                  onChange={(e) => setCustomAmount(Number(e.target.value))}
-                  placeholder="250000"
-                  className="w-full h-11 pl-8 pr-3 rounded-lg border border-outline-variant bg-surface text-base font-bold text-on-surface font-data-tabular focus:border-primary outline-none"
-                />
+            <div className="p-4 sm:p-6 pt-1 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-secondary uppercase tracking-wider">
+                  Top-Up Amount (₦)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-secondary">₦</span>
+                  <input
+                    type="number"
+                    step="50000"
+                    min="5000"
+                    value={customAmount}
+                    onChange={(e) => setCustomAmount(Number(e.target.value))}
+                    placeholder="250000"
+                    className="w-full h-11 pl-8 pr-3 rounded-lg border border-outline-variant bg-surface text-base font-bold text-on-surface font-data-tabular focus:border-primary outline-none"
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Quick Chips */}
-            <div className="space-y-1">
-              <span className="text-[11px] text-secondary font-medium">Quick Amount Presets:</span>
-              <div className="flex flex-wrap gap-2">
-                {quickAmounts.map((amt) => (
-                  <button
-                    key={amt}
-                    type="button"
-                    onClick={() => setCustomAmount(amt)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold font-data-tabular transition-colors cursor-pointer ${
-                      customAmount === amt
-                        ? 'bg-primary text-on-primary font-bold shadow-xs'
-                        : 'bg-surface border border-outline-variant text-secondary hover:text-on-surface'
-                    }`}
-                  >
-                    {formatNaira(amt)}
-                  </button>
-                ))}
+              {/* Quick Chips */}
+              <div className="space-y-1">
+                <span className="text-[11px] text-secondary font-medium">Quick Amount Presets:</span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {quickAmounts.map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => setCustomAmount(amt)}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold font-data-tabular transition-colors cursor-pointer text-center ${
+                        customAmount === amt
+                          ? 'bg-primary text-on-primary font-bold shadow-xs'
+                          : 'bg-surface border border-outline-variant text-secondary hover:text-on-surface'
+                      }`}
+                    >
+                      {formatNaira(amt)}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div className="p-3 bg-surface-container rounded-lg border border-outline-variant/60 text-xs space-y-1 text-secondary">
-              <div className="flex justify-between">
-                <span>Payment Channels:</span>
-                <strong className="text-on-surface">Card, USSD, Bank Transfer, Apple Pay</strong>
+              <div className="p-3 bg-surface-container rounded-lg border border-outline-variant/60 text-xs space-y-1 text-secondary">
+                <div className="flex justify-between">
+                  <span>Payment Channels:</span>
+                  <strong className="text-on-surface">Card, USSD, Bank Transfer, Apple Pay</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Settlement Time:</span>
+                  <strong className="text-[#166534]">Instant &amp; Automated</strong>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span>Settlement Time:</span>
-                <strong className="text-[#166534]">Instant &amp; Automated</strong>
-              </div>
-            </div>
 
-            <button
-              onClick={handlePaystackTopUp}
-              disabled={isProcessing}
-              className="w-full h-11 bg-primary text-on-primary font-bold text-sm rounded-lg hover:bg-primary/90 transition-colors shadow-xs flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[18px]">
-                {isProcessing ? 'progress_activity' : 'payments'}
-              </span>
-              <span>{isProcessing ? 'Processing Checkout...' : `Top Up ${formatNaira(customAmount)} Now`}</span>
-            </button>
-          </div>
-        )}
+              <button
+                onClick={handlePaystackTopUp}
+                disabled={isProcessing}
+                className="w-full h-11 bg-primary text-on-primary font-bold text-sm rounded-lg hover:bg-primary/90 transition-colors shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">
+                  {isProcessing ? 'progress_activity' : 'payments'}
+                </span>
+                <span>{isProcessing ? 'Processing Checkout...' : `Top Up ${formatNaira(customAmount)} Now`}</span>
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Footer */}
-        <div className="p-4 bg-surface-bright border-t border-outline-variant flex justify-between items-center text-[11px] text-secondary">
+        <div className="shrink-0 p-3 sm:p-4 bg-surface-bright border-t border-outline-variant flex justify-between items-center text-[11px] text-secondary">
           <span>Protected by Paystack 256-bit encryption</span>
           <button
             onClick={onClose}
-            className="px-3 py-1 text-secondary hover:text-on-surface rounded font-medium cursor-pointer"
+            className="px-3 py-1.5 text-secondary hover:text-on-surface rounded-lg font-medium cursor-pointer"
           >
             Close
           </button>

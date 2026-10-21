@@ -5005,119 +5005,122 @@ export const SettingsPage: React.FC = () => {
 
           {/* Create Custom Role Modal */}
           {showCreateRoleModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-margin-page animate-in fade-in duration-150">
-              <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-xl p-stack-lg max-w-lg w-full space-y-4 max-h-[90vh] overflow-y-auto">
-                <div className="flex justify-between items-center border-b border-outline-variant pb-3">
+            <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-150">
+              <div className="fixed inset-0 -z-10" onClick={() => setShowCreateRoleModal(false)} aria-hidden="true" />
+              <div className="bg-surface-container-lowest border border-outline-variant rounded-t-2xl sm:rounded-2xl shadow-xl max-w-lg w-full max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] flex flex-col overflow-hidden z-10 animate-in zoom-in-95 duration-150">
+                <div className="shrink-0 flex justify-between items-center border-b border-outline-variant p-4 sm:p-5 bg-surface-bright">
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-primary text-[22px]">add_moderator</span>
-                    <h3 className="font-headline-md text-headline-md font-bold text-on-surface">Architect Custom Role</h3>
+                    <h3 className="font-headline-md text-base sm:text-lg font-bold text-on-surface">Architect Custom Role</h3>
                   </div>
-                  <button onClick={() => setShowCreateRoleModal(false)} className="text-secondary hover:text-on-surface">
+                  <button onClick={() => setShowCreateRoleModal(false)} className="text-secondary hover:text-on-surface cursor-pointer p-1 rounded-full hover:bg-surface-container">
                     <span className="material-symbols-outlined text-[20px]">close</span>
                   </button>
                 </div>
 
-                <form onSubmit={handleCreateRoleSubmit} className="space-y-3.5 text-xs">
-                  <div>
-                    <label className="block text-secondary font-semibold mb-1">Role Title / Name *</label>
-                    <input
-                      type="text"
-                      required
-                      value={newRoleName}
-                      onChange={(e) => setNewRoleName(e.target.value)}
-                      placeholder="e.g. IT Support Specialist or Customer Service"
-                      className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none"
-                    />
-                  </div>
+                <form onSubmit={handleCreateRoleSubmit} className="flex-1 min-h-0 flex flex-col overflow-hidden text-xs">
+                  <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-3.5">
+                    <div>
+                      <label className="block text-secondary font-semibold mb-1">Role Title / Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newRoleName}
+                        onChange={(e) => setNewRoleName(e.target.value)}
+                        placeholder="e.g. IT Support Specialist or Customer Service"
+                        className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-secondary font-semibold mb-1">Role Description &amp; Scope *</label>
-                    <input
-                      type="text"
-                      required
-                      value={newRoleDescription}
-                      onChange={(e) => setNewRoleDescription(e.target.value)}
-                      placeholder="e.g. Handles technical support, student inquiries and system maintenance"
-                      className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none"
-                    />
-                  </div>
+                    <div>
+                      <label className="block text-secondary font-semibold mb-1">Role Description &amp; Scope *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newRoleDescription}
+                        onChange={(e) => setNewRoleDescription(e.target.value)}
+                        placeholder="e.g. Handles technical support, student inquiries and system maintenance"
+                        className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-secondary font-semibold mb-1.5">Accessible Modules *</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { id: 'courses', label: 'Programs & Cohorts' },
-                        { id: 'leads', label: 'Leads Pipeline' },
-                        { id: 'students', label: 'Students & Billing' },
-                        { id: 'mentors', label: 'Mentors & Sessions' },
-                        { id: 'attendance', label: 'Staff Attendance' },
-                        { id: 'expenses', label: 'Expenses & Budget' },
-                        { id: 'tickets', label: 'Support & Tickets' },
-                      ].map((mod) => (
-                        <label key={mod.id} className="flex items-center gap-2 p-2 rounded border border-outline-variant/60 cursor-pointer hover:bg-surface">
-                          <input
-                            type="checkbox"
-                            checked={newRoleModules.includes(mod.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setNewRoleModules(prev => [...prev, mod.id]);
-                              } else {
-                                setNewRoleModules(prev => prev.filter(m => m !== mod.id));
-                              }
-                            }}
-                            className="rounded accent-primary cursor-pointer"
-                          />
-                          <span>{mod.label}</span>
-                        </label>
-                      ))}
+                    <div>
+                      <label className="block text-secondary font-semibold mb-1.5">Accessible Modules *</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {[
+                          { id: 'courses', label: 'Programs & Cohorts' },
+                          { id: 'leads', label: 'Leads Pipeline' },
+                          { id: 'students', label: 'Students & Billing' },
+                          { id: 'mentors', label: 'Mentors & Sessions' },
+                          { id: 'attendance', label: 'Staff Attendance' },
+                          { id: 'expenses', label: 'Expenses & Budget' },
+                          { id: 'tickets', label: 'Support & Tickets' },
+                        ].map((mod) => (
+                          <label key={mod.id} className="flex items-center gap-2 p-2 rounded border border-outline-variant/60 cursor-pointer hover:bg-surface">
+                            <input
+                              type="checkbox"
+                              checked={newRoleModules.includes(mod.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setNewRoleModules(prev => [...prev, mod.id]);
+                                } else {
+                                  setNewRoleModules(prev => prev.filter(m => m !== mod.id));
+                                }
+                              }}
+                              className="rounded accent-primary cursor-pointer"
+                            />
+                            <span>{mod.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-secondary font-semibold mb-1.5">Granular Permissions</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {[
+                          { key: 'canAddCourses' as const, label: 'Add / Edit Courses' },
+                          { key: 'canAddCohorts' as const, label: 'Launch Cohorts' },
+                          { key: 'canAddLeads' as const, label: 'Intake Leads' },
+                          { key: 'canEnrollStudents' as const, label: 'Enroll Students' },
+                          { key: 'canViewBilling' as const, label: 'View Tuition Ledger' },
+                          { key: 'canLogExpenses' as const, label: 'Log Expenses' },
+                          { key: 'canApproveExpenses' as const, label: 'Approve Expenses' },
+                          { key: 'canIssueCertificates' as const, label: 'Issue Certificates' },
+                          { key: 'canManageAttendance' as const, label: 'Staff Attendance' },
+                          { key: 'canSubmitReports' as const, label: 'Submit Evaluations' },
+                          { key: 'canViewBiodata' as const, label: 'View Biodata (Staff, Mentor, Student)' },
+                          { key: 'canModifyStudentBiodata' as const, label: 'Modify Student Biodata' },
+                          { key: 'canModifyMentorBiodata' as const, label: 'Modify Mentor Biodata' },
+                          { key: 'canDisburseApprovedFunds' as const, label: 'Disburse Approved Funds' },
+                        ].map(({ key, label }) => (
+                          <label key={key} className="flex items-center gap-2 p-2 rounded border border-outline-variant/60 cursor-pointer hover:bg-surface">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(newRolePermissions[key])}
+                              onChange={(e) => {
+                                setNewRolePermissions(prev => ({ ...prev, [key]: e.target.checked }));
+                              }}
+                              className="rounded accent-primary cursor-pointer"
+                            />
+                            <span>{label}</span>
+                          </label>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-secondary font-semibold mb-1.5">Granular Permissions</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { key: 'canAddCourses' as const, label: 'Add / Edit Courses' },
-                        { key: 'canAddCohorts' as const, label: 'Launch Cohorts' },
-                        { key: 'canAddLeads' as const, label: 'Intake Leads' },
-                        { key: 'canEnrollStudents' as const, label: 'Enroll Students' },
-                        { key: 'canViewBilling' as const, label: 'View Tuition Ledger' },
-                        { key: 'canLogExpenses' as const, label: 'Log Expenses' },
-                        { key: 'canApproveExpenses' as const, label: 'Approve Expenses' },
-                        { key: 'canIssueCertificates' as const, label: 'Issue Certificates' },
-                        { key: 'canManageAttendance' as const, label: 'Staff Attendance' },
-                        { key: 'canSubmitReports' as const, label: 'Submit Evaluations' },
-                        { key: 'canViewBiodata' as const, label: 'View Biodata (Staff, Mentor, Student)' },
-                        { key: 'canModifyStudentBiodata' as const, label: 'Modify Student Biodata' },
-                        { key: 'canModifyMentorBiodata' as const, label: 'Modify Mentor Biodata' },
-                        { key: 'canDisburseApprovedFunds' as const, label: 'Disburse Approved Funds' },
-                      ].map(({ key, label }) => (
-                        <label key={key} className="flex items-center gap-2 p-2 rounded border border-outline-variant/60 cursor-pointer hover:bg-surface">
-                          <input
-                            type="checkbox"
-                            checked={Boolean(newRolePermissions[key])}
-                            onChange={(e) => {
-                              setNewRolePermissions(prev => ({ ...prev, [key]: e.target.checked }));
-                            }}
-                            className="rounded accent-primary cursor-pointer"
-                          />
-                          <span>{label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-3 border-t border-outline-variant">
+                  <div className="shrink-0 p-3 sm:p-4 bg-surface-bright border-t border-outline-variant flex justify-end gap-2">
                     <button
                       type="button"
                       onClick={() => setShowCreateRoleModal(false)}
-                      className="px-4 py-2 rounded-lg border border-outline-variant text-secondary font-semibold hover:bg-surface-container"
+                      className="px-4 py-2 rounded-lg border border-outline-variant text-secondary font-semibold hover:bg-surface-container cursor-pointer"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-5 py-2 rounded-lg bg-primary text-on-primary font-bold hover:bg-primary/90 transition-colors shadow-xs"
+                      className="px-5 py-2 rounded-lg bg-primary text-on-primary font-bold hover:bg-primary/90 transition-colors shadow-xs cursor-pointer"
                     >
                       Save Custom Role
                     </button>
@@ -5990,77 +5993,80 @@ export const SettingsPage: React.FC = () => {
       {/* EDIT STAFF MODAL */}
       {/* ========================================================================= */}
       {editingStaffUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="bg-surface border border-outline-variant rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in zoom-in-95">
-            <div className="flex justify-between items-center border-b border-outline-variant pb-3">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-150">
+          <div className="fixed inset-0 -z-10" onClick={() => setEditingStaffUser(null)} aria-hidden="true" />
+          <div className="relative w-full max-w-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] bg-surface border border-outline-variant rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden z-10 animate-in zoom-in-95">
+            <div className="shrink-0 flex justify-between items-center border-b border-outline-variant p-4 sm:p-5 bg-surface-bright">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-[22px]">badge</span>
                 <h3 className="font-headline-md text-base font-bold text-on-surface">Edit Staff Profile &amp; Role</h3>
               </div>
-              <button onClick={() => setEditingStaffUser(null)} className="text-secondary hover:text-on-surface cursor-pointer">
+              <button onClick={() => setEditingStaffUser(null)} className="text-secondary hover:text-on-surface cursor-pointer p-1 rounded-full hover:bg-surface-container">
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
 
-            <form onSubmit={handleSaveStaffEdit} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block text-secondary font-semibold mb-1">Full Legal Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={editStaffName}
-                  onChange={(e) => setEditStaffName(e.target.value)}
-                  className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none"
-                />
-              </div>
+            <form onSubmit={handleSaveStaffEdit} className="flex-1 min-h-0 flex flex-col overflow-hidden text-xs">
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-3.5">
+                <div>
+                  <label className="block text-secondary font-semibold mb-1">Full Legal Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editStaffName}
+                    onChange={(e) => setEditStaffName(e.target.value)}
+                    className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-secondary font-semibold mb-1">Institutional Email Address *</label>
-                <input
-                  type="email"
-                  required
-                  value={editStaffEmail}
-                  onChange={(e) => setEditStaffEmail(e.target.value)}
-                  className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none"
-                />
-              </div>
+                <div>
+                  <label className="block text-secondary font-semibold mb-1">Institutional Email Address *</label>
+                  <input
+                    type="email"
+                    required
+                    value={editStaffEmail}
+                    onChange={(e) => setEditStaffEmail(e.target.value)}
+                    className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-secondary font-semibold mb-1">Assigned Institutional Role *</label>
-                <select
-                  value={editStaffRole}
-                  onChange={(e) => setEditStaffRole(e.target.value as UserRole)}
-                  className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none cursor-pointer"
-                >
-                  <optgroup label="System Roles">
-                    <option value="super_admin">Super Admin / Managing Director</option>
-                    <option value="admissions">Admissions Officer</option>
-                    <option value="finance">Finance Officer &amp; Bursar</option>
-                    <option value="mentor">Faculty Mentor &amp; Instructor</option>
-                    <option value="program_officer">Program Officer &amp; Curriculum Lead</option>
-                  </optgroup>
-                  {customRoles.filter(r => !['super_admin', 'admissions', 'mentor', 'finance', 'student', 'program_officer'].includes(r.id)).length > 0 && (
-                    <optgroup label="Custom Roles">
-                      {customRoles.filter(r => !['super_admin', 'admissions', 'mentor', 'finance', 'student', 'program_officer'].includes(r.id)).map(cr => (
-                        <option key={cr.id} value={cr.id}>{cr.name}</option>
-                      ))}
+                <div>
+                  <label className="block text-secondary font-semibold mb-1">Assigned Institutional Role *</label>
+                  <select
+                    value={editStaffRole}
+                    onChange={(e) => setEditStaffRole(e.target.value as UserRole)}
+                    className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none cursor-pointer"
+                  >
+                    <optgroup label="System Roles">
+                      <option value="super_admin">Super Admin / Managing Director</option>
+                      <option value="admissions">Admissions Officer</option>
+                      <option value="finance">Finance Officer &amp; Bursar</option>
+                      <option value="mentor">Faculty Mentor &amp; Instructor</option>
+                      <option value="program_officer">Program Officer &amp; Curriculum Lead</option>
                     </optgroup>
-                  )}
-                </select>
+                    {customRoles.filter(r => !['super_admin', 'admissions', 'mentor', 'finance', 'student', 'program_officer'].includes(r.id)).length > 0 && (
+                      <optgroup label="Custom Roles">
+                        {customRoles.filter(r => !['super_admin', 'admissions', 'mentor', 'finance', 'student', 'program_officer'].includes(r.id)).map(cr => (
+                          <option key={cr.id} value={cr.id}>{cr.name}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-secondary font-semibold mb-1">Department / Faculty</label>
+                  <input
+                    type="text"
+                    value={editStaffDepartment}
+                    onChange={(e) => setEditStaffDepartment(e.target.value)}
+                    placeholder="e.g. Academic Affairs or Administration"
+                    className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-secondary font-semibold mb-1">Department / Faculty</label>
-                <input
-                  type="text"
-                  value={editStaffDepartment}
-                  onChange={(e) => setEditStaffDepartment(e.target.value)}
-                  placeholder="e.g. Academic Affairs or Administration"
-                  className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-outline-variant">
+              <div className="shrink-0 p-3 sm:p-4 bg-surface-bright border-t border-outline-variant flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setEditingStaffUser(null)}
@@ -6085,9 +6091,10 @@ export const SettingsPage: React.FC = () => {
       {/* DELETE STAFF CONFIRMATION MODAL */}
       {/* ========================================================================= */}
       {deletingStaffUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="bg-surface border border-outline-variant rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in zoom-in-95">
-            <div className="w-12 h-12 rounded-full bg-error/10 text-error flex items-center justify-center mx-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-150">
+          <div className="fixed inset-0 -z-10" onClick={() => setDeletingStaffUser(null)} aria-hidden="true" />
+          <div className="relative w-full max-w-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] bg-surface border border-outline-variant rounded-t-2xl sm:rounded-2xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 z-10">
+            <div className="w-12 h-12 rounded-full bg-error/10 text-error flex items-center justify-center mx-auto shrink-0">
               <span className="material-symbols-outlined text-[32px]">person_remove</span>
             </div>
             <div className="text-center space-y-1">
@@ -6130,47 +6137,50 @@ export const SettingsPage: React.FC = () => {
       {/* RENAME CUSTOM ROLE MODAL */}
       {/* ========================================================================= */}
       {renamingRole && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="bg-surface border border-outline-variant rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in zoom-in-95">
-            <div className="flex justify-between items-center border-b border-outline-variant pb-3">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-150">
+          <div className="fixed inset-0 -z-10" onClick={() => setRenamingRole(null)} aria-hidden="true" />
+          <div className="relative w-full max-w-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] bg-surface border border-outline-variant rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden z-10 animate-in zoom-in-95">
+            <div className="shrink-0 flex justify-between items-center border-b border-outline-variant p-4 sm:p-5 bg-surface-bright">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-[22px]">edit_square</span>
                 <h3 className="font-headline-md text-base font-bold text-on-surface">Rename Role &amp; Update Title</h3>
               </div>
-              <button onClick={() => setRenamingRole(null)} className="text-secondary hover:text-on-surface cursor-pointer">
+              <button onClick={() => setRenamingRole(null)} className="text-secondary hover:text-on-surface cursor-pointer p-1 rounded-full hover:bg-surface-container">
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
 
-            <p className="text-xs text-secondary leading-relaxed">
-              Renaming this role will automatically update the displayed title for all staff members assigned to this role.
-            </p>
+            <form onSubmit={handleSaveRoleRename} className="flex-1 min-h-0 flex flex-col overflow-hidden text-xs">
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-3.5">
+                <p className="text-xs text-secondary leading-relaxed">
+                  Renaming this role will automatically update the displayed title for all staff members assigned to this role.
+                </p>
 
-            <form onSubmit={handleSaveRoleRename} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block text-secondary font-semibold mb-1">Role Title / Display Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={renamedRoleTitle}
-                  onChange={(e) => setRenamedRoleTitle(e.target.value)}
-                  placeholder="e.g. Lead Program Officer"
-                  className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none"
-                />
+                <div>
+                  <label className="block text-secondary font-semibold mb-1">Role Title / Display Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={renamedRoleTitle}
+                    onChange={(e) => setRenamedRoleTitle(e.target.value)}
+                    placeholder="e.g. Lead Program Officer"
+                    className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-secondary font-semibold mb-1">Role Description &amp; Scope</label>
+                  <textarea
+                    rows={3}
+                    value={renamedRoleDesc}
+                    onChange={(e) => setRenamedRoleDesc(e.target.value)}
+                    placeholder="Describe responsibilities and institutional duties..."
+                    className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none resize-none"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-secondary font-semibold mb-1">Role Description &amp; Scope</label>
-                <textarea
-                  rows={3}
-                  value={renamedRoleDesc}
-                  onChange={(e) => setRenamedRoleDesc(e.target.value)}
-                  placeholder="Describe responsibilities and institutional duties..."
-                  className="w-full p-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface focus:border-primary outline-none resize-none"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-outline-variant">
+              <div className="shrink-0 p-3 sm:p-4 bg-surface-bright border-t border-outline-variant flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setRenamingRole(null)}
@@ -6195,9 +6205,10 @@ export const SettingsPage: React.FC = () => {
       {/* PRODUCTION FLUSH CONFIRMATION MODAL */}
       {/* ========================================================================= */}
       {showFlushConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in zoom-in-95">
-            <div className="w-12 h-12 rounded-full bg-error/10 text-error flex items-center justify-center mx-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in">
+          <div className="fixed inset-0 -z-10" onClick={() => setShowFlushConfirm(false)} aria-hidden="true" />
+          <div className="relative w-full max-w-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] bg-surface-container-lowest border border-outline-variant rounded-t-2xl sm:rounded-2xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 z-10">
+            <div className="w-12 h-12 rounded-full bg-error/10 text-error flex items-center justify-center mx-auto shrink-0">
               <span className="material-symbols-outlined text-[32px]">warning</span>
             </div>
             <div className="text-center space-y-1">
@@ -6217,13 +6228,13 @@ export const SettingsPage: React.FC = () => {
             <div className="flex gap-2 pt-2">
               <button
                 onClick={() => setShowFlushConfirm(false)}
-                className="flex-1 h-10 rounded-lg bg-surface hover:bg-surface-container border border-outline-variant font-bold text-xs text-on-surface transition-colors"
+                className="flex-1 h-10 rounded-lg bg-surface hover:bg-surface-container border border-outline-variant font-bold text-xs text-on-surface transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleExecuteFlush}
-                className="flex-1 h-10 rounded-lg bg-error hover:bg-error/90 font-bold text-xs text-white shadow-md transition-colors"
+                className="flex-1 h-10 rounded-lg bg-error hover:bg-error/90 font-bold text-xs text-white shadow-md transition-colors cursor-pointer"
               >
                 Yes, Flush Demo Data
               </button>

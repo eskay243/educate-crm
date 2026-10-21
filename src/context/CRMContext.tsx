@@ -2077,6 +2077,30 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       enrolledDate: new Date().toISOString().split('T')[0],
     };
     setStudents(prev => [newStudent, ...prev]);
+
+    // Create authentic dynamic invoice for student enrollment
+    const feeAmount = newStudent.totalFees || newStudent.tuitionAmount || 850000;
+    const paidAmount = feeAmount - (newStudent.outstandingBalance ?? 0);
+    const invoiceStatus = (newStudent.outstandingBalance ?? 0) === 0 ? 'Paid' : (paidAmount > 0 ? 'Partial' : 'Pending');
+
+    const newInv: Invoice = {
+      id: `inv-${Date.now()}`,
+      invoiceNumber: `INV-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`,
+      studentId: newStudent.id,
+      studentName: newStudent.name,
+      studentEmail: newStudent.email,
+      programName: newStudent.program,
+      issueDate: new Date().toISOString().split('T')[0],
+      dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+      totalAmount: feeAmount,
+      paidAmount: paidAmount,
+      status: invoiceStatus,
+      items: [{ id: `item-1`, description: `${newStudent.program} Tuition Enrollment`, amount: feeAmount }],
+      paymentReference: paidAmount > 0 ? `NIBSS-TRX-${Math.floor(1000000 + Math.random() * 9000000)}` : undefined,
+      nibssBankName: settings.defaultNIBSSBank?.bankName || 'Access Bank Nigeria PLC',
+    };
+    setInvoices(prev => [newInv, ...prev]);
+
     apiService.createStudent(newStudent);
 
     // Dispatch automated student onboarding welcome email via Zoho SMTP
@@ -3183,7 +3207,8 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setStudents(prev => prev.map(s => {
           if (s.id !== student.id) return s;
           const newPaid = (s.paidAmount || 0) + res.amountNaira;
-          const newBal = Math.max(0, (s.tuitionAmount || 0) - newPaid);
+          const totalFees = s.totalFees || s.tuitionAmount || 0;
+          const newBal = Math.max(0, totalFees - newPaid);
           return {
             ...s,
             paidAmount: newPaid,
@@ -3192,12 +3217,41 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           };
         }));
 
-        if (options.invoiceId) {
-          setInvoices(prev => prev.map(inv => {
-            if (inv.id !== options.invoiceId && inv.invoiceNumber !== options.invoiceId) return inv;
-            return { ...inv, status: 'Paid', paidDate: new Date().toISOString() };
-          }));
-        }
+        setInvoices(prev => {
+          const matched = prev.find(inv => (options.invoiceId && (inv.id === options.invoiceId || inv.invoiceNumber === options.invoiceId)) || inv.studentId === student.id);
+          if (matched) {
+            return prev.map(inv => {
+              if (inv.id !== matched.id) return inv;
+              const newPaid = (inv.paidAmount || 0) + res.amountNaira;
+              const total = inv.totalAmount || inv.amount || 0;
+              return {
+                ...inv,
+                paidAmount: newPaid,
+                status: newPaid >= total ? 'Paid' : 'Partial',
+                paidDate: new Date().toISOString()
+              };
+            });
+          }
+          // If no invoice found, prepend a newly synthesized dynamic invoice
+          const totalFee = student.totalFees || student.tuitionAmount || res.amountNaira;
+          const newInv: Invoice = {
+            id: `inv-${Date.now()}`,
+            invoiceNumber: options.invoiceId || `INV-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`,
+            studentId: student.id,
+            studentName: student.name,
+            studentEmail: student.email,
+            programName: student.program,
+            issueDate: new Date().toISOString().split('T')[0],
+            dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+            totalAmount: totalFee,
+            paidAmount: res.amountNaira,
+            status: res.amountNaira >= totalFee ? 'Paid' : 'Partial',
+            items: [{ id: 'item-1', description: `${student.program} Tuition`, amount: totalFee }],
+            paymentReference: res.reference,
+            nibssBankName: 'Paystack Automated Gateway'
+          };
+          return [newInv, ...prev];
+        });
 
         const commission = Math.round(res.amountNaira * 0.37);
         if (student.mentorId || student.mentorName) {

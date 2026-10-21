@@ -182,36 +182,37 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+      <div className="fixed inset-0 -z-10" onClick={onClose} aria-hidden="true" />
       <div 
-        className="w-full max-w-lg bg-surface border border-outline rounded-xl shadow-modal overflow-hidden flex flex-col"
+        className="w-full max-w-lg max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] bg-surface border border-outline rounded-t-2xl sm:rounded-xl shadow-modal overflow-hidden flex flex-col z-10 animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-6 bg-crisp-black text-white flex justify-between items-start border-b border-outline">
+        <div className="shrink-0 p-4 sm:p-5 bg-crisp-black text-white flex justify-between items-start border-b border-outline">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white">
-              <span className="material-symbols-outlined text-[24px]">send_money</span>
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/10 flex items-center justify-center text-white shrink-0">
+              <span className="material-symbols-outlined text-[22px] sm:text-[24px]">send_money</span>
             </div>
             <div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">
                 Wallet Outbound Disbursement
               </span>
-              <h3 className="font-display text-lg font-bold">
+              <h3 className="font-display text-base sm:text-lg font-bold">
                 {isMentorPayout ? 'Disburse Faculty 37% Revenue Share' : 'Disburse OpEx Requisition'}
               </h3>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4">
           {/* Wallet Balance Health Card */}
           <div className={`p-4 rounded-xl border flex items-center justify-between ${
             hasSufficientBalance 
@@ -409,11 +410,11 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 bg-surface-bright border-t border-outline-variant flex justify-between items-center">
+        <div className="shrink-0 p-3 sm:p-4 bg-surface-bright border-t border-outline-variant flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-secondary hover:text-on-surface rounded-lg text-xs font-semibold cursor-pointer"
+            className="px-4 py-2 text-secondary hover:text-on-surface rounded-lg text-xs font-semibold cursor-pointer text-center"
           >
             Cancel
           </button>
@@ -429,7 +430,7 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
               !isMentorHoursEligible ||
               (paystackBalance !== null && paystackBalance < amountToDisburse)
             }
-            className={`px-5 py-2.5 rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-2 cursor-pointer ${
+            className={`px-5 py-2.5 rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer ${
               hasSufficientBalance && accountNumber.length === 10 && isMentorHoursEligible && (paystackBalance !== null && paystackBalance >= amountToDisburse)
                 ? 'bg-[#166534] hover:bg-[#15803d] text-white'
                 : 'bg-surface-container text-secondary cursor-not-allowed opacity-60'

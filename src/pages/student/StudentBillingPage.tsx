@@ -9,7 +9,10 @@ export const StudentBillingPage: React.FC = () => {
     settings, 
     payTuitionWithPaystack, 
     submitProofOfPayment, 
-    showToast 
+    showToast,
+    openModal,
+    setSelectedStudentId,
+    setSelectedInvoiceId
   } = useCRM();
 
   const student = currentStudentProfile || {
@@ -26,9 +29,30 @@ export const StudentBillingPage: React.FC = () => {
     outstandingBalance: 200000,
   };
 
-  const studentInvoices = invoices.filter(inv => 
-    inv.studentId === student.id || inv.studentName === student.name
+  const matchedInvoices = invoices.filter(inv => 
+    inv.studentId === student.id || 
+    (inv.studentName && student.name && inv.studentName.toLowerCase().trim() === student.name.toLowerCase().trim()) ||
+    (student.email && inv.studentEmail && inv.studentEmail.toLowerCase().trim() === student.email.toLowerCase().trim())
   );
+
+  // If no stored invoice in DB, dynamically synthesize an authentic invoice matching this student's real fees
+  const studentInvoices = matchedInvoices.length > 0 ? matchedInvoices : [
+    {
+      id: `inv-${student.id}`,
+      invoiceNumber: `INV-${student.studentCode || '2026-001'}`,
+      studentId: student.id,
+      studentName: student.name,
+      studentEmail: student.email,
+      program: student.program,
+      programName: student.program,
+      description: `${student.program} Academic Tuition Settlement`,
+      totalAmount: student.totalFees || student.tuitionAmount || 0,
+      paidAmount: student.paidAmount || 0,
+      amount: student.totalFees || student.tuitionAmount || 0,
+      dueDate: (student as any).enrolledDate || new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+      status: (student.outstandingBalance || 0) === 0 && (student.totalFees || student.tuitionAmount || 0) > 0 ? 'Paid' : (student.paidAmount || 0) > 0 ? 'Partial' : 'Pending',
+    }
+  ];
 
   // Paystack Custom Payment state
   const [payAmount, setPayAmount] = useState<number>(student.outstandingBalance || 200000);
@@ -227,52 +251,63 @@ export const StudentBillingPage: React.FC = () => {
 
           {/* Invoices & Receipts List */}
           <div className="bg-surface-container-low border border-outline-variant rounded-2xl p-6 shadow-xs space-y-4">
-            <h3 className="font-bold text-base text-on-surface">Tuition Invoices & Official Receipts</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-base text-on-surface">Tuition Invoices & Official Receipts</h3>
+              <button
+                onClick={() => {
+                  setSelectedStudentId(student.id);
+                  setSelectedInvoiceId(studentInvoices[0]?.id || null);
+                  openModal('view-invoice');
+                }}
+                className="text-xs text-primary font-bold hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">receipt_long</span>
+                <span>Open Full Invoice Modal</span>
+              </button>
+            </div>
 
-            {studentInvoices.length === 0 ? (
-              <div className="p-4 rounded-xl border border-outline-variant/60 bg-surface-container/30 flex items-center justify-between">
-                <div>
-                  <div className="font-bold text-xs text-on-surface">Standard Program Enrollment Invoice</div>
-                  <div className="text-[11px] text-on-surface-variant">Ref: INV-2026-84920 &bull; Due: Oct 15, 2026</div>
-                </div>
-                <div className="text-right">
-                  <div className="font-bold text-xs text-on-surface">{formatNaira(200000)}</div>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 font-bold">Pending</span>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {studentInvoices.map((inv) => (
-                  <div key={inv.id} className="p-4 rounded-xl border border-outline-variant/80 bg-surface-container/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-xs text-primary">{inv.invoiceNumber}</span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                          inv.status === 'Paid' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600'
-                        }`}>
-                          {inv.status}
-                        </span>
-                      </div>
-                      <div className="text-xs text-on-surface mt-1">{inv.description || inv.program}</div>
-                      <div className="text-[11px] text-on-surface-variant mt-0.5">Due: {inv.dueDate}</div>
+            <div className="space-y-3">
+              {studentInvoices.map((inv) => (
+                <div key={inv.id} className="p-4 rounded-xl border border-outline-variant/80 bg-surface-container/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-xs text-primary">{inv.invoiceNumber}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                        inv.status === 'Paid' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600'
+                      }`}>
+                        {inv.status}
+                      </span>
                     </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <div className="font-extrabold text-sm text-on-surface">{formatNaira(inv.amount || inv.totalAmount || 0)}</div>
-                      </div>
-                      <button
-                        onClick={() => setActiveReceipt(inv)}
-                        className="px-3 py-1.5 rounded-lg border border-primary text-primary hover:bg-primary/5 text-xs font-bold flex items-center gap-1 transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-xs">visibility</span>
-                        <span>Receipt</span>
-                      </button>
-                    </div>
+                    <div className="text-xs text-on-surface mt-1">{inv.description || inv.program || `${student.program} Tuition`}</div>
+                    <div className="text-[11px] text-on-surface-variant mt-0.5">Due: {inv.dueDate}</div>
                   </div>
-                ))}
-              </div>
-            )}
+
+                  <div className="flex items-center gap-2">
+                    <div className="text-right mr-1">
+                      <div className="font-extrabold text-sm text-on-surface">{formatNaira(inv.amount || inv.totalAmount || student.totalFees || 0)}</div>
+                    </div>
+                    <button
+                      onClick={() => setActiveReceipt(inv)}
+                      className="px-3 py-1.5 rounded-lg border border-outline-variant hover:bg-surface-container text-xs font-bold flex items-center gap-1 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-xs">receipt</span>
+                      <span>Slip</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedStudentId(student.id);
+                        setSelectedInvoiceId(inv.id);
+                        openModal('view-invoice');
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-primary text-on-primary hover:bg-primary-container text-xs font-bold flex items-center gap-1 transition-colors shadow-xs"
+                    >
+                      <span className="material-symbols-outlined text-xs">print</span>
+                      <span>Official Invoice</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -418,8 +453,20 @@ export const StudentBillingPage: React.FC = () => {
                 <span className="text-on-surface">{student.program}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-outline-variant/40">
-                <span className="text-on-surface-variant">Amount:</span>
-                <span className="font-extrabold text-sm text-primary">{formatNaira(activeReceipt.amount)}</span>
+                <span className="text-on-surface-variant">Total Tuition:</span>
+                <span className="font-extrabold text-sm text-on-surface">{formatNaira(activeReceipt.totalAmount || activeReceipt.amount || student.totalFees || 0)}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-outline-variant/40">
+                <span className="text-on-surface-variant">Amount Paid:</span>
+                <span className="font-bold text-sm text-emerald-600">
+                  {formatNaira(activeReceipt.paidAmount !== undefined ? activeReceipt.paidAmount : (activeReceipt.status === 'Paid' ? (activeReceipt.totalAmount || activeReceipt.amount || 0) : (student.paidAmount || 0)))}
+                </span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-outline-variant/40">
+                <span className="text-on-surface-variant">Remaining Balance:</span>
+                <span className="font-bold text-sm text-amber-600">
+                  {formatNaira(Math.max(0, (activeReceipt.totalAmount || activeReceipt.amount || student.totalFees || 0) - (activeReceipt.paidAmount !== undefined ? activeReceipt.paidAmount : (activeReceipt.status === 'Paid' ? (activeReceipt.totalAmount || activeReceipt.amount || 0) : (student.paidAmount || 0)))))}
+                </span>
               </div>
               <div className="flex justify-between py-1 border-b border-outline-variant/40">
                 <span className="text-on-surface-variant">Payment Status:</span>

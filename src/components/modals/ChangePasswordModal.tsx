@@ -55,11 +55,13 @@ export const ChangePasswordModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-4 animate-in fade-in">
-      <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-5 animate-in zoom-in-95">
-        <div className="flex justify-between items-start border-b border-outline-variant pb-3">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+      <div className="fixed inset-0 -z-10" onClick={closeModal} aria-hidden="true" />
+      <div className="relative w-full max-w-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] bg-surface-container-lowest border border-outline-variant rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden z-10 animate-in zoom-in-95 duration-150">
+        {/* Fixed Header */}
+        <div className="shrink-0 flex justify-between items-start border-b border-outline-variant p-4 sm:p-5 bg-surface-bright">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
               <span className="material-symbols-outlined text-[22px]">lock_reset</span>
             </div>
             <div>
@@ -69,20 +71,21 @@ export const ChangePasswordModal: React.FC = () => {
           </div>
           <button
             onClick={closeModal}
-            className="w-8 h-8 rounded-full hover:bg-surface-container text-secondary flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full hover:bg-surface-container text-secondary flex items-center justify-center transition-colors cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
 
-        {error && (
-          <div className="p-3 rounded-lg bg-[#fef2f2] border border-[#fecaca] text-error text-xs font-semibold flex items-center gap-2">
-            <span className="material-symbols-outlined text-[16px]">error</span>
-            <span>{error}</span>
-          </div>
-        )}
+        {/* Scrollable Body Form */}
+        <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4">
+          {error && (
+            <div className="p-3 rounded-lg bg-[#fef2f2] border border-[#fecaca] text-error text-xs font-semibold flex items-center gap-2">
+              <span className="material-symbols-outlined text-[16px]">error</span>
+              <span>{error}</span>
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-on-surface mb-1">Current Password</label>
             <input
@@ -160,7 +163,7 @@ export const ChangePasswordModal: React.FC = () => {
             </label>
           </div>
 
-          <div className="flex gap-2 pt-2 border-t border-outline-variant">
+          <div className="shrink-0 p-3 sm:p-4 bg-surface-bright border-t border-outline-variant flex gap-2 -mx-4 sm:-mx-6 -mb-4 sm:-mb-6 mt-4">
             <button
               type="button"
               onClick={closeModal}

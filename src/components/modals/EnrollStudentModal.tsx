@@ -167,17 +167,17 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
   const paidPercent = totalCourseFee > 0 ? Math.min(100, Math.round((initialPayment / totalCourseFee) * 100)) : 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-margin-page animate-in fade-in duration-200">
-      <div className="absolute inset-0" onClick={onClose} />
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+      <div className="fixed inset-0 -z-10" onClick={onClose} aria-hidden="true" />
 
-      <div className="glass-panel relative w-full max-w-4xl rounded-xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden bg-surface-container-lowest border border-outline-variant z-10">
+      <div className="glass-panel relative w-full max-w-4xl max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden bg-surface-container-lowest border border-outline-variant z-10 animate-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="flex items-center justify-between p-stack-md px-stack-lg border-b border-outline-variant bg-surface-bright">
+        <div className="shrink-0 flex items-center justify-between p-4 sm:p-5 border-b border-outline-variant bg-surface-bright">
           <div>
-            <h2 className="font-headline-lg text-headline-lg font-bold text-on-surface">
+            <h2 className="font-headline-lg text-base sm:text-lg md:text-xl font-bold text-on-surface">
               {createdStudent ? '🎉 Student Admitted & Onboarded' : 'Enroll New Student'}
             </h2>
-            <p className="font-body-md text-body-md text-secondary">
+            <p className="font-body-md text-xs sm:text-sm text-secondary">
               {createdStudent 
                 ? 'Candidate credentials generated. Email dispatched with admission letter & drive links.' 
                 : 'Record candidate profile, course assignment, and initial Naira payment ledger.'}
@@ -186,15 +186,15 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
           <button
             onClick={() => { resetForm(); onClose(); }}
             aria-label="Close"
-            className="text-secondary hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-container cursor-pointer"
+            className="text-secondary hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-container cursor-pointer shrink-0"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>close</span>
+            <span className="material-symbols-outlined text-[20px] sm:text-[24px]">close</span>
           </button>
         </div>
 
         {createdStudent ? (
           /* Success Screen */
-          <div className="overflow-y-auto p-stack-lg space-y-5 flex-1">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5">
             <div className="bg-[#166534]/10 border border-[#166534]/30 rounded-xl p-5 flex items-start gap-4">
               <div className="w-12 h-12 rounded-full bg-[#166534] text-white flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined text-[28px]">check_circle</span>
@@ -345,8 +345,8 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
           </div>
         ) : (
           /* Form Body with 2 Columns */
-          <form onSubmit={handleSubmit} className="overflow-y-auto p-stack-lg flex-1">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+          <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
             {/* Left 8 Cols: Student & Payment Details */}
             <div className="lg:col-span-8 space-y-stack-md">
               {/* Student Information Card */}

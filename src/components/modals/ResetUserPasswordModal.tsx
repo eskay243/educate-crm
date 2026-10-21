@@ -57,67 +57,69 @@ export const ResetUserPasswordModal: React.FC<ResetUserPasswordModalProps> = ({ 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-inverse-surface/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-surface-container-lowest rounded-xl max-w-md w-full border border-outline-variant shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/60 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+      <div className="fixed inset-0 -z-10" onClick={onClose} aria-hidden="true" />
+      <div className="relative w-full max-w-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] bg-surface-container-lowest rounded-t-2xl sm:rounded-xl border border-outline-variant shadow-2xl overflow-hidden flex flex-col z-10 animate-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-outline-variant flex items-center justify-between bg-surface-container-low">
+        <div className="shrink-0 px-4 sm:px-6 py-3 sm:py-4 border-b border-outline-variant flex items-center justify-between bg-surface-container-low">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
               <span className="material-symbols-outlined text-xl">lock_reset</span>
             </div>
             <div>
-              <h2 className="font-title-md font-bold text-on-surface">Reset User Password</h2>
-              <p className="font-body-sm text-on-surface-variant">Administrative credential override</p>
+              <h2 className="font-title-md font-bold text-sm sm:text-base text-on-surface">Reset User Password</h2>
+              <p className="font-body-sm text-[11px] sm:text-xs text-on-surface-variant">Administrative credential override</p>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors"
+            className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors shrink-0"
           >
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
 
         {/* User Identity Banner */}
-        <div className="p-4 bg-surface-container border-b border-outline-variant flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary text-on-primary font-bold flex items-center justify-center text-label-md">
+        <div className="shrink-0 p-3 sm:p-4 bg-surface-container border-b border-outline-variant flex items-center gap-3">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary text-on-primary font-bold flex items-center justify-center text-label-md shrink-0">
             {selectedUserForPasswordReset.name.charAt(0)}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="font-semibold text-body-md text-on-surface truncate">
+            <div className="font-semibold text-body-md text-xs sm:text-sm text-on-surface truncate">
               {selectedUserForPasswordReset.name}
             </div>
-            <div className="text-label-xs text-on-surface-variant truncate">
+            <div className="text-label-xs text-[11px] text-on-surface-variant truncate">
               {selectedUserForPasswordReset.email} &bull; <span className="capitalize font-medium text-primary">{selectedUserForPasswordReset.role.replace('_', ' ')}</span>
             </div>
           </div>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {error && (
-            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-label-sm flex items-center gap-2">
-              <span className="material-symbols-outlined text-lg">error</span>
-              <span>{error}</span>
-            </div>
-          )}
+        {/* Form Container with Scrollable Body and Fixed Footer */}
+        <form onSubmit={handleSubmit} className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4">
+            {error && (
+              <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-label-sm flex items-center gap-2">
+                <span className="material-symbols-outlined text-lg">error</span>
+                <span>{error}</span>
+              </div>
+            )}
 
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-label-sm font-semibold text-on-surface">
-                New Password *
-              </label>
-              <button
-                type="button"
-                onClick={handleGeneratePassword}
-                className="text-label-xs text-primary font-semibold hover:underline flex items-center gap-1"
-              >
-                <span className="material-symbols-outlined text-xs">vpn_key</span>
-                Generate Strong
-              </button>
-            </div>
-            <div className="relative">
-              <input
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-label-sm font-semibold text-on-surface">
+                  New Password *
+                </label>
+                <button
+                  type="button"
+                  onClick={handleGeneratePassword}
+                  className="text-label-xs text-primary font-semibold hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-xs">vpn_key</span>
+                  Generate Strong
+                </button>
+              </div>
+              <div className="relative">
+                <input
                 type={showPassword ? 'text' : 'password'}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
@@ -157,35 +159,36 @@ export const ResetUserPasswordModal: React.FC<ResetUserPasswordModalProps> = ({ 
               As Super Admin, setting this password will immediately update the user's institutional login credentials across staff, mentor, and student portals.
             </span>
           </div>
+        </div>
 
-          {/* Action Buttons */}
-          <div className="pt-2 border-t border-outline-variant flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg border border-outline text-on-surface hover:bg-surface-container text-label-md font-semibold transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-5 py-2 rounded-lg bg-primary text-on-primary hover:bg-surface-tint font-bold text-label-md flex items-center gap-2 shadow-xs disabled:opacity-50 transition-all"
-            >
-              {isSubmitting ? (
-                <>
-                  <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>
-                  <span>Updating...</span>
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined text-lg">check</span>
-                  <span>Set New Password</span>
-                </>
-              )}
-            </button>
-          </div>
-        </form>
+        {/* Action Buttons Sticky Footer */}
+        <div className="shrink-0 p-3 sm:p-4 bg-surface-bright border-t border-outline-variant flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg border border-outline text-on-surface hover:bg-surface-container text-label-md font-semibold transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="px-5 py-2 rounded-lg bg-primary text-on-primary hover:bg-surface-tint font-bold text-label-md flex items-center gap-2 shadow-xs disabled:opacity-50 transition-all cursor-pointer"
+          >
+            {isSubmitting ? (
+              <>
+                <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>
+                <span>Updating...</span>
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-lg">check</span>
+                <span>Set New Password</span>
+              </>
+            )}
+          </button>
+        </div>
+      </form>
       </div>
     </div>
   );

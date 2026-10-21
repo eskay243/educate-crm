@@ -2306,13 +2306,20 @@ app.patch('/api/leads/:id', (req: Request, res: Response) => {
 
 app.post('/api/leads/:id/convert', (req: Request, res: Response) => {
   const { id } = req.params;
-  const { program, mentorName } = req.body;
+  const { program, mentorName, totalFees, dealValue, paidAmount, tuitionStatus } = req.body;
   const lead = db.leads.find(l => l.id === id);
   if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
 
   lead.status = 'Converted';
 
   const defaultPassword = `Edu#${Math.floor(1000 + Math.random() * 9000)}!${Math.random().toString(36).slice(-2).toUpperCase()}`;
+  const effectiveProgram = program || lead.programInterest || 'Full-Stack Software Engineering';
+  const matchedCourse = (db.courses || []).find((c: any) => c.title?.toLowerCase() === effectiveProgram.toLowerCase() || c.name?.toLowerCase() === effectiveProgram.toLowerCase());
+  
+  const feeAmount = Number(totalFees || dealValue || lead.dealValue || matchedCourse?.tuitionFee || 350000);
+  const initialPaid = Number(paidAmount !== undefined ? paidAmount : (tuitionStatus === 'Paid' ? feeAmount : 0));
+  const outstanding = Math.max(0, feeAmount - initialPaid);
+  const effectiveStatus = outstanding === 0 && feeAmount > 0 ? 'Paid' : initialPaid > 0 ? 'Partial' : 'Pending';
 
   const newStudent = {
     id: `stu-${Date.now()}`,
@@ -2322,60 +2329,71 @@ app.post('/api/leads/:id/convert', (req: Request, res: Response) => {
     phone: lead.phone,
     password: defaultPassword,
     mustResetPassword: true,
-    program: program || lead.programInterest,
-    mentorName: mentorName || 'Dr. Arthur Pendelton',
+    program: effectiveProgram,
+    mentorName: mentorName || matchedCourse?.leadInstructor || 'Dr. Arthur Pendelton',
     status: 'Active',
     attendanceRate: 100,
-    tuitionStatus: 'Paid',
-    cohort: `Cohort ${new Date().getFullYear()}-Q4`,
+    tuitionStatus: effectiveStatus,
+    cohort: req.body.cohort || `Cohort ${new Date().getFullYear()}-Q4`,
     enrolledDate: new Date().toISOString().split('T')[0],
-    totalFees: 850000,
-    outstandingBalance: 0,
+    totalFees: feeAmount,
+    paidAmount: initialPaid,
+    outstandingBalance: outstanding,
     courses: [
       {
         id: `c-${Date.now()}`,
-        code: 'FS-501',
-        name: program || lead.programInterest,
+        code: matchedCourse?.code || 'FS-501',
+        name: effectiveProgram,
         semester: 'Fall Semester 2026',
-        instructor: mentorName || 'Dr. Arthur Pendelton',
-        fee: 850000,
+        instructor: mentorName || matchedCourse?.leadInstructor || 'Dr. Arthur Pendelton',
+        fee: feeAmount,
         billedDate: new Date().toISOString().split('T')[0],
       }
     ],
     installments: [
       {
         id: `inst-${Date.now()}`,
-        description: 'Full Course Tuition',
+        description: initialPaid > 0 && outstanding > 0 ? 'Initial Deposit' : 'Full Course Tuition',
         dueDate: new Date().toISOString().split('T')[0],
-        amount: 850000,
-        status: 'Paid',
-      }
+        amount: initialPaid > 0 ? initialPaid : feeAmount,
+        status: initialPaid > 0 ? 'Paid' : 'Pending',
+      },
+      ...(outstanding > 0 ? [{
+        id: `inst-2-${Date.now()}`,
+        description: 'Remaining Tuition Balance Settlement',
+        dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+        amount: outstanding,
+        status: 'Pending',
+      }] : [])
     ]
   };
   db.students.unshift(newStudent);
 
   const newInvoice = {
     id: `inv-${Date.now()}`,
-    invoiceNumber: `INV-2026-${Math.floor(10000 + Math.random() * 90000)}`,
+    invoiceNumber: `INV-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`,
     studentId: newStudent.id,
     studentName: newStudent.name,
     studentEmail: newStudent.email,
     programName: newStudent.program,
+    program: newStudent.program,
     issueDate: new Date().toISOString().split('T')[0],
     dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-    totalAmount: 850000,
-    paidAmount: 850000,
-    status: 'Paid',
-    items: [{ id: 'item-1', description: `${newStudent.program} Tuition`, amount: 850000 }],
+    totalAmount: feeAmount,
+    paidAmount: initialPaid,
+    amount: feeAmount,
+    status: effectiveStatus,
+    items: [{ id: 'item-1', description: `${newStudent.program} Tuition Enrollment`, amount: feeAmount }],
     paymentReference: `NIBSS-TRX-${Math.floor(1000000 + Math.random() * 9000000)}`,
-    nibssBankName: 'Access Bank Nigeria PLC',
+    nibssBankName: db.settings?.defaultNIBSSBank?.bankName || 'Access Bank Nigeria PLC',
   };
+  if (!Array.isArray(db.invoices)) db.invoices = [];
   db.invoices.unshift(newInvoice);
 
   const newNotif = {
     id: `notif-${Date.now()}`,
     title: 'Lead Converted to Active Student',
-    message: `${lead.name} enrolled in ${newStudent.program}. Invoice #${newInvoice.invoiceNumber} (₦850,000) generated.`,
+    message: `${lead.name} enrolled in ${newStudent.program}. Invoice #${newInvoice.invoiceNumber} (₦${feeAmount.toLocaleString()}) generated.`,
     type: 'admissions',
     timestamp: 'Just now',
     read: false,
@@ -2404,6 +2422,11 @@ app.get('/api/students', (req: Request, res: Response) => {
 
 app.post('/api/students', (req: Request, res: Response) => {
   const defaultPassword = req.body.password || `Edu#${Math.floor(1000 + Math.random() * 9000)}!${Math.random().toString(36).slice(-2).toUpperCase()}`;
+  const totalFees = Number(req.body.totalFees || req.body.tuitionAmount || 0);
+  const paidAmount = Number(req.body.paidAmount !== undefined ? req.body.paidAmount : (req.body.tuitionStatus === 'Paid' ? totalFees : 0));
+  const outstanding = req.body.outstandingBalance !== undefined ? Number(req.body.outstandingBalance) : Math.max(0, totalFees - paidAmount);
+  const effectiveStatus = outstanding === 0 && totalFees > 0 ? 'Paid' : paidAmount > 0 ? 'Partial' : 'Pending';
+
   const newStudent = {
     ...req.body,
     id: `stu-${Date.now()}`,
@@ -2411,8 +2434,43 @@ app.post('/api/students', (req: Request, res: Response) => {
     password: defaultPassword,
     mustResetPassword: req.body.mustResetPassword !== undefined ? req.body.mustResetPassword : true,
     enrolledDate: req.body.enrolledDate || new Date().toISOString().split('T')[0],
+    totalFees,
+    paidAmount,
+    outstandingBalance: outstanding,
+    tuitionStatus: effectiveStatus,
   };
   db.students.unshift(newStudent);
+
+  // Generate authentic corresponding tuition invoice
+  const items = Array.isArray(newStudent.courses) && newStudent.courses.length > 0
+    ? newStudent.courses.map((c: any, i: number) => ({
+        id: c.id || `item-${i}`,
+        description: `${c.name || newStudent.program} (${c.code || 'TECH'})`,
+        amount: Number(c.fee || totalFees),
+      }))
+    : [{ id: 'item-1', description: `${newStudent.program} Comprehensive Academic Tuition`, amount: totalFees }];
+
+  const newInvoice = {
+    id: `inv-${Date.now()}`,
+    invoiceNumber: `INV-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`,
+    studentId: newStudent.id,
+    studentName: newStudent.name,
+    studentEmail: newStudent.email,
+    programName: newStudent.program,
+    program: newStudent.program,
+    issueDate: newStudent.enrolledDate,
+    dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+    totalAmount: totalFees,
+    paidAmount,
+    amount: totalFees,
+    status: effectiveStatus,
+    items,
+    paymentReference: newStudent.paymentReference || `NIBSS-TRX-${newStudent.studentCode || 'NEXUS'}`,
+    nibssBankName: db.settings?.defaultNIBSSBank?.bankName || 'Access Bank Nigeria PLC',
+  };
+  if (!Array.isArray(db.invoices)) db.invoices = [];
+  db.invoices.unshift(newInvoice);
+
   saveDatabase(db);
   sendStudentWelcomeEmail(newStudent);
   if (newStudent.mentorId || newStudent.mentorName) {
@@ -2421,7 +2479,7 @@ app.post('/api/students', (req: Request, res: Response) => {
       sendNewMenteeAssignedEmail(newStudent, assignedMentor);
     }
   }
-  res.status(201).json({ success: true, data: newStudent });
+  res.status(201).json({ success: true, data: newStudent, invoice: newInvoice });
 });
 
 app.patch('/api/students/:id', (req: Request, res: Response) => {
@@ -3690,7 +3748,7 @@ app.post('/api/paystack/initialize', async (req: Request, res: Response) => {
     const amountInKobo = Math.round(Number(amount) * 100);
     const reference = `CDL-PAY-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
+    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample') && !reference.startsWith('TEST-') && !reference.startsWith('SIM-') && !reference.startsWith('mock_')) {
       const paystackRes = await fetch('https://api.paystack.co/transaction/initialize', {
         method: 'POST',
         headers: {
@@ -3744,7 +3802,7 @@ app.get('/api/paystack/verify/:reference', async (req: Request, res: Response) =
     let studentId = '';
     let invoiceId = '';
 
-    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
+    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample') && !reference.startsWith('TEST-') && !reference.startsWith('SIM-') && !reference.startsWith('mock_')) {
       const paystackRes = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
         headers: {
           Authorization: `Bearer ${secretKey}`,
@@ -3774,18 +3832,48 @@ app.get('/api/paystack/verify/:reference', async (req: Request, res: Response) =
 
       if (student) {
         student.paidAmount = (student.paidAmount || 0) + amountPaidNaira;
-        student.outstandingBalance = Math.max(0, (student.tuitionAmount || 0) - student.paidAmount);
-        student.tuitionStatus = student.outstandingBalance === 0 ? 'Paid' : 'Partial';
+        const total = Number(student.totalFees || student.tuitionAmount || 0);
+        student.outstandingBalance = Math.max(0, total - student.paidAmount);
+        student.tuitionStatus = student.outstandingBalance === 0 && total > 0 ? 'Paid' : 'Partial';
         student.status = 'Active';
       }
 
+      if (!Array.isArray(db.invoices)) db.invoices = [];
       let invoice = db.invoices.find(inv => inv.id === invoiceId || inv.invoiceNumber === invoiceId);
       if (!invoice && student) {
         invoice = db.invoices.find(inv => inv.studentId === student.id && inv.status !== 'Paid');
       }
       if (invoice) {
-        invoice.status = 'Paid';
+        invoice.paidAmount = (invoice.paidAmount || 0) + amountPaidNaira;
+        const invTotal = Number(invoice.totalAmount || invoice.amount || student?.totalFees || student?.tuitionAmount || amountPaidNaira);
+        invoice.totalAmount = invTotal;
+        const remaining = Math.max(0, invTotal - invoice.paidAmount);
+        invoice.status = remaining === 0 ? 'Paid' : 'Partial';
         invoice.paidDate = new Date().toISOString();
+        invoice.paymentReference = reference;
+      } else if (student) {
+        const invTotal = Number(student.totalFees || student.tuitionAmount || amountPaidNaira);
+        const remaining = Math.max(0, invTotal - (student.paidAmount || amountPaidNaira));
+        invoice = {
+          id: `inv-${Date.now()}`,
+          invoiceNumber: `INV-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`,
+          studentId: student.id,
+          studentName: student.name,
+          studentEmail: student.email,
+          programName: student.program,
+          program: student.program,
+          issueDate: new Date().toISOString().split('T')[0],
+          dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+          totalAmount: invTotal,
+          paidAmount: student.paidAmount || amountPaidNaira,
+          amount: invTotal,
+          status: remaining === 0 ? 'Paid' : 'Partial',
+          items: [{ id: 'item-1', description: `${student.program} Academic Tuition Payment`, amount: invTotal }],
+          paymentReference: reference,
+          nibssBankName: db.settings?.defaultNIBSSBank?.bankName || 'Access Bank Nigeria PLC',
+          paidDate: new Date().toISOString(),
+        };
+        db.invoices.unshift(invoice);
       }
 
       let commissionRecord = null;
@@ -3950,7 +4038,7 @@ app.post('/api/paystack/disburse-mentor', async (req: Request, res: Response) =>
     const transferRef = `TRF-MEN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
     let paystackTransferCode = '';
 
-    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
+    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample') && !reference.startsWith('TEST-') && !reference.startsWith('SIM-') && !reference.startsWith('mock_')) {
       const recipientRes = await fetch('https://api.paystack.co/transferrecipient', {
         method: 'POST',
         headers: {
@@ -4279,7 +4367,7 @@ async function reconcileLivePaystackWallet(secretKey: string) {
 app.post('/api/wallet/reconcile', async (_req: Request, res: Response) => {
   try {
     const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
-    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
+    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample') && !reference.startsWith('TEST-') && !reference.startsWith('SIM-') && !reference.startsWith('mock_')) {
       const reconciled = await reconcileLivePaystackWallet(secretKey);
       return res.json({
         success: true,
@@ -4304,7 +4392,7 @@ app.get('/api/wallet/summary', async (_req: Request, res: Response) => {
     if (!db.wallet) db.wallet = defaultWallet;
 
     const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
-    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
+    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample') && !reference.startsWith('TEST-') && !reference.startsWith('SIM-') && !reference.startsWith('mock_')) {
       if (secretKey.startsWith('sk_live_')) {
         const reconciled = await reconcileLivePaystackWallet(secretKey);
         return res.json({ success: true, data: reconciled });
@@ -4345,7 +4433,7 @@ app.post('/api/wallet/virtual-account', async (_req: Request, res: Response) => 
     const walletEmail = 'wallet-operations@codelab.institute';
 
     // If live or real test Paystack key is available:
-    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
+    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample') && !reference.startsWith('TEST-') && !reference.startsWith('SIM-') && !reference.startsWith('mock_')) {
       try {
         // 1. Create or fetch Paystack customer
         const customerRes = await fetch('https://api.paystack.co/customer', {
@@ -4553,7 +4641,7 @@ app.post('/api/wallet/disburse-expense', async (req: Request, res: Response) => 
     } else {
       transferRef = `TRF-EXP-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-      if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
+      if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample') && !reference.startsWith('TEST-') && !reference.startsWith('SIM-') && !reference.startsWith('mock_')) {
         // Pre-check Paystack Transfer balance
         try {
           const balRes = await fetch('https://api.paystack.co/balance', {
@@ -4723,7 +4811,7 @@ app.get('/api/wallet/verify-transfer/:reference', async (req: Request, res: Resp
     }
 
     const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
-    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
+    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample') && !reference.startsWith('TEST-') && !reference.startsWith('SIM-') && !reference.startsWith('mock_')) {
       try {
         const psRes = await fetch(`https://api.paystack.co/transfer/verify/${encodeURIComponent(reference)}`, {
           headers: { Authorization: `Bearer ${secretKey}` }
@@ -4884,14 +4972,17 @@ app.post('/api/paystack/webhook', async (req: Request, res: Response) => {
         const student = db.students.find(s => s.id === studentId);
         if (student) {
           student.paidAmount = (student.paidAmount || 0) + amountPaid;
-          student.outstandingBalance = Math.max(0, (student.tuitionAmount || 0) - student.paidAmount);
+          const totalFees = student.totalFees || student.tuitionAmount || 0;
+          student.outstandingBalance = Math.max(0, totalFees - student.paidAmount);
           student.tuitionStatus = student.outstandingBalance === 0 ? 'Paid' : 'Partial';
         }
       }
       if (invoiceId) {
         const inv = db.invoices.find(i => i.id === invoiceId);
         if (inv) {
-          inv.status = 'Paid';
+          inv.paidAmount = (inv.paidAmount || 0) + amountPaid;
+          const totalInv = inv.totalAmount || inv.amount || 0;
+          inv.status = inv.paidAmount >= totalInv ? 'Paid' : 'Partial';
           inv.paidDate = new Date().toISOString();
         }
       }

@@ -71,12 +71,12 @@ Generated electronically by Educate CRM Financial Accounting Subsystem.
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/50 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-      <div className="absolute inset-0" onClick={onClose} />
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+      <div className="fixed inset-0 -z-10" onClick={onClose} aria-hidden="true" />
 
-      <div className="relative w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden bg-surface border border-outline-variant z-10">
+      <div className="relative w-full max-w-2xl max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden bg-surface border border-outline-variant z-10 animate-in zoom-in-95 duration-150">
         {/* Modal Top Bar */}
-        <div className="flex items-center justify-between p-4 px-6 border-b border-outline-variant bg-surface-container-low print:hidden">
+        <div className="shrink-0 flex items-center justify-between p-4 px-5 sm:px-6 border-b border-outline-variant bg-surface-container-low print:hidden">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-[22px]">receipt_long</span>
             <div>
@@ -92,7 +92,7 @@ Generated electronically by Educate CRM Financial Accounting Subsystem.
               title="Download text summary"
             >
               <span className="material-symbols-outlined text-[15px]">download</span>
-              <span>Export Text</span>
+              <span className="hidden sm:inline">Export Text</span>
             </button>
             <button
               type="button"
@@ -106,7 +106,7 @@ Generated electronically by Educate CRM Financial Accounting Subsystem.
             <button
               type="button"
               onClick={onClose}
-              className="p-1 rounded-full text-secondary hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer ml-2"
+              className="p-1 rounded-full text-secondary hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer ml-1 sm:ml-2"
             >
               <span className="material-symbols-outlined text-[20px]">close</span>
             </button>
@@ -114,7 +114,7 @@ Generated electronically by Educate CRM Financial Accounting Subsystem.
         </div>
 
         {/* Printable Voucher Body */}
-        <div id="printable-payout-voucher" className="overflow-y-auto p-6 md:p-8 space-y-6 flex-1 bg-surface text-on-surface">
+        <div id="printable-payout-voucher" className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 md:p-8 space-y-6 bg-surface text-on-surface">
           {/* Official Letterhead */}
           <div className="border-b-2 border-primary/30 pb-5 space-y-2">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

@@ -29,12 +29,12 @@ export const AssignMentorModal: React.FC<AssignMentorModalProps> = ({ isOpen, on
   const hasPrerequisites = students.length > 0 && activeMentors.length > 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-margin-page animate-in fade-in duration-200">
-      <div className="absolute inset-0" onClick={onClose} />
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+      <div className="fixed inset-0" onClick={onClose} />
 
-      <div className="glass-panel relative w-full max-w-lg rounded-xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden bg-surface-container-lowest border border-outline-variant z-10">
+      <div className="relative w-full max-w-lg max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden bg-surface-container-lowest border border-outline-variant z-10 animate-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="flex items-center justify-between p-stack-md px-stack-lg border-b border-outline-variant bg-surface-bright">
+        <div className="shrink-0 flex items-center justify-between p-4 sm:p-5 border-b border-outline-variant bg-surface-bright">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-[22px]">assignment_ind</span>
             <div>
@@ -45,14 +45,14 @@ export const AssignMentorModal: React.FC<AssignMentorModalProps> = ({ isOpen, on
           <button
             onClick={onClose}
             aria-label="Close"
-            className="text-secondary hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-container cursor-pointer"
+            className="text-secondary hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-container cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined text-[24px]">close</span>
           </button>
         </div>
 
         {!hasPrerequisites ? (
-          <div className="p-8 text-center space-y-4">
+          <div className="p-8 text-center space-y-4 overflow-y-auto">
             <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mx-auto">
               <span className="material-symbols-outlined text-[28px]">info</span>
             </div>
@@ -87,8 +87,8 @@ export const AssignMentorModal: React.FC<AssignMentorModalProps> = ({ isOpen, on
           </div>
         ) : (
           /* Form Body */
-          <form onSubmit={handleSubmit} className="overflow-y-auto p-stack-lg space-y-4 flex-1">
-            <div className="space-y-4 text-xs">
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4 text-xs">
               <div className="space-y-1">
                 <label className="font-label-md text-secondary font-semibold">Select Student Mentee <span className="text-error">*</span></label>
                 <select
@@ -145,7 +145,7 @@ export const AssignMentorModal: React.FC<AssignMentorModalProps> = ({ isOpen, on
             </div>
 
             {/* Footer Submit Buttons */}
-            <div className="pt-stack-sm flex justify-end gap-3 border-t border-outline-variant">
+            <div className="shrink-0 p-3 sm:p-4 border-t border-outline-variant bg-surface-bright flex justify-end gap-3">
               <button
                 type="button"
                 onClick={onClose}

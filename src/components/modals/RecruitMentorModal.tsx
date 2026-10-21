@@ -167,27 +167,28 @@ export const RecruitMentorModal: React.FC<RecruitMentorModalProps> = ({ isOpen, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-margin-page animate-in fade-in duration-200">
-      <div className="absolute inset-0" onClick={onClose} />
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+      <div className="fixed inset-0 -z-10" onClick={onClose} aria-hidden="true" />
 
-      <div className="glass-panel relative w-full max-w-3xl rounded-xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden bg-surface-container-lowest border border-outline-variant z-10">
+      <div className="glass-panel relative w-full max-w-3xl max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden bg-surface-container-lowest border border-outline-variant z-10 animate-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="flex items-center justify-between p-stack-md px-stack-lg border-b border-outline-variant bg-surface-bright">
+        <div className="shrink-0 flex items-center justify-between p-4 sm:p-5 border-b border-outline-variant bg-surface-bright">
           <div>
-            <h2 className="font-headline-lg text-headline-lg font-bold text-on-surface">Recruit Mentor</h2>
-            <p className="font-body-md text-body-md text-secondary">Add a new mentor to the faculty roster and configure their financial agreement.</p>
+            <h2 className="font-headline-lg text-base sm:text-lg md:text-xl font-bold text-on-surface">Recruit Mentor</h2>
+            <p className="font-body-md text-xs sm:text-sm text-secondary">Add a new mentor to the faculty roster and configure their financial agreement.</p>
           </div>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="text-secondary hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-container cursor-pointer"
+            className="text-secondary hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-container cursor-pointer shrink-0"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>close</span>
+            <span className="material-symbols-outlined text-[20px] sm:text-[24px]">close</span>
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="overflow-y-auto p-stack-lg space-y-stack-md flex-1">
+        <form onSubmit={handleSubmit} className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4">
           {/* Personal Info Section */}
           <section className="bg-surface rounded-lg border border-outline-variant p-stack-md space-y-4">
             <h3 className="text-headline-md font-headline-md font-bold text-primary flex items-center gap-2 border-b border-outline-variant pb-2">
@@ -518,25 +519,26 @@ export const RecruitMentorModal: React.FC<RecruitMentorModalProps> = ({ isOpen, 
               </div>
             </div>
           </section>
+        </div>
 
-          {/* Footer Submit Buttons */}
-          <div className="pt-stack-sm flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-5 h-10 rounded border border-outline-variant font-label-md text-label-md font-semibold text-secondary hover:bg-surface-container transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-6 h-10 rounded bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-primary-container transition-colors shadow-xs cursor-pointer"
-            >
-              Recruit &amp; Confirm Contract
-            </button>
-          </div>
-        </form>
-      </div>
+        {/* Sticky Footer Submit Buttons */}
+        <div className="shrink-0 p-3 sm:p-4 bg-surface-bright border-t border-outline-variant flex justify-end gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 h-10 rounded-lg border border-outline-variant font-label-md text-xs sm:text-sm font-semibold text-secondary hover:bg-surface-container transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="px-6 h-10 rounded-lg bg-primary text-on-primary font-label-md text-xs sm:text-sm font-bold hover:bg-primary-container transition-colors shadow-xs cursor-pointer"
+          >
+            Recruit &amp; Confirm Contract
+          </button>
+        </div>
+      </form>
     </div>
+  </div>
   );
 };

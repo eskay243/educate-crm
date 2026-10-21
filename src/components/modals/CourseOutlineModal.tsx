@@ -107,12 +107,12 @@ export const CourseOutlineModal: React.FC<CourseOutlineModalProps> = ({ isOpen, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-inverse-surface/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-surface-container-lowest rounded-2xl max-w-5xl w-full border border-outline-variant shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/60 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+      <div className="relative bg-surface-container-lowest rounded-t-2xl sm:rounded-2xl max-w-5xl w-full border border-outline-variant shadow-2xl overflow-hidden flex flex-col max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] z-10 animate-in zoom-in-95 duration-150">
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-outline-variant flex items-center justify-between bg-surface-container-low flex-wrap gap-3">
+        <div className="shrink-0 px-5 sm:px-6 py-4 border-b border-outline-variant flex items-center justify-between bg-surface-container-low flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-xs">
+            <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-xs shrink-0">
               <span className="material-symbols-outlined text-[24px]">account_tree</span>
             </div>
             <div>
@@ -134,7 +134,7 @@ export const CourseOutlineModal: React.FC<CourseOutlineModalProps> = ({ isOpen, 
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button 
               onClick={onClose}
               className="p-1.5 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
@@ -146,7 +146,7 @@ export const CourseOutlineModal: React.FC<CourseOutlineModalProps> = ({ isOpen, 
         </div>
 
         {/* Filter bar: Duration Track & Course Selector */}
-        <div className="px-6 py-3 border-b border-outline-variant bg-surface flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="shrink-0 px-5 sm:px-6 py-3 border-b border-outline-variant bg-surface flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2">
             <span className="font-bold text-secondary text-[11px] uppercase tracking-wider">Duration Track:</span>
             <div className="flex bg-surface-container rounded-lg p-1 border border-outline-variant/60">
@@ -180,7 +180,7 @@ export const CourseOutlineModal: React.FC<CourseOutlineModalProps> = ({ isOpen, 
 
         {/* Course Tabs */}
         {filteredCourses.length > 0 && (
-          <div className="px-6 pt-2 border-b border-outline-variant flex gap-2 overflow-x-auto bg-surface-bright scrollbar-none">
+          <div className="shrink-0 px-5 sm:px-6 pt-2 border-b border-outline-variant flex gap-2 overflow-x-auto bg-surface-bright scrollbar-none">
             {filteredCourses.map(courseName => {
               const isSelected = currentCourse === courseName;
               const courseData = courses.find(c => c.title === courseName);
@@ -207,7 +207,7 @@ export const CourseOutlineModal: React.FC<CourseOutlineModalProps> = ({ isOpen, 
         )}
 
         {/* Content Body */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-surface-container-lowest">
+        <div className="flex-1 min-h-0 p-4 sm:p-6 overflow-y-auto overscroll-contain space-y-6 bg-surface-container-lowest">
           {/* Regulatory Standards Banner for Selected Course */}
           <div className="p-4 rounded-xl bg-surface border border-outline-variant shadow-xs space-y-3">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
@@ -512,7 +512,7 @@ export const CourseOutlineModal: React.FC<CourseOutlineModalProps> = ({ isOpen, 
         </div>
 
         {/* Footer info bar */}
-        <div className="px-6 py-3 border-t border-outline-variant bg-surface-container-low flex items-center justify-between text-xs text-secondary flex-wrap gap-2">
+        <div className="shrink-0 px-5 sm:px-6 py-3 border-t border-outline-variant bg-surface-container-low flex items-center justify-between text-xs text-secondary flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-[16px] text-primary">policy</span>
             <span>
@@ -531,8 +531,8 @@ export const CourseOutlineModal: React.FC<CourseOutlineModalProps> = ({ isOpen, 
 
       {/* Teaching Notes & Classroom Completion Modal */}
       {teachingNotesModalLesson && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-inverse-surface/70 backdrop-blur-xs">
-          <div className="bg-surface-container-lowest rounded-xl max-w-lg w-full border border-outline-variant p-6 space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-60 overflow-y-auto overscroll-contain bg-inverse-surface/70 backdrop-blur-xs p-2 sm:p-4 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-150">
+          <div className="relative w-full max-w-lg max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] rounded-t-2xl sm:rounded-xl bg-surface-container-lowest border border-outline-variant p-4 sm:p-6 space-y-4 shadow-2xl overflow-y-auto overscroll-contain">
             <div className="flex items-center justify-between border-b border-outline-variant pb-3">
               <h3 className="font-bold text-sm text-on-surface flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-[20px]">assignment_turned_in</span>
@@ -540,7 +540,7 @@ export const CourseOutlineModal: React.FC<CourseOutlineModalProps> = ({ isOpen, 
               </h3>
               <button
                 onClick={() => setTeachingNotesModalLesson(null)}
-                className="text-secondary hover:text-on-surface"
+                className="text-secondary hover:text-on-surface cursor-pointer p-1 rounded"
               >
                 <span className="material-symbols-outlined text-lg">close</span>
               </button>
@@ -589,10 +589,10 @@ export const CourseOutlineModal: React.FC<CourseOutlineModalProps> = ({ isOpen, 
 
       {/* Interactive Video Lecture Modal */}
       {activeVideoLesson && (
-        <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-surface rounded-2xl max-w-3xl w-full border border-outline overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-70 overflow-y-auto overscroll-contain bg-black/80 backdrop-blur-xs p-2 sm:p-4 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+          <div className="relative bg-surface rounded-t-2xl sm:rounded-2xl max-w-3xl w-full border border-outline overflow-hidden shadow-2xl flex flex-col max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)]">
             {/* Modal Header */}
-            <div className="px-5 py-3.5 border-b border-outline-variant flex items-center justify-between bg-surface-container-low">
+            <div className="shrink-0 px-4 sm:px-5 py-3.5 border-b border-outline-variant flex items-center justify-between bg-surface-container-low">
               <div className="flex items-center gap-2.5">
                 <span className="material-symbols-outlined text-red-600 text-2xl">smart_display</span>
                 <div>
@@ -617,7 +617,7 @@ export const CourseOutlineModal: React.FC<CourseOutlineModalProps> = ({ isOpen, 
                 )}
                 <button
                   onClick={() => setActiveVideoLesson(null)}
-                  className="p-1 rounded-full text-secondary hover:text-on-surface hover:bg-surface-container transition-colors"
+                  className="p-1 rounded-full text-secondary hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-xl">close</span>
                 </button>
@@ -625,7 +625,7 @@ export const CourseOutlineModal: React.FC<CourseOutlineModalProps> = ({ isOpen, 
             </div>
 
             {/* Video Player */}
-            <div className="aspect-video bg-black w-full relative">
+            <div className="aspect-video bg-black w-full relative shrink-0">
               <iframe
                 src={activeVideoLesson.videoUrl}
                 title={activeVideoLesson.title}
@@ -636,7 +636,7 @@ export const CourseOutlineModal: React.FC<CourseOutlineModalProps> = ({ isOpen, 
             </div>
 
             {/* Lesson Notes & Practical Task */}
-            <div className="p-5 overflow-y-auto max-h-56 space-y-3 bg-surface text-xs border-t border-outline-variant">
+            <div className="flex-1 min-h-0 p-4 sm:p-5 overflow-y-auto overscroll-contain space-y-3 bg-surface text-xs border-t border-outline-variant">
               {activeVideoLesson.practicalLabTask && (
                 <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 space-y-1">
                   <span className="font-bold text-primary flex items-center gap-1 text-[11px] uppercase tracking-wider">

@@ -8,62 +8,120 @@ export interface InvoiceModalProps {
 }
 
 export const InvoiceModal: React.FC<InvoiceModalProps> = ({ isOpen, onClose }) => {
-  const { invoices, selectedInvoiceId, selectedStudentId, students, settings } = useCRM();
+  const { invoices, selectedInvoiceId, selectedStudentId, students, settings, currentStudentProfile } = useCRM();
 
   if (!isOpen) return null;
 
-  const currentStudent = students.find(s => s.id === selectedStudentId);
+  // Resolve target student: selected student -> student linked to selected invoice -> current student profile
+  const targetStudent = 
+    students.find(s => s.id === selectedStudentId) ||
+    (selectedInvoiceId ? students.find(s => s.id === (invoices || []).find(i => i.id === selectedInvoiceId)?.studentId) : undefined) ||
+    currentStudentProfile;
 
-  // Strictly resolve target student's invoice to prevent cross-student privacy leakage
+  // Strictly resolve target student's authentic invoice to prevent cross-student data leakage
   const currentInvoice: Invoice | undefined = useMemo(() => {
     // 1. Direct match on selectedInvoiceId
     if (selectedInvoiceId) {
       const match = (invoices || []).find(inv => inv.id === selectedInvoiceId);
-      if (match) return match;
+      if (match) {
+        const studentForMatch = targetStudent || students.find(s => s.id === match.studentId);
+        const total = match.totalAmount || match.amount || studentForMatch?.totalFees || studentForMatch?.tuitionAmount || 0;
+        const paid = match.paidAmount !== undefined ? match.paidAmount : (match.status === 'Paid' ? total : (studentForMatch?.paidAmount || 0));
+        const items = (match.items && match.items.length > 0)
+          ? match.items
+          : (studentForMatch?.courses && studentForMatch.courses.length > 0)
+            ? studentForMatch.courses.map((c, idx) => ({
+                id: c.id || `item-${idx}`,
+                description: `${c.name} (${c.code || 'TECH'})`,
+                amount: c.fee || total,
+              }))
+            : [{ id: 'item-1', description: `${match.programName || match.program || studentForMatch?.program || 'Academic'} Tuition Settlement`, amount: total }];
+
+        return {
+          ...match,
+          totalAmount: total,
+          paidAmount: paid,
+          items,
+          studentName: match.studentName || studentForMatch?.name || 'Enrolled Student',
+          studentEmail: match.studentEmail || studentForMatch?.email || '',
+          programName: match.programName || match.program || studentForMatch?.program || 'Academic Track',
+        };
+      }
     }
 
-    // 2. Match on currently selected student
-    if (currentStudent) {
+    // 2. Match invoice linked to target student
+    if (targetStudent) {
       const studentMatch = (invoices || []).find(
         inv =>
-          inv.studentId === currentStudent.id ||
-          inv.studentName?.toLowerCase() === currentStudent.name.toLowerCase() ||
-          (currentStudent.email && inv.studentEmail?.toLowerCase() === currentStudent.email.toLowerCase())
+          inv.studentId === targetStudent.id ||
+          (inv.studentName && targetStudent.name && inv.studentName.toLowerCase().trim() === targetStudent.name.toLowerCase().trim()) ||
+          (targetStudent.email && inv.studentEmail && inv.studentEmail.toLowerCase().trim() === targetStudent.email.toLowerCase().trim())
       );
-      if (studentMatch) return studentMatch;
+      if (studentMatch) {
+        const total = studentMatch.totalAmount || studentMatch.amount || targetStudent.totalFees || targetStudent.tuitionAmount || 0;
+        const paid = studentMatch.paidAmount !== undefined ? studentMatch.paidAmount : (studentMatch.status === 'Paid' ? total : (targetStudent.paidAmount || 0));
+        const items = (studentMatch.items && studentMatch.items.length > 0)
+          ? studentMatch.items
+          : (targetStudent.courses && targetStudent.courses.length > 0)
+            ? targetStudent.courses.map((c, idx) => ({
+                id: c.id || `item-${idx}`,
+                description: `${c.name} (${c.code || 'TECH'})`,
+                amount: c.fee || total,
+              }))
+            : [{ id: 'item-1', description: `${targetStudent.program} Academic Tuition`, amount: total }];
 
-      // 3. Dynamically synthesize authentic invoice matching target student's academic enrollment
-      const totalAmount = currentStudent.totalFees || 850000;
-      const paidAmount = currentStudent.paidAmount || (currentStudent.tuitionStatus === 'Paid' ? totalAmount : 0);
-      const isPaid = paidAmount >= totalAmount;
+        return {
+          ...studentMatch,
+          totalAmount: total,
+          paidAmount: paid,
+          items,
+          studentName: studentMatch.studentName || targetStudent.name,
+          studentEmail: studentMatch.studentEmail || targetStudent.email,
+          programName: studentMatch.programName || studentMatch.program || targetStudent.program,
+        };
+      }
+
+      // 3. Dynamically synthesize authentic invoice matching target student's real academic enrollment
+      const totalAmount = targetStudent.totalFees || targetStudent.tuitionAmount || 0;
+      const paidAmount = targetStudent.paidAmount || (targetStudent.tuitionStatus === 'Paid' ? totalAmount : 0);
+      const balance = Math.max(0, totalAmount - paidAmount);
+      const isPaid = balance === 0 && totalAmount > 0;
+
+      const items = (targetStudent.courses && targetStudent.courses.length > 0)
+        ? targetStudent.courses.map((c, idx) => ({
+            id: c.id || `item-${targetStudent.id}-${idx}`,
+            description: `${c.name || targetStudent.program} (${c.code || 'TECH-101'})`,
+            amount: c.fee || totalAmount,
+          }))
+        : [
+            {
+              id: `item-${targetStudent.id}-main`,
+              description: `${targetStudent.program} Comprehensive Academic Tuition`,
+              amount: totalAmount,
+            },
+          ];
 
       return {
-        id: `inv-stu-${currentStudent.id}`,
-        invoiceNumber: `INV-${currentStudent.studentCode || '2026-001'}`,
-        studentId: currentStudent.id,
-        studentName: currentStudent.name,
-        studentEmail: currentStudent.email,
-        programName: currentStudent.program,
-        issueDate: currentStudent.enrolledDate || new Date().toISOString().split('T')[0],
+        id: `inv-stu-${targetStudent.id}`,
+        invoiceNumber: `INV-${targetStudent.studentCode || new Date().getFullYear() + '-001'}`,
+        studentId: targetStudent.id,
+        studentName: targetStudent.name,
+        studentEmail: targetStudent.email,
+        programName: targetStudent.program,
+        issueDate: targetStudent.enrolledDate || new Date().toISOString().split('T')[0],
         dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
         totalAmount,
         paidAmount,
         status: isPaid ? 'Paid' : paidAmount > 0 ? 'Partial' : 'Pending',
-        items: [
-          {
-            id: `item-${currentStudent.id}-1`,
-            description: `${currentStudent.program} Comprehensive Academic Tuition`,
-            amount: totalAmount,
-          },
-        ],
-        paymentReference: (currentStudent as any).paymentReference || `NIBSS-TRX-${currentStudent.studentCode || 'NEXUS'}`,
+        items,
+        paymentReference: (targetStudent as any).paymentReference || `NIBSS-TRX-${targetStudent.studentCode || 'NEXUS'}`,
         nibssBankName: settings.defaultNIBSSBank?.bankName || 'Access Bank Nigeria PLC',
       };
     }
 
-    // Fallback only if no student is active
-    return invoices && invoices.length > 0 ? invoices[0] : undefined;
-  }, [selectedInvoiceId, currentStudent, invoices, settings]);
+    // Never leak unrelated student records (e.g. invoices[0])
+    return undefined;
+  }, [selectedInvoiceId, targetStudent, students, invoices, settings]);
 
   const handlePrint = () => {
     window.print();
@@ -86,22 +144,22 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ isOpen, onClose }) =
   const balanceDue = currentInvoice.totalAmount - currentInvoice.paidAmount;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/50 backdrop-blur-xs p-4 sm:p-margin-page animate-in fade-in duration-200 overflow-y-auto">
-      <div className="absolute inset-0" onClick={onClose} />
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+      <div className="fixed inset-0 -z-10" onClick={onClose} aria-hidden="true" />
 
-      <div className="glass-panel relative w-full max-w-3xl rounded-xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden bg-surface-container-lowest border border-outline-variant z-10">
+      <div className="glass-panel relative w-full max-w-3xl max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden bg-surface-container-lowest border border-outline-variant z-10 animate-in zoom-in-95 duration-150">
         {/* Modal Toolbar */}
-        <div className="flex items-center justify-between p-stack-md px-stack-lg border-b border-outline-variant bg-surface-bright print:hidden">
+        <div className="shrink-0 flex items-center justify-between p-4 sm:p-5 border-b border-outline-variant bg-surface-bright print:hidden">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-[22px]">receipt_long</span>
-            <h3 className="font-headline-md text-headline-md font-bold text-on-surface">
+            <h3 className="font-headline-md text-sm sm:text-base md:text-lg font-bold text-on-surface">
               {isPaid ? 'Official Tuition Payment Receipt' : 'Tuition Billing Invoice'}
             </h3>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrint}
-              className="px-4 h-9 rounded bg-secondary-container text-primary font-label-md text-xs font-bold hover:bg-surface-container-high transition-colors flex items-center gap-1.5 shadow-xs"
+              className="px-3 sm:px-4 h-9 rounded-lg bg-secondary-container text-primary font-label-md text-xs font-bold hover:bg-surface-container-high transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">print</span>
               <span>Print / PDF</span>
@@ -109,15 +167,15 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ isOpen, onClose }) =
             <button
               onClick={onClose}
               aria-label="Close"
-              className="text-secondary hover:text-primary transition-colors p-1.5 rounded-full hover:bg-surface-container"
+              className="text-secondary hover:text-primary transition-colors p-1.5 rounded-full hover:bg-surface-container cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[22px]">close</span>
+              <span className="material-symbols-outlined text-[20px] sm:text-[22px]">close</span>
             </button>
           </div>
         </div>
 
         {/* Printable Invoice Body */}
-        <div className="overflow-y-auto p-8 sm:p-10 space-y-8 bg-white text-on-surface print:p-0 print:m-0" id="printable-invoice">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-8 space-y-6 sm:space-y-8 bg-white text-on-surface print:p-0 print:m-0" id="printable-invoice">
           {/* Institution Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start gap-4 border-b border-outline-variant pb-6">
             <div>

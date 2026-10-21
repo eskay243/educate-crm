@@ -52,12 +52,12 @@ export const BookSessionModal: React.FC<BookSessionModalProps> = ({ isOpen, onCl
   const hasPrerequisites = activeMentors.length > 0 && students.length > 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 backdrop-blur-xs p-margin-page animate-in fade-in duration-200">
-      <div className="absolute inset-0" onClick={onClose} />
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/40 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+      <div className="fixed inset-0" onClick={onClose} />
 
-      <div className="glass-panel relative w-full max-w-2xl rounded-xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden bg-surface-container-lowest border border-outline-variant z-10">
+      <div className="relative w-full max-w-2xl max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden bg-surface-container-lowest border border-outline-variant z-10 animate-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="flex items-center justify-between p-stack-md px-stack-lg border-b border-outline-variant bg-surface-bright">
+        <div className="shrink-0 flex items-center justify-between p-4 sm:p-5 border-b border-outline-variant bg-surface-bright">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-[22px]">calendar_add_on</span>
             <div>
@@ -68,14 +68,14 @@ export const BookSessionModal: React.FC<BookSessionModalProps> = ({ isOpen, onCl
           <button
             onClick={onClose}
             aria-label="Close"
-            className="text-secondary hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-container cursor-pointer"
+            className="text-secondary hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-container cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>close</span>
           </button>
         </div>
 
         {!hasPrerequisites ? (
-          <div className="p-8 text-center space-y-4">
+          <div className="p-8 text-center space-y-4 overflow-y-auto">
             <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mx-auto">
               <span className="material-symbols-outlined text-[28px]">info</span>
             </div>
@@ -110,146 +110,148 @@ export const BookSessionModal: React.FC<BookSessionModalProps> = ({ isOpen, onCl
           </div>
         ) : (
           /* Form Body */
-          <form onSubmit={handleSubmit} className="overflow-y-auto p-stack-lg space-y-4 flex-1">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="font-label-md text-xs text-secondary font-semibold">Faculty Mentor <span className="text-error">*</span></label>
-                {isMentor ? (
-                  <input
-                    type="text"
-                    disabled
-                    value={`${currentMentor?.name} (${currentMentor?.department})`}
-                    className="w-full h-10 px-3 bg-surface-container border border-outline-variant rounded font-body-md text-sm text-on-surface outline-none cursor-not-allowed"
-                  />
-                ) : (
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="font-label-md text-xs text-secondary font-semibold">Faculty Mentor <span className="text-error">*</span></label>
+                  {isMentor ? (
+                    <input
+                      type="text"
+                      disabled
+                      value={`${currentMentor?.name} (${currentMentor?.department})`}
+                      className="w-full h-10 px-3 bg-surface-container border border-outline-variant rounded font-body-md text-sm text-on-surface outline-none cursor-not-allowed"
+                    />
+                  ) : (
+                    <select
+                      value={mentorId || currentMentor?.id}
+                      onChange={e => setMentorId(e.target.value)}
+                      className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
+                    >
+                      {activeMentors.map(m => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} ({m.department} • {m.commissionRate ?? 37}% Commission)
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-label-md text-xs text-secondary font-semibold">Student Mentee <span className="text-error">*</span></label>
                   <select
-                    value={mentorId || currentMentor?.id}
-                    onChange={e => setMentorId(e.target.value)}
+                    value={studentId || currentStudent?.id}
+                    onChange={e => setStudentId(e.target.value)}
                     className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
                   >
-                    {activeMentors.map(m => (
-                      <option key={m.id} value={m.id}>
-                        {m.name} ({m.department} • {m.commissionRate ?? 37}% Commission)
+                    {students.map(s => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} (#{s.studentCode}) - {s.program}
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-label-md text-xs text-secondary font-semibold">Session Date</label>
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={e => setDate(e.target.value)}
+                    className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-label-md text-xs text-secondary font-semibold">Time Window</label>
+                  <input
+                    type="text"
+                    value={time}
+                    onChange={e => setTime(e.target.value)}
+                    placeholder="e.g. 14:00 - 15:30 (WAT)"
+                    className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                  />
+                </div>
+
+                {/* Quick-Select Office Hours */}
+                {currentMentor?.officeHours && currentMentor.officeHours.filter(h => h.isActive).length > 0 && (
+                  <div className="sm:col-span-2 p-2.5 rounded-lg bg-surface-container border border-outline-variant/60 space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px] text-secondary">
+                      <span className="font-semibold text-on-surface flex items-center gap-1">
+                        <span className="material-symbols-outlined text-primary text-[14px]">schedule</span>
+                        <span>{currentMentor.name}&apos;s Weekly Office Hours</span>
+                      </span>
+                      <span>Click to autofill time</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {currentMentor.officeHours.filter(h => h.isActive).map(slot => (
+                        <button
+                          key={slot.id}
+                          type="button"
+                          onClick={() => {
+                            setTime(`${slot.startTime} - ${slot.endTime} (WAT)`);
+                            if (slot.slotDurationMinutes) {
+                              setDurationHours(slot.slotDurationMinutes / 60);
+                            }
+                          }}
+                          className="px-2 py-1 rounded bg-surface border border-outline-variant hover:border-primary text-[10px] font-mono font-bold text-on-surface hover:bg-primary/5 transition-colors cursor-pointer"
+                        >
+                          {slot.dayOfWeek}: {slot.startTime} - {slot.endTime} ({slot.locationType.includes('Google') ? 'Meet' : 'Hub'})
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 )}
+
+                <div className="space-y-1">
+                  <label className="font-label-md text-xs text-secondary font-semibold">Duration (Hours)</label>
+                  <select
+                    value={durationHours}
+                    onChange={e => setDurationHours(Number(e.target.value))}
+                    className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
+                  >
+                    <option value={1}>1.0 Hour</option>
+                    <option value={1.5}>1.5 Hours</option>
+                    <option value={2}>2.0 Hours</option>
+                    <option value={3}>3.0 Hours</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-label-md text-xs text-secondary font-semibold">Compensation Model</label>
+                  <div className="w-full h-10 px-3 bg-secondary-container/40 border border-primary/20 rounded flex items-center justify-between text-xs font-medium text-primary">
+                    <span>37% Enrollment Commission</span>
+                    <span className="text-[10px] font-bold text-[#166534] bg-[#dcfce7] px-1.5 py-0.5 rounded">Covered</span>
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-1">
-                <label className="font-label-md text-xs text-secondary font-semibold">Student Mentee <span className="text-error">*</span></label>
-                <select
-                  value={studentId || currentStudent?.id}
-                  onChange={e => setStudentId(e.target.value)}
-                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
-                >
-                  {students.map(s => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} (#{s.studentCode}) - {s.program}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-label-md text-xs text-secondary font-semibold">Session Date</label>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={e => setDate(e.target.value)}
-                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-label-md text-xs text-secondary font-semibold">Time Window</label>
+                <label className="font-label-md text-xs text-secondary font-semibold">Topic / Technical Agenda <span className="text-error">*</span></label>
                 <input
                   type="text"
-                  value={time}
-                  onChange={e => setTime(e.target.value)}
-                  placeholder="e.g. 14:00 - 15:30 (WAT)"
+                  required
+                  value={topic}
+                  onChange={e => setTopic(e.target.value)}
+                  placeholder="e.g. Distributed SQL Query Optimization & Microservice Architecture Review"
                   className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none"
                 />
               </div>
 
-              {/* Quick-Select Office Hours */}
-              {currentMentor?.officeHours && currentMentor.officeHours.filter(h => h.isActive).length > 0 && (
-                <div className="sm:col-span-2 p-2.5 rounded-lg bg-surface-container border border-outline-variant/60 space-y-1.5">
-                  <div className="flex items-center justify-between text-[11px] text-secondary">
-                    <span className="font-semibold text-on-surface flex items-center gap-1">
-                      <span className="material-symbols-outlined text-primary text-[14px]">schedule</span>
-                      <span>{currentMentor.name}&apos;s Weekly Office Hours</span>
-                    </span>
-                    <span>Click to autofill time</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {currentMentor.officeHours.filter(h => h.isActive).map(slot => (
-                      <button
-                        key={slot.id}
-                        type="button"
-                        onClick={() => {
-                          setTime(`${slot.startTime} - ${slot.endTime} (WAT)`);
-                          if (slot.slotDurationMinutes) {
-                            setDurationHours(slot.slotDurationMinutes / 60);
-                          }
-                        }}
-                        className="px-2 py-1 rounded bg-surface border border-outline-variant hover:border-primary text-[10px] font-mono font-bold text-on-surface hover:bg-primary/5 transition-colors cursor-pointer"
-                      >
-                        {slot.dayOfWeek}: {slot.startTime} - {slot.endTime} ({slot.locationType.includes('Google') ? 'Meet' : 'Hub'})
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               <div className="space-y-1">
-                <label className="font-label-md text-xs text-secondary font-semibold">Duration (Hours)</label>
-                <select
-                  value={durationHours}
-                  onChange={e => setDurationHours(Number(e.target.value))}
-                  className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
-                >
-                  <option value={1}>1.0 Hour</option>
-                  <option value={1.5}>1.5 Hours</option>
-                  <option value={2}>2.0 Hours</option>
-                  <option value={3}>3.0 Hours</option>
-                </select>
+                <label className="font-label-md text-xs text-secondary font-semibold">Session Feedback &amp; Student Action Items</label>
+                <textarea
+                  rows={3}
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  placeholder="Student demonstrated good grasp of PostgreSQL indexing. Action item: Implement Redis cache layer before next milestone."
+                  className="w-full p-2.5 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none"
+                />
               </div>
-
-              <div className="space-y-1">
-                <label className="font-label-md text-xs text-secondary font-semibold">Compensation Model</label>
-                <div className="w-full h-10 px-3 bg-secondary-container/40 border border-primary/20 rounded flex items-center justify-between text-xs font-medium text-primary">
-                  <span>37% Enrollment Commission</span>
-                  <span className="text-[10px] font-bold text-[#166534] bg-[#dcfce7] px-1.5 py-0.5 rounded">Covered</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="font-label-md text-xs text-secondary font-semibold">Topic / Technical Agenda <span className="text-error">*</span></label>
-              <input
-                type="text"
-                required
-                value={topic}
-                onChange={e => setTopic(e.target.value)}
-                placeholder="e.g. Distributed SQL Query Optimization & Microservice Architecture Review"
-                className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="font-label-md text-xs text-secondary font-semibold">Session Feedback &amp; Student Action Items</label>
-              <textarea
-                rows={3}
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                placeholder="Student demonstrated good grasp of PostgreSQL indexing. Action item: Implement Redis cache layer before next milestone."
-                className="w-full p-2.5 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none"
-              />
             </div>
 
             {/* Footer Submit Buttons */}
-            <div className="pt-stack-sm flex justify-end gap-3 border-t border-outline-variant">
+            <div className="shrink-0 p-3 sm:p-4 border-t border-outline-variant bg-surface-bright flex justify-end gap-3">
               <button
                 type="button"
                 onClick={onClose}

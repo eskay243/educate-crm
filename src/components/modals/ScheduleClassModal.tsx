@@ -67,240 +67,242 @@ export const ScheduleClassModal: React.FC<ScheduleClassModalProps> = ({ isOpen, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-inverse-surface/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-surface-container-lowest rounded-xl max-w-xl w-full border border-outline-variant shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/60 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex min-h-[100dvh] items-end sm:items-center justify-center animate-in fade-in duration-200">
+      <div className="relative w-full max-w-xl max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[min(90dvh,850px)] rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden bg-surface-container-lowest border border-outline-variant z-10 animate-in zoom-in-95 duration-150">
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-outline-variant flex items-center justify-between bg-surface-container-low">
+        <div className="shrink-0 px-5 sm:px-6 py-4 border-b border-outline-variant flex items-center justify-between bg-surface-container-low">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-indigo-500/10 text-indigo-700 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-lg bg-indigo-500/10 text-indigo-700 flex items-center justify-center shrink-0">
               <span className="material-symbols-outlined text-xl">event_upcoming</span>
             </div>
             <div>
               <h2 className="font-title-md font-bold text-on-surface">Schedule Class Timetable Slot</h2>
-              <p className="font-body-sm text-on-surface-variant">Plan faculty lecture, assign mentor, and broadcast to scholars</p>
+              <p className="font-body-sm text-on-surface-variant text-xs">Plan faculty lecture, assign mentor, and broadcast to scholars</p>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors"
+            className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors shrink-0"
           >
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
 
         {/* Modal Form */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-label-sm font-semibold text-on-surface mb-1">
+                  Course Program *
+                </label>
+                <select
+                  value={courseId}
+                  onChange={(e) => setCourseId(e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
+                  required
+                >
+                  {courses.map(c => (
+                    <option key={c.id} value={c.id}>{c.title} ({c.code})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-label-sm font-semibold text-on-surface mb-1">
+                  Target Cohort *
+                </label>
+                <select
+                  value={cohortId}
+                  onChange={(e) => setCohortId(e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
+                  required
+                >
+                  {cohorts.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <div>
               <label className="block text-label-sm font-semibold text-on-surface mb-1">
-                Course Program *
+                Assigned Faculty Mentor *
               </label>
               <select
-                value={courseId}
-                onChange={(e) => setCourseId(e.target.value)}
+                value={mentorId}
+                onChange={(e) => setMentorId(e.target.value)}
                 className="w-full h-10 px-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
                 required
               >
-                {courses.map(c => (
-                  <option key={c.id} value={c.id}>{c.title} ({c.code})</option>
+                {activeMentors.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} ({m.role || 'Faculty Mentor'}) — {m.lecturedHours || 0} hrs logged
+                  </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-label-sm font-semibold text-on-surface mb-1">
-                Target Cohort *
-              </label>
-              <select
-                value={cohortId}
-                onChange={(e) => setCohortId(e.target.value)}
-                className="w-full h-10 px-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
-                required
-              >
-                {cohorts.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-label-sm font-semibold text-on-surface mb-1">
-              Assigned Faculty Mentor *
-            </label>
-            <select
-              value={mentorId}
-              onChange={(e) => setMentorId(e.target.value)}
-              className="w-full h-10 px-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
-              required
-            >
-              {activeMentors.map(m => (
-                <option key={m.id} value={m.id}>
-                  {m.name} ({m.role || 'Faculty Mentor'}) — {m.lecturedHours || 0} hrs logged
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-label-sm font-semibold text-on-surface">
-                Lecture Topic / Lesson *
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-label-sm font-semibold text-on-surface">
+                  Lecture Topic / Lesson *
+                </label>
+                {courseLessons.length > 0 && (
+                  <span className="text-label-xs text-indigo-700">Or pick from syllabus</span>
+                )}
+              </div>
               {courseLessons.length > 0 && (
-                <span className="text-label-xs text-indigo-700">Or pick from syllabus</span>
+                <select
+                  onChange={(e) => {
+                    if (e.target.value) setTopic(e.target.value);
+                  }}
+                  className="w-full h-9 mb-2 px-3 rounded-lg border border-outline-variant bg-surface-container-low text-on-surface-variant text-label-sm focus:outline-none"
+                >
+                  <option value="">-- Select from existing course syllabus --</option>
+                  {courseLessons.map(l => (
+                    <option key={l.id} value={l.title}>{l.title}</option>
+                  ))}
+                </select>
               )}
-            </div>
-            {courseLessons.length > 0 && (
-              <select
-                onChange={(e) => {
-                  if (e.target.value) setTopic(e.target.value);
-                }}
-                className="w-full h-9 mb-2 px-3 rounded-lg border border-outline-variant bg-surface-container-low text-on-surface-variant text-label-sm focus:outline-none"
-              >
-                <option value="">-- Select from existing course syllabus --</option>
-                {courseLessons.map(l => (
-                  <option key={l.id} value={l.title}>{l.title}</option>
-                ))}
-              </select>
-            )}
-            <input
-              type="text"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="e.g. 1.2 State Architecture: TanStack Query & Optimistic Mutations"
-              className="w-full h-10 px-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-label-sm font-semibold text-on-surface mb-1">
-                Day of Week *
-              </label>
-              <select
-                value={dayOfWeek}
-                onChange={(e) => setDayOfWeek(e.target.value as any)}
-                className="w-full h-10 px-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
-                required
-              >
-                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-label-sm font-semibold text-on-surface mb-1">
-                Date *
-              </label>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full h-10 px-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-label-sm font-semibold text-on-surface mb-1">
-                Duration (Hours) *
-              </label>
-              <input
-                type="number"
-                min="0.5"
-                step="0.5"
-                value={durationHours}
-                onChange={(e) => setDurationHours(parseFloat(e.target.value) || 2)}
-                className="w-full h-10 px-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-label-sm font-semibold text-on-surface mb-1">
-                Start Time *
-              </label>
               <input
                 type="text"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                placeholder="e.g. 10:00 AM"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder="e.g. 1.2 State Architecture: TanStack Query & Optimistic Mutations"
                 className="w-full h-10 px-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
                 required
               />
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-label-sm font-semibold text-on-surface mb-1">
+                  Day of Week *
+                </label>
+                <select
+                  value={dayOfWeek}
+                  onChange={(e) => setDayOfWeek(e.target.value as any)}
+                  className="w-full h-10 px-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
+                  required
+                >
+                  {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-label-sm font-semibold text-on-surface mb-1">
+                  Date *
+                </label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-label-sm font-semibold text-on-surface mb-1">
+                  Duration (Hours) *
+                </label>
+                <input
+                  type="number"
+                  min="0.5"
+                  step="0.5"
+                  value={durationHours}
+                  onChange={(e) => setDurationHours(parseFloat(e.target.value) || 2)}
+                  className="w-full h-10 px-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-label-sm font-semibold text-on-surface mb-1">
+                  Start Time *
+                </label>
+                <input
+                  type="text"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  placeholder="e.g. 10:00 AM"
+                  className="w-full h-10 px-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-label-sm font-semibold text-on-surface mb-1">
+                  End Time *
+                </label>
+                <input
+                  type="text"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  placeholder="e.g. 12:00 PM"
+                  className="w-full h-10 px-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-label-sm font-semibold text-on-surface mb-1">
+                  Classroom Venue *
+                </label>
+                <input
+                  type="text"
+                  value={venue}
+                  onChange={(e) => setVenue(e.target.value)}
+                  placeholder="e.g. Victoria Island Executive Hub - Lab B"
+                  className="w-full h-10 px-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-label-sm font-semibold text-on-surface mb-1">
+                  Virtual Meeting Link (Optional)
+                </label>
+                <input
+                  type="url"
+                  value={meetingLink}
+                  onChange={(e) => setMeetingLink(e.target.value)}
+                  placeholder="https://meet.google.com/xyz-abc"
+                  className="w-full h-10 px-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
+                />
+              </div>
+            </div>
+
             <div>
               <label className="block text-label-sm font-semibold text-on-surface mb-1">
-                End Time *
+                Instructions & Preparation Notes
               </label>
-              <input
-                type="text"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                placeholder="e.g. 12:00 PM"
-                className="w-full h-10 px-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-label-sm font-semibold text-on-surface mb-1">
-                Classroom Venue *
-              </label>
-              <input
-                type="text"
-                value={venue}
-                onChange={(e) => setVenue(e.target.value)}
-                placeholder="e.g. Victoria Island Executive Hub - Lab B"
-                className="w-full h-10 px-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
-                required
+              <textarea
+                rows={2}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="e.g. Scholars must clone the repository before class and ensure Node v20 is installed."
+                className="w-full p-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
               />
             </div>
 
-            <div>
-              <label className="block text-label-sm font-semibold text-on-surface mb-1">
-                Virtual Meeting Link (Optional)
-              </label>
-              <input
-                type="url"
-                value={meetingLink}
-                onChange={(e) => setMeetingLink(e.target.value)}
-                placeholder="https://meet.google.com/xyz-abc"
-                className="w-full h-10 px-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-label-sm font-semibold text-on-surface mb-1">
-              Instructions & Preparation Notes
-            </label>
-            <textarea
-              rows={2}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Scholars must clone the repository before class and ensure Node v20 is installed."
-              className="w-full p-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
-            />
-          </div>
-
-          <div className="p-3 rounded-lg bg-indigo-50/50 border border-indigo-100 flex items-start gap-2.5">
-            <span className="material-symbols-outlined text-indigo-600 text-lg shrink-0 mt-0.5">verified_user</span>
-            <div className="text-label-xs text-indigo-900 leading-relaxed">
-              <strong className="font-semibold">Academic Governance Notice:</strong> Once scheduled, this class appears on faculty and student portal timetables. Upon completion, faculty attendance logging will credit student learning hours towards graduation and faculty hours towards payout eligibility.
+            <div className="p-3 rounded-lg bg-indigo-50/50 border border-indigo-100 flex items-start gap-2.5">
+              <span className="material-symbols-outlined text-indigo-600 text-lg shrink-0 mt-0.5">verified_user</span>
+              <div className="text-label-xs text-indigo-900 leading-relaxed">
+                <strong className="font-semibold">Academic Governance Notice:</strong> Once scheduled, this class appears on faculty and student portal timetables. Upon completion, faculty attendance logging will credit student learning hours towards graduation and faculty hours towards payout eligibility.
+              </div>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="pt-2 border-t border-outline-variant flex items-center justify-end gap-3">
+          <div className="shrink-0 p-3 sm:p-4 border-t border-outline-variant bg-surface-container-low flex items-center justify-end gap-2 sm:gap-3">
             <button
               type="button"
               onClick={onClose}
