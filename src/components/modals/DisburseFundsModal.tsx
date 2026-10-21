@@ -95,8 +95,9 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
   if (!isOpen || (!isMentorPayout && !isExpensePayout)) return null;
 
   const currentWalletBalance = wallet?.balance || 0;
-  const hasSufficientBalance = currentWalletBalance >= amountToDisburse;
-  const balanceAfterDisbursement = Math.max(0, currentWalletBalance - amountToDisburse);
+  const effectiveAvailableBalance = Math.max(currentWalletBalance, paystackBalance || 0);
+  const hasSufficientBalance = effectiveAvailableBalance >= amountToDisburse;
+  const balanceAfterDisbursement = Math.max(0, effectiveAvailableBalance - amountToDisburse);
 
   const handleVerifyAccount = async () => {
     if (!accountNumber || accountNumber.length !== 10) {
@@ -224,13 +225,19 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
                 Available Wallet Balance
               </span>
               <div className="font-display text-xl font-bold font-data-tabular">
-                {formatNaira(currentWalletBalance)}
+                {formatNaira(effectiveAvailableBalance)}
               </div>
-              <span className="text-[11px] opacity-80">
+              <span className="text-[11px] opacity-80 block">
                 {hasSufficientBalance 
                   ? `Remaining after payout: ${formatNaira(balanceAfterDisbursement)}` 
-                  : `Deficit: ${formatNaira(amountToDisburse - currentWalletBalance)}`}
+                  : `Deficit: ${formatNaira(amountToDisburse - effectiveAvailableBalance)}`}
               </span>
+              {currentWalletBalance < amountToDisburse && (paystackBalance ?? 0) >= amountToDisburse && (
+                <span className="text-[10px] text-emerald-800 font-semibold inline-flex items-center gap-1 mt-0.5">
+                  <span className="material-symbols-outlined text-[12px]">sync_alt</span>
+                  <span>Backed by live Paystack liquidity</span>
+                </span>
+              )}
             </div>
             <div className="text-right">
               <span className="text-[10px] font-bold uppercase tracking-wider opacity-70">
@@ -431,7 +438,7 @@ export const DisburseFundsModal: React.FC<DisburseFundsModalProps> = ({ isOpen, 
               (paystackBalance !== null && paystackBalance < amountToDisburse)
             }
             className={`px-5 py-2.5 rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer ${
-              hasSufficientBalance && accountNumber.length === 10 && isMentorHoursEligible && (paystackBalance !== null && paystackBalance >= amountToDisburse)
+              hasSufficientBalance && accountNumber.length === 10 && isMentorHoursEligible && (paystackBalance === null || paystackBalance >= amountToDisburse)
                 ? 'bg-[#166534] hover:bg-[#15803d] text-white'
                 : 'bg-surface-container text-secondary cursor-not-allowed opacity-60'
             }`}

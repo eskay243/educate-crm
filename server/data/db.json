@@ -2,6 +2,19 @@
   "leads": [
     {
       "name": "Olufunke Adeleke",
+      "email": "olufunke.qa.1792577578192@test.com",
+      "phone": "+234 803 999 8877",
+      "company": "Fidelity Tech",
+      "programInterest": "Full-Stack Software Engineering",
+      "status": "Converted",
+      "score": 85,
+      "source": "Google Ads",
+      "assignedRep": "Zainab Bello",
+      "id": "lead-1792577578193",
+      "dateAdded": "2026-10-21"
+    },
+    {
+      "name": "Olufunke Adeleke",
       "email": "olufunke.qa.1792567766464@test.com",
       "phone": "+234 803 999 8877",
       "company": "Fidelity Tech",
@@ -153,6 +166,110 @@
     }
   ],
   "students": [
+    {
+      "name": "Chukwudi Nwachukwu",
+      "email": "chukwudi.qa.1792577578214@test.com",
+      "phone": "+234 809 555 9999",
+      "program": "Full-Stack Software Engineering",
+      "cohort": "Cohort Alpha 2026",
+      "tuitionStatus": "Partial",
+      "totalFees": 350000,
+      "paidAmount": 150000,
+      "outstandingBalance": 200000,
+      "curriculumDriveUrl": "https://drive.google.com/file/d/test-curriculum",
+      "handbookDriveUrl": "https://drive.google.com/file/d/test-handbook",
+      "stateOfOrigin": "Enugu",
+      "lga": "Nsukka",
+      "idType": "NIN",
+      "idNumber": "89102938475",
+      "bankName": "Zenith Bank PLC",
+      "bankCode": "057",
+      "accountNumber": "1012345678",
+      "accountName": "Chukwudi Nwachukwu",
+      "isBankVerified": true,
+      "kycTier": "Tier 3",
+      "kycStatus": "Verified",
+      "id": "stu-1792577578215",
+      "studentCode": "STU-5637",
+      "password": "Edu#4124!YA",
+      "mustResetPassword": true,
+      "enrolledDate": "2026-10-21",
+      "attendanceRate": 98,
+      "attendedLearningHours": 42,
+      "progressPercent": 100,
+      "certificateIssued": true,
+      "certificateNumber": "CERT-CDL-2026-5637",
+      "certificateIssuedAt": "2026-10-21T10:12:58.229Z"
+    },
+    {
+      "id": "stu-1792577578199",
+      "studentCode": "STU-5778",
+      "name": "Olufunke Adeleke",
+      "email": "olufunke.qa.1792577578192@test.com",
+      "phone": "+234 803 999 8877",
+      "password": "Edu#6752!3S",
+      "mustResetPassword": true,
+      "program": "Full-Stack Software Engineering",
+      "mentorName": "Dr. Chidi Okeke",
+      "status": "Active",
+      "attendanceRate": 100,
+      "tuitionStatus": "Pending",
+      "cohort": "Cohort Alpha 2026",
+      "enrolledDate": "2026-10-21",
+      "totalFees": 350000,
+      "paidAmount": 0,
+      "outstandingBalance": 350000,
+      "courses": [
+        {
+          "id": "c-1792577578199",
+          "code": "CSE-101",
+          "name": "Full-Stack Software Engineering",
+          "semester": "Fall Semester 2026",
+          "instructor": "Dr. Chidi Okeke",
+          "fee": 350000,
+          "billedDate": "2026-10-21"
+        }
+      ],
+      "installments": [
+        {
+          "id": "inst-1792577578199",
+          "description": "Full Course Tuition",
+          "dueDate": "2026-10-21",
+          "amount": 350000,
+          "status": "Pending"
+        },
+        {
+          "id": "inst-2-1792577578199",
+          "description": "Remaining Tuition Balance Settlement",
+          "dueDate": "2026-11-20",
+          "amount": 350000,
+          "status": "Pending"
+        }
+      ],
+      "completedLessonIds": [
+        "lesson-react-01"
+      ],
+      "progressPercent": 1,
+      "assignmentSubmissions": [
+        {
+          "id": "sub-1792577578259",
+          "studentId": "stu-1792577578199",
+          "studentName": "Olufunke Adeleke",
+          "courseTitle": "Full-Stack Software Engineering",
+          "moduleTitle": "Curriculum Assignment",
+          "taskTitle": "Full-Stack REST API & Database Integration",
+          "githubUrl": "https://github.com/olufunke/educate-crm-api-task",
+          "liveUrl": "https://educate-crm-demo.vercel.app",
+          "notes": "Implemented with Express 5, TypeScript and PostgreSQL connection pooling.",
+          "submittedAt": "2026-10-21T10:12:58.259Z",
+          "status": "Exceptional",
+          "grade": 96,
+          "mentorFeedback": "Outstanding work. Code structure is modular and all endpoints are properly guarded.",
+          "reviewedBy": "Faculty Mentor",
+          "reviewedAt": "2026-10-21T10:12:58.263Z"
+        }
+      ]
+    },
     {
       "name": "Chukwudi Nwachukwu",
       "email": "chukwudi.qa.1792567766490@test.com",
@@ -2044,6 +2161,30 @@
   "mentors": [
     {
       "name": "Engr. Amina Yusuf",
+      "email": "amina.qa.1792577578232@codelab.institute",
+      "phone": "+234 802 777 6655",
+      "role": "Senior Cloud Mentor",
+      "department": "Cloud & DevOps Engineering",
+      "expertise": [
+        "AWS",
+        "Docker",
+        "Kubernetes",
+        "Terraform"
+      ],
+      "bankName": "Guaranty Trust Bank (GTBank)",
+      "bankCode": "058",
+      "accountNumber": "0234567891",
+      "accountName": "Amina Yusuf",
+      "status": "Active",
+      "lecturedHours": 28,
+      "minimumRequiredHours": 20,
+      "id": "men-1792577578233",
+      "mentorCode": "MN-5342",
+      "joinedDate": "2026-10-21",
+      "sessionsCount": 0
+    },
+    {
+      "name": "Engr. Amina Yusuf",
       "email": "amina.qa.1792567766517@codelab.institute",
       "phone": "+234 802 777 6655",
       "role": "Senior Cloud Mentor",
@@ -2318,6 +2459,34 @@
     }
   ],
   "expenses": [
+    {
+      "title": "Starlink Enterprise Satellite Internet Subscription",
+      "category": "Utilities & Infrastructure",
+      "amount": 85000,
+      "payee": "Starlink Internet Services Nigeria",
+      "payeeAccount": "0987654321",
+      "payeeBank": "Access Bank Nigeria PLC",
+      "payeeBankCode": "044",
+      "requestedBy": "Zainab Bello (Admissions)",
+      "receiptUrl": "https://codelab.institute/receipts/starlink-oct2026.pdf",
+      "description": "Monthly high-speed internet subscription for main learning campus",
+      "id": "exp-1792577578243",
+      "expenseCode": "EXP-5393",
+      "status": "Paid",
+      "date": "2026-10-21",
+      "createdAt": "2026-10-21T10:12:58.243Z",
+      "approvedBy": "Abiola Adefowope (Super Admin)",
+      "reviewedAt": "2026-10-21T10:12:58.248Z",
+      "disbursementBankName": "Access Bank Nigeria PLC",
+      "disbursementAccountNumber": "0987654321",
+      "disbursementAccountName": "Starlink Internet Services Nigeria",
+      "disbursementBankCode": "044",
+      "isDisbursedViaWallet": true,
+      "transferReference": "NIP-EXP-TRF-1792577578253",
+      "disbursedAt": "2026-10-21T10:12:58.254Z",
+      "disbursementMethod": "corporate_nip",
+      "nipSessionId": "NIP-EXP-TRF-1792577578253"
+    },
     {
       "title": "Starlink Enterprise Satellite Internet Subscription",
       "category": "Utilities & Infrastructure",
@@ -2901,6 +3070,54 @@
   ],
   "invoices": [
     {
+      "id": "inv-1792577578215",
+      "invoiceNumber": "INV-2026-34292",
+      "studentId": "stu-1792577578215",
+      "studentName": "Chukwudi Nwachukwu",
+      "studentEmail": "chukwudi.qa.1792577578214@test.com",
+      "programName": "Full-Stack Software Engineering",
+      "program": "Full-Stack Software Engineering",
+      "issueDate": "2026-10-21",
+      "dueDate": "2026-11-20",
+      "totalAmount": 350000,
+      "paidAmount": 150000,
+      "amount": 350000,
+      "status": "Partial",
+      "items": [
+        {
+          "id": "item-1",
+          "description": "Full-Stack Software Engineering Comprehensive Academic Tuition",
+          "amount": 350000
+        }
+      ],
+      "paymentReference": "NIBSS-TRX-STU-5637",
+      "nibssBankName": "OPay (PayCom)"
+    },
+    {
+      "id": "inv-1792577578199",
+      "invoiceNumber": "INV-2026-68896",
+      "studentId": "stu-1792577578199",
+      "studentName": "Olufunke Adeleke",
+      "studentEmail": "olufunke.qa.1792577578192@test.com",
+      "programName": "Full-Stack Software Engineering",
+      "program": "Full-Stack Software Engineering",
+      "issueDate": "2026-10-21",
+      "dueDate": "2026-11-20",
+      "totalAmount": 350000,
+      "paidAmount": 0,
+      "amount": 350000,
+      "status": "Pending",
+      "items": [
+        {
+          "id": "item-1",
+          "description": "Full-Stack Software Engineering Tuition Enrollment",
+          "amount": 350000
+        }
+      ],
+      "paymentReference": "NIBSS-TRX-3867702",
+      "nibssBankName": "OPay (PayCom)"
+    },
+    {
       "id": "inv-1792567766498",
       "invoiceNumber": "INV-2026-68964",
       "studentId": "stu-1792567766498",
@@ -3194,6 +3411,38 @@
   },
   "activityLogs": [
     {
+      "id": "act-1792577578259-sub",
+      "timestamp": "2026-10-21T10:12:58.259Z",
+      "title": "Assignment Submitted",
+      "description": "Olufunke Adeleke submitted Full-Stack REST API & Database Integration",
+      "type": "student",
+      "user": "Olufunke Adeleke"
+    },
+    {
+      "id": "act-1792577578254-expdisb",
+      "timestamp": "2026-10-21T10:12:58.254Z",
+      "title": "OpEx Requisition ₦85,000 Disbursed (Corporate NIP)",
+      "description": "Disbursed for Starlink Enterprise Satellite Internet Subscription to Starlink Internet Services Nigeria (Access Bank Nigeria PLC - 0987654321). Ref: NIP-EXP-TRF-1792577578253",
+      "type": "finance",
+      "user": "Corporate Treasury"
+    },
+    {
+      "id": "act-1792577578251-top",
+      "timestamp": "2026-10-21T10:12:58.251Z",
+      "title": "Operational Wallet Funded: ₦500,000",
+      "description": "Instant online top-up processed via Paystack. Available Wallet Balance: ₦700,990. Ref: QA-TOP-1792577578250",
+      "type": "finance",
+      "user": "Super Admin"
+    },
+    {
+      "id": "act-1792577578229-cert",
+      "timestamp": "2026-10-21T10:12:58.229Z",
+      "title": "Certificate of Completion Issued",
+      "description": "Official Certificate #CERT-CDL-2026-5637 issued to Chukwudi Nwachukwu for Full-Stack Software Engineering.",
+      "type": "student",
+      "user": "Academic Board"
+    },
+    {
       "id": "act-1792567766576-sub",
       "timestamp": "2026-10-21T07:29:26.576Z",
       "title": "Assignment Submitted",
@@ -3307,6 +3556,51 @@
     }
   ],
   "notifications": [
+    {
+      "id": "notif-tkt-1792577578266",
+      "title": "🎫 New Support Ticket: TKT-1012",
+      "message": "Adebayo Adeleke (Enrolled Scholar) submitted ticket: \"LMS Video Player Buffering on Module 4\"",
+      "type": "system",
+      "timestamp": "Just now",
+      "read": false,
+      "link": "/tickets"
+    },
+    {
+      "id": "notif-1792577578236",
+      "title": "New Faculty Payout Request",
+      "message": "Engr. Amina Yusuf requested payout of ₦200,000 (28h lectured).",
+      "type": "system",
+      "timestamp": "Just now",
+      "read": false,
+      "link": "/mentors"
+    },
+    {
+      "id": "notif-1792577578223-pop",
+      "title": "📄 Manual Payment Proof Uploaded",
+      "message": "Chukwudi Nwachukwu uploaded proof for ₦100,000 via Zenith Bank PLC. (Ref: NIP-TEST-1792577578222)",
+      "type": "finance",
+      "timestamp": "Just now",
+      "read": false,
+      "link": "/finance"
+    },
+    {
+      "id": "notif-1792577578220",
+      "title": "Payment Reminder Dispatched",
+      "message": "Automated reminder dispatched to Chukwudi Nwachukwu for ₦200,000 via OPay (PayCom).",
+      "type": "finance",
+      "timestamp": "Just now",
+      "read": false,
+      "link": "/students"
+    },
+    {
+      "id": "notif-1792577578199",
+      "title": "Lead Converted to Active Student",
+      "message": "Olufunke Adeleke enrolled in Full-Stack Software Engineering. Invoice #INV-2026-68896 (₦350,000) generated.",
+      "type": "admissions",
+      "timestamp": "Just now",
+      "read": false,
+      "link": "/students"
+    },
     {
       "id": "notif-tkt-1792567766581",
       "title": "🎫 New Support Ticket: TKT-1011",
@@ -3462,6 +3756,17 @@
     }
   ],
   "staffUsers": [
+    {
+      "name": "Kelechi Opara",
+      "email": "test.staff.1792577578277@codelab.institute",
+      "role": "program_officer",
+      "roleTitle": "Assistant Program Officer",
+      "department": "Academic Affairs",
+      "password": "NewSecretPassword#2026",
+      "id": "user-1792577578277",
+      "isActive": true,
+      "status": "Active"
+    },
     {
       "name": "Kelechi Opara",
       "email": "test.staff.1792567766593@codelab.institute",
@@ -5779,6 +6084,23 @@
   ],
   "assignments": [
     {
+      "id": "sub-1792577578259",
+      "studentId": "stu-1792577578199",
+      "studentName": "Olufunke Adeleke",
+      "courseTitle": "Full-Stack Software Engineering",
+      "moduleTitle": "Curriculum Assignment",
+      "taskTitle": "Full-Stack REST API & Database Integration",
+      "githubUrl": "https://github.com/olufunke/educate-crm-api-task",
+      "liveUrl": "https://educate-crm-demo.vercel.app",
+      "notes": "Implemented with Express 5, TypeScript and PostgreSQL connection pooling.",
+      "submittedAt": "2026-10-21T10:12:58.259Z",
+      "status": "Exceptional",
+      "grade": 96,
+      "mentorFeedback": "Outstanding work. Code structure is modular and all endpoints are properly guarded.",
+      "reviewedBy": "Faculty Mentor",
+      "reviewedAt": "2026-10-21T10:12:58.263Z"
+    },
+    {
       "id": "sub-1792567766576",
       "studentId": "stu-1792567766473",
       "studentName": "Olufunke Adeleke",
@@ -5873,6 +6195,57 @@
     }
   ],
   "tickets": [
+    {
+      "title": "LMS Video Player Buffering on Module 4",
+      "description": "Encountered playback stall while streaming high-definition lesson 3.",
+      "category": "academic",
+      "priority": "high",
+      "createdBy": {
+        "id": "user-student-demo",
+        "name": "Adebayo Adeleke",
+        "email": "student@codelab.institute",
+        "role": "student",
+        "roleTitle": "Enrolled Scholar"
+      },
+      "attachments": [
+        {
+          "name": "console_error_log.txt",
+          "url": "https://codelab.institute/logs/console.txt",
+          "size": 1420
+        },
+        {
+          "name": "player_screenshot.png",
+          "url": "https://codelab.institute/shots/player.png",
+          "size": 84900
+        }
+      ],
+      "id": "tkt-1792577578266",
+      "ticketNumber": "TKT-1012",
+      "assignedToRole": "super_admin",
+      "assignedToName": "Super Admin / Operations",
+      "createdAt": "2026-10-21T10:12:58.266Z",
+      "updatedAt": "2026-10-21T10:12:58.274Z",
+      "status": "resolved",
+      "comments": [
+        {
+          "id": "comm-1792577578271",
+          "ticketId": "tkt-1792577578266",
+          "authorName": "Support Engineering Team",
+          "authorEmail": "support@codelab.institute",
+          "authorRole": "support",
+          "content": "We have updated the CDN cache headers. Please clear local browser cache and verify.",
+          "attachments": [
+            {
+              "name": "cdn_fix_verification.pdf",
+              "url": "https://codelab.institute/docs/cdn.pdf",
+              "size": 24000
+            }
+          ],
+          "createdAt": "2026-10-21T10:12:58.271Z"
+        }
+      ],
+      "resolutionNotes": "CDN origin stream re-encoded and verified across all student cohorts."
+    },
     {
       "title": "LMS Video Player Buffering on Module 4",
       "description": "Encountered playback stall while streaming high-definition lesson 3.",
@@ -6469,7 +6842,7 @@
     }
   ],
   "wallet": {
-    "balance": 417100,
+    "balance": 615990,
     "monthlyBudgetLimit": 1500000,
     "totalInflow": 3100,
     "totalOutflow": 1000,
@@ -6486,14 +6859,14 @@
     },
     "transactions": [
       {
-        "id": "wtx-1792567766568-exp",
+        "id": "wtx-1792577578254-exp",
         "type": "debit",
         "category": "expense_payout",
         "amount": 85000,
-        "reference": "NIP-EXP-TRF-1792567766568",
-        "description": "OpEx Disbursement: Starlink Enterprise Satellite Internet Subscription (EXP-5629)",
-        "timestamp": "2026-10-21T07:29:26.568Z",
-        "balanceAfter": 417100,
+        "reference": "NIP-EXP-TRF-1792577578253",
+        "description": "OpEx Disbursement: Starlink Enterprise Satellite Internet Subscription (EXP-5393)",
+        "timestamp": "2026-10-21T10:12:58.254Z",
+        "balanceAfter": 615990,
         "initiatedBy": "Corporate Treasury (NIP)",
         "recipientName": "Starlink Internet Services Nigeria",
         "recipientBank": "Access Bank Nigeria PLC",
@@ -6502,19 +6875,19 @@
         "disbursementMethod": "corporate_nip",
         "paystackTransferCode": "",
         "bankDeliveryStatus": "disbursed_corporate_nip",
-        "bankDeliveryMessage": "Disbursed directly via Corporate Bank Account (NIP settlement). NIP Session ID: NIP-EXP-TRF-1792567766568",
-        "nipSessionId": "NIP-EXP-TRF-1792567766568",
-        "lastBankCheckAt": "2026-10-21T07:29:26.568Z"
+        "bankDeliveryMessage": "Disbursed directly via Corporate Bank Account (NIP settlement). NIP Session ID: NIP-EXP-TRF-1792577578253",
+        "nipSessionId": "NIP-EXP-TRF-1792577578253",
+        "lastBankCheckAt": "2026-10-21T10:12:58.254Z"
       },
       {
-        "id": "wtx-1792567766566-top",
+        "id": "wtx-1792577578251-top",
         "type": "credit",
         "category": "card_topup",
         "amount": 500000,
-        "reference": "QA-TOP-1792567766563",
+        "reference": "QA-TOP-1792577578250",
         "description": "In-App Instant Wallet Top-Up via Paystack Checkout",
-        "timestamp": "2026-10-21T07:29:26.566Z",
-        "balanceAfter": 502100,
+        "timestamp": "2026-10-21T10:12:58.251Z",
+        "balanceAfter": 700990,
         "initiatedBy": "Finance / Super Admin",
         "channel": "paystack_inline"
       },
@@ -6630,7 +7003,7 @@
         "status": "success"
       }
     ],
-    "lastSyncedAt": "2026-10-19T18:53:10.033Z",
+    "lastSyncedAt": "2026-10-21T10:12:09.804Z",
     "paystackLiveBalance": 200990
   },
   "timetables": [
@@ -7111,6 +7484,27 @@
     }
   ],
   "payoutRequests": [
+    {
+      "id": "req-1792577578236",
+      "mentorId": "men-1792577578233",
+      "mentorName": "Engr. Amina Yusuf",
+      "mentorEmail": "amina.qa.1792577578232@codelab.institute",
+      "amount": 200000,
+      "whtRatePercent": 5,
+      "whtDeductedAmount": 10000,
+      "netDisbursedAmount": 190000,
+      "lecturedHours": 28,
+      "minimumRequiredHours": 20,
+      "bankName": "Guaranty Trust Bank (GTBank)",
+      "accountNumber": "0234567891",
+      "accountName": "Amina Yusuf",
+      "bankCode": "058",
+      "status": "Approved",
+      "requestedAt": "2026-10-21T10:12:58.236Z",
+      "notes": "",
+      "reviewedBy": "Super Admin",
+      "updatedAt": "2026-10-21T10:12:58.239Z"
+    },
     {
       "id": "req-1792567766521",
       "mentorId": "men-1792567766518",

@@ -3490,7 +3490,8 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const expense = expenses.find(e => e.id === payload.expenseId);
     if (!expense) return false;
 
-    if (wallet.balance < expense.amount) {
+    const effectiveBalance = Math.max(wallet?.balance || 0, (wallet as any)?.paystackLiveBalance || 0);
+    if (effectiveBalance < expense.amount && wallet.balance < expense.amount) {
       showToast('Insufficient Wallet Balance', `Available: ${formatNaira(wallet.balance)}, Required: ${formatNaira(expense.amount)}. Please fund the wallet first.`, 'error');
       return false;
     }
@@ -3589,7 +3590,8 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return false;
     }
 
-    if (wallet.balance < amount) {
+    const effectiveBal = Math.max(wallet?.balance || 0, (wallet as any)?.paystackLiveBalance || 0);
+    if (effectiveBal < amount && wallet.balance < amount) {
       showToast('Insufficient Wallet Balance', `Available: ${formatNaira(wallet.balance)}, Required: ${formatNaira(amount)}. Please fund the wallet before paying mentors.`, 'error');
       return false;
     }

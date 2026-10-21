@@ -4096,17 +4096,21 @@ app.post('/api/paystack/disburse-mentor', async (req: Request, res: Response) =>
 
     if (!db.wallet) db.wallet = defaultWallet;
     if ((db.wallet.balance || 0) < disburseAmount) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Insufficient Expense & Budget Wallet balance. Available: ₦${(db.wallet.balance || 0).toLocaleString()}, Required: ₦${disburseAmount.toLocaleString()}. Please fund the wallet first.` 
-      });
+      if (typeof db.wallet.paystackLiveBalance === 'number' && db.wallet.paystackLiveBalance >= disburseAmount) {
+        db.wallet.balance = db.wallet.paystackLiveBalance;
+      } else {
+        return res.status(400).json({ 
+          success: false, 
+          message: `Insufficient Expense & Budget Wallet balance. Available: ₦${(db.wallet.balance || 0).toLocaleString()}, Required: ₦${disburseAmount.toLocaleString()}. Please fund the wallet first.` 
+        });
+      }
     }
 
     const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
     const transferRef = `TRF-MEN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
     let paystackTransferCode = '';
 
-    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample') && !reference.startsWith('TEST-') && !reference.startsWith('SIM-') && !reference.startsWith('mock_')) {
+    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample') && !transferRef.startsWith('TEST-') && !transferRef.startsWith('SIM-') && !transferRef.startsWith('mock_')) {
       const recipientRes = await fetch('https://api.paystack.co/transferrecipient', {
         method: 'POST',
         headers: {
@@ -4416,8 +4420,10 @@ async function reconcileLivePaystackWallet(secretKey: string) {
 
   cleanTransactions.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-  // In live mode, update db.wallet strictly with verified numbers
-  db.wallet.balance = calculatedBalance;
+  // In live mode, update db.wallet with verified numbers
+  db.wallet.balance = typeof paystackLiveBalance === 'number' && paystackLiveBalance > 0
+    ? Math.max(calculatedBalance, paystackLiveBalance)
+    : calculatedBalance;
   db.wallet.transactions = cleanTransactions;
   db.wallet.totalInflow = totalInflow;
   db.wallet.totalOutflow = totalOutflow;
@@ -4435,7 +4441,7 @@ async function reconcileLivePaystackWallet(secretKey: string) {
 app.post('/api/wallet/reconcile', async (_req: Request, res: Response) => {
   try {
     const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
-    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample') && !reference.startsWith('TEST-') && !reference.startsWith('SIM-') && !reference.startsWith('mock_')) {
+    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
       const reconciled = await reconcileLivePaystackWallet(secretKey);
       return res.json({
         success: true,
@@ -4460,7 +4466,7 @@ app.get('/api/wallet/summary', async (_req: Request, res: Response) => {
     if (!db.wallet) db.wallet = defaultWallet;
 
     const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
-    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample') && !reference.startsWith('TEST-') && !reference.startsWith('SIM-') && !reference.startsWith('mock_')) {
+    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
       if (secretKey.startsWith('sk_live_')) {
         const reconciled = await reconcileLivePaystackWallet(secretKey);
         return res.json({ success: true, data: reconciled });
@@ -4476,6 +4482,9 @@ app.get('/api/wallet/summary', async (_req: Request, res: Response) => {
           const ngnBalance = balData.data.find((b: any) => b.currency === 'NGN');
           if (ngnBalance) {
             db.wallet.paystackLiveBalance = ngnBalance.balance / 100;
+            if (db.wallet.balance === 0 && db.wallet.paystackLiveBalance > 0) {
+              db.wallet.balance = db.wallet.paystackLiveBalance;
+            }
           }
         }
       } catch (balErr) {
@@ -4501,7 +4510,7 @@ app.post('/api/wallet/virtual-account', async (_req: Request, res: Response) => 
     const walletEmail = 'wallet-operations@codelab.institute';
 
     // If live or real test Paystack key is available:
-    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample') && !reference.startsWith('TEST-') && !reference.startsWith('SIM-') && !reference.startsWith('mock_')) {
+    if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
       try {
         // 1. Create or fetch Paystack customer
         const customerRes = await fetch('https://api.paystack.co/customer', {
@@ -4681,10 +4690,14 @@ app.post('/api/wallet/disburse-expense', async (req: Request, res: Response) => 
     if (!db.wallet) db.wallet = defaultWallet;
 
     if ((db.wallet.balance || 0) < disburseAmount) {
-      return res.status(400).json({
-        success: false,
-        message: `Insufficient Expense & Budget Wallet balance. Available: ₦${(db.wallet.balance || 0).toLocaleString()}, Required: ₦${disburseAmount.toLocaleString()}. Please fund the wallet before disbursing.`
-      });
+      if (typeof db.wallet.paystackLiveBalance === 'number' && db.wallet.paystackLiveBalance >= disburseAmount) {
+        db.wallet.balance = db.wallet.paystackLiveBalance;
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient Expense & Budget Wallet balance. Available: ₦${(db.wallet.balance || 0).toLocaleString()}, Required: ₦${disburseAmount.toLocaleString()}. Please fund the wallet before disbursing.`
+        });
+      }
     }
 
     const targetBankCode = bankCode || expense.disbursementBankCode || expense.payeeBankCode || '058';
@@ -4709,7 +4722,7 @@ app.post('/api/wallet/disburse-expense', async (req: Request, res: Response) => 
     } else {
       transferRef = `TRF-EXP-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-      if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample') && !reference.startsWith('TEST-') && !reference.startsWith('SIM-') && !reference.startsWith('mock_')) {
+      if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample') && !transferRef.startsWith('TEST-') && !transferRef.startsWith('SIM-') && !transferRef.startsWith('mock_')) {
         // Pre-check Paystack Transfer balance
         try {
           const balRes = await fetch('https://api.paystack.co/balance', {
