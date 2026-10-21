@@ -1,32 +1,43 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { CRMProvider } from './context/CRMContext';
 import { PWAProvider } from './context/PWAContext';
 import { AppLayout } from './components/layout/AppLayout';
-import { LoginPage } from './pages/LoginPage';
-import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { ExecutiveReportPage } from './pages/ExecutiveReportPage';
-import { LeadManagementPage } from './pages/LeadManagementPage';
-import { StudentEnrollmentPage } from './pages/StudentEnrollmentPage';
-import { MentorManagementPage } from './pages/MentorManagementPage';
-import { MentorAvailabilityPage } from './pages/MentorAvailabilityPage';
-import { FacultyGradingPage } from './pages/FacultyGradingPage';
-import { CourseOutlinePage } from './pages/CourseOutlinePage';
-import { BusinessExpensesPage } from './pages/BusinessExpensesPage';
-import { CoursesCohortsPage } from './pages/CoursesCohortsPage';
-import { StaffAttendancePage } from './pages/StaffAttendancePage';
-import { SettingsPage } from './pages/SettingsPage';
-import { StudentDashboardPage } from './pages/student/StudentDashboardPage';
-import { StudentCoursesPage } from './pages/student/StudentCoursesPage';
-import { StudentMentorPage } from './pages/student/StudentMentorPage';
-import { StudentBillingPage } from './pages/student/StudentBillingPage';
-import { TicketsPage } from './pages/TicketsPage';
 import { useCRM } from './context/CRMContext';
 
 import { ToastContainer } from './components/notifications/ToastContainer';
 import { PWAInstallPrompt } from './components/common/PWAInstallPrompt';
 import { OfflineIndicator } from './components/common/OfflineIndicator';
+
+// Code-split page components for high-speed initial bundle download
+const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
+const ExecutiveReportPage = lazy(() => import('./pages/ExecutiveReportPage').then(m => ({ default: m.ExecutiveReportPage })));
+const LeadManagementPage = lazy(() => import('./pages/LeadManagementPage').then(m => ({ default: m.LeadManagementPage })));
+const StudentEnrollmentPage = lazy(() => import('./pages/StudentEnrollmentPage').then(m => ({ default: m.StudentEnrollmentPage })));
+const MentorManagementPage = lazy(() => import('./pages/MentorManagementPage').then(m => ({ default: m.MentorManagementPage })));
+const MentorAvailabilityPage = lazy(() => import('./pages/MentorAvailabilityPage').then(m => ({ default: m.MentorAvailabilityPage })));
+const FacultyGradingPage = lazy(() => import('./pages/FacultyGradingPage').then(m => ({ default: m.FacultyGradingPage })));
+const CourseOutlinePage = lazy(() => import('./pages/CourseOutlinePage').then(m => ({ default: m.CourseOutlinePage })));
+const BusinessExpensesPage = lazy(() => import('./pages/BusinessExpensesPage').then(m => ({ default: m.BusinessExpensesPage })));
+const CoursesCohortsPage = lazy(() => import('./pages/CoursesCohortsPage').then(m => ({ default: m.CoursesCohortsPage })));
+const StaffAttendancePage = lazy(() => import('./pages/StaffAttendancePage').then(m => ({ default: m.StaffAttendancePage })));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const StudentDashboardPage = lazy(() => import('./pages/student/StudentDashboardPage').then(m => ({ default: m.StudentDashboardPage })));
+const StudentCoursesPage = lazy(() => import('./pages/student/StudentCoursesPage').then(m => ({ default: m.StudentCoursesPage })));
+const StudentMentorPage = lazy(() => import('./pages/student/StudentMentorPage').then(m => ({ default: m.StudentMentorPage })));
+const StudentBillingPage = lazy(() => import('./pages/student/StudentBillingPage').then(m => ({ default: m.StudentBillingPage })));
+const TicketsPage = lazy(() => import('./pages/TicketsPage').then(m => ({ default: m.TicketsPage })));
+
+const PageLoadingFallback: React.FC = () => (
+  <div className="flex min-h-[60vh] w-full flex-col items-center justify-center p-8">
+    <div className="flex flex-col items-center gap-3">
+      <div className="h-9 w-9 animate-spin rounded-full border-3 border-indigo-600 border-t-transparent dark:border-indigo-400" />
+      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Loading Module...</span>
+    </div>
+  </div>
+);
 
 const HomeRoute: React.FC = () => {
   const { currentUser, hasModulePermission, isModuleEnabled } = useCRM();
@@ -71,170 +82,172 @@ export const App: React.FC = () => {
     <PWAProvider>
       <CRMProvider>
         <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/set-password" element={<ResetPasswordPage />} />
+          <Suspense fallback={<PageLoadingFallback />}>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/set-password" element={<ResetPasswordPage />} />
 
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <AppLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<HomeRoute />} />
-            <Route 
-              path="reports" 
-              element={
-                <ProtectedRoute allowedRoles={['super_admin', 'program_officer']} requiredModule="reports">
-                  <ExecutiveReportPage />
-                </ProtectedRoute>
-              } 
-            />
-            
-            <Route
-              path="courses"
-              element={
-                <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'program_officer']} requiredModule="courses">
-                  <CoursesCohortsPage />
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route
-              path="leads"
-              element={
-                <ProtectedRoute allowedRoles={['super_admin', 'admissions']} requiredModule="leads">
-                  <LeadManagementPage />
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route
-              path="students"
-              element={
-                <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'mentor', 'finance', 'program_officer']} requiredModule="students">
-                  <StudentEnrollmentPage />
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route
-              path="mentors"
-              element={
-                <ProtectedRoute allowedRoles={['super_admin', 'mentor', 'program_officer']} requiredModule="mentors">
-                  <MentorManagementPage />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<HomeRoute />} />
+                <Route 
+                  path="reports" 
+                  element={
+                    <ProtectedRoute allowedRoles={['super_admin', 'program_officer']} requiredModule="reports">
+                      <ExecutiveReportPage />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route
+                  path="courses"
+                  element={
+                    <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'program_officer']} requiredModule="courses">
+                      <CoursesCohortsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                
+                <Route
+                  path="leads"
+                  element={
+                    <ProtectedRoute allowedRoles={['super_admin', 'admissions']} requiredModule="leads">
+                      <LeadManagementPage />
+                    </ProtectedRoute>
+                  }
+                />
+                
+                <Route
+                  path="students"
+                  element={
+                    <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'mentor', 'finance', 'program_officer']} requiredModule="students">
+                      <StudentEnrollmentPage />
+                    </ProtectedRoute>
+                  }
+                />
+                
+                <Route
+                  path="mentors"
+                  element={
+                    <ProtectedRoute allowedRoles={['super_admin', 'mentor', 'program_officer']} requiredModule="mentors">
+                      <MentorManagementPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-            <Route
-              path="mentors/office-hours"
-              element={
-                <ProtectedRoute allowedRoles={['super_admin', 'mentor', 'program_officer']} requiredModule="mentors">
-                  <MentorAvailabilityPage />
-                </ProtectedRoute>
-              }
-            />
+                <Route
+                  path="mentors/office-hours"
+                  element={
+                    <ProtectedRoute allowedRoles={['super_admin', 'mentor', 'program_officer']} requiredModule="mentors">
+                      <MentorAvailabilityPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-            <Route
-              path="mentors/grading"
-              element={
-                <ProtectedRoute allowedRoles={['super_admin', 'mentor', 'program_officer']} requiredModule="mentors">
-                  <FacultyGradingPage />
-                </ProtectedRoute>
-              }
-            />
+                <Route
+                  path="mentors/grading"
+                  element={
+                    <ProtectedRoute allowedRoles={['super_admin', 'mentor', 'program_officer']} requiredModule="mentors">
+                      <FacultyGradingPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-            <Route
-              path="mentors/course-outlines"
-              element={
-                <ProtectedRoute allowedRoles={['super_admin', 'mentor', 'program_officer', 'admissions']} requiredModule="mentors">
-                  <CourseOutlinePage />
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route
-              path="attendance"
-              element={
-                <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'mentor', 'finance', 'program_officer']} requiredModule="attendance">
-                  <StaffAttendancePage />
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route
-              path="expenses"
-              element={
-                <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'finance']} requiredModule="expenses">
-                  <BusinessExpensesPage />
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route
-              path="settings"
-              element={
-                <ProtectedRoute>
-                  <SettingsPage />
-                </ProtectedRoute>
-              }
-            />
+                <Route
+                  path="mentors/course-outlines"
+                  element={
+                    <ProtectedRoute allowedRoles={['super_admin', 'mentor', 'program_officer', 'admissions']} requiredModule="mentors">
+                      <CourseOutlinePage />
+                    </ProtectedRoute>
+                  }
+                />
+                
+                <Route
+                  path="attendance"
+                  element={
+                    <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'mentor', 'finance', 'program_officer']} requiredModule="attendance">
+                      <StaffAttendancePage />
+                    </ProtectedRoute>
+                  }
+                />
+                
+                <Route
+                  path="expenses"
+                  element={
+                    <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'finance']} requiredModule="expenses">
+                      <BusinessExpensesPage />
+                    </ProtectedRoute>
+                  }
+                />
+                
+                <Route
+                  path="settings"
+                  element={
+                    <ProtectedRoute>
+                      <SettingsPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-            {/* Student Portal Routes */}
-            <Route
-              path="student/dashboard"
-              element={
-                <ProtectedRoute allowedRoles={['student', 'super_admin']}>
-                  <StudentDashboardPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="student/courses"
-              element={
-                <ProtectedRoute allowedRoles={['student', 'super_admin']} requiredModule="lms">
-                  <StudentCoursesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="student/mentor"
-              element={
-                <ProtectedRoute allowedRoles={['student', 'super_admin']} requiredModule="mentors">
-                  <StudentMentorPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="student/billing"
-              element={
-                <ProtectedRoute allowedRoles={['student', 'super_admin']} requiredModule="billing">
-                  <StudentBillingPage />
-                </ProtectedRoute>
-              }
-            />
+                {/* Student Portal Routes */}
+                <Route
+                  path="student/dashboard"
+                  element={
+                    <ProtectedRoute allowedRoles={['student', 'super_admin']}>
+                      <StudentDashboardPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="student/courses"
+                  element={
+                    <ProtectedRoute allowedRoles={['student', 'super_admin']} requiredModule="lms">
+                      <StudentCoursesPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="student/mentor"
+                  element={
+                    <ProtectedRoute allowedRoles={['student', 'super_admin']} requiredModule="mentors">
+                      <StudentMentorPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="student/billing"
+                  element={
+                    <ProtectedRoute allowedRoles={['student', 'super_admin']} requiredModule="billing">
+                      <StudentBillingPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-            <Route
-              path="tickets"
-              element={
-                <ProtectedRoute requiredModule="tickets">
-                  <TicketsPage />
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-      <ToastContainer />
-      <PWAInstallPrompt />
-      <OfflineIndicator />
-    </CRMProvider>
+                <Route
+                  path="tickets"
+                  element={
+                    <ProtectedRoute requiredModule="tickets">
+                      <TicketsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
+        <ToastContainer />
+        <PWAInstallPrompt />
+        <OfflineIndicator />
+      </CRMProvider>
     </PWAProvider>
   );
 };
