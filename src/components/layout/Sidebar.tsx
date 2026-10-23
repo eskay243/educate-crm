@@ -104,6 +104,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
 
     // Universal Support & Feedback Module for all roles
     { to: '/tickets', label: 'Support & Tickets', icon: 'confirmation_number', module: 'tickets' },
+
+    // Universal Team Chat & Messaging
+    { to: '/chat', label: 'Team Chat & Messages', icon: 'forum' },
   ];
 
   const visibleNavItems = allNavItems.filter(item => {
@@ -119,6 +122,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
 
     // Support & Tickets is universal to all authenticated roles (when module is enabled or for super admin)
     if (item.to === '/tickets') return true;
+
+    // Team Chat & Messaging is universal to all authenticated roles
+    if (item.to === '/chat') return true;
 
     // Role filter
     let roleAllowed = false;

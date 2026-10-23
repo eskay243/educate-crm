@@ -24,6 +24,10 @@ import {
   MentorPayoutRequest,
   WalletTransaction
 } from '../types/crm';
+import {
+  ChatConversation,
+  ChatMessage
+} from '../types/chat';
 
 const API_BASE_URL = '/api';
 
@@ -749,6 +753,34 @@ class ApiService {
     return this.request<{ success: boolean; data: MentorPayoutRequest }>(`/payout-requests/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(updates),
+    });
+  }
+
+  // Institutional Multi-Role Chat & File Sharing
+  async getChatConversations(userId: string, role: string): Promise<ChatConversation[] | null> {
+    return this.request<ChatConversation[]>(`/chat/conversations?userId=${encodeURIComponent(userId)}&role=${encodeURIComponent(role)}`);
+  }
+
+  async getChatMessages(conversationId: string): Promise<ChatMessage[] | null> {
+    return this.request<ChatMessage[]>(`/chat/conversations/${conversationId}/messages`);
+  }
+
+  async sendChatMessage(messageData: Partial<ChatMessage>): Promise<ChatMessage | null> {
+    return this.request<ChatMessage>(`/chat/conversations/${messageData.conversationId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify(messageData),
+    });
+  }
+
+  async createOrGetDirectConversation(payload: {
+    targetUserId: string;
+    targetEmail: string;
+    targetName: string;
+    targetRole: string;
+  }): Promise<ChatConversation | null> {
+    return this.request<ChatConversation>('/chat/direct', {
+      method: 'POST',
+      body: JSON.stringify(payload),
     });
   }
 }

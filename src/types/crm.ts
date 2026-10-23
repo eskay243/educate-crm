@@ -78,6 +78,12 @@ export interface SupportTicket {
   updatedAt: string;
   comments: TicketComment[];
   resolutionNotes?: string;
+  isArchived?: boolean;
+  resolvedAt?: string;
+  resolvedBy?: { id: string; name: string; role: string };
+  statusRequestedAt?: string;
+  statusRequestedBy?: { id: string; name: string; role: string };
+  statusRequestNote?: string;
 }
 
 // Nigerian Standard 3-Tier KYC & Civil Demographics (CBN CDD Compliance)
@@ -131,6 +137,7 @@ export interface AuthUser extends NigerianBiodataKYC {
   email: string;
   role: UserRole;
   roleTitle: string;
+  avatar?: string;
   password?: string;
   department?: string;
 

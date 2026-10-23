@@ -78,6 +78,8 @@ interface DatabaseSchema {
   timetables?: any[];
   payoutRequests?: any[];
   pushSubscriptions?: any[];
+  chatConversations?: any[];
+  chatMessages?: any[];
 }
 
 const defaultWallet = {
@@ -97,6 +99,99 @@ const defaultWallet = {
   transactions: [],
   lastSyncedAt: new Date().toISOString()
 };
+
+const initialChatConversations = [
+  {
+    id: 'conv-channel-general',
+    type: 'channel',
+    name: 'general-announcements',
+    topic: 'Campus Announcements & General News',
+    description: 'Institution-wide announcements for staff, faculty mentors, and students.',
+    participants: [],
+    allowedRoles: ['super_admin', 'admissions', 'finance', 'program_officer', 'mentor', 'student', 'it_support'],
+    isDefault: true,
+    lastMessage: {
+      content: 'Welcome to the unified Educate CRM institutional communications hub.',
+      senderName: 'System Administrator',
+      timestamp: '2026-10-20T08:00:00.000Z'
+    },
+    unreadCount: 0,
+    createdAt: '2026-10-20T08:00:00.000Z',
+    updatedAt: '2026-10-20T08:00:00.000Z'
+  },
+  {
+    id: 'conv-channel-staff',
+    type: 'channel',
+    name: 'staff-room',
+    topic: 'Operations, Approvals & Staff Coordination',
+    description: 'Private coordination channel for administrative staff, finance, and management.',
+    participants: [],
+    allowedRoles: ['super_admin', 'admissions', 'finance', 'program_officer', 'it_support'],
+    isDefault: true,
+    lastMessage: {
+      content: 'Q4 operational budget reviews and enrollment deadlines are now open.',
+      senderName: 'Abiola Adefowope',
+      timestamp: '2026-10-21T09:00:00.000Z'
+    },
+    unreadCount: 0,
+    createdAt: '2026-10-20T08:00:00.000Z',
+    updatedAt: '2026-10-21T09:00:00.000Z'
+  },
+  {
+    id: 'conv-channel-faculty',
+    type: 'channel',
+    name: 'faculty-mentors',
+    topic: 'Academic Mentorship, Syllabus & Curriculum Delivery',
+    description: 'Faculty mentors and academic coordination.',
+    participants: [],
+    allowedRoles: ['super_admin', 'program_officer', 'mentor'],
+    isDefault: true,
+    lastMessage: {
+      content: 'Please ensure topic completion is marked after every classroom lecture.',
+      senderName: 'Academic Director',
+      timestamp: '2026-10-21T10:00:00.000Z'
+    },
+    unreadCount: 0,
+    createdAt: '2026-10-20T08:00:00.000Z',
+    updatedAt: '2026-10-21T10:00:00.000Z'
+  }
+];
+
+const initialChatMessages = [
+  {
+    id: 'msg-seed-1',
+    conversationId: 'conv-channel-general',
+    senderId: 'usr-admin-1',
+    senderName: 'System Administrator',
+    senderEmail: 'admin@codelab.institute',
+    senderRole: 'super_admin',
+    senderRoleTitle: 'Super Administrator',
+    content: 'Welcome to the unified Educate CRM institutional communications hub.',
+    timestamp: '2026-10-20T08:00:00.000Z'
+  },
+  {
+    id: 'msg-seed-2',
+    conversationId: 'conv-channel-staff',
+    senderId: 'usr-admin-1',
+    senderName: 'Abiola Adefowope',
+    senderEmail: 'abiola.adefowope@codelab.institute',
+    senderRole: 'super_admin',
+    senderRoleTitle: 'Super Administrator',
+    content: 'Q4 operational budget reviews and enrollment deadlines are now open.',
+    timestamp: '2026-10-21T09:00:00.000Z'
+  },
+  {
+    id: 'msg-seed-3',
+    conversationId: 'conv-channel-faculty',
+    senderId: 'usr-admin-1',
+    senderName: 'Academic Director',
+    senderEmail: 'director@codelab.institute',
+    senderRole: 'program_officer',
+    senderRoleTitle: 'Program Officer',
+    content: 'Please ensure topic completion is marked after every classroom lecture.',
+    timestamp: '2026-10-21T10:00:00.000Z'
+  }
+];
 
 const getInitialDatabase = (): DatabaseSchema => ({
   leads: initialLeads,
@@ -120,6 +215,8 @@ const getInitialDatabase = (): DatabaseSchema => ({
   timetables: initialTimetables,
   payoutRequests: [],
   pushSubscriptions: [],
+  chatConversations: initialChatConversations,
+  chatMessages: initialChatMessages,
 });
 
 const loadDatabase = (): DatabaseSchema => {
@@ -151,6 +248,8 @@ const loadDatabase = (): DatabaseSchema => {
     if (!Array.isArray(parsed.timetables)) parsed.timetables = initialTimetables;
     if (!Array.isArray(parsed.payoutRequests)) parsed.payoutRequests = [];
     if (!parsed.wallet) parsed.wallet = defaultWallet;
+    if (!Array.isArray(parsed.chatConversations)) parsed.chatConversations = initialChatConversations;
+    if (!Array.isArray(parsed.chatMessages)) parsed.chatMessages = initialChatMessages;
     return parsed;
   } catch (err) {
     console.error('Error loading database, returning default seed:', err);
@@ -5453,6 +5552,21 @@ app.patch('/api/tickets/:id', async (req: Request, res: Response) => {
     }
   }
 
+  // Support status check request notification
+  if (req.body.statusRequestedAt && req.body.statusRequestedBy) {
+    if (!Array.isArray(db.notifications)) db.notifications = [];
+    db.notifications.unshift({
+      id: `notif-ticket-status-${Date.now()}`,
+      userId: updatedTicket.createdBy?.id || 'all',
+      title: 'Ticket Status Confirmation Requested',
+      message: `${req.body.statusRequestedBy.name} (${req.body.statusRequestedBy.role}) requested a status confirmation on Ticket #${updatedTicket.ticketNumber}: "${updatedTicket.title}". Please verify if your issue is resolved.`,
+      timestamp: new Date().toISOString(),
+      read: false,
+      type: 'ticket',
+      link: '/tickets'
+    });
+  }
+
   res.json({ success: true, data: updatedTicket });
 });
 
@@ -5640,6 +5754,362 @@ app.post('/api/push/test', async (req: Request, res: Response) => {
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message || 'Push test failed' });
   }
+});
+
+// ----------------------------------------------------
+// Institutional Multi-Role Chat & File Sharing Engine
+// ----------------------------------------------------
+
+const sendChatMentionEmail = async (params: {
+  recipientEmail: string;
+  recipientName: string;
+  senderName: string;
+  conversationName: string;
+  messageContent: string;
+}) => {
+  if (!params.recipientEmail) return;
+  try {
+    const { transporter, from } = await getTransporter();
+    const primaryColor = '#00236f';
+    const portalUrl = `${APP_BASE_URL}/chat`;
+    const subject = `💬 [Educate CRM] ${params.senderName} mentioned you in #${params.conversationName}`;
+    const bodyContent = `
+      <div style="padding: 32px 24px; color: #1e293b; line-height: 1.6; font-family: 'Inter', sans-serif;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <span style="background-color: #eff6ff; color: #1d4ed8; font-weight: 700; font-size: 11px; padding: 6px 14px; border-radius: 20px; border: 1px solid #bfdbfe; text-transform: uppercase;">
+            New @Mention in Team Chat
+          </span>
+        </div>
+        <h2 style="color: ${primaryColor}; margin-top: 0; font-size: 20px; font-weight: 700;">Hello ${params.recipientName},</h2>
+        <p style="font-size: 14px; color: #475569;">
+          <strong>${params.senderName}</strong> tagged you in <strong>#${params.conversationName}</strong>:
+        </p>
+        <div style="background-color: #f8fafc; border-left: 4px solid ${primaryColor}; padding: 16px 20px; margin: 20px 0; border-radius: 4px; font-size: 14px; color: #334155; font-style: italic;">
+          "${params.messageContent}"
+        </div>
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${portalUrl}" style="background-color: ${primaryColor}; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; display: inline-block;">
+            Open Team Chat &rarr;
+          </a>
+        </div>
+      </div>
+    `;
+
+    await transporter.sendMail({
+      from,
+      to: params.recipientEmail,
+      subject,
+      html: wrapEmailHtml(subject, bodyContent),
+    });
+  } catch (err) {
+    console.error('Error dispatching chat mention email:', err);
+  }
+};
+
+const canUserMessageTarget = (
+  sender: { id?: string; email?: string; role?: string },
+  target: { id?: string; email?: string; role?: string }
+): boolean => {
+  if (!sender.role || !target.role) return false;
+  if (sender.role === 'super_admin') return true;
+
+  const isStaffSender = ['admissions', 'finance', 'program_officer', 'it_support'].includes(sender.role);
+  if (isStaffSender) return true; // Selected staff can message other staff, mentors, and students
+
+  if (sender.role === 'mentor') {
+    // Mentor can message all staff & other mentors
+    if (['super_admin', 'admissions', 'finance', 'program_officer', 'it_support', 'mentor'].includes(target.role)) {
+      return true;
+    }
+    // Mentor can message students enrolled in their course or assigned as mentees
+    if (target.role === 'student') {
+      const mentorObj = (db.mentors || []).find((m: any) => m.id === sender.id || m.email === sender.email);
+      const studentObj = (db.students || []).find((s: any) => s.id === target.id || s.email === target.email);
+      if (!mentorObj || !studentObj) return false;
+      const isCourseMatch = mentorObj.assignedCourse && studentObj.courseEnrolled && mentorObj.assignedCourse.toLowerCase() === studentObj.courseEnrolled.toLowerCase();
+      const isMenteeMatch = Array.isArray(mentorObj.mentees) && mentorObj.mentees.includes(studentObj.id);
+      const isDirectMentor = studentObj.mentorId === mentorObj.id;
+      return Boolean(isCourseMatch || isMenteeMatch || isDirectMentor);
+    }
+    return false;
+  }
+
+  if (sender.role === 'student') {
+    // Student can message all staff & super admin
+    if (['super_admin', 'admissions', 'finance', 'program_officer', 'it_support'].includes(target.role)) {
+      return true;
+    }
+    // Student can message their assigned mentor
+    if (target.role === 'mentor') {
+      const studentObj = (db.students || []).find((s: any) => s.id === sender.id || s.email === sender.email);
+      const mentorObj = (db.mentors || []).find((m: any) => m.id === target.id || m.email === target.email);
+      if (!studentObj || !mentorObj) return false;
+      const isCourseMatch = mentorObj.assignedCourse && studentObj.courseEnrolled && mentorObj.assignedCourse.toLowerCase() === studentObj.courseEnrolled.toLowerCase();
+      const isDirectMentor = studentObj.mentorId === mentorObj.id;
+      return Boolean(isCourseMatch || isDirectMentor);
+    }
+    return false;
+  }
+
+  return false;
+};
+
+app.get('/api/chat/users', (req: Request, res: Response) => {
+  const userId = String(req.query.userId || '');
+  const role = String(req.query.role || '');
+  const email = String(req.query.email || '');
+
+  const sender = { id: userId, role, email };
+  const allUsers: any[] = [];
+
+  // Add staff
+  (db.staffUsers || []).forEach((u: any) => {
+    if (u.id !== userId && u.email !== email && u.status !== 'inactive') {
+      allUsers.push({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        roleTitle: u.roleTitle || u.role,
+        avatar: u.avatar
+      });
+    }
+  });
+
+  // Add mentors
+  (db.mentors || []).forEach((m: any) => {
+    if (m.id !== userId && m.email !== email && m.status !== 'Inactive') {
+      allUsers.push({
+        id: m.id,
+        name: m.name,
+        email: m.email,
+        role: 'mentor',
+        roleTitle: `Faculty Mentor (${m.assignedCourse || m.specialization || 'General'})`,
+        avatar: m.avatar,
+        courseName: m.assignedCourse
+      });
+    }
+  });
+
+  // Add students
+  (db.students || []).forEach((s: any) => {
+    if (s.id !== userId && s.email !== email && s.status !== 'Dropped') {
+      allUsers.push({
+        id: s.id,
+        name: s.name,
+        email: s.email,
+        role: 'student',
+        roleTitle: `Student Scholar (${s.courseEnrolled || 'Active'})`,
+        avatar: s.avatar,
+        courseName: s.courseEnrolled
+      });
+    }
+  });
+
+  // Filter based on communication permissions
+  const authorizedUsers = allUsers.filter(target => canUserMessageTarget(sender, target));
+  res.json({ success: true, data: authorizedUsers });
+});
+
+app.get('/api/chat/conversations', (req: Request, res: Response) => {
+  const userId = String(req.query.userId || '');
+  const role = String(req.query.role || '');
+  const email = String(req.query.email || '');
+
+  if (!Array.isArray(db.chatConversations)) db.chatConversations = [...initialChatConversations];
+
+  const visible = db.chatConversations.filter((c: any) => {
+    if (c.type === 'channel') {
+      if (role === 'super_admin') return true;
+      if (Array.isArray(c.allowedRoles)) {
+        return c.allowedRoles.includes(role);
+      }
+      return true;
+    }
+    if (c.type === 'direct') {
+      if (role === 'super_admin') return true;
+      return Array.isArray(c.participants) && (c.participants.includes(userId) || c.participants.includes(email));
+    }
+    return false;
+  });
+
+  // Attach unread count calculation
+  const result = visible.map((c: any) => {
+    const unread = (db.chatMessages || []).filter((m: any) => {
+      return m.conversationId === c.id && m.senderId !== userId && (!Array.isArray(m.readBy) || !m.readBy.includes(userId));
+    }).length;
+    return { ...c, unreadCount: unread };
+  });
+
+  res.json({ success: true, data: result });
+});
+
+app.get('/api/chat/conversations/:id/messages', (req: Request, res: Response) => {
+  const { id } = req.params;
+  if (!Array.isArray(db.chatMessages)) db.chatMessages = [...initialChatMessages];
+
+  const messages = db.chatMessages.filter((m: any) => m.conversationId === id);
+  messages.sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+  res.json({ success: true, data: messages });
+});
+
+app.post('/api/chat/conversations/:id/messages', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const {
+    senderId,
+    senderName,
+    senderEmail,
+    senderRole,
+    senderRoleTitle,
+    senderAvatar,
+    content,
+    mentions,
+    attachments
+  } = req.body;
+
+  if (!content && (!Array.isArray(attachments) || attachments.length === 0)) {
+    return res.status(400).json({ success: false, message: 'Message content or attachment is required' });
+  }
+
+  if (!Array.isArray(db.chatConversations)) db.chatConversations = [...initialChatConversations];
+  if (!Array.isArray(db.chatMessages)) db.chatMessages = [...initialChatMessages];
+
+  let convIndex = db.chatConversations.findIndex((c: any) => c.id === id);
+  if (convIndex === -1) {
+    return res.status(404).json({ success: false, message: 'Conversation not found' });
+  }
+
+  const newMessage = {
+    id: `msg-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    conversationId: id,
+    senderId: senderId || 'anonymous',
+    senderName: senderName || 'User',
+    senderEmail: senderEmail || '',
+    senderRole: senderRole || 'user',
+    senderRoleTitle: senderRoleTitle || senderRole || 'User',
+    senderAvatar: senderAvatar || '',
+    content: content || '',
+    mentions: Array.isArray(mentions) ? mentions : [],
+    attachments: Array.isArray(attachments) ? attachments : [],
+    timestamp: new Date().toISOString(),
+    readBy: [senderId].filter(Boolean)
+  };
+
+  db.chatMessages.push(newMessage);
+
+  // Update conversation last message
+  db.chatConversations[convIndex].lastMessage = {
+    content: content || (attachments?.length ? `📎 ${attachments[0].name}` : 'Shared a file'),
+    senderName: senderName || 'User',
+    timestamp: newMessage.timestamp
+  };
+  db.chatConversations[convIndex].updatedAt = newMessage.timestamp;
+
+  saveDatabase(db);
+
+  // Handle @mentions: in-app notifications and email dispatch
+  if (Array.isArray(mentions) && mentions.length > 0) {
+    const convName = db.chatConversations[convIndex].name || 'general';
+    mentions.forEach((targetIdOrEmail: string) => {
+      // Find target user across staff, mentors, students
+      const targetUser = 
+        (db.staffUsers || []).find((u: any) => u.id === targetIdOrEmail || u.email === targetIdOrEmail) ||
+        (db.mentors || []).find((m: any) => m.id === targetIdOrEmail || m.email === targetIdOrEmail) ||
+        (db.students || []).find((s: any) => s.id === targetIdOrEmail || s.email === targetIdOrEmail);
+
+      if (targetUser && targetUser.id !== senderId) {
+        if (!Array.isArray(db.notifications)) db.notifications = [];
+        db.notifications.unshift({
+          id: `notif-chat-mention-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          userId: targetUser.id,
+          title: `Tagged by ${senderName}`,
+          message: `${senderName} mentioned you in #${convName}: "${(content || '').slice(0, 80)}"`,
+          timestamp: new Date().toISOString(),
+          read: false,
+          type: 'message',
+          link: `/chat?conv=${id}`
+        });
+
+        // Dispatch mention email
+        sendChatMentionEmail({
+          recipientEmail: targetUser.email,
+          recipientName: targetUser.name,
+          senderName: senderName || 'A colleague',
+          conversationName: convName,
+          messageContent: content || 'Shared an attachment in chat.'
+        }).catch(err => console.error('Failed to dispatch mention email:', err));
+      }
+    });
+    saveDatabase(db);
+  }
+
+  res.status(201).json({ success: true, data: newMessage });
+});
+
+app.post('/api/chat/direct', (req: Request, res: Response) => {
+  const { senderId, senderEmail, senderName, senderRole, targetUserId, targetEmail, targetName, targetRole } = req.body;
+
+  if (!senderId || !targetUserId) {
+    return res.status(400).json({ success: false, message: 'Both senderId and targetUserId are required' });
+  }
+
+  // Validate permission matrix
+  const isAllowed = canUserMessageTarget(
+    { id: senderId, email: senderEmail, role: senderRole },
+    { id: targetUserId, email: targetEmail, role: targetRole }
+  );
+
+  if (!isAllowed) {
+    return res.status(403).json({
+      success: false,
+      message: `Role permission restriction: Users with role '${senderRole}' cannot directly message '${targetRole}' (${targetName}).`
+    });
+  }
+
+  if (!Array.isArray(db.chatConversations)) db.chatConversations = [...initialChatConversations];
+
+  const directId = `dm-${[senderId, targetUserId].sort().join('-')}`;
+  let conv = db.chatConversations.find((c: any) => c.id === directId);
+
+  if (!conv) {
+    conv = {
+      id: directId,
+      type: 'direct',
+      name: `${senderName} & ${targetName}`,
+      topic: `Direct Message between ${senderName} and ${targetName}`,
+      participants: [senderId, targetUserId, senderEmail, targetEmail].filter(Boolean),
+      allowedRoles: [senderRole, targetRole, 'super_admin'].filter(Boolean),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    db.chatConversations.unshift(conv);
+    saveDatabase(db);
+  }
+
+  res.json({ success: true, data: conv });
+});
+
+app.post('/api/chat/conversations/:id/read', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ success: false, message: 'userId is required' });
+
+  if (Array.isArray(db.chatMessages)) {
+    let updated = false;
+    db.chatMessages.forEach((m: any) => {
+      if (m.conversationId === id) {
+        if (!Array.isArray(m.readBy)) m.readBy = [];
+        if (!m.readBy.includes(userId)) {
+          m.readBy.push(userId);
+          updated = true;
+        }
+      }
+    });
+    if (updated) saveDatabase(db);
+  }
+
+  res.json({ success: true, message: 'Messages marked as read' });
 });
 
 app.listen(PORT, () => {

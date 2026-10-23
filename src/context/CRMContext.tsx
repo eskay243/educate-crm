@@ -298,6 +298,9 @@ interface CRMContextType {
   updateTicketStatus: (ticketId: string, status: TicketStatus, resolutionNotes?: string) => Promise<void>;
   assignTicket: (ticketId: string, assignedToRole: string, assignedToName?: string, assignedToEmail?: string) => Promise<void>;
   addTicketComment: (ticketId: string, content: string, attachments?: TicketAttachment[]) => Promise<void>;
+  markTicketDone: (ticketId: string, resolutionNotes?: string) => Promise<void>;
+  requestTicketStatus: (ticketId: string, note?: string) => Promise<void>;
+  toggleTicketArchive: (ticketId: string, isArchived: boolean) => Promise<void>;
 
   // Custom Roles & Permission Architecture
   customRoles: CustomRoleDefinition[];
@@ -1362,6 +1365,81 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     await apiService.addTicketComment(ticketId, commentData);
     showToast('Comment Posted', 'Your reply has been added to the ticket.', 'success');
+  };
+
+  const markTicketDone = async (ticketId: string, resolutionNotes?: string) => {
+    const resolvedAt = new Date().toISOString();
+    const resolvedBy = currentUser ? { id: currentUser.id, name: currentUser.name, role: currentUser.roleTitle } : undefined;
+
+    setTickets(prev => prev.map(t => {
+      if (t.id === ticketId || t.ticketNumber === ticketId) {
+        return {
+          ...t,
+          status: 'resolved' as TicketStatus,
+          isArchived: true,
+          resolvedAt,
+          resolvedBy,
+          resolutionNotes: resolutionNotes || t.resolutionNotes,
+          updatedAt: resolvedAt,
+        };
+      }
+      return t;
+    }));
+
+    await apiService.updateTicket(ticketId, {
+      status: 'resolved',
+      isArchived: true,
+      resolvedAt,
+      resolvedBy,
+      resolutionNotes
+    });
+    showToast('Ticket Resolved & Archived', 'Ticket marked as done and moved to Archive to declutter your active view.', 'success');
+  };
+
+  const requestTicketStatus = async (ticketId: string, note?: string) => {
+    const statusRequestedAt = new Date().toISOString();
+    const statusRequestedBy = currentUser ? { id: currentUser.id, name: currentUser.name, role: currentUser.roleTitle } : undefined;
+
+    setTickets(prev => prev.map(t => {
+      if (t.id === ticketId || t.ticketNumber === ticketId) {
+        return {
+          ...t,
+          statusRequestedAt,
+          statusRequestedBy,
+          statusRequestNote: note,
+          updatedAt: statusRequestedAt,
+        };
+      }
+      return t;
+    }));
+
+    await apiService.updateTicket(ticketId, {
+      statusRequestedAt,
+      statusRequestedBy,
+      statusRequestNote: note
+    });
+    showToast('Status Confirmation Requested', 'Sent verification request to the ticket creator.', 'info');
+  };
+
+  const toggleTicketArchive = async (ticketId: string, isArchived: boolean) => {
+    const now = new Date().toISOString();
+    setTickets(prev => prev.map(t => {
+      if (t.id === ticketId || t.ticketNumber === ticketId) {
+        return {
+          ...t,
+          isArchived,
+          status: isArchived ? t.status : (t.status === 'resolved' ? 'open' : t.status),
+          updatedAt: now,
+        };
+      }
+      return t;
+    }));
+
+    await apiService.updateTicket(ticketId, {
+      isArchived,
+      status: isArchived ? undefined : 'open'
+    });
+    showToast(isArchived ? 'Ticket Archived' : 'Ticket Reopened', isArchived ? 'Moved to archived view.' : 'Restored to Active Tickets queue.', 'info');
   };
 
   const addStaffUser = (userData: Omit<AuthUser, 'id'>) => {
@@ -4632,6 +4710,9 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateTicketStatus,
         assignTicket,
         addTicketComment,
+        markTicketDone,
+        requestTicketStatus,
+        toggleTicketArchive,
         customRoles,
         createCustomRole,
         updateRolePermissions,

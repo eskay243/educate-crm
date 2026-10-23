@@ -29,6 +29,7 @@ const StudentCoursesPage = lazy(() => import('./pages/student/StudentCoursesPage
 const StudentMentorPage = lazy(() => import('./pages/student/StudentMentorPage').then(m => ({ default: m.StudentMentorPage })));
 const StudentBillingPage = lazy(() => import('./pages/student/StudentBillingPage').then(m => ({ default: m.StudentBillingPage })));
 const TicketsPage = lazy(() => import('./pages/TicketsPage').then(m => ({ default: m.TicketsPage })));
+const ChatPage = lazy(() => import('./pages/ChatPage').then(m => ({ default: m.ChatPage })));
 
 const PageLoadingFallback: React.FC = () => (
   <div className="flex min-h-[60vh] w-full flex-col items-center justify-center p-8">
@@ -235,6 +236,15 @@ export const App: React.FC = () => {
                   element={
                     <ProtectedRoute requiredModule="tickets">
                       <TicketsPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="chat"
+                  element={
+                    <ProtectedRoute>
+                      <ChatPage />
                     </ProtectedRoute>
                   }
                 />

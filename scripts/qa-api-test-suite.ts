@@ -570,12 +570,30 @@ async function main() {
       method: 'PATCH',
       body: JSON.stringify({
         status: 'resolved',
+        isArchived: true,
         resolutionNotes: 'CDN origin stream re-encoded and verified across all student cohorts.',
+        resolvedAt: new Date().toISOString(),
       }),
     });
     assert(res.status === 200, `Expected 200, got ${res.status}`);
     const ticket = res.body?.data || res.body;
     assert(ticket?.status === 'resolved', `Expected status resolved, got ${ticket?.status}`);
+    assert(ticket?.isArchived === true, 'Expected ticket to be marked as isArchived');
+  });
+
+  await runTest('QA-TCK-004', 'Tickets', 'Support staff requests status confirmation on an open ticket', async () => {
+    const res = await request(`/api/tickets/${testTicketId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        statusRequestedAt: new Date().toISOString(),
+        statusRequestedBy: { id: 'usr-admin-1', name: 'Abiola Adefowope', role: 'super_admin' },
+        statusRequestNote: 'Please verify if the video streaming issue is completely resolved.'
+      }),
+    });
+    assert(res.status === 200, `Expected 200, got ${res.status}`);
+    const ticket = res.body?.data || res.body;
+    assert(ticket?.statusRequestedAt !== undefined, 'Expected statusRequestedAt to be set');
+    assert(ticket?.statusRequestNote?.includes('Please verify'), 'Expected verification note');
   });
 
   // ============================================================================
@@ -665,6 +683,90 @@ async function main() {
     assert(Array.isArray(backup.staffUsers) || Array.isArray(backup.staff), 'Expected staff in backup');
     assert(Array.isArray(backup.expenses), 'Expected expenses in backup');
     assert(backup.settings !== undefined, 'Expected settings in backup');
+  });
+
+  // ============================================================================
+  // SUITE 11: INSTITUTIONAL MULTI-ROLE CHAT & FILE SHARING
+  // ============================================================================
+  console.log('\n--- [SUITE 11: INSTITUTIONAL MULTI-ROLE CHAT & FILE SHARING] ---');
+
+  let activeChatChannelId = '';
+  await runTest('QA-CHT-001', 'Chat', 'Retrieve authorized chat channels for staff user', async () => {
+    const res = await request('/api/chat/conversations?userId=usr-admin-1&role=super_admin');
+    assert(res.status === 200, `Expected 200, got ${res.status}`);
+    const conversations = res.body?.data || [];
+    assert(Array.isArray(conversations), 'Expected conversations array');
+    assert(conversations.length >= 3, `Expected at least 3 channels, got ${conversations.length}`);
+    const staffRoom = conversations.find((c: any) => c.name === 'staff-room');
+    assert(staffRoom !== undefined, 'Expected staff-room channel');
+    activeChatChannelId = staffRoom.id;
+  });
+
+  await runTest('QA-CHT-002', 'Chat', 'Staff dispatches message with file attachment and @mention', async () => {
+    assert(activeChatChannelId !== '', 'Channel ID must be defined');
+    const res = await request(`/api/chat/conversations/${activeChatChannelId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({
+        senderId: 'usr-admin-1',
+        senderName: 'Abiola Adefowope',
+        senderEmail: 'abiola.adefowope@codelab.institute',
+        senderRole: 'super_admin',
+        content: 'Hello @Zainab Bello, please review the attached updated syllabus for our software engineering cohort.',
+        mentions: ['usr-admissions-1'],
+        attachments: [
+          {
+            id: 'att-1',
+            name: 'syllabus-q4-2026.pdf',
+            url: 'https://codelab.institute/files/syllabus-q4.pdf',
+            type: 'application/pdf',
+            size: 154200
+          }
+        ]
+      })
+    });
+    assert(res.status === 200 || res.status === 201, `Expected 200/201, got ${res.status}`);
+    const msg = res.body?.data;
+    assert(msg?.id !== undefined, 'Expected message ID');
+    assert(msg?.attachments?.length === 1, 'Expected 1 attachment');
+    assert(Array.isArray(msg?.mentions) && msg.mentions.includes('usr-admissions-1'), 'Expected mention recorded');
+  });
+
+  await runTest('QA-CHT-003', 'Chat', 'Initiate 1-on-1 direct message between authorized staff members', async () => {
+    const res = await request('/api/chat/direct', {
+      method: 'POST',
+      body: JSON.stringify({
+        senderId: 'usr-admin-1',
+        senderEmail: 'abiola.adefowope@codelab.institute',
+        senderName: 'Abiola Adefowope',
+        senderRole: 'super_admin',
+        targetUserId: 'usr-finance-1',
+        targetEmail: 'finance@codelab.institute',
+        targetName: 'Emeka Nwosu',
+        targetRole: 'finance'
+      })
+    });
+    assert(res.status === 200, `Expected 200, got ${res.status}`);
+    const conv = res.body?.data;
+    assert(conv?.type === 'direct', 'Expected direct conversation type');
+    assert(Array.isArray(conv?.participants) && conv.participants.includes('usr-admin-1'), 'Expected sender in participants');
+  });
+
+  await runTest('QA-CHT-004', 'Chat', 'Permission boundary: Student blocked from messaging arbitrary student', async () => {
+    const res = await request('/api/chat/direct', {
+      method: 'POST',
+      body: JSON.stringify({
+        senderId: 'stu-demo-1',
+        senderEmail: 'student1@codelab.institute',
+        senderName: 'Student Alpha',
+        senderRole: 'student',
+        targetUserId: 'stu-demo-2',
+        targetEmail: 'student2@codelab.institute',
+        targetName: 'Student Beta',
+        targetRole: 'student'
+      })
+    });
+    assert(res.status === 403, `Expected HTTP 403 Forbidden, got ${res.status}`);
+    assert(res.body?.success === false, 'Expected success === false');
   });
 
   // ============================================================================

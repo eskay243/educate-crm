@@ -57,6 +57,9 @@ export const TicketsPage: React.FC = () => {
     updateTicketStatus, 
     assignTicket,
     addTicketComment, 
+    markTicketDone,
+    requestTicketStatus,
+    toggleTicketArchive,
     currentUser, 
     customRoles,
     showToast 
@@ -78,12 +81,19 @@ export const TicketsPage: React.FC = () => {
     });
   }, [tickets, currentUser, isSuperAdmin]);
 
+  // View Mode: 'active' (decluttered active desk) vs 'archived' (completed/resolved tickets)
+  const [viewMode, setViewMode] = useState<'active' | 'archived'>('active');
+
   // Search and Filter States
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<string>(isSuperAdmin ? 'all' : 'my_tickets');
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
 
   // Modal / Drawer States
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -120,6 +130,11 @@ export const TicketsPage: React.FC = () => {
 
   const filteredTickets = useMemo(() => {
     return authorizedTickets.filter(t => {
+      // Archive / Active filter
+      const isTicketArchived = t.isArchived === true || t.status === 'resolved' || t.status === 'closed';
+      if (viewMode === 'active' && isTicketArchived) return false;
+      if (viewMode === 'archived' && !isTicketArchived) return false;
+
       const matchesSearch = 
         t.ticketNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
         t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -144,7 +159,21 @@ export const TicketsPage: React.FC = () => {
 
       return matchesSearch && matchesStatus && matchesCategory && matchesPriority && matchesTab;
     });
-  }, [authorizedTickets, searchQuery, statusFilter, categoryFilter, priorityFilter, activeTab, currentUser]);
+  }, [authorizedTickets, viewMode, searchQuery, statusFilter, categoryFilter, priorityFilter, activeTab, currentUser]);
+
+  const activeCount = useMemo(() => {
+    return authorizedTickets.filter(t => !(t.isArchived === true || t.status === 'resolved' || t.status === 'closed')).length;
+  }, [authorizedTickets]);
+
+  const archivedCount = useMemo(() => {
+    return authorizedTickets.filter(t => t.isArchived === true || t.status === 'resolved' || t.status === 'closed').length;
+  }, [authorizedTickets]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredTickets.length / pageSize));
+  const paginatedTickets = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredTickets.slice(start, start + pageSize);
+  }, [filteredTickets, currentPage, pageSize]);
 
   const stats = useMemo(() => {
     const total = authorizedTickets.length;
@@ -316,6 +345,52 @@ export const TicketsPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Top View Toggle: Active Desk vs Archived Declutter */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-surface-container-low p-2.5 rounded-2xl border border-outline-variant">
+        <div className="inline-flex rounded-xl bg-surface p-1 border border-outline-variant shadow-2xs">
+          <button
+            type="button"
+            onClick={() => { setViewMode('active'); setCurrentPage(1); }}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              viewMode === 'active'
+                ? 'bg-primary text-on-primary shadow-xs'
+                : 'text-secondary hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px]">inbox</span>
+            <span>Active Tickets</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${viewMode === 'active' ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'}`}>
+              {activeCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setViewMode('archived'); setCurrentPage(1); }}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              viewMode === 'archived'
+                ? 'bg-[#166534] text-white shadow-xs'
+                : 'text-secondary hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px]">inventory_2</span>
+            <span>Archived / Done</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${viewMode === 'archived' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'}`}>
+              {archivedCount}
+            </span>
+          </button>
+        </div>
+
+        <div className="text-[11px] text-secondary flex items-center gap-1.5">
+          <span className="material-symbols-outlined text-[16px] text-primary">info</span>
+          <span>
+            {viewMode === 'active'
+              ? 'Showing unresolved tickets currently awaiting action or under review.'
+              : 'Resolved tickets are archived here to declutter the active helpdesk.'}
+          </span>
+        </div>
+      </div>
+
       {/* Tabs & Filters */}
       <div className="space-y-stack-sm">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-surface-container-lowest p-3 rounded-xl border border-outline-variant">
@@ -477,94 +552,200 @@ export const TicketsPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant">
-              {filteredTickets.map((ticket) => (
-                <tr key={ticket.id} className="hover:bg-surface-container-low/50 transition-colors">
-                  <td className="p-3 pl-4 font-mono font-bold text-primary whitespace-nowrap">
-                    {ticket.ticketNumber}
-                  </td>
+              {paginatedTickets.map((ticket) => {
+                const isCreator = ticket.createdBy.email === currentUser?.email || ticket.createdBy.id === currentUser?.id;
+                const isTicketDone = ticket.isArchived === true || ticket.status === 'resolved' || ticket.status === 'closed';
 
-                  <td className="p-3 max-w-sm">
-                    <div className="font-bold text-on-surface hover:text-primary transition-colors cursor-pointer flex items-center gap-1.5" onClick={() => setSelectedTicketId(ticket.id)}>
-                      <span>{ticket.title}</span>
-                      {ticket.attachments && ticket.attachments.length > 0 && (
-                        <span title={`${ticket.attachments.length} attachment(s)`} className="inline-flex items-center text-primary text-[11px] font-semibold">
-                          <span className="material-symbols-outlined text-[14px]">attach_file</span>
-                          <span>{ticket.attachments.length}</span>
-                        </span>
+                return (
+                  <tr key={ticket.id} className="hover:bg-surface-container-low/50 transition-colors">
+                    <td className="p-3 pl-4 font-mono font-bold text-primary whitespace-nowrap">
+                      {ticket.ticketNumber}
+                    </td>
+
+                    <td className="p-3 max-w-sm">
+                      <div className="font-bold text-on-surface hover:text-primary transition-colors cursor-pointer flex items-center gap-1.5" onClick={() => setSelectedTicketId(ticket.id)}>
+                        <span>{ticket.title}</span>
+                        {ticket.attachments && ticket.attachments.length > 0 && (
+                          <span title={`${ticket.attachments.length} attachment(s)`} className="inline-flex items-center text-primary text-[11px] font-semibold">
+                            <span className="material-symbols-outlined text-[14px]">attach_file</span>
+                            <span>{ticket.attachments.length}</span>
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-secondary text-[11px] line-clamp-1 mt-0.5">
+                        {ticket.description}
+                      </p>
+
+                      {ticket.statusRequestedAt && !isTicketDone && (
+                        <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-900 text-[10px] font-semibold">
+                          <span className="material-symbols-outlined text-[12px] text-amber-600">help</span>
+                          <span>Status check requested by {ticket.statusRequestedBy?.name || 'Support'}</span>
+                        </div>
                       )}
-                    </div>
-                    <p className="text-secondary text-[11px] line-clamp-1 mt-0.5">
-                      {ticket.description}
-                    </p>
-                  </td>
+                    </td>
 
-                  <td className="p-3 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border ${getCategoryBadgeClass(ticket.category)}`}>
-                      {getCategoryLabel(ticket.category)}
-                    </span>
-                  </td>
+                    <td className="p-3 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border ${getCategoryBadgeClass(ticket.category)}`}>
+                        {getCategoryLabel(ticket.category)}
+                      </span>
+                    </td>
 
-                  <td className="p-3 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] uppercase tracking-wider ${getPriorityBadgeClass(ticket.priority)}`}>
-                      {ticket.priority}
-                    </span>
-                  </td>
+                    <td className="p-3 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] uppercase tracking-wider ${getPriorityBadgeClass(ticket.priority)}`}>
+                        {ticket.priority}
+                      </span>
+                    </td>
 
-                  <td className="p-3 whitespace-nowrap">
-                    <CrispStatusBadge status={ticket.status} />
-                  </td>
+                    <td className="p-3 whitespace-nowrap">
+                      <CrispStatusBadge status={ticket.status} />
+                    </td>
 
-                  <td className="p-3 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5 text-on-surface font-medium text-xs">
-                      <span className="material-symbols-outlined text-[15px] text-primary">assignment_ind</span>
-                      <span>{ticket.assignedToName || (ticket.assignedToRole ? ticket.assignedToRole.toUpperCase().replace('_', ' ') : 'Super Admin')}</span>
-                    </div>
-                  </td>
+                    <td className="p-3 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5 text-on-surface font-medium text-xs">
+                        <span className="material-symbols-outlined text-[15px] text-primary">assignment_ind</span>
+                        <span>{ticket.assignedToName || (ticket.assignedToRole ? ticket.assignedToRole.toUpperCase().replace('_', ' ') : 'Super Admin')}</span>
+                      </div>
+                    </td>
 
-                  <td className="p-3 whitespace-nowrap">
-                    <div className="font-semibold text-on-surface">{ticket.createdBy.name}</div>
-                    <div className="text-[10px] text-secondary capitalize">{ticket.createdBy.roleTitle || ticket.createdBy.role.replace('_', ' ')}</div>
-                  </td>
+                    <td className="p-3 whitespace-nowrap">
+                      <div className="font-semibold text-on-surface">{ticket.createdBy.name}</div>
+                      <div className="text-[10px] text-secondary capitalize">{ticket.createdBy.roleTitle || ticket.createdBy.role.replace('_', ' ')}</div>
+                    </td>
 
-                  <td className="p-3 text-secondary text-[11px] whitespace-nowrap font-mono">
-                    {formatTicketDateTime(ticket.updatedAt || ticket.createdAt)}
-                  </td>
+                    <td className="p-3 text-secondary text-[11px] whitespace-nowrap font-mono">
+                      {formatTicketDateTime(ticket.updatedAt || ticket.createdAt)}
+                    </td>
 
-                  <td className="p-3 pr-4 text-right whitespace-nowrap">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <button
-                        onClick={() => setSelectedTicketId(ticket.id)}
-                        className="px-2.5 py-1 rounded bg-secondary-container text-primary font-bold text-xs hover:bg-secondary-container/80 transition-colors flex items-center gap-1 cursor-pointer shadow-xs"
-                      >
-                        <span className="material-symbols-outlined text-[15px]">chat</span>
-                        <span>Reply ({ticket.comments?.length || 0})</span>
-                      </button>
-
-                      {isStaff && (
-                        <select
-                          value={ticket.status}
-                          onChange={(e) => updateTicketStatus(ticket.id, e.target.value as TicketStatus)}
-                          className="text-[11px] bg-surface border border-outline-variant rounded px-2 py-1 text-on-surface font-semibold outline-none cursor-pointer"
+                    <td className="p-3 pr-4 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                        <button
+                          onClick={() => setSelectedTicketId(ticket.id)}
+                          className="px-2.5 py-1 rounded bg-secondary-container text-primary font-bold text-xs hover:bg-secondary-container/80 transition-colors flex items-center gap-1 cursor-pointer shadow-xs"
                         >
-                          <option value="open">Open</option>
-                          <option value="in_progress">In Progress</option>
-                          <option value="resolved">Resolved</option>
-                          <option value="closed">Closed</option>
-                        </select>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                          <span className="material-symbols-outlined text-[15px]">chat</span>
+                          <span>Reply ({ticket.comments?.length || 0})</span>
+                        </button>
+
+                        {/* Mark Done / Resolved (Available to creator or Staff) */}
+                        {!isTicketDone ? (
+                          <button
+                            onClick={() => markTicketDone(ticket.id)}
+                            className="px-2.5 py-1 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-600 hover:text-white transition-all text-xs font-bold flex items-center gap-1 cursor-pointer shadow-2xs"
+                            title="Mark ticket as done/resolved and move to archive"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                            <span>Done</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => toggleTicketArchive(ticket.id, false)}
+                            className="px-2.5 py-1 rounded bg-surface border border-outline-variant text-secondary hover:text-primary hover:border-primary transition-all text-xs font-semibold flex items-center gap-1 cursor-pointer shadow-2xs"
+                            title="Reopen this ticket and restore to active desk"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">unarchive</span>
+                            <span>Reopen</span>
+                          </button>
+                        )}
+
+                        {/* Request Status Confirmation (Staff to Creator) */}
+                        {isStaff && !isCreator && !isTicketDone && (
+                          <button
+                            onClick={() => {
+                              const note = window.prompt('Add an optional verification note for the ticket creator:', 'Please confirm if the problem has been fully resolved on your end.');
+                              if (note !== null) {
+                                requestTicketStatus(ticket.id, note);
+                              }
+                            }}
+                            className="px-2 py-1 rounded bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-600 hover:text-white transition-all text-xs font-semibold flex items-center gap-1 cursor-pointer shadow-2xs"
+                            title="Prompt ticket creator to confirm status"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">help</span>
+                            <span>Request Status</span>
+                          </button>
+                        )}
+
+                        {isStaff && (
+                          <select
+                            value={ticket.status}
+                            onChange={(e) => updateTicketStatus(ticket.id, e.target.value as TicketStatus)}
+                            className="text-[11px] bg-surface border border-outline-variant rounded px-2 py-1 text-on-surface font-semibold outline-none cursor-pointer"
+                          >
+                            <option value="open">Open</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="closed">Closed</option>
+                          </select>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
               {filteredTickets.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-secondary">
-                    No tickets found matching your search and filter parameters.
+                  <td colSpan={9} className="p-8 text-center text-secondary">
+                    {viewMode === 'active' 
+                      ? 'No active tickets matching your search. Everything is clear!' 
+                      : 'No archived or resolved tickets found in archive.'}
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination Controls */}
+        <div className="p-3 bg-surface border-t border-outline-variant flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-secondary">
+          <div className="flex items-center gap-2">
+            <span>Show</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="px-2 py-1 bg-surface-container-lowest border border-outline-variant rounded-md text-on-surface font-semibold outline-none cursor-pointer"
+            >
+              <option value={10}>10 per page</option>
+              <option value={25}>25 per page</option>
+              <option value={50}>50 per page</option>
+            </select>
+            <span>
+              Showing {filteredTickets.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredTickets.length)} of {filteredTickets.length} tickets
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage <= 1}
+              className={`px-3 py-1.5 rounded-lg border text-xs font-bold flex items-center gap-1 ${
+                currentPage <= 1
+                  ? 'border-outline-variant text-secondary/40 cursor-not-allowed bg-surface-container/50'
+                  : 'border-outline-variant text-on-surface hover:bg-surface-container-high cursor-pointer shadow-2xs'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+              <span>Prev</span>
+            </button>
+
+            <span className="px-2.5 py-1 text-xs font-mono font-bold text-on-surface">
+              Page {currentPage} of {totalPages}
+            </span>
+
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              className={`px-3 py-1.5 rounded-lg border text-xs font-bold flex items-center gap-1 ${
+                currentPage >= totalPages
+                  ? 'border-outline-variant text-secondary/40 cursor-not-allowed bg-surface-container/50'
+                  : 'border-outline-variant text-on-surface hover:bg-surface-container-high cursor-pointer shadow-2xs'
+              }`}
+            >
+              <span>Next</span>
+              <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -762,6 +943,65 @@ export const TicketsPage: React.FC = () => {
 
               <div className="p-3 rounded-lg bg-surface border border-outline-variant/60 text-xs text-on-surface leading-relaxed whitespace-pre-wrap">
                 {activeTicket.description}
+              </div>
+
+              {/* Status Confirmation Prompt Banner */}
+              {activeTicket.statusRequestedAt && activeTicket.status !== 'resolved' && (
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 animate-in fade-in">
+                  <div className="flex items-start gap-2">
+                    <span className="material-symbols-outlined text-amber-600 text-[20px] shrink-0 mt-0.5">help</span>
+                    <div className="text-xs">
+                      <div className="font-bold text-amber-900">
+                        Status Confirmation Requested by {activeTicket.statusRequestedBy?.name || 'Support'}
+                      </div>
+                      <p className="text-amber-800 text-[11px] mt-0.5">
+                        "{activeTicket.statusRequestNote || 'Please confirm if your issue or observation has been resolved.'}"
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      markTicketDone(activeTicket.id);
+                      setSelectedTicketId(null);
+                    }}
+                    className="shrink-0 px-3 py-1.5 rounded-lg bg-[#166534] hover:bg-[#15803d] text-white font-bold text-xs flex items-center gap-1 shadow-xs cursor-pointer transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">check_circle</span>
+                    <span>Yes, Mark as Done</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Quick Resolution Controls in Drawer */}
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-surface-container-low border border-outline-variant text-xs">
+                <span className="text-secondary font-semibold">Resolution State:</span>
+                <div className="flex items-center gap-2">
+                  {activeTicket.status !== 'resolved' ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        markTicketDone(activeTicket.id);
+                        setSelectedTicketId(null);
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-600 hover:text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition-all shadow-2xs"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">check_circle</span>
+                      <span>Mark as Done &amp; Archive</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        toggleTicketArchive(activeTicket.id, false);
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-surface border border-outline-variant text-secondary hover:text-primary hover:border-primary font-semibold text-xs flex items-center gap-1 cursor-pointer transition-all shadow-2xs"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">unarchive</span>
+                      <span>Reopen to Active</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Ticket Main Attachments */}
