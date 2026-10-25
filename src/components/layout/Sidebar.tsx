@@ -27,7 +27,7 @@ interface NavItemConfig {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
-  const { openModal, resetAllData, currentUser, logout, settings, isModuleEnabled, hasPermission, hasModulePermission, hasFeaturePermission, tickets } = useCRM();
+  const { openModal, resetAllData, currentUser, logout, settings, isModuleEnabled, hasPermission, hasModulePermission, hasFeaturePermission, tickets, unreadChatCount } = useCRM();
   const { isStandalone, promptInstall, isIOS, setShowIOSInstallGuide } = usePWA();
   const navigate = useNavigate();
   const location = useLocation();
@@ -74,6 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   const allNavItems: NavItemConfig[] = [
     // Staff & Admin Links
     { to: '/', label: 'Dashboard', icon: 'dashboard', exact: true, allowedRoles: ['super_admin', 'admissions', 'finance', 'program_officer'] },
+    { to: '/chat', label: 'Team Chat', icon: 'chat', allowedRoles: ['super_admin', 'admissions', 'finance', 'program_officer', 'mentor'] },
     { to: '/reports', label: 'Executive Reports', icon: 'monitoring', allowedRoles: ['super_admin', 'program_officer'], module: 'reports' },
     { to: '/courses', label: 'Programs & Cohorts', icon: 'menu_book', allowedRoles: ['super_admin', 'admissions', 'program_officer'], module: 'courses' },
     { to: '/leads', label: 'Leads Pipeline', icon: 'leaderboard', allowedRoles: ['super_admin', 'admissions'], module: 'leads' },
@@ -98,15 +99,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
 
     // Student Portal Links
     { to: '/student/dashboard', label: 'Student Dashboard', icon: 'dashboard', exact: true, allowedRoles: ['student'] },
+    { to: '/chat', label: 'Team Chat', icon: 'chat', allowedRoles: ['student'] },
     { to: '/student/courses', label: 'Classroom & LMS', icon: 'local_library', allowedRoles: ['student'], module: 'lms' },
     { to: '/student/mentor', label: '1-on-1 Faculty Mentor', icon: 'support_agent', allowedRoles: ['student'], module: 'mentors' },
     { to: '/student/billing', label: 'Tuition & Invoicing', icon: 'receipt_long', allowedRoles: ['student'], module: 'billing' },
 
     // Universal Support & Feedback Module for all roles
     { to: '/tickets', label: 'Support & Tickets', icon: 'confirmation_number', module: 'tickets' },
-
-    // Universal Team Chat & Messaging
-    { to: '/chat', label: 'Team Chat & Messages', icon: 'forum' },
   ];
 
   const visibleNavItems = allNavItems.filter(item => {
@@ -122,9 +121,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
 
     // Support & Tickets is universal to all authenticated roles (when module is enabled or for super admin)
     if (item.to === '/tickets') return true;
-
-    // Team Chat & Messaging is universal to all authenticated roles
-    if (item.to === '/chat') return true;
 
     // Role filter
     let roleAllowed = false;
@@ -375,6 +371,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
                     {item.icon}
                   </span>
                   <span className="truncate">{item.label}</span>
+                  {item.to === '/chat' && unreadChatCount > 0 && (
+                    <span 
+                      data-testid="sidebar-unread-chat-badge"
+                      className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-600 text-white font-data-tabular shadow-sm animate-pulse"
+                      title={`${unreadChatCount} unread message${unreadChatCount > 1 ? 's' : ''}`}
+                    >
+                      {unreadChatCount > 99 ? '99+' : unreadChatCount}
+                    </span>
+                  )}
                   {item.to === '/tickets' && tickets.filter(t => t.status === 'open').length > 0 && (
                     <span className="ml-auto text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-primary/15 text-primary font-data-tabular">
                       {tickets.filter(t => t.status === 'open').length}

@@ -16,6 +16,7 @@ export const ChatPage: React.FC = () => {
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const [isSending, setIsSending] = useState(false);
   const [isNewDmOpen, setIsNewDmOpen] = useState(false);
+  const [dmSearchQuery, setDmSearchQuery] = useState('');
 
   // Mention autocomplete state
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
@@ -123,6 +124,17 @@ export const ChatPage: React.FC = () => {
       directMessages: directMessages.filter(c => c.name.toLowerCase().includes(q) || (c.topic || '').toLowerCase().includes(q)),
     };
   }, [channels, directMessages, searchFilter]);
+
+  const filteredDmUsers = useMemo(() => {
+    const q = dmSearchQuery.toLowerCase().trim();
+    if (!q) return allowedUsers;
+    return allowedUsers.filter(u => 
+      u.name.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q) ||
+      (u.role && u.role.toLowerCase().includes(q)) ||
+      (u.roleTitle && u.roleTitle.toLowerCase().includes(q))
+    );
+  }, [allowedUsers, dmSearchQuery]);
 
   // Handle typing & @ autocomplete detection
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -692,7 +704,10 @@ export const ChatPage: React.FC = () => {
                 <h3 className="font-headline-md text-sm font-bold text-on-surface">Start Direct Message</h3>
               </div>
               <button 
-                onClick={() => setIsNewDmOpen(false)} 
+                onClick={() => {
+                  setIsNewDmOpen(false);
+                  setDmSearchQuery('');
+                }} 
                 className="text-secondary hover:text-on-surface p-1 rounded hover:bg-surface-container cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[20px]">close</span>
@@ -703,17 +718,60 @@ export const ChatPage: React.FC = () => {
               Select an authorized user to open a private 1-on-1 messaging thread.
             </p>
 
+            {/* Direct Message Contact Search Bar */}
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-secondary">
+                <span className="material-symbols-outlined text-[18px]">search</span>
+              </span>
+              <input
+                type="text"
+                value={dmSearchQuery}
+                onChange={(e) => setDmSearchQuery(e.target.value)}
+                placeholder="Search contact by name, email, or role..."
+                className="w-full pl-9 pr-8 py-2 text-xs bg-surface-container-low border border-outline-variant rounded-xl text-on-surface focus:outline-none focus:border-primary placeholder:text-secondary/60"
+                autoFocus
+              />
+              {dmSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setDmSearchQuery('')}
+                  className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-secondary hover:text-on-surface cursor-pointer"
+                  title="Clear search"
+                >
+                  <span className="material-symbols-outlined text-[16px]">cancel</span>
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] text-secondary px-0.5">
+              <span>{filteredDmUsers.length} contact{filteredDmUsers.length === 1 ? '' : 's'} available</span>
+              {dmSearchQuery && (
+                <span className="text-[10px] text-primary font-medium truncate max-w-[160px]">
+                  Matching "{dmSearchQuery}"
+                </span>
+              )}
+            </div>
+
             <div className="max-h-72 overflow-y-auto overscroll-contain space-y-1 p-1">
               {allowedUsers.length === 0 ? (
-                <div className="p-4 text-center text-xs text-secondary">
+                <div className="p-6 text-center text-xs text-secondary">
                   No eligible contacts available for your role profile.
                 </div>
+              ) : filteredDmUsers.length === 0 ? (
+                <div className="p-6 text-center text-xs text-secondary">
+                  <span className="material-symbols-outlined text-2xl text-secondary/40 mb-1">person_search</span>
+                  <p className="font-semibold">No contacts found</p>
+                  <p className="text-[10px] text-secondary/70">No authorized users match "{dmSearchQuery}"</p>
+                </div>
               ) : (
-                allowedUsers.map((user) => (
+                filteredDmUsers.map((user) => (
                   <button
                     key={user.id}
                     type="button"
-                    onClick={() => handleStartDirectMessage(user)}
+                    onClick={() => {
+                      handleStartDirectMessage(user);
+                      setDmSearchQuery('');
+                    }}
                     className="w-full text-left p-2.5 rounded-xl hover:bg-surface-container transition-colors flex items-center justify-between cursor-pointer group border border-transparent hover:border-outline-variant"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">

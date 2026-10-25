@@ -33,3 +33,4 @@ server/backups/*.json
 *.sw?
 .agents/
 scratch/
+*.local-pre-sync.json

@@ -32,6 +32,7 @@ import { CourseOutlineModal } from '../modals/CourseOutlineModal';
 import { RequestPayoutModal } from '../modals/RequestPayoutModal';
 import { BulkUploadCoursesModal } from '../modals/BulkUploadCoursesModal';
 import { MobileBottomNav } from './MobileBottomNav';
+import { FloatingChatWidget } from '../chat/FloatingChatWidget';
 
 export const AppLayout: React.FC = () => {
   const { activeModal, closeModal } = useCRM();
@@ -181,6 +182,9 @@ export const AppLayout: React.FC = () => {
         onClose={closeModal}
       />
       <ChangePasswordModal />
+
+      {/* Omnipresent Floating Chat Popout Widget */}
+      <FloatingChatWidget />
     </div>
   );
 };

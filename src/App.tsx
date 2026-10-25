@@ -30,6 +30,7 @@ const StudentMentorPage = lazy(() => import('./pages/student/StudentMentorPage')
 const StudentBillingPage = lazy(() => import('./pages/student/StudentBillingPage').then(m => ({ default: m.StudentBillingPage })));
 const TicketsPage = lazy(() => import('./pages/TicketsPage').then(m => ({ default: m.TicketsPage })));
 const ChatPage = lazy(() => import('./pages/ChatPage').then(m => ({ default: m.ChatPage })));
+const OperationalDashboardPage = lazy(() => import('./pages/OperationalDashboardPage').then(m => ({ default: m.OperationalDashboardPage })));
 
 const PageLoadingFallback: React.FC = () => (
   <div className="flex min-h-[60vh] w-full flex-col items-center justify-center p-8">
@@ -48,20 +49,13 @@ const HomeRoute: React.FC = () => {
   if (currentUser.role === 'student') {
     return <Navigate to="/student/dashboard" replace />;
   }
-  if (currentUser.role === 'admissions') {
-    return <Navigate to="/leads" replace />;
-  }
-  if (currentUser.role === 'finance') {
-    return <Navigate to="/expenses" replace />;
-  }
   if (currentUser.role === 'mentor') {
     return <Navigate to="/mentors" replace />;
   }
-  if (currentUser.role === 'program_officer' || currentUser.role.includes('program_officer')) {
-    return <Navigate to="/courses" replace />;
-  }
-  if (currentUser.role === 'super_admin') {
-    return <ExecutiveReportPage />;
+  
+  // Super Admin, Admissions, Finance, and Program Officers land on the Operational Command Center
+  if (['super_admin', 'admissions', 'finance', 'program_officer'].includes(currentUser.role)) {
+    return <OperationalDashboardPage />;
   }
 
   // Fallback for custom configured roles based on enabled modules
@@ -75,7 +69,7 @@ const HomeRoute: React.FC = () => {
   if (hasModulePermission('settings')) return <Navigate to="/settings" replace />;
 
   if (isModuleEnabled('tickets')) return <Navigate to="/tickets" replace />;
-  return <Navigate to="/settings" replace />;
+  return <OperationalDashboardPage />;
 };
 
 export const App: React.FC = () => {

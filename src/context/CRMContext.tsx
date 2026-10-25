@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Lead, 
   Student, 
@@ -329,6 +329,12 @@ interface CRMContextType {
   adminResetUserPassword: (userId: string, newPassword: string) => Promise<boolean>;
   selectedUserForPasswordReset: { id: string; name: string; email: string; role: string; category?: string } | null;
   setSelectedUserForPasswordReset: (user: { id: string; name: string; email: string; role: string; category?: string } | null) => void;
+
+  // Team Chat & Unread Indicator
+  unreadChatCount: number;
+  refreshUnreadChatCount: () => Promise<void>;
+  isChatPopoutOpen: boolean;
+  setIsChatPopoutOpen: (open: boolean) => void;
 }
 
 const CRMContext = createContext<CRMContextType | undefined>(undefined);
@@ -597,6 +603,33 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const saved = localStorage.getItem(STORAGE_KEYS.PAYOUT_REQUESTS);
     return saved ? JSON.parse(saved) : initialPayoutRequests;
   });
+
+  // Team Chat Live Unread Counter & Floating Dock State
+  const [unreadChatCount, setUnreadChatCount] = useState<number>(0);
+  const [isChatPopoutOpen, setIsChatPopoutOpen] = useState<boolean>(false);
+
+  const refreshUnreadChatCount = useCallback(async () => {
+    if (!currentUser) {
+      setUnreadChatCount(0);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/chat/conversations?userId=${encodeURIComponent(currentUser.id)}&role=${encodeURIComponent(currentUser.role)}&email=${encodeURIComponent(currentUser.email)}`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        const total = data.data.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
+        setUnreadChatCount(total);
+      }
+    } catch {
+      // Background poll silently catches offline states
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    refreshUnreadChatCount();
+    const interval = setInterval(refreshUnreadChatCount, 4000);
+    return () => clearInterval(interval);
+  }, [refreshUnreadChatCount]);
 
   // Bootstrap from backend on mount
   useEffect(() => {
@@ -4760,6 +4793,10 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         editStaffUser,
         renameCustomRole,
         changePassword,
+        unreadChatCount,
+        refreshUnreadChatCount,
+        isChatPopoutOpen,
+        setIsChatPopoutOpen,
       }}
     >
       {children}
