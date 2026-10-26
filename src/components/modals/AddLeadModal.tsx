@@ -23,6 +23,16 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) =
   const [dealValue, setDealValue] = useState<number>(courses[0]?.tuitionFee || 850000);
   const [notes, setNotes] = useState('');
 
+  // Follow-up scheduling fields
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const defaultFollowUpDate = tomorrow.toISOString().split('T')[0];
+
+  const [nextFollowUpDate, setNextFollowUpDate] = useState(defaultFollowUpDate);
+  const [nextFollowUpTime, setNextFollowUpTime] = useState('10:00 AM');
+  const [preferredChannel, setPreferredChannel] = useState<'phone' | 'whatsapp' | 'email' | 'in_person'>('whatsapp');
+  const [followUpPriority, setFollowUpPriority] = useState<'High' | 'Medium' | 'Low'>('High');
+
   if (!isOpen) return null;
 
   const effectiveProgram = selectedCourseId === '__custom__'
@@ -43,10 +53,26 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) =
       score: Number(score),
       source,
       lastContactDate: 'Today',
-      lastContactChannel: 'via Email',
+      lastContactChannel: preferredChannel ? `via ${preferredChannel === 'whatsapp' ? 'WhatsApp' : preferredChannel.charAt(0).toUpperCase() + preferredChannel.slice(1)}` : 'via Phone',
       assignedRep: assignedRep || 'Admissions Specialist',
       dealValue: Number(dealValue),
       notes: notes || 'Direct intake record created from admin dashboard.',
+      nextFollowUpDate,
+      nextFollowUpTime,
+      preferredChannel,
+      followUpPriority,
+      followUpStatus: 'Upcoming',
+      followUpHistory: [
+        {
+          id: `act-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          repName: assignedRep || 'Admissions Team',
+          outcome: 'Inquiry Created',
+          notes: notes || 'Lead entered into system. Follow-up scheduled.',
+          nextScheduledDate: nextFollowUpDate,
+          nextScheduledTime: nextFollowUpTime,
+        }
+      ]
     });
 
     onClose();
@@ -243,6 +269,71 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) =
                 onChange={e => setScore(Number(e.target.value))}
                 className="w-full h-2 bg-surface-container-high rounded-lg appearance-none cursor-pointer accent-primary mt-2"
               />
+            </div>
+          </div>
+
+          {/* Follow-up Planning & Contact Strategy */}
+          <div className="p-3.5 rounded-xl bg-surface-container-low border border-primary/20 space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-[18px]">calendar_clock</span>
+              <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider">
+                Follow-up Target &amp; Preferred Channel
+              </h4>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-secondary">Follow-up Date</label>
+                <input
+                  type="date"
+                  value={nextFollowUpDate}
+                  onChange={e => setNextFollowUpDate(e.target.value)}
+                  className="w-full h-9 px-2.5 border border-outline-variant rounded-md bg-surface text-xs focus:border-primary outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-secondary">Target Time</label>
+                <input
+                  type="text"
+                  value={nextFollowUpTime}
+                  onChange={e => setNextFollowUpTime(e.target.value)}
+                  placeholder="e.g. 10:00 AM"
+                  className="w-full h-9 px-2.5 border border-outline-variant rounded-md bg-surface text-xs focus:border-primary outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-secondary">Preferred Channel</label>
+                <select
+                  value={preferredChannel}
+                  onChange={e => setPreferredChannel(e.target.value as any)}
+                  className="w-full h-9 px-2 border border-outline-variant rounded-md bg-surface text-xs focus:border-primary outline-none cursor-pointer"
+                >
+                  <option value="whatsapp">WhatsApp Direct</option>
+                  <option value="phone">Phone Call</option>
+                  <option value="email">Email</option>
+                  <option value="in_person">In-Person Hub Visit</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] font-semibold text-secondary">Priority:</span>
+              {(['High', 'Medium', 'Low'] as const).map(p => (
+                <label key={p} className="flex items-center gap-1.5 text-xs cursor-pointer">
+                  <input
+                    type="radio"
+                    name="followUpPriority"
+                    checked={followUpPriority === p}
+                    onChange={() => setFollowUpPriority(p)}
+                    className="text-primary focus:ring-primary"
+                  />
+                  <span className={p === 'High' ? 'text-red-600 font-bold' : p === 'Medium' ? 'text-amber-600 font-medium' : 'text-secondary'}>
+                    {p}
+                  </span>
+                </label>
+              ))}
             </div>
           </div>
 

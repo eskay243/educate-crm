@@ -15,6 +15,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
 const ExecutiveReportPage = lazy(() => import('./pages/ExecutiveReportPage').then(m => ({ default: m.ExecutiveReportPage })));
 const LeadManagementPage = lazy(() => import('./pages/LeadManagementPage').then(m => ({ default: m.LeadManagementPage })));
+const ContactsPage = lazy(() => import('./pages/ContactsPage').then(m => ({ default: m.ContactsPage })));
 const StudentEnrollmentPage = lazy(() => import('./pages/StudentEnrollmentPage').then(m => ({ default: m.StudentEnrollmentPage })));
 const MentorManagementPage = lazy(() => import('./pages/MentorManagementPage').then(m => ({ default: m.MentorManagementPage })));
 const MentorAvailabilityPage = lazy(() => import('./pages/MentorAvailabilityPage').then(m => ({ default: m.MentorAvailabilityPage })));
@@ -115,6 +116,15 @@ export const App: React.FC = () => {
                   element={
                     <ProtectedRoute allowedRoles={['super_admin', 'admissions']} requiredModule="leads">
                       <LeadManagementPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="contacts"
+                  element={
+                    <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'program_officer']} requiredModule="leads">
+                      <ContactsPage />
                     </ProtectedRoute>
                   }
                 />

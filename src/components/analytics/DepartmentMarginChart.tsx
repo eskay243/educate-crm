@@ -58,12 +58,19 @@ export const DepartmentMarginChart: React.FC = () => {
       const trackStudents = students.filter(s => 
         s.program?.toLowerCase().includes(c.title.toLowerCase())
       );
-      const trackRev = trackStudents.reduce((sum, s) => sum + (s.totalFees - (s.outstandingBalance || 0)), 0);
+      const trackRev = trackStudents.reduce((sum, s) => {
+        const tuition = Number(s.totalFees || s.tuitionAmount || 0);
+        const balance = Number(s.outstandingBalance || 0);
+        const paid = (typeof s.paidAmount === 'number' && !isNaN(s.paidAmount))
+          ? s.paidAmount
+          : Math.max(0, tuition - balance);
+        return sum + (isNaN(paid) ? 0 : paid);
+      }, 0);
 
       // Allocated departmental expenses
       const deptExpenses = expenses.filter(e => 
         e.department?.toLowerCase().includes(dept.toLowerCase())
-      ).reduce((sum, e) => sum + e.amount, 0);
+      ).reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
 
       map.set(dept, {
         revenue: prev.revenue + trackRev,

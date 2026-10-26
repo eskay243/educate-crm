@@ -78,6 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     { to: '/reports', label: 'Executive Reports', icon: 'monitoring', allowedRoles: ['super_admin', 'program_officer'], module: 'reports' },
     { to: '/courses', label: 'Programs & Cohorts', icon: 'menu_book', allowedRoles: ['super_admin', 'admissions', 'program_officer'], module: 'courses' },
     { to: '/leads', label: 'Leads Pipeline', icon: 'leaderboard', allowedRoles: ['super_admin', 'admissions'], module: 'leads' },
+    { to: '/contacts', label: 'Contacts & Follow-ups', icon: 'contact_phone', allowedRoles: ['super_admin', 'admissions', 'program_officer'], module: 'leads' },
     { to: '/students', label: 'Students & Billing', icon: 'school', allowedRoles: ['super_admin', 'admissions', 'mentor', 'finance', 'program_officer'], module: 'students' },
     { 
       to: '/mentors', 

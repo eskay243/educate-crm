@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopNavbar } from './TopNavbar';
 import { useCRM } from '../../context/CRMContext';
+import { RouteErrorBoundary } from '../common/RouteErrorBoundary';
 import { CreateRecordHubModal } from '../modals/CreateRecordHubModal';
 import { RecruitMentorModal } from '../modals/RecruitMentorModal';
 import { EnrollStudentModal } from '../modals/EnrollStudentModal';
@@ -31,6 +32,7 @@ import { ResetUserPasswordModal } from '../modals/ResetUserPasswordModal';
 import { CourseOutlineModal } from '../modals/CourseOutlineModal';
 import { RequestPayoutModal } from '../modals/RequestPayoutModal';
 import { BulkUploadCoursesModal } from '../modals/BulkUploadCoursesModal';
+import { LogFollowUpModal } from '../modals/LogFollowUpModal';
 import { MobileBottomNav } from './MobileBottomNav';
 import { FloatingChatWidget } from '../chat/FloatingChatWidget';
 
@@ -64,7 +66,20 @@ export const AppLayout: React.FC = () => {
         
         <main className="flex-1 overflow-y-auto bg-background">
           <div className="max-w-container-max mx-auto p-4 sm:p-gutter md:p-margin-page pb-24 md:pb-16">
-            <Outlet />
+            <RouteErrorBoundary>
+              <Suspense
+                fallback={
+                  <div className="flex min-h-[50vh] w-full flex-col items-center justify-center p-8">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="h-9 w-9 animate-spin rounded-full border-3 border-indigo-600 border-t-transparent dark:border-indigo-400" />
+                      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Loading Module...</span>
+                    </div>
+                  </div>
+                }
+              >
+                <Outlet />
+              </Suspense>
+            </RouteErrorBoundary>
           </div>
         </main>
 
@@ -179,6 +194,10 @@ export const AppLayout: React.FC = () => {
       />
       <BulkUploadCoursesModal
         isOpen={activeModal === 'bulk-upload-courses'}
+        onClose={closeModal}
+      />
+      <LogFollowUpModal
+        isOpen={activeModal === 'log-follow-up'}
         onClose={closeModal}
       />
       <ChangePasswordModal />

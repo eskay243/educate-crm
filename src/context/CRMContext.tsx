@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Lead, 
+  LeadFollowUpActivity, 
   Student, 
   Mentor, 
   Expense, 
@@ -70,22 +71,24 @@ import { APP_BASE_URL } from '../utils/url';
 
 
 export const formatNaira = (amount: number, fractionDigits = 0): string => {
+  const safeAmount = (typeof amount === 'number' && !isNaN(amount)) ? amount : 0;
   return '₦' + new Intl.NumberFormat('en-NG', {
     maximumFractionDigits: fractionDigits,
     minimumFractionDigits: fractionDigits,
-  }).format(amount);
+  }).format(safeAmount);
 };
 
 export const formatNairaCompact = (amount: number): string => {
-  if (amount >= 1_000_000) {
-    const val = (amount / 1_000_000).toFixed(1).replace(/\.0$/, '');
+  const safeAmount = (typeof amount === 'number' && !isNaN(amount)) ? amount : 0;
+  if (safeAmount >= 1_000_000) {
+    const val = (safeAmount / 1_000_000).toFixed(1).replace(/\.0$/, '');
     return `₦${val}M`;
   }
-  if (amount >= 1_000) {
-    const val = (amount / 1_000).toFixed(0);
+  if (safeAmount >= 1_000) {
+    const val = (safeAmount / 1_000).toFixed(0);
     return `₦${val}K`;
   }
-  return `₦${amount}`;
+  return `₦${safeAmount}`;
 };
 
 export const resolveRoleTitle = (roleId: string, customRolesList?: any[]): string => {
@@ -249,11 +252,23 @@ interface CRMContextType {
   setSelectedStudentForAssignmentId: (id: string | null) => void;
   setSelectedCourseForEditId: (id: string | null) => void;
   setSelectedMentorForEditId: (id: string | null) => void;
+  selectedLeadForFollowUp: Lead | null;
+  setSelectedLeadForFollowUp: (lead: Lead | null) => void;
+  openFollowUpModal: (lead: Lead) => void;
 
   // Mutators
   addLead: (lead: Omit<Lead, 'id' | 'dateAdded'>) => void;
   updateLeadStatus: (id: string, status: LeadStatus, lossReason?: string) => void;
   updateLeadNotes: (id: string, notes: string) => void;
+  scheduleLeadFollowUp: (leadId: string, payload: {
+    nextFollowUpDate?: string;
+    nextFollowUpTime?: string;
+    outcome: string;
+    notes: string;
+    priority?: 'High' | 'Medium' | 'Low';
+    preferredChannel?: 'phone' | 'whatsapp' | 'email' | 'in_person';
+    newStatus?: LeadStatus;
+  }) => Promise<void>;
   convertLeadToStudent: (leadId: string, program: string, mentorName: string) => void;
   
   enrollStudent: (student: Omit<Student, 'id' | 'enrolledDate' | 'studentCode'>) => Student;
@@ -578,6 +593,12 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedStudentForAssignmentId, setSelectedStudentForAssignmentId] = useState<string | null>(null);
   const [selectedCourseForEditId, setSelectedCourseForEditId] = useState<string | null>(null);
   const [selectedMentorForEditId, setSelectedMentorForEditId] = useState<string | null>(null);
+  const [selectedLeadForFollowUp, setSelectedLeadForFollowUp] = useState<Lead | null>(null);
+
+  const openFollowUpModal = (lead: Lead) => {
+    setSelectedLeadForFollowUp(lead);
+    setActiveModal('log-follow-up');
+  };
   const [selectedBiodataUser, setSelectedBiodataUser] = useState<{
     category: 'staff' | 'mentor' | 'student';
     id: string;
@@ -2035,6 +2056,60 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLeads(prev => prev.map(l => l.id === id ? { ...l, notes } : l));
     apiService.updateLead(id, { notes });
     showToast('Notes Saved', 'Discovery notes updated successfully.', 'success');
+  };
+
+  const scheduleLeadFollowUp = async (leadId: string, payload: {
+    nextFollowUpDate?: string;
+    nextFollowUpTime?: string;
+    outcome: string;
+    notes: string;
+    priority?: 'High' | 'Medium' | 'Low';
+    preferredChannel?: 'phone' | 'whatsapp' | 'email' | 'in_person';
+    newStatus?: LeadStatus;
+  }) => {
+    const targetLead = leads.find(l => l.id === leadId);
+    if (!targetLead) return;
+
+    const repName = currentUser?.name || targetLead.assignedRep || 'Admissions Officer';
+    const newActivity: LeadFollowUpActivity = {
+      id: `act-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      repName,
+      outcome: payload.outcome,
+      notes: payload.notes,
+      nextScheduledDate: payload.nextFollowUpDate,
+      nextScheduledTime: payload.nextFollowUpTime,
+    };
+
+    const existingHistory = targetLead.followUpHistory || [];
+    const updatedHistory = [newActivity, ...existingHistory];
+
+    const updatedLeadFields: Partial<Lead> = {
+      nextFollowUpDate: payload.nextFollowUpDate,
+      nextFollowUpTime: payload.nextFollowUpTime,
+      followUpPriority: payload.priority || targetLead.followUpPriority || 'Medium',
+      preferredChannel: payload.preferredChannel || targetLead.preferredChannel || 'phone',
+      followUpHistory: updatedHistory,
+      lastContactDate: 'Today',
+      lastContactChannel: payload.preferredChannel ? `via ${payload.preferredChannel.charAt(0).toUpperCase() + payload.preferredChannel.slice(1)}` : 'via Phone',
+      notes: payload.notes ? `${targetLead.notes ? targetLead.notes + '\n' : ''}[${new Date().toLocaleDateString('en-NG')}] ${payload.outcome}: ${payload.notes}` : targetLead.notes,
+      ...(payload.newStatus ? { status: payload.newStatus } : {}),
+    };
+
+    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, ...updatedLeadFields } : l));
+    try {
+      await apiService.updateLead(leadId, updatedLeadFields as any);
+    } catch (e) {
+      console.error('Failed to update lead follow-up on backend:', e);
+    }
+
+    showToast('Follow-Up Logged', `Follow-up recorded for ${targetLead.name}.`, 'success');
+    logActivity({
+      title: 'Lead Follow-up Recorded',
+      description: `${payload.outcome} with ${targetLead.name}. Next scheduled: ${payload.nextFollowUpDate || 'None'}.`,
+      type: 'lead',
+      user: repName,
+    });
   };
 
   const convertLeadToStudent = async (leadId: string, program?: string, mentorName?: string) => {
@@ -4610,9 +4685,19 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // KPIs
   const kpis: ExecutiveKPIs = useMemo(() => {
     const activeStudentCount = students.filter(s => s.status === 'Active').length;
-    const totalRev = students.reduce((acc, s) => acc + (s.totalFees - (s.outstandingBalance || 0)), 0);
-    const mentorPay = sessions.reduce((acc, s) => acc + s.compensationAmount, 0) + mentors.reduce((acc, m) => acc + m.pendingPayout, 0);
-    const totalExp = expenses.reduce((acc, e) => acc + e.amount, 0);
+    const totalRev = students.reduce((acc, s) => {
+      const tuition = Number(s.totalFees || s.tuitionAmount || 0);
+      const balance = Number(s.outstandingBalance || 0);
+      const paid = (typeof s.paidAmount === 'number' && !isNaN(s.paidAmount))
+        ? s.paidAmount
+        : Math.max(0, tuition - balance);
+      return acc + (isNaN(paid) ? 0 : paid);
+    }, 0);
+
+    const mentorPay = sessions.reduce((acc, s) => acc + (Number(s.compensationAmount) || 0), 0) +
+      mentors.reduce((acc, m) => acc + (Number(m.pendingPayout) || 0), 0);
+
+    const totalExp = expenses.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
     const totalCosts = mentorPay + totalExp;
     const netProfit = totalRev - totalCosts;
     const margin = totalRev > 0 ? Number(((netProfit / totalRev) * 100).toFixed(1)) : 0;
@@ -4705,9 +4790,13 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         selectedBiodataUser,
         setSelectedBiodataUser,
         openBiodataModal,
+        selectedLeadForFollowUp,
+        setSelectedLeadForFollowUp,
+        openFollowUpModal,
         addLead,
         updateLeadStatus,
         updateLeadNotes,
+        scheduleLeadFollowUp,
         convertLeadToStudent,
         enrollStudent,
         updateStudent,

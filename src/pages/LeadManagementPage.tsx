@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useCRM, formatNaira } from '../context/CRMContext';
 import { LeadStatus } from '../types/crm';
 import { CrispStatusBadge } from '../components/common/CrispStatusBadge';
 
 export const LeadManagementPage: React.FC = () => {
-  const { leads, updateLeadStatus, updateLeadNotes, convertLeadToStudent, openModal, globalSearch } = useCRM();
+  const { leads, updateLeadStatus, updateLeadNotes, convertLeadToStudent, openModal, openFollowUpModal, globalSearch } = useCRM();
 
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('kanban');
   const [tableSearch, setTableSearch] = useState('');
@@ -152,6 +153,14 @@ export const LeadManagementPage: React.FC = () => {
             </button>
           </div>
 
+          <Link
+            to="/contacts"
+            className="h-10 px-4 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 font-label-md text-label-md font-bold transition-colors flex items-center gap-unit shadow-xs"
+          >
+            <span className="material-symbols-outlined text-[18px]">contact_phone</span>
+            <span>Contacts &amp; Follow-ups</span>
+          </Link>
+
           <button 
             onClick={() => setActiveTab(activeTab === 'All' ? 'Qualified' : 'All')}
             className={`h-10 px-4 rounded border border-outline-variant font-label-md text-label-md transition-colors flex items-center gap-unit shadow-xs ${
@@ -295,6 +304,26 @@ export const LeadManagementPage: React.FC = () => {
                               </div>
                             )}
 
+                            {/* Scheduled Follow-up Badge */}
+                            {lead.nextFollowUpDate && (
+                              <div 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openFollowUpModal(lead);
+                                }}
+                                className="p-1.5 rounded bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-[10px] text-amber-900 dark:text-amber-300 flex items-center justify-between cursor-pointer hover:bg-amber-100 transition-colors"
+                                title="Click to log call or reschedule"
+                              >
+                                <div className="flex items-center gap-1 font-semibold truncate">
+                                  <span className="material-symbols-outlined text-[13px] text-amber-600">alarm</span>
+                                  <span>{lead.nextFollowUpDate} {lead.nextFollowUpTime || ''}</span>
+                                </div>
+                                <span className="text-[9px] uppercase tracking-wider font-bold bg-amber-200/60 dark:bg-amber-900/60 px-1 py-0.5 rounded">
+                                  {lead.preferredChannel || 'Call'}
+                                </span>
+                              </div>
+                            )}
+
                             <div className="flex items-center justify-between pt-2 border-t border-outline-variant/60 text-[10px]">
                               <span className="text-secondary font-medium">Rep: {lead.assignedRep.split(' ')[0]}</span>
                               <span className="font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
@@ -304,16 +333,25 @@ export const LeadManagementPage: React.FC = () => {
 
                             {/* Action Buttons */}
                             <div className="flex items-center justify-between pt-1 gap-1">
-                              <button
-                                onClick={() => {
-                                  setNoteModalLeadId(lead.id);
-                                  setNoteText(lead.notes || '');
-                                }}
-                                className="text-secondary hover:text-primary p-1 text-[11px] rounded hover:bg-surface-container"
-                                title="View / Edit Discovery Notes"
-                              >
-                                <span className="material-symbols-outlined text-[16px]">edit_note</span>
-                              </button>
+                              <div className="flex items-center gap-0.5">
+                                <button
+                                  onClick={() => {
+                                    setNoteModalLeadId(lead.id);
+                                    setNoteText(lead.notes || '');
+                                  }}
+                                  className="text-secondary hover:text-primary p-1 text-[11px] rounded hover:bg-surface-container"
+                                  title="View / Edit Discovery Notes"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">edit_note</span>
+                                </button>
+                                <button
+                                  onClick={() => openFollowUpModal(lead)}
+                                  className="text-secondary hover:text-indigo-600 dark:hover:text-indigo-400 p-1 text-[11px] rounded hover:bg-surface-container"
+                                  title="Log Follow-up / Touchpoint"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">add_call</span>
+                                </button>
+                              </div>
                               
                               <div className="flex items-center gap-1">
                                 {stage !== 'Converted' && (
@@ -442,6 +480,13 @@ export const LeadManagementPage: React.FC = () => {
                     <td className="p-stack-md text-on-surface font-medium">{lead.assignedRep}</td>
                     <td className="p-stack-md text-right">
                       <div className="flex items-center justify-end gap-1">
+                        <button 
+                          onClick={() => openFollowUpModal(lead)}
+                          className="text-secondary hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors p-1.5 rounded hover:bg-surface-container" 
+                          title="Schedule or Log Follow-up"
+                        >
+                          <span className="material-symbols-outlined text-[20px]">add_call</span>
+                        </button>
                         <button 
                           onClick={() => {
                             setNoteModalLeadId(lead.id);

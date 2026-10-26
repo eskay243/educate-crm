@@ -9,11 +9,6 @@ export const FloatingChatWidget: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // If already on the full Chat page, hide the floating widget
-  if (location.pathname === '/chat' || !currentUser) {
-    return null;
-  }
-
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -98,9 +93,10 @@ export const FloatingChatWidget: React.FC = () => {
   };
 
   useEffect(() => {
+    if (!currentUser || location.pathname === '/chat') return;
     fetchConversations();
     fetchAllowedUsers();
-  }, [currentUser]);
+  }, [currentUser, location.pathname]);
 
   useEffect(() => {
     if (isChatPopoutOpen && activeConvId) {
@@ -130,6 +126,7 @@ export const FloatingChatWidget: React.FC = () => {
 
   // Watch for unread increment when popout is closed to trigger discrete popup notification
   useEffect(() => {
+    if (!currentUser) return;
     if (unreadChatCount > prevUnreadCountRef.current && !isChatPopoutOpen) {
       // Fetch latest conversation message to display popup toast
       fetch(`/api/chat/conversations?userId=${encodeURIComponent(currentUser.id)}&role=${encodeURIComponent(currentUser.role)}&email=${encodeURIComponent(currentUser.email)}`)
@@ -304,6 +301,11 @@ export const FloatingChatWidget: React.FC = () => {
   });
 
   const activeConv = conversations.find(c => c.id === activeConvId);
+
+  // If already on the full Chat page or not logged in, hide floating widget safely in render phase
+  if (location.pathname === '/chat' || !currentUser) {
+    return null;
+  }
 
   return (
     <aside aria-label="Team Chat" className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-40 flex flex-col items-end pointer-events-none">

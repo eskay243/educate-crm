@@ -152,6 +152,16 @@ export interface AuthUser extends NigerianBiodataKYC {
 
 export type LeadStatus = 'Qualified' | 'Negotiation' | 'Discovery' | 'Overdue' | 'Contacted' | 'New' | 'Converted' | 'Lost';
 
+export interface LeadFollowUpActivity {
+  id: string;
+  timestamp: string;
+  repName: string;
+  outcome: string; // e.g. "Call Answered - Interested", "Left Voicemail", "Requested Callback", "Sent WhatsApp Info"
+  notes: string;
+  nextScheduledDate?: string;
+  nextScheduledTime?: string;
+}
+
 export interface Lead {
   id: string;
   name: string;
@@ -170,6 +180,13 @@ export interface Lead {
   avatarUrl?: string;
   notes?: string;
   dealValue?: number;
+  // Follow-up attributes
+  nextFollowUpDate?: string; // YYYY-MM-DD
+  nextFollowUpTime?: string; // e.g. "10:30 AM"
+  followUpPriority?: 'High' | 'Medium' | 'Low';
+  preferredChannel?: 'phone' | 'whatsapp' | 'email' | 'in_person';
+  followUpStatus?: 'Due Today' | 'Upcoming' | 'Overdue' | 'Followed Up' | 'Requires Call' | 'None';
+  followUpHistory?: LeadFollowUpActivity[];
 }
 
 export type StudentStatus = 'Active' | 'Pending' | 'Completed' | 'Paused' | 'Deactivated';
@@ -869,6 +886,7 @@ export type ModalType =
   | 'request-payout'
   | 'bulk-upload-courses'
   | 'view-biodata'
+  | 'log-follow-up'
   | null;
 
 export interface MentorPayoutRequest {
