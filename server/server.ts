@@ -2673,6 +2673,129 @@ app.post('/api/students/:id/payment-reminder', (req: Request, res: Response) => 
   res.json({ success: true, message: 'Payment reminder dispatched successfully.', data: notif });
 });
 
+app.post('/api/students/:id/installment-payment', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const {
+    amount,
+    paymentDate,
+    paymentMethod,
+    reference,
+    bankName,
+    bankAccountNumber,
+    notes,
+    installmentId,
+    recordedByName
+  } = req.body;
+
+  const paymentNum = Number(amount);
+  if (isNaN(paymentNum) || paymentNum <= 0) {
+    return res.status(400).json({ success: false, message: 'Valid payment amount greater than 0 is required' });
+  }
+
+  const studentIndex = db.students.findIndex(s => s.id === id || s.studentCode === id);
+  if (studentIndex === -1) {
+    return res.status(404).json({ success: false, message: 'Student not found' });
+  }
+
+  const student = db.students[studentIndex];
+  const oldPaid = Number(student.paidAmount || 0);
+  const totalFees = Number(student.totalFees || student.tuitionAmount || 0);
+  const newPaid = oldPaid + paymentNum;
+  const newOutstanding = Math.max(0, totalFees - newPaid);
+  const newTuitionStatus = newOutstanding === 0 && totalFees > 0 ? 'Paid' : 'Partial';
+
+  student.paidAmount = newPaid;
+  student.outstandingBalance = newOutstanding;
+  student.tuitionStatus = newTuitionStatus;
+
+  // Reconcile installment schedule
+  if (!Array.isArray(student.installments)) {
+    student.installments = [];
+  }
+
+  if (installmentId) {
+    const inst = student.installments.find((i: any) => i.id === installmentId);
+    if (inst) {
+      inst.status = 'Paid';
+      inst.paidAt = paymentDate || new Date().toISOString();
+      inst.reference = reference || `INST-REC-${Date.now()}`;
+    }
+  } else {
+    // Automatically mark the first scheduled/pending installment as Paid
+    const pendingInst = student.installments.find((i: any) => i.status !== 'Paid');
+    if (pendingInst) {
+      pendingInst.status = 'Paid';
+      pendingInst.paidAt = paymentDate || new Date().toISOString();
+      pendingInst.reference = reference || `INST-REC-${Date.now()}`;
+    }
+  }
+
+  // Record into payment history / audit trail
+  if (!Array.isArray(student.paymentHistory)) {
+    student.paymentHistory = [];
+  }
+  const paymentRecord = {
+    id: `pay-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    amount: paymentNum,
+    paymentDate: paymentDate || new Date().toISOString().split('T')[0],
+    paymentMethod: paymentMethod || 'Bank Transfer',
+    reference: reference || `MANUAL-${Date.now()}`,
+    bankName: bankName || 'Direct Settlement',
+    bankAccountNumber: bankAccountNumber || undefined,
+    notes: notes || 'Installment tuition payment recorded by Bursary',
+    recordedAt: new Date().toISOString(),
+    recordedBy: recordedByName || 'Finance Officer'
+  };
+  student.paymentHistory.unshift(paymentRecord);
+
+  // Synchronize invoice
+  if (Array.isArray(db.invoices)) {
+    const inv = db.invoices.find((i: any) => i.studentId === student.id || i.studentCode === student.studentCode || (i.studentName && i.studentName.toLowerCase() === student.name.toLowerCase()));
+    if (inv) {
+      inv.paidAmount = newPaid;
+      inv.balanceDue = newOutstanding;
+      if (newOutstanding === 0) {
+        inv.status = 'Paid';
+        inv.paidDate = paymentDate || new Date().toISOString().split('T')[0];
+      } else {
+        inv.status = 'Partial';
+      }
+    }
+  }
+
+  // System notification
+  if (!Array.isArray(db.notifications)) db.notifications = [];
+  db.notifications.unshift({
+    id: `notif-inst-${Date.now()}`,
+    title: '💰 Installment Payment Recorded',
+    message: `₦${paymentNum.toLocaleString()} installment recorded for ${student.name} via ${paymentMethod || 'Bank Transfer'}. Outstanding: ₦${newOutstanding.toLocaleString()}`,
+    type: 'finance',
+    timestamp: 'Just now',
+    read: false,
+    link: '/students'
+  });
+
+  // Operational Activity log
+  if (!Array.isArray(db.activityLogs)) db.activityLogs = [];
+  db.activityLogs.unshift({
+    id: `act-inst-${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    title: `Tuition Installment: ₦${paymentNum.toLocaleString()}`,
+    description: `${student.name} (${student.cohort}) - Method: ${paymentMethod || 'Bank Transfer'} (Ref: ${reference || 'N/A'})`,
+    type: 'finance',
+    user: recordedByName || 'Bursary & Accounts'
+  });
+
+  saveDatabase(db);
+
+  res.json({
+    success: true,
+    message: `Installment payment of ₦${paymentNum.toLocaleString()} recorded successfully for ${student.name}.`,
+    data: student,
+    payment: paymentRecord
+  });
+});
+
 // ----------------------------------------------------
 // Mentors Endpoints
 // ----------------------------------------------------
@@ -5965,10 +6088,13 @@ app.post('/api/chat/conversations/:id/messages', async (req: Request, res: Respo
     senderAvatar,
     content,
     mentions,
-    attachments
+    attachments,
+    replyTo,
+    messageType,
+    voiceDurationSeconds
   } = req.body;
 
-  if (!content && (!Array.isArray(attachments) || attachments.length === 0)) {
+  if (!content && (!Array.isArray(attachments) || attachments.length === 0) && messageType !== 'voice') {
     return res.status(400).json({ success: false, message: 'Message content or attachment is required' });
   }
 
@@ -5980,6 +6106,8 @@ app.post('/api/chat/conversations/:id/messages', async (req: Request, res: Respo
     return res.status(404).json({ success: false, message: 'Conversation not found' });
   }
 
+  const effectiveMessageType = messageType || (attachments?.length ? 'file' : 'text');
+
   const newMessage = {
     id: `msg-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     conversationId: id,
@@ -5990,6 +6118,15 @@ app.post('/api/chat/conversations/:id/messages', async (req: Request, res: Respo
     senderRoleTitle: senderRoleTitle || senderRole || 'User',
     senderAvatar: senderAvatar || '',
     content: content || '',
+    messageType: effectiveMessageType,
+    replyTo: replyTo && replyTo.messageId ? {
+      messageId: replyTo.messageId,
+      senderId: replyTo.senderId || '',
+      senderName: replyTo.senderName || 'User',
+      contentSnippet: (replyTo.contentSnippet || '').slice(0, 140),
+      mediaType: replyTo.mediaType || 'text'
+    } : undefined,
+    voiceDurationSeconds: voiceDurationSeconds ? Number(voiceDurationSeconds) : undefined,
     mentions: Array.isArray(mentions) ? mentions : [],
     attachments: Array.isArray(attachments) ? attachments : [],
     timestamp: new Date().toISOString(),
@@ -5999,8 +6136,19 @@ app.post('/api/chat/conversations/:id/messages', async (req: Request, res: Respo
   db.chatMessages.push(newMessage);
 
   // Update conversation last message
+  let lastMessageSummary = content;
+  if (!lastMessageSummary) {
+    if (effectiveMessageType === 'voice') {
+      lastMessageSummary = '🎤 Voice message';
+    } else if (attachments?.length) {
+      lastMessageSummary = `📎 ${attachments[0].name || 'Attachment'}`;
+    } else {
+      lastMessageSummary = 'Shared a file';
+    }
+  }
+
   db.chatConversations[convIndex].lastMessage = {
-    content: content || (attachments?.length ? `📎 ${attachments[0].name}` : 'Shared a file'),
+    content: lastMessageSummary,
     senderName: senderName || 'User',
     timestamp: newMessage.timestamp
   };
@@ -6045,6 +6193,71 @@ app.post('/api/chat/conversations/:id/messages', async (req: Request, res: Respo
   }
 
   res.status(201).json({ success: true, data: newMessage });
+});
+
+app.post('/api/chat/subgroups', (req: Request, res: Response) => {
+  const { name, description, parentChannelId, cohortId, classId, participants, createdBy, creatorName, creatorRole } = req.body;
+
+  if (!name || !name.trim()) {
+    return res.status(400).json({ success: false, message: 'Subgroup name is required' });
+  }
+
+  if (!Array.isArray(db.chatConversations)) db.chatConversations = [...initialChatConversations];
+  if (!Array.isArray(db.chatMessages)) db.chatMessages = [...initialChatMessages];
+
+  const formattedName = name.trim().startsWith('#') 
+    ? name.trim() 
+    : `#${name.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-')}`;
+
+  const memberList = Array.from(new Set([
+    createdBy,
+    ...(Array.isArray(participants) ? participants : [])
+  ])).filter(Boolean);
+
+  const newSubgroup = {
+    id: `subgroup-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    type: 'subgroup',
+    name: formattedName,
+    topic: description || `Class subgroup for ${name.trim()}`,
+    description: description || '',
+    participants: memberList,
+    parentChannelId: parentChannelId || undefined,
+    cohortId: cohortId || undefined,
+    classId: classId || undefined,
+    isSubgroup: true,
+    createdBy: createdBy || 'staff',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    lastMessage: {
+      content: `Subgroup created by ${creatorName || 'Staff'}`,
+      senderName: 'System',
+      timestamp: new Date().toISOString()
+    }
+  };
+
+  db.chatConversations.push(newSubgroup);
+
+  // Seed welcome system message
+  const welcomeMsg = {
+    id: `msg-${Date.now()}-welcome`,
+    conversationId: newSubgroup.id,
+    senderId: 'system',
+    senderName: 'Nexus System',
+    senderEmail: 'system@educate.internal',
+    senderRole: 'super_admin',
+    senderRoleTitle: 'System Admin',
+    content: `Welcome to ${formattedName}! This subgroup was created by ${creatorName || 'Staff'} for class discussion and cohort collaboration.`,
+    messageType: 'text',
+    attachments: [],
+    mentions: [],
+    timestamp: new Date().toISOString(),
+    readBy: [createdBy].filter(Boolean)
+  };
+
+  db.chatMessages.push(welcomeMsg);
+  saveDatabase(db);
+
+  res.status(201).json({ success: true, data: newSubgroup });
 });
 
 app.post('/api/chat/direct', (req: Request, res: Response) => {

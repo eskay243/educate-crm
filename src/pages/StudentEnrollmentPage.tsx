@@ -23,6 +23,7 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
     hasFeaturePermission,
     showToast,
     openBiodataModal,
+    openRecordPaymentModal,
   } = useCRM();
 
   const [viewMode, setViewMode] = useState<'table' | 'detail'>('table');
@@ -536,16 +537,25 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                             )}
 
                             {!isMentor && (
-                              <button
-                                onClick={() => {
-                                  sendPaymentReminder(student.id);
-                                  showToast('Reminder Sent', `Payment reminder dispatched to ${student.name}`, 'info');
-                                }}
-                                className="p-1.5 rounded text-secondary hover:text-primary hover:bg-surface-container transition-colors cursor-pointer"
-                                title="Send Payment Reminder"
-                              >
-                                <span className="material-symbols-outlined text-[18px]">notifications_active</span>
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => {
+                                    sendPaymentReminder(student.id);
+                                    showToast('Reminder Sent', `Payment reminder dispatched to ${student.name}`, 'info');
+                                  }}
+                                  className="p-1.5 rounded text-secondary hover:text-primary hover:bg-surface-container transition-colors cursor-pointer"
+                                  title="Send Payment Reminder"
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">notifications_active</span>
+                                </button>
+                                <button
+                                  onClick={() => openRecordPaymentModal(student)}
+                                  className="p-1.5 rounded text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors cursor-pointer"
+                                  title="Record Tuition Installment Payment"
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">payments</span>
+                                </button>
+                              </>
                             )}
                           </div>
                         </td>
@@ -808,6 +818,15 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                   {(isFinance || isAdminOrAdmissions) && (
                     <>
                       <button 
+                        onClick={() => openRecordPaymentModal(currentStudent)}
+                        className="h-10 px-stack-md bg-emerald-600 text-white rounded font-label-md text-label-md font-bold hover:bg-emerald-700 transition-colors flex items-center gap-unit shadow-xs cursor-pointer"
+                        title="Record an installment tuition payment for this student"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">payments</span>
+                        <span>Record Installment Payment</span>
+                      </button>
+
+                      <button 
                         onClick={() => {
                           setSelectedStudentId(currentStudent.id);
                           const existingInv = (invoices || []).find(inv => 
@@ -1008,10 +1027,20 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
               {!isMentor ? (
                 <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md shadow-xs">
                   <div className="flex justify-between items-center mb-stack-sm">
-                    <h3 className="font-headline-md text-headline-md font-bold text-on-surface">
-                      Tuition Payment Schedule &amp; Due Dates
-                    </h3>
-                    <span className="text-xs text-secondary">NIBSS Settlement Status</span>
+                    <div>
+                      <h3 className="font-headline-md text-headline-md font-bold text-on-surface">
+                        Tuition Payment Schedule &amp; Due Dates
+                      </h3>
+                      <span className="text-xs text-secondary">NIBSS Settlement Status</span>
+                    </div>
+                    <button
+                      onClick={() => openRecordPaymentModal(currentStudent)}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                      title="Record an installment tuition payment"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">add_card</span>
+                      <span>+ Record Payment</span>
+                    </button>
                   </div>
 
                   <div className="space-y-3">

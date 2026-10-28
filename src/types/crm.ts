@@ -887,7 +887,22 @@ export type ModalType =
   | 'bulk-upload-courses'
   | 'view-biodata'
   | 'log-follow-up'
+  | 'record-installment'
+  | 'create-subgroup'
   | null;
+
+export interface RecordInstallmentPayload {
+  studentId: string;
+  installmentId?: string;
+  amount: number;
+  paymentDate: string;
+  paymentMethod: 'Bank Transfer' | 'Paystack' | 'POS' | 'Cash' | 'Cheque';
+  reference: string;
+  bankName?: string;
+  bankAccountNumber?: string;
+  notes?: string;
+  receiptUrl?: string;
+}
 
 export interface MentorPayoutRequest {
   id: string;

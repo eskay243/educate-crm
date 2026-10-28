@@ -38,7 +38,8 @@ import {
   VirtualAccountDetails,
   TimetableSlot,
   MentorPayoutRequest,
-  WalletTransaction
+  WalletTransaction,
+  RecordInstallmentPayload
 } from '../types/crm';
 import { 
   initialLeads, 
@@ -255,6 +256,10 @@ interface CRMContextType {
   selectedLeadForFollowUp: Lead | null;
   setSelectedLeadForFollowUp: (lead: Lead | null) => void;
   openFollowUpModal: (lead: Lead) => void;
+  selectedStudentForPayment: Student | null;
+  setSelectedStudentForPayment: (student: Student | null) => void;
+  openRecordPaymentModal: (student: Student) => void;
+  recordStudentInstallmentPayment: (studentId: string, payload: RecordInstallmentPayload) => Promise<boolean>;
 
   // Mutators
   addLead: (lead: Omit<Lead, 'id' | 'dateAdded'>) => void;
@@ -598,6 +603,13 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const openFollowUpModal = (lead: Lead) => {
     setSelectedLeadForFollowUp(lead);
     setActiveModal('log-follow-up');
+  };
+
+  const [selectedStudentForPayment, setSelectedStudentForPayment] = useState<Student | null>(null);
+
+  const openRecordPaymentModal = (student: Student) => {
+    setSelectedStudentForPayment(student);
+    setActiveModal('record-installment');
   };
   const [selectedBiodataUser, setSelectedBiodataUser] = useState<{
     category: 'staff' | 'mentor' | 'student';
@@ -2453,6 +2465,66 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       type: 'finance',
       user: currentUser?.name || 'Account Officer',
     });
+  };
+
+  const recordStudentInstallmentPayment = async (studentId: string, payload: RecordInstallmentPayload): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/students/${studentId}/installment-payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...payload,
+          recordedByName: currentUser?.name || 'Finance Officer'
+        })
+      });
+      const result = await res.json();
+      if (!res.ok || !result.success) {
+        showToast('Payment Recording Failed', result.message || 'Could not record installment payment.', 'error');
+        return false;
+      }
+
+      // Update student in state
+      setStudents(prev => prev.map(s => {
+        if (s.id === studentId || s.studentCode === studentId) {
+          return {
+            ...s,
+            paidAmount: result.data.paidAmount,
+            outstandingBalance: result.data.outstandingBalance,
+            tuitionStatus: result.data.tuitionStatus,
+            installments: result.data.installments,
+            paymentHistory: result.data.paymentHistory
+          };
+        }
+        return s;
+      }));
+
+      // Update invoice in state
+      setInvoices(prev => prev.map(inv => {
+        if (inv.studentId === studentId || (inv as any).studentCode === studentId || (inv.studentName && result.data.name && inv.studentName.toLowerCase() === result.data.name.toLowerCase())) {
+          return {
+            ...inv,
+            paidAmount: result.data.paidAmount,
+            balanceDue: result.data.outstandingBalance,
+            status: result.data.outstandingBalance === 0 ? 'Paid' : 'Partial',
+            paidDate: result.data.outstandingBalance === 0 ? (payload.paymentDate || new Date().toISOString().split('T')[0]) : inv.paidDate
+          };
+        }
+        return inv;
+      }));
+
+      showToast(
+        'Installment Recorded!',
+        `₦${Number(payload.amount).toLocaleString()} credited for ${result.data.name}. Remaining balance: ₦${Number(result.data.outstandingBalance).toLocaleString()}`,
+        'success'
+      );
+
+      closeModal();
+      return true;
+    } catch (err: any) {
+      console.error('Error recording student installment:', err);
+      showToast('Network Error', err.message || 'Failed to submit installment payment.', 'error');
+      return false;
+    }
   };
 
   // Mentor mutations
@@ -4793,6 +4865,10 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         selectedLeadForFollowUp,
         setSelectedLeadForFollowUp,
         openFollowUpModal,
+        selectedStudentForPayment,
+        setSelectedStudentForPayment,
+        openRecordPaymentModal,
+        recordStudentInstallmentPayment,
         addLead,
         updateLeadStatus,
         updateLeadNotes,

@@ -20,6 +20,7 @@ export const FloatingChatWidget: React.FC = () => {
   const [inputText, setInputText] = useState('');
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const [isSending, setIsSending] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<{ messageId: string; senderName: string; contentSnippet: string } | null>(null);
 
   // Mention autocomplete state
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
@@ -229,6 +230,7 @@ export const FloatingChatWidget: React.FC = () => {
         senderRoleTitle: currentUser.roleTitle,
         senderAvatar: currentUser.avatar,
         content: inputText.trim(),
+        replyTo: replyingTo || undefined,
         mentions: taggedUserIds,
         attachments,
       };
@@ -244,6 +246,7 @@ export const FloatingChatWidget: React.FC = () => {
         setInputText('');
         setAttachments([]);
         setTaggedUserIds([]);
+        setReplyingTo(null);
         setMentionQuery(null);
         fetchConversations();
         await refreshUnreadChatCount();
@@ -409,7 +412,7 @@ export const FloatingChatWidget: React.FC = () => {
                     >
                       <div className="flex items-center gap-2 truncate">
                         <span className="material-symbols-outlined text-[14px]">
-                          {conv.type === 'direct' ? 'person' : 'tag'}
+                          {conv.type === 'direct' ? 'person' : conv.type === 'subgroup' ? 'groups' : 'tag'}
                         </span>
                         <span className="truncate">{conv.name}</span>
                       </div>
@@ -588,16 +591,33 @@ export const FloatingChatWidget: React.FC = () => {
                     </div>
 
                     <div 
-                      className={`max-w-[85%] rounded-2xl px-3 py-2 text-xs leading-relaxed shadow-xs ${
+                      className={`max-w-[85%] rounded-2xl px-3 py-2 text-xs leading-relaxed shadow-xs relative group/msg ${
                         isMe 
                           ? 'bg-primary text-white rounded-br-xs' 
                           : 'bg-white text-on-surface border border-outline-variant/60 rounded-bl-xs'
                       }`}
                     >
-                      <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                      {/* Quoted Header if Reply */}
+                      {msg.replyTo && (
+                        <div className={`p-1.5 mb-1.5 rounded border-l-2 text-[10px] ${
+                          isMe ? 'bg-black/15 border-white/80 text-white' : 'bg-primary/10 border-primary text-on-surface'
+                        }`}>
+                          <span className="font-bold">{msg.replyTo.senderName}:</span> {msg.replyTo.contentSnippet}
+                        </div>
+                      )}
+
+                      {/* Content or Voice Player */}
+                      {msg.messageType === 'voice' && msg.attachments?.[0] ? (
+                        <div className="flex items-center gap-1.5 my-1">
+                          <span className="material-symbols-outlined text-[16px] text-rose-500">mic</span>
+                          <audio controls src={msg.attachments[0].url} className="h-6 max-w-[180px]" />
+                        </div>
+                      ) : (
+                        <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                      )}
 
                       {/* Attachments preview */}
-                      {msg.attachments && msg.attachments.length > 0 && (
+                      {msg.attachments && msg.attachments.length > 0 && msg.messageType !== 'voice' && (
                         <div className="mt-2 space-y-1">
                           {msg.attachments.map(att => (
                             <a
@@ -618,6 +638,23 @@ export const FloatingChatWidget: React.FC = () => {
                           ))}
                         </div>
                       )}
+
+                      {/* Quick Hover Reply Button */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReplyingTo({
+                            messageId: msg.id,
+                            senderName: msg.senderName,
+                            contentSnippet: (msg.content || 'Attachment').slice(0, 60)
+                          });
+                          inputRef.current?.focus();
+                        }}
+                        className={`absolute top-1 ${isMe ? '-left-6' : '-right-6'} hidden group-hover/msg:flex p-1 rounded hover:bg-surface-container text-secondary hover:text-primary transition`}
+                        title="Reply"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">reply</span>
+                      </button>
                     </div>
                   </div>
                 );
@@ -635,6 +672,22 @@ export const FloatingChatWidget: React.FC = () => {
                 onSelect={handleSelectMention}
                 onClose={() => setMentionQuery(null)}
               />
+            </div>
+          )}
+
+          {/* Active Reply Banner in Popout */}
+          {replyingTo && (
+            <div className="px-3 py-1 bg-primary/10 border-t border-primary/20 flex items-center justify-between text-[11px] text-primary shrink-0 animate-fade-in">
+              <span className="truncate">
+                Replying to <strong>{replyingTo.senderName}</strong>: <span className="opacity-80 truncate">{replyingTo.contentSnippet}</span>
+              </span>
+              <button 
+                type="button" 
+                onClick={() => setReplyingTo(null)} 
+                className="hover:text-red-500 p-0.5 ml-2 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[14px]">close</span>
+              </button>
             </div>
           )}
 

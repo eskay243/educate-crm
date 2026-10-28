@@ -33,6 +33,8 @@ import { CourseOutlineModal } from '../modals/CourseOutlineModal';
 import { RequestPayoutModal } from '../modals/RequestPayoutModal';
 import { BulkUploadCoursesModal } from '../modals/BulkUploadCoursesModal';
 import { LogFollowUpModal } from '../modals/LogFollowUpModal';
+import { RecordInstallmentPaymentModal } from '../modals/RecordInstallmentPaymentModal';
+import { CreateSubgroupModal } from '../modals/CreateSubgroupModal';
 import { MobileBottomNav } from './MobileBottomNav';
 import { FloatingChatWidget } from '../chat/FloatingChatWidget';
 
@@ -198,6 +200,14 @@ export const AppLayout: React.FC = () => {
       />
       <LogFollowUpModal
         isOpen={activeModal === 'log-follow-up'}
+        onClose={closeModal}
+      />
+      <RecordInstallmentPaymentModal
+        isOpen={activeModal === 'record-installment'}
+        onClose={closeModal}
+      />
+      <CreateSubgroupModal
+        isOpen={activeModal === 'create-subgroup'}
         onClose={closeModal}
       />
       <ChangePasswordModal />

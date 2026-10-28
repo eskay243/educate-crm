@@ -1,10 +1,17 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useCRM } from '../context/CRMContext';
-import { ChatConversation, ChatMessage, ChatAttachment, ChatUserTarget } from '../types/chat';
+import { ChatConversation, ChatMessage, ChatAttachment, ChatUserTarget, ChatMessageReplyTo } from '../types/chat';
 import { MentionSuggestions } from '../components/chat/MentionSuggestions';
+import { VoiceMessageRecorder } from '../components/chat/VoiceMessageRecorder';
+
+interface SwipeState {
+  messageId: string;
+  startX: number;
+  currentX: number;
+}
 
 export const ChatPage: React.FC = () => {
-  const { currentUser, showToast } = useCRM();
+  const { currentUser, showToast, openModal } = useCRM();
 
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
@@ -18,6 +25,18 @@ export const ChatPage: React.FC = () => {
   const [isNewDmOpen, setIsNewDmOpen] = useState(false);
   const [dmSearchQuery, setDmSearchQuery] = useState('');
 
+  // Replying state & Quoted message banner
+  const [replyingTo, setReplyingTo] = useState<ChatMessageReplyTo | null>(null);
+  const [isVoiceRecording, setIsVoiceRecording] = useState(false);
+
+  // Swipe-to-reply state & Right-click context menu
+  const [swiping, setSwiping] = useState<SwipeState | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    message: ChatMessage;
+  } | null>(null);
+
   // Mention autocomplete state
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [taggedUserIds, setTaggedUserIds] = useState<string[]>([]);
@@ -25,6 +44,13 @@ export const ChatPage: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Dismiss context menu on global click
+  useEffect(() => {
+    const handleCloseMenu = () => setContextMenu(null);
+    window.addEventListener('click', handleCloseMenu);
+    return () => window.removeEventListener('click', handleCloseMenu);
+  }, []);
 
   // 1. Fetch conversations & eligible users for current user
   const fetchConversations = async () => {
@@ -112,18 +138,23 @@ export const ChatPage: React.FC = () => {
     return conversations.filter(c => c.type === 'channel');
   }, [conversations]);
 
+  const subgroups = useMemo(() => {
+    return conversations.filter(c => c.type === 'subgroup');
+  }, [conversations]);
+
   const directMessages = useMemo(() => {
     return conversations.filter(c => c.type === 'direct');
   }, [conversations]);
 
   const filteredConversations = useMemo(() => {
-    if (!searchFilter.trim()) return { channels, directMessages };
+    if (!searchFilter.trim()) return { channels, subgroups, directMessages };
     const q = searchFilter.toLowerCase();
     return {
       channels: channels.filter(c => c.name.toLowerCase().includes(q) || (c.topic || '').toLowerCase().includes(q)),
+      subgroups: subgroups.filter(c => c.name.toLowerCase().includes(q) || (c.topic || '').toLowerCase().includes(q)),
       directMessages: directMessages.filter(c => c.name.toLowerCase().includes(q) || (c.topic || '').toLowerCase().includes(q)),
     };
-  }, [channels, directMessages, searchFilter]);
+  }, [channels, subgroups, directMessages, searchFilter]);
 
   const filteredDmUsers = useMemo(() => {
     const q = dmSearchQuery.toLowerCase().trim();
@@ -135,6 +166,36 @@ export const ChatPage: React.FC = () => {
       (u.roleTitle && u.roleTitle.toLowerCase().includes(q))
     );
   }, [allowedUsers, dmSearchQuery]);
+
+  // Reply selection trigger
+  const handleSetReply = (msg: ChatMessage) => {
+    const snippet = msg.content 
+      ? (msg.content.slice(0, 100) + (msg.content.length > 100 ? '...' : '')) 
+      : (msg.attachments?.[0]?.name ? `📎 ${msg.attachments[0].name}` : 'Voice Note');
+
+    setReplyingTo({
+      messageId: msg.id,
+      senderId: msg.senderId,
+      senderName: msg.senderName,
+      contentSnippet: snippet,
+      mediaType: msg.messageType || 'text'
+    });
+    textareaRef.current?.focus();
+  };
+
+  // Scroll to quoted original message
+  const handleScrollToMessage = (messageId: string) => {
+    const el = document.getElementById(`msg-${messageId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('ring-2', 'ring-primary', 'bg-primary/10', 'transition-all');
+      setTimeout(() => {
+        el.classList.remove('ring-2', 'ring-primary', 'bg-primary/10');
+      }, 2000);
+    } else {
+      showToast('Notice', 'Original message not found in recent history.', 'info');
+    }
+  };
 
   // Handle typing & @ autocomplete detection
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -177,7 +238,40 @@ export const ChatPage: React.FC = () => {
     }, 50);
   };
 
-  // Handle File Selection (Converts to Base64 data URL)
+  // Handle Clipboard Paste (intercepts screenshots and image files)
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.indexOf('image') !== -1) {
+        const file = item.getAsFile();
+        if (!file) continue;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const url = event.target?.result as string;
+          if (url) {
+            setAttachments(prev => [
+              ...prev,
+              {
+                id: `screenshot-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                name: `Screenshot-${new Date().toLocaleTimeString().replace(/:/g, '')}.png`,
+                url,
+                type: file.type || 'image/png',
+                size: file.size
+              }
+            ]);
+            showToast('Screenshot Attached', 'Clipboard screenshot added to message.', 'info');
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  };
+
+  // Handle File Selection
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -219,6 +313,7 @@ export const ChatPage: React.FC = () => {
         senderRoleTitle: currentUser.roleTitle,
         senderAvatar: currentUser.avatar,
         content: inputText.trim(),
+        replyTo: replyingTo || undefined,
         mentions: taggedUserIds,
         attachments,
       };
@@ -234,12 +329,58 @@ export const ChatPage: React.FC = () => {
         setInputText('');
         setAttachments([]);
         setTaggedUserIds([]);
+        setReplyingTo(null);
         fetchConversations();
       } else {
         showToast('Error', data.message || 'Failed to send message', 'error');
       }
     } catch (err: any) {
       showToast('Error', err.message || 'Could not send message', 'error');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  // Send voice note
+  const handleSendVoice = async (audioDataUrl: string, durationSeconds: number) => {
+    if (!activeConvId || !currentUser) return;
+    setIsVoiceRecording(false);
+    setIsSending(true);
+
+    try {
+      const payload = {
+        senderId: currentUser.id,
+        senderName: currentUser.name,
+        senderEmail: currentUser.email,
+        senderRole: currentUser.role,
+        senderRoleTitle: currentUser.roleTitle,
+        senderAvatar: currentUser.avatar,
+        content: '🎤 Voice message',
+        messageType: 'voice',
+        voiceDurationSeconds: durationSeconds,
+        replyTo: replyingTo || undefined,
+        attachments: [{
+          id: `voice-${Date.now()}`,
+          name: `VoiceNote-${durationSeconds}s.webm`,
+          url: audioDataUrl,
+          type: 'audio/webm',
+          size: Math.round(audioDataUrl.length * 0.75)
+        }]
+      };
+
+      const res = await fetch(`/api/chat/conversations/${activeConvId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setMessages(prev => [...prev, data.data]);
+        setReplyingTo(null);
+        fetchConversations();
+      }
+    } catch (err: any) {
+      showToast('Voice Error', err.message || 'Could not dispatch voice message', 'error');
     } finally {
       setIsSending(false);
     }
@@ -299,7 +440,7 @@ export const ChatPage: React.FC = () => {
       {/* Main Container */}
       <div className="flex-1 flex overflow-hidden">
         {/* ========================================================================= */}
-        {/* LEFT SIDEBAR: Channels & Direct Messages                                  */}
+        {/* LEFT SIDEBAR: Channels, Subgroups & Direct Messages                       */}
         {/* ========================================================================= */}
         <div className="w-80 border-r border-outline-variant bg-surface-container-lowest flex flex-col shrink-0">
           {/* Header */}
@@ -309,14 +450,24 @@ export const ChatPage: React.FC = () => {
               <h2 className="font-headline-md text-sm font-bold text-on-surface">Institutional Chat</h2>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setIsNewDmOpen(true)}
-              className="w-7 h-7 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-on-primary flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
-              title="Start a new Direct Message"
-            >
-              <span className="material-symbols-outlined text-[18px]">add_comment</span>
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => openModal('create-subgroup')}
+                className="w-7 h-7 rounded-lg bg-surface-container hover:bg-primary hover:text-white text-secondary flex items-center justify-center transition-colors cursor-pointer"
+                title="Create Class Subgroup"
+              >
+                <span className="material-symbols-outlined text-[17px]">group_add</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsNewDmOpen(true)}
+                className="w-7 h-7 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-on-primary flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+                title="Start a new Direct Message"
+              >
+                <span className="material-symbols-outlined text-[18px]">add_comment</span>
+              </button>
+            </div>
           </div>
 
           {/* Search Bar */}
@@ -337,10 +488,10 @@ export const ChatPage: React.FC = () => {
 
           {/* Conversations Scroll Area */}
           <div className="flex-1 overflow-y-auto overscroll-contain p-2 space-y-4">
-            {/* Group Channels Section */}
+            {/* 1. Group Channels Section */}
             <div>
               <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-secondary flex items-center justify-between">
-                <span>Group Channels</span>
+                <span>Institutional Channels</span>
                 <span className="font-mono text-[9px]">{filteredConversations.channels.length}</span>
               </div>
               <div className="space-y-0.5 mt-1">
@@ -382,7 +533,64 @@ export const ChatPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Direct Messages Section */}
+            {/* 2. Class & Cohort Subgroups Section */}
+            <div>
+              <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-secondary flex items-center justify-between">
+                <span>Class & Cohort Subgroups</span>
+                <button
+                  type="button"
+                  onClick={() => openModal('create-subgroup')}
+                  className="text-[10px] text-primary hover:underline font-bold cursor-pointer flex items-center gap-0.5"
+                >
+                  <span>+ Subgroup</span>
+                </button>
+              </div>
+              <div className="space-y-0.5 mt-1">
+                {filteredConversations.subgroups.length === 0 ? (
+                  <div className="px-3 py-3 text-center text-[11px] text-secondary">
+                    No subgroups yet. Click <button onClick={() => openModal('create-subgroup')} className="text-primary font-bold hover:underline">+ Subgroup</button> to create a class group!
+                  </div>
+                ) : (
+                  filteredConversations.subgroups.map((conv) => {
+                    const isActive = conv.id === activeConvId;
+                    return (
+                      <button
+                        key={conv.id}
+                        type="button"
+                        onClick={() => setActiveConvId(conv.id)}
+                        className={`w-full text-left px-2.5 py-2 rounded-xl transition-all flex items-center justify-between cursor-pointer group ${
+                          isActive
+                            ? 'bg-primary text-on-primary shadow-xs font-bold'
+                            : 'hover:bg-surface-container text-on-surface'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={`material-symbols-outlined text-[18px] ${isActive ? 'text-white' : 'text-emerald-600'}`}>
+                            groups
+                          </span>
+                          <div className="truncate">
+                            <div className="text-xs truncate font-medium">{conv.name}</div>
+                            {conv.topic && (
+                              <div className={`text-[10px] truncate ${isActive ? 'text-white/80' : 'text-secondary'}`}>
+                                {conv.topic}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {Boolean(conv.unreadCount && conv.unreadCount > 0) && (
+                          <span className="shrink-0 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white">
+                            {conv.unreadCount}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* 3. Direct Messages Section */}
             <div>
               <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-secondary flex items-center justify-between">
                 <span>Direct Messages</span>
@@ -453,7 +661,9 @@ export const ChatPage: React.FC = () => {
               <div className="shrink-0 p-3.5 px-6 border-b border-outline-variant bg-surface-container-lowest flex items-center justify-between shadow-2xs">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
-                    {activeConversation.type === 'channel' ? (
+                    {activeConversation.type === 'subgroup' ? (
+                      <span className="material-symbols-outlined text-[20px] text-emerald-600">groups</span>
+                    ) : activeConversation.type === 'channel' ? (
                       <span className="material-symbols-outlined text-[20px]">tag</span>
                     ) : (
                       activeConversation.name.charAt(0).toUpperCase()
@@ -462,12 +672,16 @@ export const ChatPage: React.FC = () => {
                   <div>
                     <h3 className="font-bold text-sm text-on-surface flex items-center gap-1.5">
                       <span>{activeConversation.name}</span>
-                      <span className="text-[10px] font-medium px-2 py-0.2 rounded-full bg-surface-container text-secondary uppercase tracking-wider">
+                      <span className={`text-[10px] font-medium px-2 py-0.2 rounded-full uppercase tracking-wider ${
+                        activeConversation.type === 'subgroup'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400'
+                          : 'bg-surface-container text-secondary'
+                      }`}>
                         {activeConversation.type}
                       </span>
                     </h3>
                     <p className="text-[11px] text-secondary">
-                      {activeConversation.topic || activeConversation.description || 'Institutional conversation thread'}
+                      {activeConversation.topic || activeConversation.description || 'Class & institutional collaboration thread'}
                     </p>
                   </div>
                 </div>
@@ -494,12 +708,49 @@ export const ChatPage: React.FC = () => {
                   messages.map((msg) => {
                     const isSelf = msg.senderId === currentUser?.id;
                     const isMentioned = currentUser && msg.mentions?.includes(currentUser.id);
+                    const isCurrentSwipe = swiping?.messageId === msg.id;
+                    const swipeDelta = isCurrentSwipe ? Math.max(0, swiping.currentX - swiping.startX) : 0;
 
                     return (
                       <div 
+                        id={`msg-${msg.id}`}
                         key={msg.id}
-                        className={`flex gap-3 max-w-3xl ${isSelf ? 'ml-auto flex-row-reverse' : ''}`}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          setContextMenu({ x: e.clientX, y: e.clientY, message: msg });
+                        }}
+                        onTouchStart={(e) => {
+                          const touch = e.touches[0];
+                          if (touch) setSwiping({ messageId: msg.id, startX: touch.clientX, currentX: touch.clientX });
+                        }}
+                        onTouchMove={(e) => {
+                          const touch = e.touches[0];
+                          if (touch && swiping?.messageId === msg.id) {
+                            setSwiping(prev => prev ? { ...prev, currentX: touch.clientX } : null);
+                          }
+                        }}
+                        onTouchEnd={() => {
+                          if (swiping?.messageId === msg.id) {
+                            const delta = swiping.currentX - swiping.startX;
+                            if (delta > 50) {
+                              handleSetReply(msg);
+                            }
+                            setSwiping(null);
+                          }
+                        }}
+                        style={{
+                          transform: swipeDelta ? `translateX(${Math.min(swipeDelta, 60)}px)` : undefined,
+                          transition: swiping ? 'none' : 'transform 0.2s ease-out'
+                        }}
+                        className={`flex gap-3 max-w-3xl group relative select-text ${isSelf ? 'ml-auto flex-row-reverse' : ''}`}
                       >
+                        {/* Swipe reply indicator cue */}
+                        {swipeDelta > 20 && (
+                          <div className="absolute -left-8 top-1/2 -translate-y-1/2 flex items-center justify-center text-primary animate-pulse">
+                            <span className="material-symbols-outlined text-[20px]">reply</span>
+                          </div>
+                        )}
+
                         {/* Avatar */}
                         {msg.senderAvatar ? (
                           <img 
@@ -527,19 +778,56 @@ export const ChatPage: React.FC = () => {
                             </span>
                           </div>
 
-                          <div className={`p-3 rounded-2xl text-xs leading-relaxed max-w-lg shadow-2xs ${
+                          <div className={`p-3 rounded-2xl text-xs leading-relaxed max-w-lg shadow-2xs relative group/bubble ${
                             isSelf 
                               ? 'bg-primary text-on-primary rounded-tr-xs' 
                               : isMentioned 
                                 ? 'bg-amber-50/90 border border-amber-300 text-on-surface rounded-tl-xs'
                                 : 'bg-surface-container-low border border-outline-variant text-on-surface rounded-tl-xs'
                           }`}>
-                            <div className="whitespace-pre-wrap">
-                              {renderMessageContent(msg.content)}
-                            </div>
+                            {/* Quoted Message Snippet Header (if this message is a reply) */}
+                            {msg.replyTo && (
+                              <div
+                                onClick={() => handleScrollToMessage(msg.replyTo!.messageId)}
+                                className={`p-2 mb-2 rounded-lg border-l-4 cursor-pointer transition text-left select-none ${
+                                  isSelf 
+                                    ? 'bg-black/15 border-white/80 hover:bg-black/25 text-white' 
+                                    : 'bg-primary/10 border-primary hover:bg-primary/15 text-on-surface'
+                                }`}
+                                title="Click to jump to quoted message"
+                              >
+                                <div className="flex items-center gap-1 text-[10px] font-bold opacity-90">
+                                  <span className="material-symbols-outlined text-[13px]">reply</span>
+                                  <span>{msg.replyTo.senderName}</span>
+                                </div>
+                                <div className="text-[11px] truncate opacity-85 mt-0.5">
+                                  {msg.replyTo.contentSnippet || 'Message'}
+                                </div>
+                              </div>
+                            )}
 
-                            {/* Attachments */}
-                            {msg.attachments && msg.attachments.length > 0 && (
+                            {/* Main Content */}
+                            {msg.content && msg.content !== '🎤 Voice message' && (
+                              <div className="whitespace-pre-wrap text-left">
+                                {renderMessageContent(msg.content)}
+                              </div>
+                            )}
+
+                            {/* Voice Note Player */}
+                            {msg.messageType === 'voice' && msg.attachments && msg.attachments.length > 0 && (
+                              <div className="mt-1 flex items-center gap-2 p-2 rounded-xl bg-black/5 dark:bg-white/10">
+                                <span className="material-symbols-outlined text-[18px] text-rose-500">mic</span>
+                                <audio controls src={msg.attachments[0].url} className="h-7 max-w-[220px] sm:max-w-[260px]" />
+                                {msg.voiceDurationSeconds && (
+                                  <span className="text-[10px] font-mono opacity-70">
+                                    {Math.floor(msg.voiceDurationSeconds / 60)}:{(msg.voiceDurationSeconds % 60).toString().padStart(2, '0')}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Attachments (Images, Videos, Files) */}
+                            {msg.attachments && msg.attachments.length > 0 && msg.messageType !== 'voice' && (
                               <div className="mt-2 pt-2 border-t border-outline-variant/40 space-y-1.5">
                                 {msg.attachments.map((att) => (
                                   <div key={att.id}>
@@ -548,9 +836,15 @@ export const ChatPage: React.FC = () => {
                                         <img 
                                           src={att.url} 
                                           alt={att.name} 
-                                          className="max-h-56 rounded-lg object-contain border border-outline-variant bg-black/5"
+                                          className="max-h-60 rounded-lg object-contain border border-outline-variant bg-black/5"
                                         />
                                       </a>
+                                    ) : att.type.startsWith('video/') ? (
+                                      <video 
+                                        controls 
+                                        src={att.url} 
+                                        className="max-h-60 rounded-lg max-w-full border border-outline-variant mt-1"
+                                      />
                                     ) : (
                                       <a
                                         href={att.url}
@@ -570,6 +864,30 @@ export const ChatPage: React.FC = () => {
                                 ))}
                               </div>
                             )}
+
+                            {/* Quick Action Hover Bar */}
+                            <div className={`absolute top-1 ${isSelf ? '-left-16' : '-right-16'} hidden group-hover:flex items-center gap-1 bg-surface border border-outline-variant rounded-lg p-0.5 shadow-sm`}>
+                              <button
+                                type="button"
+                                onClick={() => handleSetReply(msg)}
+                                className="p-1 rounded text-secondary hover:text-primary hover:bg-surface-container transition cursor-pointer"
+                                title="Reply to this message"
+                              >
+                                <span className="material-symbols-outlined text-[16px]">reply</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setInputText(prev => `${prev} @${msg.senderName} `);
+                                  setTaggedUserIds(prev => Array.from(new Set([...prev, msg.senderId])));
+                                  textareaRef.current?.focus();
+                                }}
+                                className="p-1 rounded text-secondary hover:text-primary hover:bg-surface-container transition cursor-pointer"
+                                title="Tag sender"
+                              >
+                                <span className="material-symbols-outlined text-[16px]">alternate_email</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -581,6 +899,26 @@ export const ChatPage: React.FC = () => {
 
               {/* Bottom Input Area */}
               <div className="shrink-0 p-3 sm:p-4 border-t border-outline-variant bg-surface-container-lowest">
+                {/* Active Quoted Reply Banner */}
+                {replyingTo && (
+                  <div className="flex items-center justify-between px-3 py-1.5 mb-2 bg-primary/10 border border-primary/20 rounded-xl text-xs text-primary animate-fade-in">
+                    <div className="flex items-center gap-2 truncate">
+                      <span className="material-symbols-outlined text-[16px]">reply</span>
+                      <span className="truncate">
+                        Replying to <strong className="font-bold">{replyingTo.senderName}</strong>: <span className="opacity-80 truncate">{replyingTo.contentSnippet}</span>
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setReplyingTo(null)}
+                      className="p-1 hover:bg-primary/10 rounded-md transition text-primary cursor-pointer shrink-0"
+                      title="Cancel reply"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">close</span>
+                    </button>
+                  </div>
+                )}
+
                 {/* Active Attachments Preview */}
                 {attachments.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-2 p-2 bg-surface-container rounded-xl border border-outline-variant">
@@ -603,81 +941,103 @@ export const ChatPage: React.FC = () => {
                   </div>
                 )}
 
-                <div className="relative">
-                  {/* @Mention Autocomplete Dropdown */}
-                  {mentionQuery !== null && (
-                    <MentionSuggestions
-                      users={allowedUsers}
-                      filterText={mentionQuery}
-                      onSelect={handleSelectMention}
-                      onClose={() => setMentionQuery(null)}
+                {/* Voice Message Recorder View */}
+                {isVoiceRecording ? (
+                  <div className="mb-2">
+                    <VoiceMessageRecorder
+                      onSendVoice={handleSendVoice}
+                      onCancel={() => setIsVoiceRecording(false)}
                     />
-                  )}
-
-                  <div className="flex items-end gap-2 bg-surface border border-outline-variant rounded-2xl p-2 focus-within:border-primary shadow-xs">
-                    {/* Attachment Upload Trigger */}
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleFileSelect}
-                      multiple
-                      className="hidden"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="p-2 rounded-xl text-secondary hover:text-primary hover:bg-surface-container transition-colors cursor-pointer shrink-0"
-                      title="Attach file, document, or screenshot"
-                    >
-                      <span className="material-symbols-outlined text-[20px]">attach_file</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setInputText(prev => prev + '@');
-                        setMentionQuery('');
-                        textareaRef.current?.focus();
-                      }}
-                      className="p-2 rounded-xl text-secondary hover:text-primary hover:bg-surface-container transition-colors cursor-pointer shrink-0"
-                      title="Tag a colleague or student with @"
-                    >
-                      <span className="material-symbols-outlined text-[20px]">alternate_email</span>
-                    </button>
-
-                    {/* Text Area */}
-                    <textarea
-                      ref={textareaRef}
-                      rows={1}
-                      value={inputText}
-                      onChange={handleInputChange}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSendMessage();
-                        }
-                      }}
-                      placeholder={`Message ${activeConversation.name}... (Type @ to mention, Enter to send)`}
-                      className="flex-1 max-h-32 p-1.5 bg-transparent text-xs text-on-surface placeholder:text-secondary outline-none resize-none leading-relaxed"
-                    />
-
-                    {/* Send Button */}
-                    <button
-                      type="button"
-                      onClick={() => handleSendMessage()}
-                      disabled={isSending || (!inputText.trim() && attachments.length === 0)}
-                      className={`p-2 rounded-xl text-white transition-all cursor-pointer shrink-0 flex items-center justify-center ${
-                        inputText.trim() || attachments.length > 0
-                          ? 'bg-primary hover:bg-primary/90 shadow-xs'
-                          : 'bg-surface-container text-secondary/40 cursor-not-allowed'
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[20px]">
-                        {isSending ? 'progress_activity' : 'send'}
-                      </span>
-                    </button>
                   </div>
-                </div>
+                ) : (
+                  <div className="relative">
+                    {/* @Mention Autocomplete Dropdown */}
+                    {mentionQuery !== null && (
+                      <MentionSuggestions
+                        users={allowedUsers}
+                        filterText={mentionQuery}
+                        onSelect={handleSelectMention}
+                        onClose={() => setMentionQuery(null)}
+                      />
+                    )}
+
+                    <div className="flex items-end gap-2 bg-surface border border-outline-variant rounded-2xl p-2 focus-within:border-primary shadow-xs">
+                      {/* Attachment Upload Trigger */}
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileSelect}
+                        accept="image/*,video/*,.pdf,.doc,.docx,.txt"
+                        multiple
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="p-2 rounded-xl text-secondary hover:text-primary hover:bg-surface-container transition-colors cursor-pointer shrink-0"
+                        title="Attach file, screenshot, video, or document"
+                      >
+                        <span className="material-symbols-outlined text-[20px]">attach_file</span>
+                      </button>
+
+                      {/* Voice Note Trigger */}
+                      <button
+                        type="button"
+                        onClick={() => setIsVoiceRecording(true)}
+                        className="p-2 rounded-xl text-secondary hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer shrink-0"
+                        title="Record voice note"
+                      >
+                        <span className="material-symbols-outlined text-[20px]">mic</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setInputText(prev => prev + '@');
+                          setMentionQuery('');
+                          textareaRef.current?.focus();
+                        }}
+                        className="p-2 rounded-xl text-secondary hover:text-primary hover:bg-surface-container transition-colors cursor-pointer shrink-0"
+                        title="Tag a colleague or student with @"
+                      >
+                        <span className="material-symbols-outlined text-[20px]">alternate_email</span>
+                      </button>
+
+                      {/* Text Area with Screenshot Paste Interceptor */}
+                      <textarea
+                        ref={textareaRef}
+                        rows={1}
+                        value={inputText}
+                        onChange={handleInputChange}
+                        onPaste={handlePaste}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSendMessage();
+                          }
+                        }}
+                        placeholder={`Message ${activeConversation.name}... (Type @ to mention, Paste screenshot, Enter to send)`}
+                        className="flex-1 max-h-32 p-1.5 bg-transparent text-xs text-on-surface placeholder:text-secondary outline-none resize-none leading-relaxed"
+                      />
+
+                      {/* Send Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleSendMessage()}
+                        disabled={isSending || (!inputText.trim() && attachments.length === 0)}
+                        className={`p-2 rounded-xl text-white transition-all cursor-pointer shrink-0 flex items-center justify-center ${
+                          inputText.trim() || attachments.length > 0
+                            ? 'bg-primary hover:bg-primary/90 shadow-xs'
+                            : 'bg-surface-container text-secondary/40 cursor-not-allowed'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[20px]">
+                          {isSending ? 'progress_activity' : 'send'}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           ) : (
@@ -685,12 +1045,63 @@ export const ChatPage: React.FC = () => {
               <span className="material-symbols-outlined text-5xl text-outline-variant">chat</span>
               <h3 className="font-bold text-base text-on-surface">Select a conversation to start chatting</h3>
               <p className="text-xs max-w-sm text-center">
-                Select an institutional channel from the left sidebar or start a direct message with an authorized team member.
+                Select an institutional channel, class subgroup, or direct message from the left sidebar.
               </p>
             </div>
           )}
         </div>
       </div>
+
+      {/* ========================================================================= */}
+      {/* RIGHT-CLICK CONTEXT MENU                                                  */}
+      {/* ========================================================================= */}
+      {contextMenu && (
+        <div 
+          style={{ 
+            top: Math.min(window.innerHeight - 170, contextMenu.y), 
+            left: Math.min(window.innerWidth - 220, contextMenu.x) 
+          }}
+          className="fixed z-50 bg-surface border border-outline-variant shadow-2xl rounded-xl p-1.5 text-xs text-on-surface min-w-[190px] animate-fade-in"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              handleSetReply(contextMenu.message);
+              setContextMenu(null);
+            }}
+            className="w-full text-left px-3 py-2 rounded-lg hover:bg-primary/10 hover:text-primary flex items-center gap-2 transition cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[16px]">reply</span>
+            <span>Reply to message</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setInputText(prev => `${prev} @${contextMenu.message.senderName} `);
+              setTaggedUserIds(prev => Array.from(new Set([...prev, contextMenu.message.senderId])));
+              textareaRef.current?.focus();
+              setContextMenu(null);
+            }}
+            className="w-full text-left px-3 py-2 rounded-lg hover:bg-primary/10 hover:text-primary flex items-center gap-2 transition cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[16px]">alternate_email</span>
+            <span>Tag @{contextMenu.message.senderName}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard.writeText(contextMenu.message.content || '');
+              showToast('Copied', 'Message text copied to clipboard', 'info');
+              setContextMenu(null);
+            }}
+            className="w-full text-left px-3 py-2 rounded-lg hover:bg-surface-container flex items-center gap-2 transition cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[16px]">content_copy</span>
+            <span>Copy message text</span>
+          </button>
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* NEW DIRECT MESSAGE MODAL (ROLE-ISOLATED SELECTOR)                         */}

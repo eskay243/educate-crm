@@ -8,6 +8,14 @@ export interface ChatAttachment {
   size: number;
 }
 
+export interface ChatMessageReplyTo {
+  messageId: string;
+  senderId?: string;
+  senderName: string;
+  contentSnippet: string;
+  mediaType?: 'text' | 'image' | 'voice' | 'video' | 'file';
+}
+
 export interface ChatMessage {
   id: string;
   conversationId: string;
@@ -18,13 +26,16 @@ export interface ChatMessage {
   senderRoleTitle?: string;
   senderAvatar?: string;
   content: string;
+  replyTo?: ChatMessageReplyTo;
+  messageType?: 'text' | 'image' | 'voice' | 'video' | 'file';
+  voiceDurationSeconds?: number;
   mentions?: string[]; // Array of tagged user IDs or emails
   attachments?: ChatAttachment[];
   timestamp: string;
   readBy?: string[];
 }
 
-export type ConversationType = 'direct' | 'channel';
+export type ConversationType = 'direct' | 'channel' | 'subgroup';
 
 export interface ChatConversation {
   id: string;
@@ -35,6 +46,11 @@ export interface ChatConversation {
   participants: string[]; // User IDs or emails
   allowedRoles?: string[]; // Optional role filter for channels
   courseId?: string; // For cohort-specific channels
+  parentChannelId?: string; // Parent channel or cohort ID if subgroup
+  cohortId?: string;
+  classId?: string;
+  isSubgroup?: boolean;
+  createdBy?: string;
   isDefault?: boolean; // Institutional channels joined automatically
   lastMessage?: {
     content: string;
