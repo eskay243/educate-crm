@@ -1127,6 +1127,8 @@ export const defaultRoleDefinitions: CustomRoleDefinition[] = [
       canScheduleClasses: true,
       canApproveTopics: true,
       canManageUsers: true,
+      canDisburseApprovedFunds: true,
+      canViewStandupReports: true,
     }
   },
   {

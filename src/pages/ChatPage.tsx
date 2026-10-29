@@ -93,8 +93,9 @@ export const ChatPage: React.FC = () => {
 
   // 2. Fetch messages for active conversation
   const fetchActiveMessages = async (convId: string) => {
+    if (!currentUser) return;
     try {
-      const res = await fetch(`/api/chat/conversations/${convId}/messages`);
+      const res = await fetch(`/api/chat/conversations/${convId}/messages?userId=${encodeURIComponent(currentUser.id)}&role=${encodeURIComponent(currentUser.role)}&email=${encodeURIComponent(currentUser.email)}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
         setMessages(data.data);
@@ -440,7 +441,7 @@ export const ChatPage: React.FC = () => {
   };
 
   // Render message content with clickable URLs and highlighted @mentions
-  const renderMessageContent = (content: string) => {
+  const renderMessageContent = (content: string, isSelf = false) => {
     const parts = content.split(/(https?:\/\/[^\s]+|www\.[^\s]+|@[a-zA-Z0-9_.-]+)/g);
     return parts.map((part, index) => {
       if (part.startsWith('http://') || part.startsWith('https://') || part.startsWith('www.')) {
@@ -452,7 +453,9 @@ export const ChatPage: React.FC = () => {
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="underline font-semibold hover:opacity-80 break-all text-blue-500 dark:text-blue-400 cursor-pointer"
+            className={`underline font-semibold hover:opacity-80 break-all cursor-pointer ${
+              isSelf ? 'text-white' : 'text-blue-500 dark:text-blue-400'
+            }`}
           >
             {part}
           </a>
@@ -462,13 +465,17 @@ export const ChatPage: React.FC = () => {
         return (
           <span 
             key={index} 
-            className="inline-flex items-center px-1.5 py-0.2 mx-0.5 rounded font-bold bg-primary/10 text-primary border border-primary/20 text-xs"
+            className={`inline-flex items-center px-1.5 py-0.2 mx-0.5 rounded font-bold text-xs ${
+              isSelf 
+                ? 'bg-white/20 text-white border border-white/30' 
+                : 'bg-primary/10 text-primary border border-primary/20'
+            }`}
           >
             {part}
           </span>
         );
       }
-      return <span key={index}>{part}</span>;
+      return <span key={index} className={isSelf ? 'text-white font-medium' : undefined}>{part}</span>;
     });
   };
 
@@ -817,7 +824,7 @@ export const ChatPage: React.FC = () => {
 
                           <div className={`p-3 rounded-2xl text-xs leading-relaxed max-w-lg shadow-2xs relative group/bubble ${
                             isSelf 
-                              ? 'bg-primary text-on-primary rounded-tr-xs' 
+                              ? 'bg-primary text-white font-medium rounded-tr-xs' 
                               : isMentioned 
                                 ? 'bg-amber-50/90 border border-amber-300 text-on-surface rounded-tl-xs'
                                 : 'bg-surface-container-low border border-outline-variant text-on-surface rounded-tl-xs'
@@ -901,7 +908,7 @@ export const ChatPage: React.FC = () => {
                                 {/* Main Content */}
                                 {msg.content && msg.content !== '🎤 Voice message' && (
                                   <div className="whitespace-pre-wrap text-left">
-                                    {renderMessageContent(msg.content)}
+                                    {renderMessageContent(msg.content, isSelf)}
                                     {msg.isEdited && (
                                       <span className="text-[10px] opacity-65 italic ml-1.5 font-normal">
                                         (edited)

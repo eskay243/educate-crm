@@ -36,4 +36,7 @@ scratch/
 *.local-pre-sync.json
 mobile/
 educate-crm-mobile/
+output/
+video/
+screens.json
 

@@ -20,6 +20,7 @@ export interface RoleCapabilities {
   canModifyStudentBiodata?: boolean;
   canModifyMentorBiodata?: boolean;
   canDisburseApprovedFunds?: boolean;
+  canViewStandupReports?: boolean;
 }
 
 export interface CustomRoleDefinition {

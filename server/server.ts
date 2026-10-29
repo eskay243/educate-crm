@@ -4653,17 +4653,43 @@ async function reconcileLivePaystackWallet(secretKey: string) {
     });
   }
 
-  cleanTransactions.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  // 5b. Safely merge with existing transactions instead of destructively wiping them
+  const existingTransactions = Array.isArray(db.wallet?.transactions) ? db.wallet.transactions : [];
+  const mergedMap = new Map<string, any>();
 
-  // In live mode, update db.wallet with verified numbers
+  // First add all clean live transactions from Paystack
+  for (const tx of cleanTransactions) {
+    const key = tx.reference || tx.id;
+    mergedMap.set(key, tx);
+  }
+
+  // Then preserve existing transactions (manual top-ups, disbursements, DVA credits)
+  for (const existing of existingTransactions) {
+    const key = existing.reference || existing.id;
+    if (!mergedMap.has(key)) {
+      mergedMap.set(key, existing);
+    }
+  }
+
+  const finalTransactions = Array.from(mergedMap.values());
+  finalTransactions.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  // In live mode, recalculate verified figures from the merged ledger
+  const computedInflow = finalTransactions.filter(t => t.type === 'credit').reduce((s, t) => s + (t.amount || 0), 0);
+  const computedOutflow = finalTransactions.filter(t => t.type === 'debit').reduce((s, t) => s + (t.amount || 0), 0);
+  const computedLedgerBalance = Math.max(0, computedInflow - computedOutflow);
+
   db.wallet.balance = typeof paystackLiveBalance === 'number' && paystackLiveBalance > 0
-    ? Math.max(calculatedBalance, paystackLiveBalance)
-    : calculatedBalance;
-  db.wallet.transactions = cleanTransactions;
-  db.wallet.totalInflow = totalInflow;
-  db.wallet.totalOutflow = totalOutflow;
+    ? Math.max(computedLedgerBalance, paystackLiveBalance, db.wallet.balance || 0)
+    : Math.max(computedLedgerBalance, db.wallet.balance || 0);
+
+  db.wallet.transactions = finalTransactions;
+  db.wallet.totalInflow = computedInflow;
+  db.wallet.totalOutflow = computedOutflow;
   db.wallet.lastSyncedAt = new Date().toISOString();
-  db.wallet.paystackLiveBalance = paystackLiveBalance;
+  if (typeof paystackLiveBalance === 'number') {
+    db.wallet.paystackLiveBalance = paystackLiveBalance;
+  }
   
   if (!db.wallet.virtualAccount || db.wallet.virtualAccount.accountNumber !== '9817707007') {
     db.wallet.virtualAccount = defaultWallet.virtualAccount;
@@ -4702,12 +4728,7 @@ app.get('/api/wallet/summary', async (_req: Request, res: Response) => {
 
     const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
     if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
-      if (secretKey.startsWith('sk_live_')) {
-        const reconciled = await reconcileLivePaystackWallet(secretKey);
-        return res.json({ success: true, data: reconciled });
-      }
-
-      // Fetch Paystack transfer balance
+      // Non-destructive read of Paystack transfer balance
       try {
         const balRes = await fetch('https://api.paystack.co/balance', {
           headers: { Authorization: `Bearer ${secretKey}` }
@@ -4717,13 +4738,25 @@ app.get('/api/wallet/summary', async (_req: Request, res: Response) => {
           const ngnBalance = balData.data.find((b: any) => b.currency === 'NGN');
           if (ngnBalance) {
             db.wallet.paystackLiveBalance = ngnBalance.balance / 100;
-            if (db.wallet.balance === 0 && db.wallet.paystackLiveBalance > 0) {
+            if ((!db.wallet.balance || db.wallet.balance === 0) && db.wallet.paystackLiveBalance > 0) {
               db.wallet.balance = db.wallet.paystackLiveBalance;
             }
           }
         }
       } catch (balErr) {
         console.warn('Wallet summary balance fetch error:', balErr);
+      }
+    }
+
+    // Ensure totalInflow and totalOutflow reflect ledger accurately
+    if (Array.isArray(db.wallet.transactions) && db.wallet.transactions.length > 0) {
+      const calcInflow = db.wallet.transactions.filter(t => t.type === 'credit').reduce((s, t) => s + (t.amount || 0), 0);
+      const calcOutflow = db.wallet.transactions.filter(t => t.type === 'debit').reduce((s, t) => s + (t.amount || 0), 0);
+      if (calcInflow > 0 && (!db.wallet.totalInflow || db.wallet.totalInflow === 0)) {
+        db.wallet.totalInflow = calcInflow;
+      }
+      if (calcOutflow > 0 && (!db.wallet.totalOutflow || db.wallet.totalOutflow === 0)) {
+        db.wallet.totalOutflow = calcOutflow;
       }
     }
 
@@ -6062,9 +6095,18 @@ app.get('/api/chat/conversations', (req: Request, res: Response) => {
       }
       return true;
     }
-    if (c.type === 'direct') {
+    if (c.type === 'subgroup') {
+      if (Array.isArray(c.participants) && (c.participants.includes(userId) || c.participants.includes(email))) return true;
       if (role === 'super_admin') return true;
-      return Array.isArray(c.participants) && (c.participants.includes(userId) || c.participants.includes(email));
+      if (Array.isArray(c.allowedRoles)) return c.allowedRoles.includes(role);
+      return false;
+    }
+    if (c.type === 'direct') {
+      // Direct message privacy: Strictly accessible ONLY by the two participants
+      return Array.isArray(c.participants) && (
+        (Boolean(userId) && c.participants.includes(userId)) ||
+        (Boolean(email) && c.participants.includes(email))
+      );
     }
     return false;
   });
@@ -6082,7 +6124,33 @@ app.get('/api/chat/conversations', (req: Request, res: Response) => {
 
 app.get('/api/chat/conversations/:id/messages', (req: Request, res: Response) => {
   const { id } = req.params;
+  const userId = String(req.query.userId || req.headers['x-user-id'] || '');
+  const email = String(req.query.email || req.headers['x-user-email'] || '');
+  const role = String(req.query.role || req.headers['x-user-role'] || '');
+
+  if (!Array.isArray(db.chatConversations)) db.chatConversations = [...initialChatConversations];
   if (!Array.isArray(db.chatMessages)) db.chatMessages = [...initialChatMessages];
+
+  const conv = db.chatConversations.find((c: any) => c.id === id);
+  if (!conv) {
+    return res.status(404).json({ success: false, message: 'Conversation not found' });
+  }
+
+  // Authorization check for Direct Messages: Must be an invited participant
+  if (conv.type === 'direct') {
+    const isParticipant = Array.isArray(conv.participants) && (
+      (Boolean(userId) && conv.participants.includes(userId)) ||
+      (Boolean(email) && conv.participants.includes(email))
+    );
+    if (!isParticipant) {
+      return res.status(403).json({ success: false, message: 'Access denied: You are not a participant in this private direct message.' });
+    }
+  }
+
+  // Authorization check for Channels / Subgroups
+  if (conv.type === 'channel' && Array.isArray(conv.allowedRoles) && role && role !== 'super_admin' && !conv.allowedRoles.includes(role)) {
+    return res.status(403).json({ success: false, message: 'Access denied to this channel.' });
+  }
 
   const messages = db.chatMessages.filter((m: any) => m.conversationId === id);
   messages.sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -6118,6 +6186,17 @@ app.post('/api/chat/conversations/:id/messages', async (req: Request, res: Respo
   let convIndex = db.chatConversations.findIndex((c: any) => c.id === id);
   if (convIndex === -1) {
     return res.status(404).json({ success: false, message: 'Conversation not found' });
+  }
+
+  const conv = db.chatConversations[convIndex];
+  if (conv.type === 'direct') {
+    const isParticipant = Array.isArray(conv.participants) && (
+      (Boolean(senderId) && conv.participants.includes(senderId)) ||
+      (Boolean(senderEmail) && conv.participants.includes(senderEmail))
+    );
+    if (!isParticipant) {
+      return res.status(403).json({ success: false, message: 'Access denied: You cannot dispatch messages to a private conversation you do not belong to.' });
+    }
   }
 
   const effectiveMessageType = messageType || (attachments?.length ? 'file' : 'text');
@@ -6346,7 +6425,11 @@ app.post('/api/chat/subgroups', (req: Request, res: Response) => {
 });
 
 app.post('/api/chat/direct', (req: Request, res: Response) => {
-  const { senderId, senderEmail, senderName, senderRole, targetUserId, targetEmail, targetName, targetRole } = req.body;
+  const senderId = req.body.senderId || req.body.initiatorId;
+  const senderEmail = req.body.senderEmail;
+  const senderName = req.body.senderName || 'Staff Member';
+  const senderRole = req.body.senderRole || 'staff';
+  const { targetUserId, targetEmail, targetName, targetRole } = req.body;
 
   if (!senderId || !targetUserId) {
     return res.status(400).json({ success: false, message: 'Both senderId and targetUserId are required' });
@@ -6361,7 +6444,7 @@ app.post('/api/chat/direct', (req: Request, res: Response) => {
   if (!isAllowed) {
     return res.status(403).json({
       success: false,
-      message: `Role permission restriction: Users with role '${senderRole}' cannot directly message '${targetRole}' (${targetName}).`
+      message: `Role permission restriction: Users with role '${senderRole}' cannot directly message '${targetRole}' (${targetName || 'User'}).`
     });
   }
 
@@ -6374,10 +6457,10 @@ app.post('/api/chat/direct', (req: Request, res: Response) => {
     conv = {
       id: directId,
       type: 'direct',
-      name: `${senderName} & ${targetName}`,
-      topic: `Direct Message between ${senderName} and ${targetName}`,
-      participants: [senderId, targetUserId, senderEmail, targetEmail].filter(Boolean),
-      allowedRoles: [senderRole, targetRole, 'super_admin'].filter(Boolean),
+      name: `${senderName} & ${targetName || 'Direct Message'}`,
+      topic: `Direct Message between ${senderName} and ${targetName || 'Colleague'}`,
+      participants: Array.from(new Set([senderId, targetUserId, senderEmail, targetEmail].filter(Boolean))),
+      allowedRoles: [senderRole, targetRole].filter(Boolean),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -6474,6 +6557,70 @@ app.get('/api/scrum/standups', (req: Request, res: Response) => {
   if (!Array.isArray((db as any).dailyStandups)) (db as any).dailyStandups = [];
   const list = userId ? (db as any).dailyStandups.filter((s: any) => s.userId === userId) : (db as any).dailyStandups;
   res.json({ success: true, data: list });
+});
+
+app.get('/api/scrum/management-report', (req: Request, res: Response) => {
+  const targetDate = String(req.query.date || new Date().toISOString().split('T')[0]);
+  const moduleId = req.query.moduleId ? String(req.query.moduleId) : null;
+  const role = req.query.role ? String(req.query.role) : null;
+
+  if (!Array.isArray((db as any).dailyStandups)) (db as any).dailyStandups = [];
+
+  // Filter standups for target date
+  let filtered = (db as any).dailyStandups.filter((s: any) => s.date === targetDate);
+
+  if (moduleId && moduleId !== 'all') {
+    filtered = filtered.filter((s: any) => Array.isArray(s.taggedModuleIds) && s.taggedModuleIds.includes(moduleId));
+  }
+  if (role && role !== 'all') {
+    filtered = filtered.filter((s: any) => s.userRole === role);
+  }
+
+  // Enrich with staff biodata
+  const staffList = [
+    ...(db.staffUsers || []),
+    ...(db.mentors || []),
+    ...(db.users || [])
+  ];
+
+  const enrichedStandups = filtered.map((s: any) => {
+    const staff = staffList.find((u: any) => u.id === s.userId || u.email === s.userId);
+    return {
+      ...s,
+      staffName: s.userName || staff?.name || 'Staff Member',
+      staffRoleTitle: staff?.roleTitle || staff?.role || s.userRole,
+      department: staff?.department || staff?.specialization || 'Operations',
+      avatarUrl: staff?.avatarUrl || staff?.avatar || null
+    };
+  });
+
+  const totalCompleted = enrichedStandups.reduce((acc: number, s: any) => {
+    return acc + (Array.isArray(s.tasksYesterday) ? s.tasksYesterday.filter((t: any) => t.status === 'completed').length : 0);
+  }, 0);
+
+  const totalPlanned = enrichedStandups.reduce((acc: number, s: any) => {
+    return acc + (Array.isArray(s.tasksToday) ? s.tasksToday.length : 0);
+  }, 0);
+
+  const totalBlockers = enrichedStandups.reduce((acc: number, s: any) => {
+    return acc + (Array.isArray(s.blockers) ? s.blockers.length : 0);
+  }, 0);
+
+  const blockedCount = enrichedStandups.filter((s: any) => s.sentiment === 'blocked' || (s.blockers && s.blockers.length > 0)).length;
+
+  res.json({
+    success: true,
+    data: {
+      date: targetDate,
+      totalSubmissions: enrichedStandups.length,
+      totalCompletedTasks: totalCompleted,
+      totalPlannedTasks: totalPlanned,
+      totalBlockersFlagged: totalBlockers,
+      blockedStaffCount: blockedCount,
+      sentimentSummary: blockedCount > 0 ? 'Action Required (Blockers Present)' : 'High Sprint Velocity (Optimal)',
+      standups: enrichedStandups
+    }
+  });
 });
 
 app.post('/api/scrum/weekly-evaluation', (req: Request, res: Response) => {

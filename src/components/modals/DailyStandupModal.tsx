@@ -26,10 +26,11 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
     submitDailyStandup,
     generateWeeklyScrumEvaluation,
     weeklyScrumReports,
+    hasFeaturePermission,
     showToast,
   } = useCRM();
 
-  const [activeTab, setActiveTab] = useState<'standup' | 'weekly'>('standup');
+  const [activeTab, setActiveTab] = useState<'standup' | 'weekly' | 'management_report'>('standup');
 
   // Form states for Standup
   const [tasksYesterday, setTasksYesterday] = useState<DailyStandupTask[]>([
@@ -43,6 +44,71 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEvaluatingWeekly, setIsEvaluatingWeekly] = useState(false);
   const [activeWeeklyReport, setActiveWeeklyReport] = useState<WeeklyScrumPerformance | null>(null);
+
+  // Management Rollup Report State & Role Capability
+  const canViewReports = currentUser?.role === 'super_admin' || (typeof hasFeaturePermission === 'function' && hasFeaturePermission('canViewStandupReports'));
+  const [reportDate, setReportDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [reportModule, setReportModule] = useState<string>('all');
+  const [managementReport, setManagementReport] = useState<any | null>(null);
+  const [isLoadingReport, setIsLoadingReport] = useState(false);
+
+  const fetchManagementReport = async (dateStr = reportDate, moduleStr = reportModule) => {
+    setIsLoadingReport(true);
+    try {
+      const url = `/api/scrum/management-report?date=${dateStr}${moduleStr !== 'all' ? `&moduleId=${moduleStr}` : ''}`;
+      const res = await fetch(url);
+      const json = await res.json();
+      if (json.success) {
+        setManagementReport(json.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch management standup report:', err);
+    } finally {
+      setIsLoadingReport(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'management_report') {
+      fetchManagementReport(reportDate, reportModule);
+    }
+  }, [isOpen, activeTab, reportDate, reportModule]);
+
+  const handleExportCSV = () => {
+    if (!managementReport || !managementReport.standups || managementReport.standups.length === 0) {
+      showToast('Export Notice', 'No standups available to export for this date.', 'warning');
+      return;
+    }
+
+    const headers = ['Date', 'Staff Name', 'Role', 'Department', 'Yesterday Completed Tasks', 'Today Planned Tasks', 'Blockers', 'Modules', 'AI Feedback'];
+    const rows = managementReport.standups.map((s: any) => {
+      const yesterday = (s.tasksYesterday || []).map((t: any) => `[${t.status}] ${t.description}`).join('; ');
+      const today = (s.tasksToday || []).map((t: any) => `[${t.status}] ${t.description}`).join('; ');
+      const blockersStr = (s.blockers || []).join('; ');
+      const modulesStr = (s.taggedModuleIds || []).join(', ');
+      return [
+        `"${s.date}"`,
+        `"${(s.staffName || '').replace(/"/g, '""')}"`,
+        `"${(s.staffRoleTitle || s.userRole || '').replace(/"/g, '""')}"`,
+        `"${(s.department || '').replace(/"/g, '""')}"`,
+        `"${yesterday.replace(/"/g, '""')}"`,
+        `"${today.replace(/"/g, '""')}"`,
+        `"${blockersStr.replace(/"/g, '""')}"`,
+        `"${modulesStr.replace(/"/g, '""')}"`,
+        `"${(s.aiAgentFeedback || '').replace(/"/g, '""')}"`,
+      ].join(',');
+    });
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `daily-standup-management-report-${reportDate}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Export Successful', `Downloaded daily standup report for ${reportDate}`, 'success');
+  };
 
   // Initialize modules based on currentUser assignedModules
   useEffect(() => {
@@ -152,6 +218,7 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
       });
       if (success) {
         await fetchTodayStandup();
+        onClose();
       }
     } finally {
       setIsSubmitting(false);
@@ -240,6 +307,23 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
               </span>
             )}
           </button>
+          {canViewReports && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('management_report')}
+              className={`pb-3 px-3 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer ${
+                activeTab === 'management_report'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-secondary hover:text-on-surface'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">monitoring</span>
+              <span>Management Standup Rollup</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded bg-primary text-white font-bold tracking-wider">
+                ADMIN
+              </span>
+            </button>
+          )}
         </div>
 
         {/* Content Body */}
@@ -481,27 +565,36 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                   <p className="text-xs text-secondary">
                     Logged tasks will be cross-referenced with your weekly performance velocity.
                   </p>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-hover text-white font-bold text-xs flex items-center gap-2 shadow-xs disabled:opacity-50 transition-all cursor-pointer"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>Evaluating with AI Agent...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
-                        <span>{todayStandup ? 'Update & Re-Evaluate Standup' : 'Submit Daily Standup'}</span>
-                      </>
-                    )}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="px-4 py-2.5 rounded-lg border border-outline hover:bg-surface-container text-secondary text-xs font-bold transition-all cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-hover text-white font-bold text-xs flex items-center gap-2 shadow-xs disabled:opacity-50 transition-all cursor-pointer"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Evaluating with AI Agent...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
+                          <span>{todayStandup ? 'Update & Re-Evaluate Standup' : 'Submit Daily Standup'}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>
-          ) : (
+          ) : activeTab === 'weekly' ? (
             /* Weekly Scrum Performance Tab */
             <div className="space-y-5">
               <div className="flex items-center justify-between flex-wrap gap-2">
@@ -649,6 +742,280 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                   <p className="text-sm font-bold text-on-surface">No Weekly Scrum Evaluation on record</p>
                   <p className="text-xs text-secondary mt-1 max-w-sm">
                     Click &apos;Run Weekly AI Audit&apos; to let the autonomous AI Scrum Master analyze your tasks across all modules.
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Management Standup Rollup Tab */
+            <div className="space-y-5">
+              {/* Controls & Filter Bar */}
+              <div className="p-4 rounded-xl bg-surface border border-outline shadow-xs flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-secondary uppercase tracking-wider mb-1">
+                      Standup Date
+                    </label>
+                    <input
+                      type="date"
+                      value={reportDate}
+                      onChange={e => setReportDate(e.target.value)}
+                      className="bg-canvas border border-outline rounded-lg px-2.5 py-1.5 text-xs text-on-surface font-semibold outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-secondary uppercase tracking-wider mb-1">
+                      Operational Module
+                    </label>
+                    <select
+                      value={reportModule}
+                      onChange={e => setReportModule(e.target.value)}
+                      className="bg-canvas border border-outline rounded-lg px-2.5 py-1.5 text-xs text-on-surface font-semibold outline-none focus:border-primary"
+                    >
+                      <option value="all">All Modules</option>
+                      {AVAILABLE_MODULES.map(m => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="self-end">
+                    <button
+                      type="button"
+                      onClick={() => fetchManagementReport(reportDate, reportModule)}
+                      disabled={isLoadingReport}
+                      className="px-3 py-1.5 rounded-lg border border-outline bg-surface hover:bg-surface-container text-xs font-semibold text-secondary hover:text-on-surface flex items-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <span className={`material-symbols-outlined text-[15px] ${isLoadingReport ? 'animate-spin' : ''}`}>
+                        refresh
+                      </span>
+                      <span>Refresh</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="self-end">
+                  <button
+                    type="button"
+                    onClick={handleExportCSV}
+                    disabled={!managementReport || !managementReport.standups || managementReport.standups.length === 0}
+                    className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">download</span>
+                    <span>Export CSV Rollup</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* KPI Scorecards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-4 rounded-xl bg-surface border border-outline shadow-xs">
+                  <div className="flex items-center justify-between text-secondary mb-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Submissions Logged</span>
+                    <span className="material-symbols-outlined text-[18px] text-primary">groups</span>
+                  </div>
+                  <div className="text-2xl font-bold text-on-surface font-data-tabular">
+                    {managementReport?.totalSubmissions || 0}
+                  </div>
+                  <span className="text-[10px] text-secondary">Active staff reporters</span>
+                </div>
+
+                <div className="p-4 rounded-xl bg-surface border border-outline shadow-xs">
+                  <div className="flex items-center justify-between text-emerald-800 mb-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Achieved / Completed</span>
+                    <span className="material-symbols-outlined text-[18px] text-emerald-600">check_circle</span>
+                  </div>
+                  <div className="text-2xl font-bold text-emerald-700 font-data-tabular">
+                    {managementReport?.totalCompletedTasks || 0}
+                  </div>
+                  <span className="text-[10px] text-secondary">Yesterday deliverables</span>
+                </div>
+
+                <div className="p-4 rounded-xl bg-surface border border-outline shadow-xs">
+                  <div className="flex items-center justify-between text-primary mb-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Planned Commitments</span>
+                    <span className="material-symbols-outlined text-[18px] text-primary">schedule</span>
+                  </div>
+                  <div className="text-2xl font-bold text-primary font-data-tabular">
+                    {managementReport?.totalPlannedTasks || 0}
+                  </div>
+                  <span className="text-[10px] text-secondary">Today deliverables</span>
+                </div>
+
+                <div className="p-4 rounded-xl bg-surface border border-outline shadow-xs">
+                  <div className="flex items-center justify-between text-amber-800 mb-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Active Blockers</span>
+                    <span className="material-symbols-outlined text-[18px] text-amber-600">warning</span>
+                  </div>
+                  <div className="text-2xl font-bold text-amber-700 font-data-tabular">
+                    {managementReport?.totalBlockersFlagged || 0}
+                  </div>
+                  <span className="text-[10px] text-secondary">
+                    {managementReport?.blockedStaffCount || 0} staff need unblocking
+                  </span>
+                </div>
+              </div>
+
+              {/* Standup Rollup List */}
+              {isLoadingReport ? (
+                <div className="py-16 text-center text-secondary flex flex-col items-center bg-surface rounded-xl border border-outline">
+                  <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin mb-3" />
+                  <p className="text-xs font-semibold">Aggregating standup submissions across departments...</p>
+                </div>
+              ) : managementReport && managementReport.standups && managementReport.standups.length > 0 ? (
+                <div className="space-y-4">
+                  {managementReport.standups.map((standup: any) => {
+                    const hasBlockers = Array.isArray(standup.blockers) && standup.blockers.length > 0;
+                    return (
+                      <div
+                        key={standup.id || standup.userId}
+                        className="p-4 sm:p-5 rounded-xl bg-surface border border-outline shadow-xs space-y-4"
+                      >
+                        {/* Staff Header */}
+                        <div className="flex items-start justify-between flex-wrap gap-2 pb-3 border-b border-outline">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-sm border border-primary/20 shrink-0">
+                              {standup.staffName ? standup.staffName.charAt(0).toUpperCase() : 'U'}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-sm font-bold text-on-surface">{standup.staffName}</h4>
+                                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-surface-container text-secondary">
+                                  {standup.staffRoleTitle || standup.userRole}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-secondary">
+                                Department: <span className="font-semibold text-on-surface">{standup.department}</span> &bull; Logged at{' '}
+                                {new Date(standup.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {hasBlockers ? (
+                              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1">
+                                <span className="material-symbols-outlined text-[14px]">warning</span> Blocked
+                              </span>
+                            ) : (
+                              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                                <span className="material-symbols-outlined text-[14px]">check_circle</span> On Track
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Tagged CRM Modules */}
+                        {Array.isArray(standup.taggedModuleIds) && standup.taggedModuleIds.length > 0 && (
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] font-bold text-secondary uppercase tracking-wider mr-1">Modules:</span>
+                            {standup.taggedModuleIds.map((modId: string) => {
+                              const mod = AVAILABLE_MODULES.find(m => m.id === modId);
+                              return (
+                                <span
+                                  key={modId}
+                                  className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface-container border border-outline-variant text-on-surface"
+                                >
+                                  {mod?.name || modId}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* 2-Column Task Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Yesterday Completed */}
+                          <div className="p-3.5 rounded-lg bg-emerald-50/50 border border-emerald-200/80">
+                            <div className="text-xs font-bold text-emerald-900 mb-2 flex items-center gap-1.5">
+                              <span className="material-symbols-outlined text-[15px] text-emerald-600">done_all</span>
+                              <span>Completed / Achieved (Yesterday)</span>
+                            </div>
+                            {Array.isArray(standup.tasksYesterday) && standup.tasksYesterday.length > 0 ? (
+                              <ul className="space-y-1.5">
+                                {standup.tasksYesterday.map((t: any, i: number) => (
+                                  <li key={i} className="text-xs text-emerald-950 flex items-start gap-1.5">
+                                    <span className="text-emerald-600 mt-0.5">•</span>
+                                    <span className="flex-1 font-medium">{t.description}</span>
+                                    <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-emerald-100 text-emerald-800 font-bold shrink-0">
+                                      {t.moduleId}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-xs text-secondary italic">No completion items noted.</p>
+                            )}
+                          </div>
+
+                          {/* Today Commitments */}
+                          <div className="p-3.5 rounded-lg bg-blue-50/50 border border-blue-200/80">
+                            <div className="text-xs font-bold text-blue-900 mb-2 flex items-center gap-1.5">
+                              <span className="material-symbols-outlined text-[15px] text-primary">flag</span>
+                              <span>Planned Commitments (Today)</span>
+                            </div>
+                            {Array.isArray(standup.tasksToday) && standup.tasksToday.length > 0 ? (
+                              <ul className="space-y-1.5">
+                                {standup.tasksToday.map((t: any, i: number) => (
+                                  <li key={i} className="text-xs text-blue-950 flex items-start gap-1.5">
+                                    <span className="text-primary mt-0.5">•</span>
+                                    <span className="flex-1 font-medium">{t.description}</span>
+                                    <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-blue-100 text-blue-800 font-bold shrink-0">
+                                      {t.moduleId}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-xs text-secondary italic">No daily commitments planned.</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Blockers Alert if any */}
+                        {hasBlockers ? (
+                          <div className="p-3.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-950">
+                            <div className="text-xs font-bold text-amber-800 mb-1 flex items-center gap-1.5">
+                              <span className="material-symbols-outlined text-[16px] text-amber-600">error</span>
+                              <span>Blockers &amp; Management Escalations:</span>
+                            </div>
+                            <ul className="space-y-1 ml-5 list-disc text-xs font-medium">
+                              {standup.blockers.map((b: string, i: number) => (
+                                <li key={i}>{b}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : (
+                          <div className="p-2.5 rounded-lg bg-surface-container/60 border border-outline-variant text-[11px] text-secondary flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-[14px] text-emerald-600">verified</span>
+                            <span>No blockers reported &bull; Sprint progressing unhindered</span>
+                          </div>
+                        )}
+
+                        {/* AI Coach Feedback if present */}
+                        {standup.aiAgentFeedback && (
+                          <div className="p-3 rounded-lg bg-canvas border border-outline text-xs text-secondary">
+                            <div className="flex items-center gap-1.5 text-primary font-bold mb-1">
+                              <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
+                              <span>AI Scrum Evaluation:</span>
+                            </div>
+                            <p className="leading-relaxed">{standup.aiAgentFeedback}</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-16 text-center text-secondary flex flex-col items-center bg-surface rounded-xl border border-outline">
+                  <div className="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-secondary mb-3">
+                    <span className="material-symbols-outlined text-[28px]">assignment_late</span>
+                  </div>
+                  <p className="text-sm font-bold text-on-surface">No standups submitted for {reportDate}</p>
+                  <p className="text-xs text-secondary mt-1 max-w-sm">
+                    Staff submissions across the organization will appear here once logged for this day.
                   </p>
                 </div>
               )}

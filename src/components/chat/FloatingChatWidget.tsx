@@ -76,8 +76,9 @@ export const FloatingChatWidget: React.FC = () => {
 
   // 3. Fetch active messages
   const fetchActiveMessages = async (convId: string) => {
+    if (!currentUser) return;
     try {
-      const res = await fetch(`/api/chat/conversations/${convId}/messages`);
+      const res = await fetch(`/api/chat/conversations/${convId}/messages?userId=${encodeURIComponent(currentUser.id)}&role=${encodeURIComponent(currentUser.role)}&email=${encodeURIComponent(currentUser.email)}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
         setMessages(data.data);
@@ -281,8 +282,14 @@ export const FloatingChatWidget: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          initiatorId: currentUser.id,
+          senderId: currentUser.id,
+          senderEmail: currentUser.email,
+          senderName: currentUser.name,
+          senderRole: currentUser.role,
           targetUserId: targetUser.id,
+          targetEmail: targetUser.email,
+          targetName: targetUser.name,
+          targetRole: targetUser.role
         })
       });
       const data = await res.json();
@@ -327,7 +334,7 @@ export const FloatingChatWidget: React.FC = () => {
     }
   };
 
-  const renderMessageContent = (content: string) => {
+  const renderMessageContent = (content: string, isSelf = false) => {
     const parts = content.split(/(https?:\/\/[^\s]+|www\.[^\s]+|@[a-zA-Z0-9_.-]+)/g);
     return parts.map((part, index) => {
       if (part.startsWith('http://') || part.startsWith('https://') || part.startsWith('www.')) {
@@ -339,7 +346,9 @@ export const FloatingChatWidget: React.FC = () => {
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="underline font-semibold hover:opacity-80 break-all text-blue-400 cursor-pointer"
+            className={`underline font-semibold hover:opacity-80 break-all cursor-pointer ${
+              isSelf ? 'text-white' : 'text-blue-500 dark:text-blue-400'
+            }`}
           >
             {part}
           </a>
@@ -349,13 +358,17 @@ export const FloatingChatWidget: React.FC = () => {
         return (
           <span
             key={index}
-            className="inline-flex items-center px-1 rounded font-bold bg-primary/20 text-primary text-[10px]"
+            className={`inline-flex items-center px-1.5 py-0.2 mx-0.5 rounded font-bold text-[11px] ${
+              isSelf 
+                ? 'bg-white/20 text-white border border-white/30' 
+                : 'bg-primary/10 text-primary border border-primary/20'
+            }`}
           >
             {part}
           </span>
         );
       }
-      return <span key={index}>{part}</span>;
+      return <span key={index} className={isSelf ? 'text-white font-medium' : undefined}>{part}</span>;
     });
   };
 
@@ -683,7 +696,7 @@ export const FloatingChatWidget: React.FC = () => {
                         </div>
                       ) : (
                         <div className="whitespace-pre-wrap break-words">
-                          {renderMessageContent(msg.content)}
+                          {renderMessageContent(msg.content, isMe)}
                           {msg.isEdited && (
                             <span className="text-[9px] opacity-70 italic ml-1">(edited)</span>
                           )}

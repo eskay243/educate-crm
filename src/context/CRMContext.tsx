@@ -77,7 +77,7 @@ import { APP_BASE_URL } from '../utils/url';
 
 export const formatNaira = (amount: number, fractionDigits = 0): string => {
   const safeAmount = (typeof amount === 'number' && !isNaN(amount)) ? amount : 0;
-  return '₦' + new Intl.NumberFormat('en-NG', {
+  return '₦ ' + new Intl.NumberFormat('en-NG', {
     maximumFractionDigits: fractionDigits,
     minimumFractionDigits: fractionDigits,
   }).format(safeAmount);
@@ -87,13 +87,13 @@ export const formatNairaCompact = (amount: number): string => {
   const safeAmount = (typeof amount === 'number' && !isNaN(amount)) ? amount : 0;
   if (safeAmount >= 1_000_000) {
     const val = (safeAmount / 1_000_000).toFixed(1).replace(/\.0$/, '');
-    return `₦${val}M`;
+    return `₦ ${val}M`;
   }
   if (safeAmount >= 1_000) {
     const val = (safeAmount / 1_000).toFixed(0);
-    return `₦${val}K`;
+    return `₦ ${val}K`;
   }
-  return `₦${safeAmount}`;
+  return `₦ ${safeAmount}`;
 };
 
 export const resolveRoleTitle = (roleId: string, customRolesList?: any[]): string => {

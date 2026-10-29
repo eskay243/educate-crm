@@ -83,9 +83,14 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
 
   const handleSyncWallet = async () => {
     await reconcileWalletWithPaystack();
-    const res = await apiService.getPaystackBalance();
-    if (res && typeof res.balance === 'number') {
-      setLivePaystackBal(res.balance);
+    try {
+      const res = await apiService.getPaystackBalance();
+      if (res && typeof res.balance === 'number') {
+        setLivePaystackBal(res.balance);
+        showToast('Paystack Live Synced', `Live transfer balance: ${formatNaira(res.balance)}. Ledger reconciled.`, 'info');
+      }
+    } catch {
+      // handled in reconcileWalletWithPaystack
     }
   };
   
@@ -227,6 +232,22 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
   );
   const pendingCount = pendingExpenses.length;
 
+  const computedTotalInflow = useMemo(() => {
+    if (typeof wallet?.totalInflow === 'number' && wallet.totalInflow > 0) return wallet.totalInflow;
+    const txCredits = (wallet?.transactions || [])
+      .filter(t => t.type === 'credit')
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+    return txCredits > 0 ? txCredits : (wallet?.balance || 0);
+  }, [wallet]);
+
+  const computedTotalOutflow = useMemo(() => {
+    if (typeof wallet?.totalOutflow === 'number' && wallet.totalOutflow > 0) return wallet.totalOutflow;
+    const txDebits = (wallet?.transactions || [])
+      .filter(t => t.type === 'debit')
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+    return txDebits;
+  }, [wallet]);
+
   const filteredExpenses = useMemo(() => {
     return expenses.filter((e) => {
       const matchesCat = selectedCategory === 'All' || e.category === selectedCategory;
@@ -362,7 +383,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
 
               <div>
                 <span className="text-white/70 text-xs font-medium">Available Liquid Balance</span>
-                <div className="font-display text-3xl sm:text-4xl font-bold font-data-tabular text-white tracking-tight flex items-baseline gap-2 mt-0.5">
+                <div className="font-display text-3xl sm:text-4xl font-bold font-data-tabular text-white flex items-baseline gap-2 mt-0.5">
                   <span>{formatNaira(wallet?.balance || 0)}</span>
                   <span className="text-xs text-emerald-300 font-sans font-semibold bg-white/10 px-2 py-0.5 rounded-full">
                     Liquid Funds
@@ -371,14 +392,14 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
               </div>
 
               <div className="flex items-center gap-3 pt-0.5 text-xs text-white/80 flex-wrap">
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1.5">
                   <span className="text-white/50">Total Inflows Funded:</span> 
-                  <strong className="text-emerald-300 font-data-tabular">{formatNaira(wallet?.totalInflow ?? wallet?.balance ?? 0)}</strong>
+                  <strong className="text-emerald-300 font-data-tabular font-semibold">{formatNaira(computedTotalInflow)}</strong>
                 </span>
                 <span>•</span>
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1.5">
                   <span className="text-white/50">Total Outflows:</span> 
-                  <strong className="text-white font-data-tabular">{formatNaira(wallet?.totalOutflow || 0)}</strong>
+                  <strong className="text-white font-data-tabular font-semibold">{formatNaira(computedTotalOutflow)}</strong>
                 </span>
               </div>
 
@@ -441,7 +462,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
 
                 <div className="bg-black/30 rounded-lg p-3 border border-white/10 mt-3">
                   <span className="text-[10px] text-white/70 block">Paystack Live Transfer Balance</span>
-                  <div className="font-mono text-xl font-bold tracking-tight text-emerald-300 font-data-tabular mt-0.5">
+                  <div className="font-mono text-xl font-bold text-emerald-300 font-data-tabular mt-0.5">
                     {formatNaira(wallet?.paystackLiveBalance ?? livePaystackBal ?? 0)}
                   </div>
                   <span className="text-[10px] text-white/60 block mt-0.5">Available for instant NIBSS bank transfers</span>

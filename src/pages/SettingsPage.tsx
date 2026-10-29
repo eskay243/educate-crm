@@ -237,6 +237,39 @@ export const SettingsPage: React.FC = () => {
     isProfileBankVerified,
   ]);
 
+  const validateNigerianGovernmentId = (idType: string, idNumber: string): { valid: boolean; message?: string } => {
+    const clean = idNumber.trim().toUpperCase();
+    if (!clean) return { valid: false, message: 'ID number is required.' };
+
+    switch (idType) {
+      case 'NIN':
+        if (!/^\d{11}$/.test(clean)) return { valid: false, message: 'NIN must be exactly 11 numeric digits.' };
+        return { valid: true };
+      case 'BVN':
+        if (!/^\d{11}$/.test(clean)) return { valid: false, message: 'BVN must be exactly 11 numeric digits.' };
+        return { valid: true };
+      case 'International Passport':
+        // Nigerian e-Passport: 8 to 9 alphanumeric characters (e.g. A10984729)
+        if (!/^[A-Z0-9]{8,9}$/.test(clean)) {
+          return { valid: false, message: 'Nigerian International Passport must be 8-9 alphanumeric characters (e.g. A10984729).' };
+        }
+        return { valid: true };
+      case 'Driver License':
+        if (clean.length < 10 || clean.length > 12) {
+          return { valid: false, message: "FRSC National Driver's License must be 10-12 alphanumeric characters." };
+        }
+        return { valid: true };
+      case 'Voter Card':
+        if (clean.length < 10 || clean.length > 20) {
+          return { valid: false, message: "INEC Voter's Card (PVC) must be 10-20 alphanumeric characters." };
+        }
+        return { valid: true };
+      default:
+        if (clean.length < 6) return { valid: false, message: 'Identification number must be at least 6 characters.' };
+        return { valid: true };
+    }
+  };
+
   const [activeKycStep, setActiveKycStep] = useState<1 | 2 | 3>(1);
 
   // Progressive tier gating completion checks
@@ -253,10 +286,11 @@ export const SettingsPage: React.FC = () => {
   }, [profileAvatarUrl, profileName, profilePhone, profileDob, profileGender, profileStateOfOrigin, profileLga]);
 
   const isTier2Complete = useMemo(() => {
+    const isIdValid = validateNigerianGovernmentId(profileIdType, profileIdNumber).valid;
     return Boolean(
       isTier1Complete &&
       profileIdType &&
-      profileIdNumber.trim().length >= 10 &&
+      isIdValid &&
       (isProfileIdVerified || profileIdDocUrl) &&
       (profileIdDocUrl || profileIdDocName)
     );
@@ -290,7 +324,8 @@ export const SettingsPage: React.FC = () => {
 
   const tier2MissingFields = useMemo(() => {
     const missing: string[] = [];
-    if (!profileIdNumber.trim() || profileIdNumber.trim().length < 10) missing.push(`Valid 10-11 digit ${profileIdType} Number`);
+    const validation = validateNigerianGovernmentId(profileIdType, profileIdNumber);
+    if (!validation.valid) missing.push(validation.message || `Valid ${profileIdType} Number`);
     if (!isProfileIdVerified && !profileIdDocUrl) missing.push('Government ID Validation');
     if (!profileIdDocUrl && !profileIdDocName) missing.push('ID Document Proof upload (PDF/Image)');
     return missing;
@@ -655,6 +690,7 @@ export const SettingsPage: React.FC = () => {
     canModifyStudentBiodata: false,
     canModifyMentorBiodata: false,
     canDisburseApprovedFunds: false,
+    canViewStandupReports: false,
   });
 
   // SMTP Settings State - configured for Zoho Mail
@@ -1416,15 +1452,16 @@ export const SettingsPage: React.FC = () => {
   };
 
   const handleVerifyId = () => {
-    if (!profileIdNumber || profileIdNumber.length < 10) {
-      showToast('Invalid ID', `Please enter a valid 10-11 digit ${profileIdType} number.`, 'warning');
+    const validation = validateNigerianGovernmentId(profileIdType, profileIdNumber);
+    if (!validation.valid) {
+      showToast('Invalid ID', validation.message || `Please enter a valid ${profileIdType} number.`, 'warning');
       return;
     }
     setIsVerifyingId(true);
     setTimeout(() => {
       setIsProfileIdVerified(true);
       setIsVerifyingId(false);
-      showToast('Government ID Validated', `${profileIdType} (#${profileIdNumber}) confirmed against National Identity Directory.`, 'success');
+      showToast('Government ID Validated', `${profileIdType} (#${profileIdNumber.toUpperCase()}) confirmed against National Identity Directory.`, 'success');
     }, 700);
   };
 
@@ -2279,13 +2316,18 @@ export const SettingsPage: React.FC = () => {
                           setProfileIdNumber(e.target.value.trim());
                           setIsProfileIdVerified(false);
                         }}
-                        placeholder={`Enter your ${profileIdType} number (e.g. 11 digits for NIN/BVN)`}
-                        className="flex-1 h-10 px-3 bg-surface border border-outline-variant rounded-lg font-data-tabular font-bold text-sm text-on-surface focus:border-primary outline-none tracking-wider"
+                        placeholder={
+                          profileIdType === 'International Passport' ? 'Enter passport number (e.g. A10984729 - 8-9 chars)' :
+                          profileIdType === 'NIN' ? 'Enter 11-digit NIN' :
+                          profileIdType === 'BVN' ? 'Enter 11-digit BVN' :
+                          `Enter your ${profileIdType} number`
+                        }
+                        className="flex-1 h-10 px-3 bg-surface border border-outline-variant rounded-lg font-data-tabular font-bold text-sm text-on-surface focus:border-primary outline-none tracking-wider uppercase"
                       />
                       <button
                         type="button"
                         onClick={handleVerifyId}
-                        disabled={isVerifyingId || profileIdNumber.length < 10}
+                        disabled={isVerifyingId || !validateNigerianGovernmentId(profileIdType, profileIdNumber).valid}
                         className="px-4 h-10 rounded-lg bg-primary text-on-primary font-bold text-xs hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
                       >
                         {isVerifyingId ? (
@@ -4956,6 +4998,7 @@ export const SettingsPage: React.FC = () => {
                         { key: 'canModifyStudentBiodata' as const, label: 'Modify Student Biodata', icon: 'edit_square' },
                         { key: 'canModifyMentorBiodata' as const, label: 'Modify Mentor Biodata', icon: 'manage_accounts' },
                         { key: 'canDisburseApprovedFunds' as const, label: 'Disburse Approved Funds', icon: 'payments' },
+                        { key: 'canViewStandupReports' as const, label: 'View Standup Management Reports', icon: 'monitoring' },
                       ].map(({ key, label, icon }) => {
                         const isGranted = role.id === 'super_admin' || Boolean(role.permissions?.[key]);
                         const isImmutable = role.id === 'super_admin';
@@ -4972,6 +5015,7 @@ export const SettingsPage: React.FC = () => {
                                 canLogExpenses: false, canApproveExpenses: false, canIssueCertificates: false, canViewBilling: false,
                                 canManageSettings: false, canManageAttendance: false, canSubmitReports: false,
                                 canViewBiodata: false, canModifyStudentBiodata: false, canModifyMentorBiodata: false, canDisburseApprovedFunds: false,
+                                canViewStandupReports: false,
                               };
                               updateRolePermissions(role.id, {
                                 permissions: {
@@ -5093,6 +5137,7 @@ export const SettingsPage: React.FC = () => {
                           { key: 'canModifyStudentBiodata' as const, label: 'Modify Student Biodata' },
                           { key: 'canModifyMentorBiodata' as const, label: 'Modify Mentor Biodata' },
                           { key: 'canDisburseApprovedFunds' as const, label: 'Disburse Approved Funds' },
+                          { key: 'canViewStandupReports' as const, label: 'View Standup Management Reports' },
                         ].map(({ key, label }) => (
                           <label key={key} className="flex items-center gap-2 p-2 rounded border border-outline-variant/60 cursor-pointer hover:bg-surface">
                             <input

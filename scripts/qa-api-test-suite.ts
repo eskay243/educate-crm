@@ -842,6 +842,43 @@ async function main() {
     assert(delRes.body?.data?.content.includes('This message was deleted'), 'Expected tombstone content');
   });
 
+  await runTest('QA-CHT-007', 'Chat', 'Strict Privacy: Non-participant staff blocked with HTTP 403 from reading/writing private DM', async () => {
+    // 1. Initiate private DM between Admin and Finance
+    const dmRes = await request('/api/chat/direct', {
+      method: 'POST',
+      body: JSON.stringify({
+        senderId: 'usr-admin-1',
+        senderEmail: 'abiola.adefowope@codelab.institute',
+        senderName: 'Abiola Adefowope',
+        senderRole: 'super_admin',
+        targetUserId: 'usr-finance-1',
+        targetEmail: 'finance@codelab.institute',
+        targetName: 'Emeka Nwosu',
+        targetRole: 'finance'
+      })
+    });
+    assert(dmRes.status === 200 || dmRes.status === 201, `Expected 200/201, got ${dmRes.status}`);
+    const privateDmId = dmRes.body?.data?.id;
+    assert(privateDmId, 'Expected direct message conversation ID');
+
+    // 2. Uninvolved staff member (e.g. admissions) attempts to read messages in this DM
+    const eavesdropRes = await request(`/api/chat/conversations/${privateDmId}/messages?userId=usr-admissions-1&role=admissions`);
+    assert(eavesdropRes.status === 403, `Expected HTTP 403 Forbidden for non-participant eavesdrop, got ${eavesdropRes.status}`);
+
+    // 3. Uninvolved staff member attempts to send message into this DM
+    const unauthorizedPostRes = await request(`/api/chat/conversations/${privateDmId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({
+        senderId: 'usr-admissions-1',
+        senderName: 'Admissions Officer',
+        senderEmail: 'admissions@codelab.institute',
+        senderRole: 'admissions',
+        content: 'I should not be able to send into this private conversation'
+      })
+    });
+    assert(unauthorizedPostRes.status === 403, `Expected HTTP 403 Forbidden for non-participant injection, got ${unauthorizedPostRes.status}`);
+  });
+
   // ============================================================================
   // SUITE 12: AI DAILY STANDUP & WEEKLY SCRUM PERFORMANCE
   // ============================================================================
@@ -900,6 +937,21 @@ async function main() {
     assert(typeof evalData?.aiExecutiveSummary === 'string', 'Expected executive summary');
     assert(Array.isArray(evalData?.aiStrengths), 'Expected strengths array');
     assert(Array.isArray(evalData?.aiGrowthAreas), 'Expected growth areas array');
+  });
+
+  await runTest('QA-SCRUM-003', 'Scrum', 'Management Standup Rollup aggregates submissions, KPIs, and staff biodata', async () => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const res = await request(`/api/scrum/management-report?date=${todayStr}`);
+    assert(res.status === 200, `Expected 200, got ${res.status}`);
+    const report = res.body?.data;
+    assert(report !== undefined, 'Expected report payload');
+    assert(report.totalSubmissions >= 1, `Expected at least 1 submission, got ${report.totalSubmissions}`);
+    assert(report.totalCompletedTasks >= 1, `Expected at least 1 completed task, got ${report.totalCompletedTasks}`);
+    assert(report.totalPlannedTasks >= 1, `Expected at least 1 planned task, got ${report.totalPlannedTasks}`);
+    assert(Array.isArray(report.standups) && report.standups.length > 0, 'Expected non-empty standups array');
+    const firstStandup = report.standups[0];
+    assert(firstStandup.staffName !== undefined, 'Expected staffName on standup');
+    assert(firstStandup.department !== undefined, 'Expected department on standup');
   });
 
   // ============================================================================
