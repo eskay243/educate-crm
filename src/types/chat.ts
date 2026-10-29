@@ -16,6 +16,12 @@ export interface ChatMessageReplyTo {
   mediaType?: 'text' | 'image' | 'voice' | 'video' | 'file';
 }
 
+export interface ChatMessageForwardInfo {
+  originalSenderName: string;
+  originalSenderId?: string;
+  originalTimestamp: string;
+}
+
 export interface ChatMessage {
   id: string;
   conversationId: string;
@@ -27,6 +33,11 @@ export interface ChatMessage {
   senderAvatar?: string;
   content: string;
   replyTo?: ChatMessageReplyTo;
+  forwardedFrom?: ChatMessageForwardInfo;
+  isEdited?: boolean;
+  editedAt?: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
   messageType?: 'text' | 'image' | 'voice' | 'video' | 'file';
   voiceDurationSeconds?: number;
   mentions?: string[]; // Array of tagged user IDs or emails

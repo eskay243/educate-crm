@@ -11,7 +11,7 @@ interface SwipeState {
 }
 
 export const ChatPage: React.FC = () => {
-  const { currentUser, showToast, openModal } = useCRM();
+  const { currentUser, showToast, openModal, openForwardModal, editChatMessage, deleteChatMessage, isSuperAdmin } = useCRM();
 
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
@@ -28,6 +28,10 @@ export const ChatPage: React.FC = () => {
   // Replying state & Quoted message banner
   const [replyingTo, setReplyingTo] = useState<ChatMessageReplyTo | null>(null);
   const [isVoiceRecording, setIsVoiceRecording] = useState(false);
+
+  // Message Editing state
+  const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
+  const [editInputText, setEditInputText] = useState('');
 
   // Swipe-to-reply state & Right-click context menu
   const [swiping, setSwiping] = useState<SwipeState | null>(null);
@@ -417,10 +421,43 @@ export const ChatPage: React.FC = () => {
     }
   };
 
-  // Render message content with highlighted @mentions
+  // Delete a message with optimistic tombstone
+  const handleDeleteMessage = async (msgId: string) => {
+    try {
+      const ok = await deleteChatMessage(msgId);
+      if (ok) {
+        setMessages(prev =>
+          prev.map(m =>
+            m.id === msgId
+              ? { ...m, isDeleted: true, content: '🚫 This message was deleted', attachments: [] }
+              : m
+          )
+        );
+      }
+    } catch (e: any) {
+      showToast('Error', e.message || 'Could not delete message', 'error');
+    }
+  };
+
+  // Render message content with clickable URLs and highlighted @mentions
   const renderMessageContent = (content: string) => {
-    const parts = content.split(/(@[a-zA-Z0-9_\s.-]+(?:\s|$))/g);
+    const parts = content.split(/(https?:\/\/[^\s]+|www\.[^\s]+|@[a-zA-Z0-9_.-]+)/g);
     return parts.map((part, index) => {
+      if (part.startsWith('http://') || part.startsWith('https://') || part.startsWith('www.')) {
+        const href = part.startsWith('http') ? part : `https://${part}`;
+        return (
+          <a
+            key={index}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="underline font-semibold hover:opacity-80 break-all text-blue-500 dark:text-blue-400 cursor-pointer"
+          >
+            {part}
+          </a>
+        );
+      }
       if (part.startsWith('@')) {
         return (
           <span 
@@ -785,6 +822,16 @@ export const ChatPage: React.FC = () => {
                                 ? 'bg-amber-50/90 border border-amber-300 text-on-surface rounded-tl-xs'
                                 : 'bg-surface-container-low border border-outline-variant text-on-surface rounded-tl-xs'
                           }`}>
+                            {/* Forwarded Message Provenance Header */}
+                            {msg.forwardedFrom && (
+                              <div className={`flex items-center gap-1 text-[10px] italic mb-1.5 pb-1 border-b ${
+                                isSelf ? 'border-white/20 text-white/80' : 'border-outline-variant/40 text-secondary'
+                              }`}>
+                                <span className="material-symbols-outlined text-[13px]">forward</span>
+                                <span>Forwarded from <strong>{msg.forwardedFrom.originalSenderName}</strong></span>
+                              </div>
+                            )}
+
                             {/* Quoted Message Snippet Header (if this message is a reply) */}
                             {msg.replyTo && (
                               <div
@@ -806,88 +853,177 @@ export const ChatPage: React.FC = () => {
                               </div>
                             )}
 
-                            {/* Main Content */}
-                            {msg.content && msg.content !== '🎤 Voice message' && (
-                              <div className="whitespace-pre-wrap text-left">
-                                {renderMessageContent(msg.content)}
+                            {/* Message Body or Tombstone */}
+                            {msg.isDeleted ? (
+                              <div className="italic text-xs opacity-75 flex items-center gap-1.5 py-1 text-left">
+                                <span className="material-symbols-outlined text-[15px]">block</span>
+                                <span>This message was deleted</span>
                               </div>
-                            )}
-
-                            {/* Voice Note Player */}
-                            {msg.messageType === 'voice' && msg.attachments && msg.attachments.length > 0 && (
-                              <div className="mt-1 flex items-center gap-2 p-2 rounded-xl bg-black/5 dark:bg-white/10">
-                                <span className="material-symbols-outlined text-[18px] text-rose-500">mic</span>
-                                <audio controls src={msg.attachments[0].url} className="h-7 max-w-[220px] sm:max-w-[260px]" />
-                                {msg.voiceDurationSeconds && (
-                                  <span className="text-[10px] font-mono opacity-70">
-                                    {Math.floor(msg.voiceDurationSeconds / 60)}:{(msg.voiceDurationSeconds % 60).toString().padStart(2, '0')}
-                                  </span>
-                                )}
+                            ) : editingMessage?.id === msg.id ? (
+                              <div className="space-y-2 text-left">
+                                <textarea
+                                  value={editInputText}
+                                  onChange={e => setEditInputText(e.target.value)}
+                                  className="w-full p-2 bg-surface text-on-surface border border-outline-variant rounded-lg text-xs outline-none focus:border-primary"
+                                  rows={2}
+                                />
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingMessage(null)}
+                                    className="px-2 py-0.5 text-[11px] rounded bg-surface-container text-secondary hover:bg-surface-container-high cursor-pointer"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      const ok = await editChatMessage(msg.id, editInputText);
+                                      if (ok) {
+                                        setMessages(prev =>
+                                          prev.map(m =>
+                                            m.id === msg.id
+                                              ? { ...m, content: editInputText, isEdited: true, editedAt: new Date().toISOString() }
+                                              : m
+                                          )
+                                        );
+                                        setEditingMessage(null);
+                                      }
+                                    }}
+                                    className="px-2.5 py-0.5 text-[11px] rounded bg-primary text-on-primary font-bold shadow-xs cursor-pointer"
+                                  >
+                                    Save
+                                  </button>
+                                </div>
                               </div>
-                            )}
-
-                            {/* Attachments (Images, Videos, Files) */}
-                            {msg.attachments && msg.attachments.length > 0 && msg.messageType !== 'voice' && (
-                              <div className="mt-2 pt-2 border-t border-outline-variant/40 space-y-1.5">
-                                {msg.attachments.map((att) => (
-                                  <div key={att.id}>
-                                    {att.type.startsWith('image/') ? (
-                                      <a href={att.url} target="_blank" rel="noopener noreferrer" className="block mt-1">
-                                        <img 
-                                          src={att.url} 
-                                          alt={att.name} 
-                                          className="max-h-60 rounded-lg object-contain border border-outline-variant bg-black/5"
-                                        />
-                                      </a>
-                                    ) : att.type.startsWith('video/') ? (
-                                      <video 
-                                        controls 
-                                        src={att.url} 
-                                        className="max-h-60 rounded-lg max-w-full border border-outline-variant mt-1"
-                                      />
-                                    ) : (
-                                      <a
-                                        href={att.url}
-                                        download={att.name}
-                                        className={`inline-flex items-center gap-2 p-2 rounded-lg text-xs font-semibold border transition-colors ${
-                                          isSelf 
-                                            ? 'bg-white/10 hover:bg-white/20 text-white border-white/20' 
-                                            : 'bg-surface hover:bg-surface-container text-primary border-outline-variant'
-                                        }`}
-                                      >
-                                        <span className="material-symbols-outlined text-[18px]">description</span>
-                                        <span className="truncate max-w-[200px]">{att.name}</span>
-                                        <span className="material-symbols-outlined text-[16px]">download</span>
-                                      </a>
+                            ) : (
+                              <>
+                                {/* Main Content */}
+                                {msg.content && msg.content !== '🎤 Voice message' && (
+                                  <div className="whitespace-pre-wrap text-left">
+                                    {renderMessageContent(msg.content)}
+                                    {msg.isEdited && (
+                                      <span className="text-[10px] opacity-65 italic ml-1.5 font-normal">
+                                        (edited)
+                                      </span>
                                     )}
                                   </div>
-                                ))}
-                              </div>
+                                )}
+
+                                {/* Voice Note Player */}
+                                {msg.messageType === 'voice' && msg.attachments && msg.attachments.length > 0 && (
+                                  <div className="mt-1 flex items-center gap-2 p-2 rounded-xl bg-black/5 dark:bg-white/10">
+                                    <span className="material-symbols-outlined text-[18px] text-rose-500">mic</span>
+                                    <audio controls src={msg.attachments[0].url} className="h-7 max-w-[220px] sm:max-w-[260px]" />
+                                    {msg.voiceDurationSeconds && (
+                                      <span className="text-[10px] font-mono opacity-70">
+                                        {Math.floor(msg.voiceDurationSeconds / 60)}:{(msg.voiceDurationSeconds % 60).toString().padStart(2, '0')}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Attachments (Images, Videos, Files) */}
+                                {msg.attachments && msg.attachments.length > 0 && msg.messageType !== 'voice' && (
+                                  <div className="mt-2 pt-2 border-t border-outline-variant/40 space-y-1.5">
+                                    {msg.attachments.map((att) => (
+                                      <div key={att.id}>
+                                        {att.type.startsWith('image/') ? (
+                                          <a href={att.url} target="_blank" rel="noopener noreferrer" className="block mt-1">
+                                            <img 
+                                              src={att.url} 
+                                              alt={att.name} 
+                                              className="max-h-60 rounded-lg object-contain border border-outline-variant bg-black/5"
+                                            />
+                                          </a>
+                                        ) : att.type.startsWith('video/') ? (
+                                          <video 
+                                            controls 
+                                            src={att.url} 
+                                            className="max-h-60 rounded-lg max-w-full border border-outline-variant mt-1"
+                                          />
+                                        ) : (
+                                          <a
+                                            href={att.url}
+                                            download={att.name}
+                                            className={`inline-flex items-center gap-2 p-2 rounded-lg text-xs font-semibold border transition-colors ${
+                                              isSelf 
+                                                ? 'bg-white/10 hover:bg-white/20 text-white border-white/20' 
+                                                : 'bg-surface hover:bg-surface-container text-primary border-outline-variant'
+                                            }`}
+                                          >
+                                            <span className="material-symbols-outlined text-[18px]">description</span>
+                                            <span className="truncate max-w-[200px]">{att.name}</span>
+                                            <span className="material-symbols-outlined text-[16px]">download</span>
+                                          </a>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </>
                             )}
 
                             {/* Quick Action Hover Bar */}
-                            <div className={`absolute top-1 ${isSelf ? '-left-16' : '-right-16'} hidden group-hover:flex items-center gap-1 bg-surface border border-outline-variant rounded-lg p-0.5 shadow-sm`}>
-                              <button
-                                type="button"
-                                onClick={() => handleSetReply(msg)}
-                                className="p-1 rounded text-secondary hover:text-primary hover:bg-surface-container transition cursor-pointer"
-                                title="Reply to this message"
-                              >
-                                <span className="material-symbols-outlined text-[16px]">reply</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setInputText(prev => `${prev} @${msg.senderName} `);
-                                  setTaggedUserIds(prev => Array.from(new Set([...prev, msg.senderId])));
-                                  textareaRef.current?.focus();
-                                }}
-                                className="p-1 rounded text-secondary hover:text-primary hover:bg-surface-container transition cursor-pointer"
-                                title="Tag sender"
-                              >
-                                <span className="material-symbols-outlined text-[16px]">alternate_email</span>
-                              </button>
-                            </div>
+                            {!msg.isDeleted && (
+                              <div className={`absolute top-1 ${isSelf ? '-left-36' : '-right-36'} hidden group-hover:flex items-center gap-1 bg-surface border border-outline-variant rounded-lg p-0.5 shadow-sm`}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetReply(msg)}
+                                  className="p-1 rounded text-secondary hover:text-primary hover:bg-surface-container transition cursor-pointer"
+                                  title="Reply to this message"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">reply</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openForwardModal(msg)}
+                                  className="p-1 rounded text-secondary hover:text-primary hover:bg-surface-container transition cursor-pointer"
+                                  title="Forward message"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">forward</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setInputText(prev => `${prev} @${msg.senderName} `);
+                                    setTaggedUserIds(prev => Array.from(new Set([...prev, msg.senderId])));
+                                    textareaRef.current?.focus();
+                                  }}
+                                  className="p-1 rounded text-secondary hover:text-primary hover:bg-surface-container transition cursor-pointer"
+                                  title="Tag sender"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">alternate_email</span>
+                                </button>
+                                {isSelf && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingMessage(msg);
+                                      setEditInputText(msg.content);
+                                    }}
+                                    className="p-1 rounded text-secondary hover:text-primary hover:bg-surface-container transition cursor-pointer"
+                                    title="Edit message"
+                                  >
+                                    <span className="material-symbols-outlined text-[16px]">edit</span>
+                                  </button>
+                                )}
+                                {(isSelf || isSuperAdmin) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (window.confirm('Delete this message?')) {
+                                        handleDeleteMessage(msg.id);
+                                      }
+                                    }}
+                                    className="p-1 rounded text-secondary hover:text-rose-500 hover:bg-surface-container transition cursor-pointer"
+                                    title="Delete message"
+                                  >
+                                    <span className="material-symbols-outlined text-[16px]">delete</span>
+                                  </button>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1078,6 +1214,17 @@ export const ChatPage: React.FC = () => {
           <button
             type="button"
             onClick={() => {
+              openForwardModal(contextMenu.message);
+              setContextMenu(null);
+            }}
+            className="w-full text-left px-3 py-2 rounded-lg hover:bg-primary/10 hover:text-primary flex items-center gap-2 transition cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[16px]">forward</span>
+            <span>Forward message</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
               setInputText(prev => `${prev} @${contextMenu.message.senderName} `);
               setTaggedUserIds(prev => Array.from(new Set([...prev, contextMenu.message.senderId])));
               textareaRef.current?.focus();
@@ -1100,6 +1247,36 @@ export const ChatPage: React.FC = () => {
             <span className="material-symbols-outlined text-[16px]">content_copy</span>
             <span>Copy message text</span>
           </button>
+          {(contextMenu.message.senderId === currentUser?.id || contextMenu.message.senderEmail === currentUser?.email) && !contextMenu.message.isDeleted && (
+            <button
+              type="button"
+              onClick={() => {
+                setEditingMessage(contextMenu.message);
+                setEditInputText(contextMenu.message.content || '');
+                setContextMenu(null);
+              }}
+              className="w-full text-left px-3 py-2 rounded-lg hover:bg-primary/10 hover:text-primary flex items-center gap-2 transition cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">edit</span>
+              <span>Edit message</span>
+            </button>
+          )}
+          {(contextMenu.message.senderId === currentUser?.id || contextMenu.message.senderEmail === currentUser?.email || isSuperAdmin) && !contextMenu.message.isDeleted && (
+            <button
+              type="button"
+              onClick={() => {
+                const targetId = contextMenu.message.id;
+                setContextMenu(null);
+                if (window.confirm('Delete this message?')) {
+                  handleDeleteMessage(targetId);
+                }
+              }}
+              className="w-full text-left px-3 py-2 rounded-lg hover:bg-rose-500/10 text-rose-500 flex items-center gap-2 transition cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">delete</span>
+              <span>Delete message</span>
+            </button>
+          )}
         </div>
       )}
 

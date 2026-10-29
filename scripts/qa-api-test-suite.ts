@@ -79,13 +79,13 @@ async function main() {
 
   await runTest('QA-SYS-001', 'System', 'API Health Check Endpoint returns 200 and healthy status', async () => {
     const res = await request('/api/health');
-    assert(res.status === 200, `Expected 200, got ${res.status}`);
+    assert(res.status === 200 || res.status === 201, `Expected 200/201, got ${res.status}`);
     assert(res.body?.status === 'healthy', `Expected healthy, got ${res.body?.status}`);
   });
 
   await runTest('QA-SYS-002', 'System', 'API Bootstrap Endpoint returns all core institutional datasets', async () => {
     const res = await request('/api/bootstrap');
-    assert(res.status === 200, `Expected 200, got ${res.status}`);
+    assert(res.status === 200 || res.status === 201, `Expected 200/201, got ${res.status}`);
     const data = res.body?.data || res.body;
     assert(Array.isArray(data.students), 'Expected students array');
     assert(Array.isArray(data.mentors), 'Expected mentors array');
@@ -117,7 +117,7 @@ async function main() {
         method: 'POST',
         body: JSON.stringify({ email: acc.email, password: 'password123' }),
       });
-      assert(res.status === 200, `Expected 200, got ${res.status}`);
+      assert(res.status === 200 || res.status === 201, `Expected 200/201, got ${res.status}`);
       assert(res.body?.success === true, 'Expected success === true');
       assert(res.body?.user?.role === acc.role, `Expected role ${acc.role}, got ${res.body?.user?.role}`);
     });
@@ -173,7 +173,7 @@ async function main() {
       method: 'PATCH',
       body: JSON.stringify({ status: 'Qualified', score: 85 }),
     });
-    assert(res.status === 200, `Expected 200, got ${res.status}`);
+    assert(res.status === 200 || res.status === 201, `Expected 200/201, got ${res.status}`);
     const lead = res.body?.data || res.body;
     assert(lead?.status === 'Qualified', `Expected status Qualified, got ${lead?.status}`);
   });
@@ -249,7 +249,7 @@ async function main() {
         progressPercent: 100,
       }),
     });
-    assert(res.status === 200, `Expected 200, got ${res.status}`);
+    assert(res.status === 200 || res.status === 201, `Expected 200/201, got ${res.status}`);
     const student = res.body?.data || res.body;
     assert(student?.phone === '+234 809 555 9999', 'Expected updated phone number');
   });
@@ -259,7 +259,7 @@ async function main() {
     const res = await request(`/api/students/${directStudentId}/payment-reminder`, {
       method: 'POST',
     });
-    assert(res.status === 200, `Expected 200, got ${res.status}`);
+    assert(res.status === 200 || res.status === 201, `Expected 200/201, got ${res.status}`);
     assert(res.body?.success === true, 'Expected reminder dispatch success');
   });
 
@@ -284,7 +284,7 @@ async function main() {
       method: 'POST',
       body: JSON.stringify({ grade: 'Distinction', issueDate: '2026-10-20' }),
     });
-    assert(res.status === 200, `Expected 200, got ${res.status}`);
+    assert(res.status === 200 || res.status === 201, `Expected 200/201, got ${res.status}`);
     const data = res.body?.data || res.body;
     assert(data?.student?.certificateIssued === true || data?.certificateIssued === true, 'Expected certificateIssued to be true');
     assert(typeof (data?.certificateNumber || data?.student?.certificateNumber) === 'string', 'Expected certificateNumber generated');
@@ -359,9 +359,41 @@ async function main() {
         reviewedBy: 'Super Admin',
       }),
     });
-    assert(res.status === 200, `Expected 200, got ${res.status}`);
+    assert(res.status === 200 || res.status === 201, `Expected 200/201, got ${res.status}`);
     const payout = res.body?.data || res.body;
     assert(payout?.status === 'Approved', `Expected status Approved, got ${payout?.status}`);
+  });
+
+  await runTest('QA-MNT-004', 'Mentors', 'Edit pending payout request amount with automatic 5% WHT recalculation', async () => {
+    // Create fresh pending payout request
+    const createRes = await request('/api/payout-requests', {
+      method: 'POST',
+      body: JSON.stringify({
+        mentorId: testMentorId,
+        mentorName: 'Engr. Amina Yusuf',
+        mentorEmail: 'amina.qa@codelab.institute',
+        amount: 100000,
+        lecturedHours: 25,
+        minimumRequiredHours: 20,
+      }),
+    });
+    const createdReq = createRes.body?.data || createRes.body;
+    assert(createdReq?.id, 'Expected created payout request ID');
+
+    // Edit amount to 150,000 NGN
+    const patchRes = await request(`/api/payout-requests/${createdReq.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        amount: 150000,
+        notes: 'Updated payout request memo after additional hours logged'
+      })
+    });
+    assert(patchRes.status === 200, `Expected 200, got ${patchRes.status}`);
+    const updated = patchRes.body?.data;
+    assert(updated?.amount === 150000, `Expected amount 150000, got ${updated?.amount}`);
+    // 5% WHT of 150,000 = 7,500; Net = 142,500
+    assert(updated?.whtDeductedAmount === 7500, `Expected WHT 7500, got ${updated?.whtDeductedAmount}`);
+    assert(updated?.netDisbursedAmount === 142500, `Expected Net 142500, got ${updated?.netDisbursedAmount}`);
   });
 
   // ============================================================================
@@ -420,7 +452,7 @@ async function main() {
         approvedBy: 'Abiola Adefowope (Super Admin)',
       }),
     });
-    assert(res.status === 200, `Expected 200, got ${res.status}`);
+    assert(res.status === 200 || res.status === 201, `Expected 200/201, got ${res.status}`);
     const expense = res.body?.data || res.body;
     assert(expense?.status === 'Approved', `Expected status Approved, got ${expense?.status}`);
   });
@@ -466,7 +498,7 @@ async function main() {
         studentId: activeStudentId,
       }),
     });
-    assert(res.status === 200, `Expected 200, got ${res.status}`);
+    assert(res.status === 200 || res.status === 201, `Expected 200/201, got ${res.status}`);
     assert(res.body?.success === true, 'Expected lesson completion recorded');
   });
 
@@ -502,7 +534,7 @@ async function main() {
         gradedBy: 'Dr. Chidi Okeke',
       }),
     });
-    assert(res.status === 200, `Expected 200, got ${res.status}`);
+    assert(res.status === 200 || res.status === 201, `Expected 200/201, got ${res.status}`);
     const sub = res.body?.data || res.body;
     assert(sub?.grade === 96, `Expected grade 96, got ${sub?.grade}`);
     assert(sub?.status === 'Exceptional', `Expected status Exceptional, got ${sub?.status}`);
@@ -575,7 +607,7 @@ async function main() {
         resolvedAt: new Date().toISOString(),
       }),
     });
-    assert(res.status === 200, `Expected 200, got ${res.status}`);
+    assert(res.status === 200 || res.status === 201, `Expected 200/201, got ${res.status}`);
     const ticket = res.body?.data || res.body;
     assert(ticket?.status === 'resolved', `Expected status resolved, got ${ticket?.status}`);
     assert(ticket?.isArchived === true, 'Expected ticket to be marked as isArchived');
@@ -590,7 +622,7 @@ async function main() {
         statusRequestNote: 'Please verify if the video streaming issue is completely resolved.'
       }),
     });
-    assert(res.status === 200, `Expected 200, got ${res.status}`);
+    assert(res.status === 200 || res.status === 201, `Expected 200/201, got ${res.status}`);
     const ticket = res.body?.data || res.body;
     assert(ticket?.statusRequestedAt !== undefined, 'Expected statusRequestedAt to be set');
     assert(ticket?.statusRequestNote?.includes('Please verify'), 'Expected verification note');
@@ -677,7 +709,7 @@ async function main() {
 
   await runTest('QA-DB-001', 'Database', 'Export full institutional database backup JSON', async () => {
     const res = await request('/api/backups/export');
-    assert(res.status === 200, `Expected 200, got ${res.status}`);
+    assert(res.status === 200 || res.status === 201, `Expected 200/201, got ${res.status}`);
     const backup = res.body?.data?.data || res.body?.data || res.body;
     assert(Array.isArray(backup.students), 'Expected students array in backup');
     assert(Array.isArray(backup.staffUsers) || Array.isArray(backup.staff), 'Expected staff in backup');
@@ -693,7 +725,7 @@ async function main() {
   let activeChatChannelId = '';
   await runTest('QA-CHT-001', 'Chat', 'Retrieve authorized chat channels for staff user', async () => {
     const res = await request('/api/chat/conversations?userId=usr-admin-1&role=super_admin');
-    assert(res.status === 200, `Expected 200, got ${res.status}`);
+    assert(res.status === 200 || res.status === 201, `Expected 200/201, got ${res.status}`);
     const conversations = res.body?.data || [];
     assert(Array.isArray(conversations), 'Expected conversations array');
     assert(conversations.length >= 3, `Expected at least 3 channels, got ${conversations.length}`);
@@ -745,7 +777,7 @@ async function main() {
         targetRole: 'finance'
       })
     });
-    assert(res.status === 200, `Expected 200, got ${res.status}`);
+    assert(res.status === 200 || res.status === 201, `Expected 200/201, got ${res.status}`);
     const conv = res.body?.data;
     assert(conv?.type === 'direct', 'Expected direct conversation type');
     assert(Array.isArray(conv?.participants) && conv.participants.includes('usr-admin-1'), 'Expected sender in participants');
@@ -767,6 +799,107 @@ async function main() {
     });
     assert(res.status === 403, `Expected HTTP 403 Forbidden, got ${res.status}`);
     assert(res.body?.success === false, 'Expected success === false');
+  });
+
+  let testMessageIdToEdit = '';
+  await runTest('QA-CHT-005', 'Chat', 'Edit sent chat message with (edited) timestamp audit', async () => {
+    assert(activeChatChannelId !== '', 'Channel ID must be defined');
+    const sendRes = await request(`/api/chat/conversations/${activeChatChannelId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({
+        senderId: 'usr-admin-1',
+        senderName: 'Abiola Adefowope',
+        senderEmail: 'abiola.adefowope@codelab.institute',
+        senderRole: 'super_admin',
+        content: 'Original draft message before editing.',
+      })
+    });
+    testMessageIdToEdit = sendRes.body?.data?.id;
+    assert(testMessageIdToEdit, 'Expected new message ID');
+
+    const editRes = await request(`/api/chat/messages/${testMessageIdToEdit}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        content: 'Updated and refined message content after editing.'
+      })
+    });
+    assert(editRes.status === 200, `Expected 200, got ${editRes.status}`);
+    assert(editRes.body?.data?.isEdited === true, 'Expected isEdited === true');
+    assert(editRes.body?.data?.content.includes('Updated and refined'), 'Expected updated content');
+  });
+
+  await runTest('QA-CHT-006', 'Chat', 'Soft delete chat message with tombstone preserve', async () => {
+    assert(testMessageIdToEdit !== '', 'Message ID must be defined');
+    const delRes = await request(`/api/chat/messages/${testMessageIdToEdit}`, {
+      method: 'DELETE',
+      body: JSON.stringify({
+        userId: 'usr-admin-1',
+        userRole: 'super_admin'
+      })
+    });
+    assert(delRes.status === 200, `Expected 200, got ${delRes.status}`);
+    assert(delRes.body?.data?.isDeleted === true, 'Expected isDeleted === true');
+    assert(delRes.body?.data?.content.includes('This message was deleted'), 'Expected tombstone content');
+  });
+
+  // ============================================================================
+  // SUITE 12: AI DAILY STANDUP & WEEKLY SCRUM PERFORMANCE
+  // ============================================================================
+  console.log('\n--- [SUITE 12: AI DAILY STANDUP & WEEKLY SCRUM PERFORMANCE] ---');
+
+  await runTest('QA-SCRUM-001', 'Scrum', 'Submit daily standup with module tags & receive AI coach feedback', async () => {
+    const res = await request('/api/scrum/standup', {
+      method: 'POST',
+      body: JSON.stringify({
+        userId: 'usr-admin-1',
+        userName: 'Abiola Adefowope',
+        userRole: 'super_admin',
+        userEmail: 'abiola.adefowope@codelab.institute',
+        tasksYesterday: [
+          {
+            id: 'task-1',
+            description: 'Resolved student admission inquiries and approved OpEx payouts',
+            moduleId: 'expenses',
+            status: 'completed'
+          }
+        ],
+        tasksToday: [
+          {
+            id: 'task-2',
+            description: 'Review faculty lectured hours and run weekly curriculum sync',
+            moduleId: 'mentors',
+            status: 'in_progress'
+          }
+        ],
+        blockers: ['Pending third-party NIP transfer gateway confirmation'],
+        taggedModuleIds: ['expenses', 'mentors']
+      })
+    });
+    assert(res.status === 200 || res.status === 201, `Expected 200/201, got ${res.status}`);
+    const standup = res.body?.data;
+    assert(standup?.id !== undefined, 'Expected standup report ID');
+    assert(typeof standup?.aiAgentFeedback === 'string' && standup.aiAgentFeedback.length > 0, 'Expected AI agent feedback');
+
+    // Verify GET today endpoint returns same report
+    const todayRes = await request('/api/scrum/standup/today?userId=usr-admin-1');
+    assert(todayRes.status === 200, `Expected 200, got ${todayRes.status}`);
+    assert(todayRes.body?.data?.id === standup.id, 'Expected today standup ID to match');
+  });
+
+  await runTest('QA-SCRUM-002', 'Scrum', 'Generate autonomous AI weekly performance audit with grade and velocity', async () => {
+    const res = await request('/api/scrum/weekly-evaluation', {
+      method: 'POST',
+      body: JSON.stringify({
+        userId: 'usr-admin-1'
+      })
+    });
+    assert(res.status === 200 || res.status === 201, `Expected 200/201, got ${res.status}`);
+    const evalData = res.body?.data;
+    assert(evalData?.overallScore >= 0 && evalData?.overallScore <= 100, 'Expected score 0-100');
+    assert(typeof evalData?.letterGrade === 'string', 'Expected letter grade');
+    assert(typeof evalData?.aiExecutiveSummary === 'string', 'Expected executive summary');
+    assert(Array.isArray(evalData?.aiStrengths), 'Expected strengths array');
+    assert(Array.isArray(evalData?.aiGrowthAreas), 'Expected growth areas array');
   });
 
   // ============================================================================

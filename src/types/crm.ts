@@ -148,6 +148,7 @@ export interface AuthUser extends NigerianBiodataKYC {
   deactivatedAt?: string;
   deactivatedReason?: string;
   isApprover?: boolean; // Super Admin assigned official Approver authority
+  assignedModules?: string[]; // e.g. ['leads', 'expenses', 'lms', 'billing', 'mentors', 'students', 'attendance', 'tickets']
 }
 
 export type LeadStatus = 'Qualified' | 'Negotiation' | 'Discovery' | 'Overdue' | 'Contacted' | 'New' | 'Converted' | 'Lost';
@@ -889,7 +890,58 @@ export type ModalType =
   | 'log-follow-up'
   | 'record-installment'
   | 'create-subgroup'
+  | 'forward-message'
+  | 'daily-standup'
   | null;
+
+export interface DailyStandupTask {
+  id: string;
+  description: string;
+  moduleId: string; // e.g. 'leads' | 'expenses' | 'lms' | 'billing' | 'mentors' | 'students' | 'attendance' | 'tickets'
+  status: 'completed' | 'in_progress' | 'blocked';
+  estimatedHours?: number;
+  blockerDetails?: string;
+}
+
+export interface DailyStandupReport {
+  id: string;
+  userId: string;
+  userName: string;
+  userRole: UserRole | string;
+  date: string; // YYYY-MM-DD
+  tasksYesterday: DailyStandupTask[];
+  tasksToday: DailyStandupTask[];
+  blockers: string[];
+  taggedModuleIds: string[];
+  aiAgentFeedback?: string;
+  sentiment: 'positive' | 'neutral' | 'blocked';
+  submittedAt: string;
+}
+
+export interface WeeklyScrumPerformance {
+  id: string;
+  userId: string;
+  userName: string;
+  userRole: string;
+  weekNumber: number;
+  weekStartDate: string;
+  weekEndDate: string;
+  overallScore: number; // 0 - 100
+  letterGrade: 'A+' | 'A' | 'B' | 'C' | 'D' | 'F';
+  metrics: {
+    completionRatePercent: number;
+    moduleCoverageScore: number;
+    blockerResolutionScore: number;
+    consistencyScore: number;
+    totalTasksLogged: number;
+    totalTasksCompleted: number;
+  };
+  moduleBreakdown: Record<string, { tasksCompleted: number; tasksPlanned: number }>;
+  aiExecutiveSummary: string;
+  aiStrengths: string[];
+  aiGrowthAreas: string[];
+  generatedAt: string;
+}
 
 export interface RecordInstallmentPayload {
   studentId: string;

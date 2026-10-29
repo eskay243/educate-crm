@@ -35,6 +35,8 @@ import { BulkUploadCoursesModal } from '../modals/BulkUploadCoursesModal';
 import { LogFollowUpModal } from '../modals/LogFollowUpModal';
 import { RecordInstallmentPaymentModal } from '../modals/RecordInstallmentPaymentModal';
 import { CreateSubgroupModal } from '../modals/CreateSubgroupModal';
+import { ForwardMessageModal } from '../modals/ForwardMessageModal';
+import { DailyStandupModal } from '../modals/DailyStandupModal';
 import { MobileBottomNav } from './MobileBottomNav';
 import { FloatingChatWidget } from '../chat/FloatingChatWidget';
 
@@ -208,6 +210,14 @@ export const AppLayout: React.FC = () => {
       />
       <CreateSubgroupModal
         isOpen={activeModal === 'create-subgroup'}
+        onClose={closeModal}
+      />
+      <ForwardMessageModal
+        isOpen={activeModal === 'forward-message'}
+        onClose={closeModal}
+      />
+      <DailyStandupModal
+        isOpen={activeModal === 'daily-standup'}
         onClose={closeModal}
       />
       <ChangePasswordModal />

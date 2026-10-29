@@ -29,6 +29,7 @@ export const MentorManagementPage: React.FC = () => {
     setSelectedSlotForAttendance,
     payoutRequests,
     reviewMentorPayout,
+    openEditPayoutRequestModal,
     getUserTaskFootprint,
     deleteMentorUser,
     toggleUserActiveStatus,
@@ -1364,6 +1365,18 @@ export const MentorManagementPage: React.FC = () => {
                                 <span className="material-symbols-outlined text-[14px] text-primary">receipt_long</span>
                                 <span>WHT Slip</span>
                               </button>
+
+                              {req.status === 'Pending' && (isSuperAdmin || isFinance || req.mentorId === myMentorProfile?.id || req.mentorEmail.toLowerCase() === currentUser?.email.toLowerCase()) && (
+                                <button
+                                  type="button"
+                                  onClick={() => openEditPayoutRequestModal(req)}
+                                  className="px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[11px] font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
+                                  title="Edit pending payout request amount or memo"
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">edit</span>
+                                  <span>Edit</span>
+                                </button>
+                              )}
 
                               {(isSuperAdmin || isFinance) && req.status === 'Pending' && (
                                 <>

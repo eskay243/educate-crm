@@ -100,6 +100,18 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
 
         {/* Actions & Profile */}
         <div className="flex items-center gap-3">
+          {/* Daily Standup / AI Scrum Quick Trigger */}
+          {currentUser && (
+            <button
+              onClick={() => openModal('daily-standup')}
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 h-8 rounded-md bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-bold border border-amber-500/30 transition-all cursor-pointer shadow-xs"
+              title="Open AI Scrum & Daily Standup task logger"
+            >
+              <span className="material-symbols-outlined text-[16px] text-amber-500">psychology</span>
+              <span className="hidden sm:inline">Daily Standup</span>
+            </button>
+          )}
+
           {/* Quick Record Creator (Restricted to non-students and non-mentors) */}
           {currentUser && currentUser.role !== 'student' && currentUser.role !== 'mentor' && (
             <button

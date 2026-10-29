@@ -5,7 +5,16 @@ import { ChatConversation, ChatMessage, ChatAttachment, ChatUserTarget } from '.
 import { MentionSuggestions } from './MentionSuggestions';
 
 export const FloatingChatWidget: React.FC = () => {
-  const { currentUser, unreadChatCount, refreshUnreadChatCount, isChatPopoutOpen, setIsChatPopoutOpen } = useCRM();
+  const {
+    currentUser,
+    unreadChatCount,
+    refreshUnreadChatCount,
+    isChatPopoutOpen,
+    setIsChatPopoutOpen,
+    openForwardModal,
+    deleteChatMessage,
+    isSuperAdmin,
+  } = useCRM();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -305,6 +314,51 @@ export const FloatingChatWidget: React.FC = () => {
 
   const activeConv = conversations.find(c => c.id === activeConvId);
 
+  const handleDeleteMessage = async (msgId: string) => {
+    const ok = await deleteChatMessage(msgId);
+    if (ok) {
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === msgId
+            ? { ...m, isDeleted: true, content: '🚫 This message was deleted', attachments: [] }
+            : m
+        )
+      );
+    }
+  };
+
+  const renderMessageContent = (content: string) => {
+    const parts = content.split(/(https?:\/\/[^\s]+|www\.[^\s]+|@[a-zA-Z0-9_.-]+)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith('http://') || part.startsWith('https://') || part.startsWith('www.')) {
+        const href = part.startsWith('http') ? part : `https://${part}`;
+        return (
+          <a
+            key={index}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="underline font-semibold hover:opacity-80 break-all text-blue-400 cursor-pointer"
+          >
+            {part}
+          </a>
+        );
+      }
+      if (part.startsWith('@')) {
+        return (
+          <span
+            key={index}
+            className="inline-flex items-center px-1 rounded font-bold bg-primary/20 text-primary text-[10px]"
+          >
+            {part}
+          </span>
+        );
+      }
+      return <span key={index}>{part}</span>;
+    });
+  };
+
   // If already on the full Chat page or not logged in, hide floating widget safely in render phase
   if (location.pathname === '/chat' || !currentUser) {
     return null;
@@ -597,6 +651,16 @@ export const FloatingChatWidget: React.FC = () => {
                           : 'bg-white text-on-surface border border-outline-variant/60 rounded-bl-xs'
                       }`}
                     >
+                      {/* Provenance Header if Forwarded */}
+                      {msg.forwardedFrom && (
+                        <div className={`flex items-center gap-1 text-[9px] italic mb-1 pb-1 border-b ${
+                          isMe ? 'border-white/20 text-white/80' : 'border-outline-variant/40 text-secondary'
+                        }`}>
+                          <span className="material-symbols-outlined text-[11px]">forward</span>
+                          <span>Forwarded from <strong>{msg.forwardedFrom.originalSenderName}</strong></span>
+                        </div>
+                      )}
+
                       {/* Quoted Header if Reply */}
                       {msg.replyTo && (
                         <div className={`p-1.5 mb-1.5 rounded border-l-2 text-[10px] ${
@@ -606,18 +670,28 @@ export const FloatingChatWidget: React.FC = () => {
                         </div>
                       )}
 
-                      {/* Content or Voice Player */}
-                      {msg.messageType === 'voice' && msg.attachments?.[0] ? (
+                      {/* Content or Voice Player or Deleted Tombstone */}
+                      {msg.isDeleted ? (
+                        <p className="italic text-[11px] opacity-75 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[13px]">block</span>
+                          <span>This message was deleted</span>
+                        </p>
+                      ) : msg.messageType === 'voice' && msg.attachments?.[0] ? (
                         <div className="flex items-center gap-1.5 my-1">
                           <span className="material-symbols-outlined text-[16px] text-rose-500">mic</span>
                           <audio controls src={msg.attachments[0].url} className="h-6 max-w-[180px]" />
                         </div>
                       ) : (
-                        <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                        <div className="whitespace-pre-wrap break-words">
+                          {renderMessageContent(msg.content)}
+                          {msg.isEdited && (
+                            <span className="text-[9px] opacity-70 italic ml-1">(edited)</span>
+                          )}
+                        </div>
                       )}
 
                       {/* Attachments preview */}
-                      {msg.attachments && msg.attachments.length > 0 && msg.messageType !== 'voice' && (
+                      {msg.attachments && msg.attachments.length > 0 && msg.messageType !== 'voice' && !msg.isDeleted && (
                         <div className="mt-2 space-y-1">
                           {msg.attachments.map(att => (
                             <a
@@ -639,22 +713,48 @@ export const FloatingChatWidget: React.FC = () => {
                         </div>
                       )}
 
-                      {/* Quick Hover Reply Button */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setReplyingTo({
-                            messageId: msg.id,
-                            senderName: msg.senderName,
-                            contentSnippet: (msg.content || 'Attachment').slice(0, 60)
-                          });
-                          inputRef.current?.focus();
-                        }}
-                        className={`absolute top-1 ${isMe ? '-left-6' : '-right-6'} hidden group-hover/msg:flex p-1 rounded hover:bg-surface-container text-secondary hover:text-primary transition`}
-                        title="Reply"
-                      >
-                        <span className="material-symbols-outlined text-[14px]">reply</span>
-                      </button>
+                      {/* Quick Hover Action Buttons */}
+                      {!msg.isDeleted && (
+                        <div className={`absolute top-1 ${isMe ? '-left-14' : '-right-14'} hidden group-hover/msg:flex items-center gap-0.5 bg-surface border border-outline-variant rounded-md p-0.5 shadow-xs`}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReplyingTo({
+                                messageId: msg.id,
+                                senderName: msg.senderName,
+                                contentSnippet: (msg.content || 'Attachment').slice(0, 60)
+                              });
+                              inputRef.current?.focus();
+                            }}
+                            className="p-1 rounded hover:bg-surface-container text-secondary hover:text-primary transition"
+                            title="Reply"
+                          >
+                            <span className="material-symbols-outlined text-[13px]">reply</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openForwardModal(msg)}
+                            className="p-1 rounded hover:bg-surface-container text-secondary hover:text-primary transition"
+                            title="Forward"
+                          >
+                            <span className="material-symbols-outlined text-[13px]">forward</span>
+                          </button>
+                          {(isMe || isSuperAdmin) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (window.confirm('Delete this message?')) {
+                                  handleDeleteMessage(msg.id);
+                                }
+                              }}
+                              className="p-1 rounded hover:bg-surface-container text-secondary hover:text-rose-500 transition"
+                              title="Delete"
+                            >
+                              <span className="material-symbols-outlined text-[13px]">delete</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

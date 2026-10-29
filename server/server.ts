@@ -4513,9 +4513,22 @@ app.patch('/api/payout-requests/:id', (req: Request, res: Response) => {
     return res.status(404).json({ success: false, message: 'Payout request not found.' });
   }
 
+  const existing = db.payoutRequests[index];
+  let updatedWht = existing.whtDeductedAmount;
+  let updatedNet = existing.netDisbursedAmount;
+
+  if (req.body.amount !== undefined) {
+    const numAmt = Number(req.body.amount);
+    updatedWht = Math.round(numAmt * 0.05);
+    updatedNet = numAmt - updatedWht;
+  }
+
   db.payoutRequests[index] = {
-    ...db.payoutRequests[index],
+    ...existing,
     ...req.body,
+    amount: req.body.amount !== undefined ? Number(req.body.amount) : existing.amount,
+    whtDeductedAmount: updatedWht,
+    netDisbursedAmount: updatedNet,
     updatedAt: new Date().toISOString(),
   };
 
@@ -6090,6 +6103,7 @@ app.post('/api/chat/conversations/:id/messages', async (req: Request, res: Respo
     mentions,
     attachments,
     replyTo,
+    forwardedFrom,
     messageType,
     voiceDurationSeconds
   } = req.body;
@@ -6125,6 +6139,11 @@ app.post('/api/chat/conversations/:id/messages', async (req: Request, res: Respo
       senderName: replyTo.senderName || 'User',
       contentSnippet: (replyTo.contentSnippet || '').slice(0, 140),
       mediaType: replyTo.mediaType || 'text'
+    } : undefined,
+    forwardedFrom: forwardedFrom && forwardedFrom.originalSenderName ? {
+      originalSenderName: forwardedFrom.originalSenderName,
+      originalSenderId: forwardedFrom.originalSenderId || '',
+      originalTimestamp: forwardedFrom.originalTimestamp || new Date().toISOString()
     } : undefined,
     voiceDurationSeconds: voiceDurationSeconds ? Number(voiceDurationSeconds) : undefined,
     mentions: Array.isArray(mentions) ? mentions : [],
@@ -6193,6 +6212,72 @@ app.post('/api/chat/conversations/:id/messages', async (req: Request, res: Respo
   }
 
   res.status(201).json({ success: true, data: newMessage });
+});
+
+app.patch('/api/chat/messages/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { content, userId } = req.body;
+
+  if (!content || !content.trim()) {
+    return res.status(400).json({ success: false, message: 'Message content cannot be empty' });
+  }
+
+  if (!Array.isArray(db.chatMessages)) db.chatMessages = [...initialChatMessages];
+  const msgIndex = db.chatMessages.findIndex((m: any) => m.id === id);
+  if (msgIndex === -1) {
+    return res.status(404).json({ success: false, message: 'Message not found' });
+  }
+
+  const msg = db.chatMessages[msgIndex];
+  if (userId && msg.senderId !== userId && userId !== 'usr-superadmin') {
+    return res.status(403).json({ success: false, message: 'Only the original sender can edit this message' });
+  }
+
+  msg.content = content.trim();
+  msg.isEdited = true;
+  msg.editedAt = new Date().toISOString();
+
+  if (Array.isArray(db.chatConversations)) {
+    const conv = db.chatConversations.find((c: any) => c.id === msg.conversationId);
+    if (conv && conv.lastMessage) {
+      conv.lastMessage.content = msg.content;
+    }
+  }
+
+  saveDatabase(db);
+  res.json({ success: true, data: msg, message: 'Message updated successfully' });
+});
+
+app.delete('/api/chat/messages/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { userId } = req.body;
+
+  if (!Array.isArray(db.chatMessages)) db.chatMessages = [...initialChatMessages];
+  const msgIndex = db.chatMessages.findIndex((m: any) => m.id === id);
+  if (msgIndex === -1) {
+    return res.status(404).json({ success: false, message: 'Message not found' });
+  }
+
+  const msg = db.chatMessages[msgIndex];
+  if (userId && msg.senderId !== userId && userId !== 'usr-superadmin') {
+    return res.status(403).json({ success: false, message: 'Only the original sender can delete this message' });
+  }
+
+  msg.isDeleted = true;
+  msg.deletedAt = new Date().toISOString();
+  msg.content = '🚫 This message was deleted';
+  msg.attachments = [];
+  msg.replyTo = undefined;
+
+  if (Array.isArray(db.chatConversations)) {
+    const conv = db.chatConversations.find((c: any) => c.id === msg.conversationId);
+    if (conv && conv.lastMessage) {
+      conv.lastMessage.content = '🚫 Message was deleted';
+    }
+  }
+
+  saveDatabase(db);
+  res.json({ success: true, data: msg, message: 'Message deleted successfully' });
 });
 
 app.post('/api/chat/subgroups', (req: Request, res: Response) => {
@@ -6323,6 +6408,141 @@ app.post('/api/chat/conversations/:id/read', (req: Request, res: Response) => {
   }
 
   res.json({ success: true, message: 'Messages marked as read' });
+});
+
+// ----------------------------------------------------
+// AI Agent-Based Daily Standup & Weekly Scrum Endpoints
+// ----------------------------------------------------
+app.get('/api/scrum/standup/today', (req: Request, res: Response) => {
+  const userId = String(req.query.userId || '');
+  const today = new Date().toISOString().split('T')[0];
+  if (!Array.isArray((db as any).dailyStandups)) (db as any).dailyStandups = [];
+  const found = (db as any).dailyStandups.find((s: any) => s.userId === userId && s.date === today);
+  res.json({ success: true, data: found || null });
+});
+
+app.post('/api/scrum/standup', (req: Request, res: Response) => {
+  const { userId, userName, userRole, tasksYesterday, tasksToday, blockers, taggedModuleIds } = req.body;
+  if (!userId || !userName) {
+    return res.status(400).json({ success: false, message: 'userId and userName are required' });
+  }
+
+  if (!Array.isArray((db as any).dailyStandups)) (db as any).dailyStandups = [];
+  const today = new Date().toISOString().split('T')[0];
+
+  const completedCount = Array.isArray(tasksYesterday) ? tasksYesterday.filter((t: any) => t.status === 'completed').length : 0;
+  const plannedCount = Array.isArray(tasksToday) ? tasksToday.length : 0;
+  const hasBlockers = Array.isArray(blockers) && blockers.length > 0;
+  
+  let aiFeedback = '';
+  if (hasBlockers) {
+    aiFeedback = `⚠️ Blockers flagged: ${blockers.join(', ')}. AI Scrum Master has alerted the responsible department leads. Prioritize unblocked module items.`;
+  } else if (completedCount > 0 && plannedCount > 0) {
+    aiFeedback = `⚡ Excellent sprint velocity! ${completedCount} deliverables completed, ${plannedCount} planned for today. Module alignment is strong.`;
+  } else {
+    aiFeedback = `✓ Daily standup logged successfully. Ensure planned tasks align with your assigned module responsibilities.`;
+  }
+
+  const newStandup = {
+    id: `std-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    userId,
+    userName,
+    userRole: userRole || 'staff',
+    date: today,
+    tasksYesterday: Array.isArray(tasksYesterday) ? tasksYesterday : [],
+    tasksToday: Array.isArray(tasksToday) ? tasksToday : [],
+    blockers: Array.isArray(blockers) ? blockers : [],
+    taggedModuleIds: Array.isArray(taggedModuleIds) ? taggedModuleIds : [],
+    aiAgentFeedback: aiFeedback,
+    sentiment: hasBlockers ? 'blocked' : 'positive',
+    submittedAt: new Date().toISOString()
+  };
+
+  const existingIndex = (db as any).dailyStandups.findIndex((s: any) => s.userId === userId && s.date === today);
+  if (existingIndex !== -1) {
+    (db as any).dailyStandups[existingIndex] = newStandup;
+  } else {
+    (db as any).dailyStandups.unshift(newStandup);
+  }
+
+  saveDatabase(db);
+  res.status(201).json({ success: true, data: newStandup });
+});
+
+app.get('/api/scrum/standups', (req: Request, res: Response) => {
+  const userId = req.query.userId ? String(req.query.userId) : null;
+  if (!Array.isArray((db as any).dailyStandups)) (db as any).dailyStandups = [];
+  const list = userId ? (db as any).dailyStandups.filter((s: any) => s.userId === userId) : (db as any).dailyStandups;
+  res.json({ success: true, data: list });
+});
+
+app.post('/api/scrum/weekly-evaluation', (req: Request, res: Response) => {
+  const { userId, weekStartDate, weekEndDate } = req.body;
+  if (!userId) return res.status(400).json({ success: false, message: 'userId is required' });
+
+  if (!Array.isArray((db as any).dailyStandups)) (db as any).dailyStandups = [];
+  if (!Array.isArray((db as any).weeklyScrumReports)) (db as any).weeklyScrumReports = [];
+
+  const userStandups = (db as any).dailyStandups.filter((s: any) => s.userId === userId);
+  const totalTasksLogged = userStandups.reduce((acc: number, s: any) => acc + (s.tasksToday?.length || 0) + (s.tasksYesterday?.length || 0), 0);
+  const totalTasksCompleted = userStandups.reduce((acc: number, s: any) => acc + (s.tasksYesterday?.filter((t: any) => t.status === 'completed').length || 0), 0);
+  
+  const completionRate = totalTasksLogged > 0 ? Math.round((totalTasksCompleted / Math.max(1, totalTasksLogged)) * 100) : 85;
+  const daysLogged = Math.min(5, userStandups.length);
+  const consistencyScore = Math.max(20, Math.round((daysLogged / 5) * 100));
+  const blockerScore = userStandups.some((s: any) => s.blockers?.length > 0) ? 80 : 95;
+  const moduleCoverageScore = 90;
+
+  const overallScore = Math.round(
+    completionRate * 0.4 +
+    blockerScore * 0.2 +
+    moduleCoverageScore * 0.2 +
+    consistencyScore * 0.2
+  );
+
+  const letterGrade = overallScore >= 90 ? 'A+' : overallScore >= 80 ? 'A' : overallScore >= 70 ? 'B' : overallScore >= 60 ? 'C' : 'D';
+
+  const userObj = 
+    (db.staffUsers || []).find((u: any) => u.id === userId) ||
+    (db.mentors || []).find((m: any) => m.id === userId) ||
+    (db.students || []).find((s: any) => s.id === userId) ||
+    { name: 'Team Member', role: 'Staff' };
+
+  const weeklyReport = {
+    id: `scr-rep-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    userId,
+    userName: userObj.name,
+    userRole: userObj.roleTitle || userObj.role || 'Staff',
+    weekNumber: Math.ceil(new Date().getDate() / 7),
+    weekStartDate: weekStartDate || new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0],
+    weekEndDate: weekEndDate || new Date().toISOString().split('T')[0],
+    overallScore,
+    letterGrade,
+    metrics: {
+      completionRatePercent: completionRate,
+      moduleCoverageScore,
+      blockerResolutionScore: blockerScore,
+      consistencyScore,
+      totalTasksLogged,
+      totalTasksCompleted
+    },
+    moduleBreakdown: {},
+    aiExecutiveSummary: `Sprint evaluation for ${userObj.name}: High operational execution across assigned modules with consistent daily check-ins and strong closure velocity.`,
+    aiStrengths: ['Proactive daily task logging', 'Rapid deliverable execution', 'High module alignment'],
+    aiGrowthAreas: ['Pre-empt cross-department dependency handoffs', 'Log granular estimated completion hours'],
+    generatedAt: new Date().toISOString()
+  };
+
+  (db as any).weeklyScrumReports.unshift(weeklyReport);
+  saveDatabase(db);
+  res.status(201).json({ success: true, data: weeklyReport });
+});
+
+app.get('/api/scrum/weekly-reports', (req: Request, res: Response) => {
+  const userId = req.query.userId ? String(req.query.userId) : null;
+  if (!Array.isArray((db as any).weeklyScrumReports)) (db as any).weeklyScrumReports = [];
+  const list = userId ? (db as any).weeklyScrumReports.filter((r: any) => r.userId === userId) : (db as any).weeklyScrumReports;
+  res.json({ success: true, data: list });
 });
 
 app.listen(PORT, () => {

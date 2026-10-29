@@ -39,8 +39,12 @@ import {
   TimetableSlot,
   MentorPayoutRequest,
   WalletTransaction,
-  RecordInstallmentPayload
+  RecordInstallmentPayload,
+  DailyStandupReport,
+  DailyStandupTask,
+  WeeklyScrumPerformance
 } from '../types/crm';
+import { ChatMessage } from '../types/chat';
 import { 
   initialLeads, 
   initialStudents, 
@@ -261,6 +265,28 @@ interface CRMContextType {
   openRecordPaymentModal: (student: Student) => void;
   recordStudentInstallmentPayment: (studentId: string, payload: RecordInstallmentPayload) => Promise<boolean>;
 
+  // Chat message management
+  selectedMessageForForward: ChatMessage | null;
+  setSelectedMessageForForward: (msg: ChatMessage | null) => void;
+  openForwardModal: (msg: ChatMessage) => void;
+  forwardChatMessage: (targetConversationId: string, message: ChatMessage) => Promise<boolean>;
+  editChatMessage: (messageId: string, content: string) => Promise<boolean>;
+  deleteChatMessage: (messageId: string) => Promise<boolean>;
+
+  // Payout request editing
+  selectedPayoutRequestForEdit: MentorPayoutRequest | null;
+  setSelectedPayoutRequestForEdit: (req: MentorPayoutRequest | null) => void;
+  openEditPayoutRequestModal: (req: MentorPayoutRequest) => void;
+  updateMentorPayoutRequest: (requestId: string, payload: Partial<MentorPayoutRequest>) => Promise<boolean>;
+
+  // AI Daily Standup & Weekly Scrum
+  dailyStandups: DailyStandupReport[];
+  weeklyScrumReports: WeeklyScrumPerformance[];
+  todayStandup: DailyStandupReport | null;
+  fetchTodayStandup: () => Promise<void>;
+  submitDailyStandup: (data: { tasksYesterday: DailyStandupTask[]; tasksToday: DailyStandupTask[]; blockers: string[]; taggedModuleIds: string[]; }) => Promise<boolean>;
+  generateWeeklyScrumEvaluation: (userId?: string) => Promise<WeeklyScrumPerformance | null>;
+
   // Mutators
   addLead: (lead: Omit<Lead, 'id' | 'dateAdded'>) => void;
   updateLeadStatus: (id: string, status: LeadStatus, lossReason?: string) => void;
@@ -379,6 +405,8 @@ const STORAGE_KEYS = {
   WALLET: 'nexus_clean_prod_wallet_v2',
   TIMETABLES: 'nexus_clean_prod_timetables_v1',
   PAYOUT_REQUESTS: 'nexus_clean_prod_payout_requests_v1',
+  STANDUPS: 'nexus_clean_prod_standups_v1',
+  SCRUM_REPORTS: 'nexus_clean_prod_scrum_reports_v1',
 };
 
 export const defaultWalletState: ExpenseAndBudgetWallet = {
@@ -636,6 +664,39 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const saved = localStorage.getItem(STORAGE_KEYS.PAYOUT_REQUESTS);
     return saved ? JSON.parse(saved) : initialPayoutRequests;
   });
+
+  // Chat message management state
+  const [selectedMessageForForward, setSelectedMessageForForward] = useState<ChatMessage | null>(null);
+  const openForwardModal = (msg: ChatMessage) => {
+    setSelectedMessageForForward(msg);
+    setActiveModal('forward-message');
+  };
+
+  // Payout request edit state
+  const [selectedPayoutRequestForEdit, setSelectedPayoutRequestForEdit] = useState<MentorPayoutRequest | null>(null);
+  const openEditPayoutRequestModal = (req: MentorPayoutRequest) => {
+    setSelectedPayoutRequestForEdit(req);
+    setActiveModal('request-payout');
+  };
+
+  // AI Daily Standup & Weekly Scrum state
+  const [dailyStandups, setDailyStandups] = useState<DailyStandupReport[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.STANDUPS);
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [weeklyScrumReports, setWeeklyScrumReports] = useState<WeeklyScrumPerformance[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SCRUM_REPORTS);
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [todayStandup, setTodayStandup] = useState<DailyStandupReport | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.STANDUPS, JSON.stringify(dailyStandups));
+  }, [dailyStandups]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SCRUM_REPORTS, JSON.stringify(weeklyScrumReports));
+  }, [weeklyScrumReports]);
 
   // Team Chat Live Unread Counter & Floating Dock State
   const [unreadChatCount, setUnreadChatCount] = useState<number>(0);
@@ -4061,6 +4122,226 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   };
 
+  const updateMentorPayoutRequest = async (requestId: string, payload: Partial<MentorPayoutRequest>): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/payout-requests/${requestId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        const updated = data.data;
+        setPayoutRequests(prev => prev.map(r => r.id === requestId ? updated : r));
+        showToast('Payout Request Updated', `Request has been updated (${formatNaira(updated.amount)}).`, 'success');
+        logActivity({
+          title: 'Payout Request Updated',
+          description: `Payout request ${requestId} details updated (Amount: ${formatNaira(updated.amount)}).`,
+          type: 'mentor',
+          user: currentUser?.name || 'User',
+        });
+        return true;
+      } else {
+        const whtRate = 5;
+        setPayoutRequests(prev => prev.map(r => {
+          if (r.id !== requestId) return r;
+          const nextAmount = payload.amount !== undefined ? Number(payload.amount) : r.amount;
+          const nextWht = Math.round(nextAmount * (whtRate / 100));
+          return {
+            ...r,
+            ...payload,
+            amount: nextAmount,
+            whtDeductedAmount: nextWht,
+            netDisbursedAmount: nextAmount - nextWht,
+          };
+        }));
+        showToast('Payout Request Updated', 'Request updated locally.', 'success');
+        return true;
+      }
+    } catch (e: any) {
+      showToast('Error', e.message || 'Failed to update payout request', 'error');
+      return false;
+    }
+  };
+
+  const forwardChatMessage = async (targetConversationId: string, message: ChatMessage): Promise<boolean> => {
+    if (!currentUser) {
+      showToast('Error', 'You must be logged in to forward messages.', 'error');
+      return false;
+    }
+    try {
+      const res = await fetch(`/api/chat/conversations/${targetConversationId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          senderId: currentUser.id,
+          senderName: currentUser.name,
+          senderRole: currentUser.role,
+          senderEmail: currentUser.email,
+          content: message.content || '',
+          attachments: message.attachments || [],
+          messageType: message.messageType || 'text',
+          forwardedFrom: {
+            originalSenderName: message.senderName || 'Anonymous',
+            originalSenderId: message.senderId,
+            originalTimestamp: message.timestamp || new Date().toISOString(),
+          },
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Message Forwarded', 'Message was forwarded successfully.', 'success');
+        refreshUnreadChatCount();
+        return true;
+      } else {
+        showToast('Forward Failed', data.error || 'Failed to forward message.', 'error');
+        return false;
+      }
+    } catch (e: any) {
+      showToast('Network Error', e.message || 'Could not forward message.', 'error');
+      return false;
+    }
+  };
+
+  const editChatMessage = async (messageId: string, content: string): Promise<boolean> => {
+    if (!content.trim()) {
+      showToast('Validation Error', 'Message cannot be empty.', 'warning');
+      return false;
+    }
+    try {
+      const res = await fetch(`/api/chat/messages/${messageId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Updated', 'Message edited successfully.', 'success');
+        return true;
+      } else {
+        showToast('Edit Failed', data.error || 'Could not edit message.', 'error');
+        return false;
+      }
+    } catch (e: any) {
+      showToast('Network Error', e.message || 'Could not update message.', 'error');
+      return false;
+    }
+  };
+
+  const deleteChatMessage = async (messageId: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/chat/messages/${messageId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentUser?.id,
+          userRole: currentUser?.role,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Message Deleted', 'Message has been removed.', 'success');
+        return true;
+      } else {
+        showToast('Delete Failed', data.error || 'Could not delete message.', 'error');
+        return false;
+      }
+    } catch (e: any) {
+      showToast('Network Error', e.message || 'Could not delete message.', 'error');
+      return false;
+    }
+  };
+
+  const fetchTodayStandup = useCallback(async () => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch(`/api/scrum/standup/today?userId=${encodeURIComponent(currentUser.id)}`);
+      const data = await res.json();
+      if (data.success) {
+        setTodayStandup(data.data);
+      }
+    } catch (e) {
+      console.warn('Could not fetch today standup:', e);
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (currentUser) {
+      fetchTodayStandup();
+    }
+  }, [currentUser, fetchTodayStandup]);
+
+  const submitDailyStandup = async (data: {
+    tasksYesterday: DailyStandupTask[];
+    tasksToday: DailyStandupTask[];
+    blockers: string[];
+    taggedModuleIds: string[];
+  }): Promise<boolean> => {
+    if (!currentUser) {
+      showToast('Error', 'Please sign in to submit your daily standup.', 'error');
+      return false;
+    }
+    try {
+      const res = await fetch('/api/scrum/standup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          userName: currentUser.name,
+          userRole: currentUser.role,
+          userEmail: currentUser.email,
+          ...data,
+        }),
+      });
+      const resData = await res.json();
+      if (resData.success && resData.data) {
+        setTodayStandup(resData.data);
+        setDailyStandups(prev => [resData.data, ...prev.filter(s => s.id !== resData.data.id)]);
+        showToast('Standup Logged 🚀', 'Your daily scrum updates and AI feedback have been recorded!', 'success');
+        logActivity({
+          title: 'Daily Standup Submitted',
+          description: `${currentUser.name} completed daily scrum standup with AI evaluation.`,
+          type: 'system',
+          user: currentUser.name,
+        });
+        return true;
+      } else {
+        showToast('Submission Failed', resData.error || 'Failed to submit standup.', 'error');
+        return false;
+      }
+    } catch (e: any) {
+      showToast('Network Error', e.message || 'Failed to submit standup.', 'error');
+      return false;
+    }
+  };
+
+  const generateWeeklyScrumEvaluation = async (userId?: string): Promise<WeeklyScrumPerformance | null> => {
+    const targetUserId = userId || currentUser?.id;
+    if (!targetUserId) {
+      showToast('Error', 'User ID required for weekly evaluation.', 'error');
+      return null;
+    }
+    try {
+      const res = await fetch('/api/scrum/weekly-evaluation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: targetUserId }),
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setWeeklyScrumReports(prev => [data.data, ...prev.filter(r => r.id !== data.data.id)]);
+        showToast('Weekly Scrum Evaluated', `Evaluation complete: ${data.data.velocityScore}% velocity rating.`, 'success');
+        return data.data;
+      } else {
+        showToast('Evaluation Error', data.error || 'Could not generate weekly evaluation.', 'error');
+        return null;
+      }
+    } catch (e: any) {
+      showToast('Network Error', e.message || 'Failed to generate weekly evaluation.', 'error');
+      return null;
+    }
+  };
+
   const updateWalletBudgetLimit = async (limit: number) => {
     try {
       const res = await apiService.updateBudgetLimit(limit);
@@ -4948,6 +5229,22 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         payoutRequests,
         requestMentorPayout,
         reviewMentorPayout,
+        selectedPayoutRequestForEdit,
+        setSelectedPayoutRequestForEdit,
+        openEditPayoutRequestModal,
+        updateMentorPayoutRequest,
+        selectedMessageForForward,
+        setSelectedMessageForForward,
+        openForwardModal,
+        forwardChatMessage,
+        editChatMessage,
+        deleteChatMessage,
+        dailyStandups,
+        weeklyScrumReports,
+        todayStandup,
+        fetchTodayStandup,
+        submitDailyStandup,
+        generateWeeklyScrumEvaluation,
         updateUserProfile,
         deleteStaffUser,
         deleteMentorUser,
