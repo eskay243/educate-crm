@@ -271,6 +271,13 @@ class ApiService {
     });
   }
 
+  async reviewKYC(userId: string, payload: { status: 'Verified' | 'Pending Review' | 'Incomplete'; notes?: string; approvedBy?: string; kycTier?: string }): Promise<any> {
+    return this.request<any>(`/kyc/review/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
   async deleteStaff(id: string): Promise<boolean> {
     const res = await this.request<{ success: boolean; message?: string }>(`/staff/${id}`, {
       method: 'DELETE',

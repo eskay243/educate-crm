@@ -21,6 +21,7 @@ yarn-error.log*
 
 # Backups
 server/backups/*.json
+backups/
 
 # Editor & OS
 .DS_Store

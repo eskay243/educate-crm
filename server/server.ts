@@ -3274,6 +3274,74 @@ app.patch('/api/staff/:id', (req: Request, res: Response) => {
   res.json({ success: true, data: db.staffUsers[index] });
 });
 
+app.patch('/api/kyc/review/:userId', (req: Request, res: Response) => {
+  const { userId } = req.params;
+  const status = req.body.status || req.body.kycStatus;
+  const notes = req.body.notes || req.body.rejectionReason;
+  const approvedBy = req.body.approvedBy || req.body.reviewedBy;
+  const kycTier = req.body.kycTier;
+
+  if (!status) {
+    return res.status(400).json({ success: false, message: 'Review status is required' });
+  }
+
+  let updatedRecord: any = null;
+  let category: string = '';
+
+  const staffIndex = (db.staffUsers || []).findIndex(u => u.id === userId || u.email?.toLowerCase() === userId.toLowerCase());
+  if (staffIndex !== -1) {
+    db.staffUsers[staffIndex] = {
+      ...db.staffUsers[staffIndex],
+      kycStatus: status,
+      isBankVerified: status === 'Verified' ? true : db.staffUsers[staffIndex].isBankVerified,
+      kycTier: kycTier || db.staffUsers[staffIndex].kycTier || 'Tier 3',
+      kycApprovedBy: status === 'Verified' ? (approvedBy || 'Super Admin') : undefined,
+      kycApprovedAt: status === 'Verified' ? new Date().toISOString() : undefined,
+      kycRejectionReason: status === 'Incomplete' ? notes : undefined,
+    };
+    updatedRecord = db.staffUsers[staffIndex];
+    category = 'staff';
+  } else {
+    const mentorIndex = (db.mentors || []).findIndex(m => m.id === userId || m.email?.toLowerCase() === userId.toLowerCase());
+    if (mentorIndex !== -1) {
+      db.mentors[mentorIndex] = {
+        ...db.mentors[mentorIndex],
+        kycStatus: status,
+        isAccountVerified: status === 'Verified' ? true : db.mentors[mentorIndex].isAccountVerified,
+        bankVerified: status === 'Verified' ? true : db.mentors[mentorIndex].bankVerified,
+        kycTier: kycTier || db.mentors[mentorIndex].kycTier || 'Tier 3',
+        kycApprovedBy: status === 'Verified' ? (approvedBy || 'Super Admin') : undefined,
+        kycApprovedAt: status === 'Verified' ? new Date().toISOString() : undefined,
+        kycRejectionReason: status === 'Incomplete' ? notes : undefined,
+      };
+      updatedRecord = db.mentors[mentorIndex];
+      category = 'mentor';
+    } else {
+      const studentIndex = (db.students || []).findIndex(s => s.id === userId || s.email?.toLowerCase() === userId.toLowerCase());
+      if (studentIndex !== -1) {
+        db.students[studentIndex] = {
+          ...db.students[studentIndex],
+          kycStatus: status,
+          isBankVerified: status === 'Verified' ? true : db.students[studentIndex].isBankVerified,
+          kycTier: kycTier || db.students[studentIndex].kycTier || 'Tier 3',
+          kycApprovedBy: status === 'Verified' ? (approvedBy || 'Super Admin') : undefined,
+          kycApprovedAt: status === 'Verified' ? new Date().toISOString() : undefined,
+          kycRejectionReason: status === 'Incomplete' ? notes : undefined,
+        };
+        updatedRecord = db.students[studentIndex];
+        category = 'student';
+      }
+    }
+  }
+
+  if (!updatedRecord) {
+    return res.status(404).json({ success: false, message: 'User record not found in system' });
+  }
+
+  saveDatabase(db);
+  res.json({ success: true, data: updatedRecord, category });
+});
+
 // ----------------------------------------------------
 // Helper to inspect active tasks/assignments for a user
 // ----------------------------------------------------

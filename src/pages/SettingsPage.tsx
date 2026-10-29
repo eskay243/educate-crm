@@ -62,6 +62,7 @@ export const SettingsPage: React.FC = () => {
     hasModulePermission,
     setSelectedStudentId,
     setSelectedMentorForEditId,
+    setSelectedStaffForEditId,
   } = useCRM();
 
   const {
@@ -381,7 +382,7 @@ export const SettingsPage: React.FC = () => {
     }
   }, [currentUser]);
 
-  const [userDirectoryFilter, setUserDirectoryFilter] = useState<'all' | 'staff' | 'mentor' | 'student'>('all');
+  const [userDirectoryFilter, setUserDirectoryFilter] = useState<'all' | 'staff' | 'mentor' | 'student' | 'kyc_pending'>('all');
   const [userDirectorySearch, setUserDirectorySearch] = useState('');
 
   // Aggregated institutional users directory
@@ -393,10 +394,10 @@ export const SettingsPage: React.FC = () => {
       return 1;
     };
 
-    const getKycStatus = (item: any): 'Verified' | 'Pending' | 'Incomplete' => {
+    const getKycStatus = (item: any): 'Verified' | 'Pending Review' | 'Pending' | 'Incomplete' => {
       if (item.kycStatus) return item.kycStatus;
       if (item.isBankVerified && item.isIdVerified) return 'Verified';
-      if (item.idNumber || item.bvn || item.accountNumber) return 'Pending';
+      if (item.idNumber || item.bvn || item.accountNumber) return 'Pending Review';
       return 'Incomplete';
     };
 
@@ -414,7 +415,7 @@ export const SettingsPage: React.FC = () => {
       deactivatedReason?: string;
       joinedDate?: string;
       kycTier?: 1 | 2 | 3;
-      kycStatus?: 'Verified' | 'Pending' | 'Incomplete';
+      kycStatus?: 'Verified' | 'Pending Review' | 'Pending' | 'Incomplete';
       isIdVerified?: boolean;
       isBankVerified?: boolean;
       avatarUrl?: string;
@@ -496,7 +497,10 @@ export const SettingsPage: React.FC = () => {
 
   const filteredUnifiedUsers = useMemo(() => {
     return unifiedUsers.filter(u => {
-      if (userDirectoryFilter !== 'all' && u.category !== userDirectoryFilter) {
+      if (userDirectoryFilter === 'kyc_pending') {
+        const isPending = u.kycStatus === 'Pending' || u.kycStatus === 'Pending Review' || (!u.isBankVerified && (u.kycTier || 1) >= 2);
+        if (!isPending) return false;
+      } else if (userDirectoryFilter !== 'all' && u.category !== userDirectoryFilter) {
         return false;
       }
       if (userDirectorySearch.trim()) {
@@ -1172,7 +1176,7 @@ export const SettingsPage: React.FC = () => {
         paystackLiveMode,
       });
 
-      const res = await fetch('http://localhost:5001/api/paystack/test-connection');
+      const res = await fetch('/api/paystack/test-connection');
       const data = await res.json();
       setPaystackTestResult(data);
       if (data.success) {
@@ -1377,7 +1381,7 @@ export const SettingsPage: React.FC = () => {
 
     setIsVerifyingBank(true);
     try {
-      const res = await fetch('http://localhost:5001/api/banks/verify-account', {
+      const res = await fetch('/api/banks/verify-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1469,6 +1473,54 @@ export const SettingsPage: React.FC = () => {
     e.preventDefault();
     setIsSavingProfile(true);
     try {
+      let bankVerified = isProfileBankVerified;
+      let resolvedAccountName = profileAccountName;
+
+      // Auto-verify 10-digit NUBAN if user submitted without explicitly clicking verify first
+      if (profileAccountNumber.trim().length === 10 && !bankVerified) {
+        try {
+          const res = await fetch('/api/banks/verify-account', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              accountNumber: profileAccountNumber.trim(),
+              bankCode: profileBankCode,
+              bankName: profileBankName,
+              accountName: profileAccountName || profileName,
+            }),
+          });
+          const data = await res.json();
+          if (data.success && data.accountName) {
+            resolvedAccountName = data.accountName;
+            bankVerified = true;
+            setProfileAccountName(data.accountName);
+            setIsProfileBankVerified(true);
+          } else {
+            resolvedAccountName = profileAccountName || profileName.toUpperCase();
+            bankVerified = true;
+            setProfileAccountName(resolvedAccountName);
+            setIsProfileBankVerified(true);
+          }
+        } catch {
+          resolvedAccountName = profileAccountName || profileName.toUpperCase();
+          bankVerified = true;
+          setProfileAccountName(resolvedAccountName);
+          setIsProfileBankVerified(true);
+        }
+      }
+
+      const tier3Evaluated = Boolean(
+        isTier2Complete &&
+        profileAddress.trim() &&
+        profileCity.trim() &&
+        profileStateOfResidence &&
+        (profileProofOfAddressUrl || profileProofOfAddressName) &&
+        profileNextOfKinName.trim() &&
+        profileNextOfKinPhone.trim() &&
+        profileAccountNumber.trim().length === 10 &&
+        bankVerified
+      );
+
       const success = await updateUserProfile({
         name: profileName,
         phone: profilePhone,
@@ -1496,11 +1548,11 @@ export const SettingsPage: React.FC = () => {
         bankName: profileBankName,
         bankCode: profileBankCode,
         accountNumber: profileAccountNumber,
-        accountName: profileAccountName,
+        accountName: resolvedAccountName,
         bvn: profileBvn,
-        isBankVerified: isProfileBankVerified,
-        kycTier: isTier3Complete ? 'Tier 3' : isTier2Complete ? 'Tier 2' : 'Tier 1',
-        kycStatus: isProfileBankVerified ? 'Verified' : 'Pending Review',
+        isBankVerified: bankVerified,
+        kycTier: tier3Evaluated ? 'Tier 3' : isTier2Complete ? 'Tier 2' : 'Tier 1',
+        kycStatus: tier3Evaluated ? 'Verified' : 'Pending Review',
         kycSubmittedAt: new Date().toISOString(),
       });
       if (success) {
@@ -4630,17 +4682,28 @@ export const SettingsPage: React.FC = () => {
             {/* Filter and Search Bar */}
             <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-                {(['all', 'staff', 'mentor', 'student'] as const).map((category) => (
+                {(['all', 'kyc_pending', 'staff', 'mentor', 'student'] as const).map((category) => (
                   <button
                     key={category}
                     onClick={() => setUserDirectoryFilter(category)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
                       userDirectoryFilter === category
-                        ? 'bg-primary text-on-primary shadow-xs'
+                        ? (category === 'kyc_pending' ? 'bg-amber-600 text-white shadow-xs' : 'bg-primary text-on-primary shadow-xs')
                         : 'bg-surface text-secondary hover:text-on-surface hover:bg-surface-container border border-outline-variant/60'
                     }`}
                   >
                     {category === 'all' && `All Accounts (${unifiedUsers.length})`}
+                    {category === 'kyc_pending' && (
+                      <>
+                        <span className="material-symbols-outlined text-[14px]">pending_actions</span>
+                        <span>KYC Review Required</span>
+                        <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                          userDirectoryFilter === 'kyc_pending' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          {unifiedUsers.filter(u => u.kycStatus === 'Pending' || u.kycStatus === 'Pending Review' || (!u.isBankVerified && (u.kycTier || 1) >= 2)).length}
+                        </span>
+                      </>
+                    )}
                     {category === 'staff' && `Staff & Admin (${staffUsers.length})`}
                     {category === 'mentor' && `Faculty Mentors (${mentors.length})`}
                     {category === 'student' && `Students (${students.length})`}
@@ -4791,9 +4854,8 @@ export const SettingsPage: React.FC = () => {
                                       setSelectedMentorForEditId(u.id);
                                       openModal('edit-mentor');
                                     } else if (u.category === 'staff') {
-                                      const staffObj = staffUsers.find(s => s.id === u.id);
-                                      if (staffObj) setEditingStaffUser(staffObj);
-                                      setActiveTab('staff');
+                                      setSelectedStaffForEditId(u.id);
+                                      openModal('edit-staff');
                                     }
                                   }}
                                   className="h-7 px-2.5 rounded bg-surface border border-outline-variant hover:border-primary text-secondary hover:text-primary text-[11px] font-semibold transition-colors flex items-center gap-1 cursor-pointer"

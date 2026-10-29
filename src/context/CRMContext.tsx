@@ -257,6 +257,9 @@ interface CRMContextType {
   setSelectedStudentForAssignmentId: (id: string | null) => void;
   setSelectedCourseForEditId: (id: string | null) => void;
   setSelectedMentorForEditId: (id: string | null) => void;
+  selectedStaffForEditId: string | null;
+  setSelectedStaffForEditId: (id: string | null) => void;
+  reviewUserKYC: (userId: string, category: 'staff' | 'mentor' | 'student', status: 'Verified' | 'Pending Review' | 'Incomplete', notes?: string) => Promise<boolean>;
   selectedLeadForFollowUp: Lead | null;
   setSelectedLeadForFollowUp: (lead: Lead | null) => void;
   openFollowUpModal: (lead: Lead) => void;
@@ -626,6 +629,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedStudentForAssignmentId, setSelectedStudentForAssignmentId] = useState<string | null>(null);
   const [selectedCourseForEditId, setSelectedCourseForEditId] = useState<string | null>(null);
   const [selectedMentorForEditId, setSelectedMentorForEditId] = useState<string | null>(null);
+  const [selectedStaffForEditId, setSelectedStaffForEditId] = useState<string | null>(null);
   const [selectedLeadForFollowUp, setSelectedLeadForFollowUp] = useState<Lead | null>(null);
 
   const openFollowUpModal = (lead: Lead) => {
@@ -1272,6 +1276,21 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         return s;
       }));
+    }
+
+    // 4. Persist to backend server so changes survive reloads and sync to production database
+    try {
+      if (currentUser.role === 'student') {
+        const targetId = studentIdToSync || currentUser.id;
+        await apiService.updateStudent(targetId, data as any);
+      } else if (currentUser.role === 'mentor') {
+        const targetId = mentorIdToSync || currentUser.id;
+        await apiService.updateMentor(targetId, data as any);
+      } else {
+        await apiService.updateStaff(currentUser.id, data);
+      }
+    } catch (err) {
+      console.warn('Backend sync for profile update deferred:', err);
     }
 
     showToast('Profile & KYC Saved', 'Your profile information and settlement bank details have been saved.', 'success');
@@ -1976,6 +1995,105 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return true;
     } catch (err: any) {
       showToast('Update Failed', err.message || 'Failed to update staff member.', 'error');
+      return false;
+    }
+  };
+
+  const reviewUserKYC = async (
+    userId: string,
+    category: 'staff' | 'mentor' | 'student',
+    status: 'Verified' | 'Pending Review' | 'Incomplete',
+    notes?: string
+  ): Promise<boolean> => {
+    try {
+      const reviewerName = currentUser?.name || 'Super Admin';
+      const approvedAt = new Date().toISOString();
+      await apiService.reviewKYC(userId, {
+        status,
+        notes,
+        approvedBy: reviewerName,
+        kycTier: status === 'Verified' ? 'Tier 3' : undefined,
+      });
+
+      // Update in-memory collections
+      if (category === 'staff') {
+        setStaffUsers(prev => prev.map(u => (u.id === userId || u.email?.toLowerCase() === userId.toLowerCase()) ? {
+          ...u,
+          kycStatus: status,
+          isBankVerified: status === 'Verified' ? true : u.isBankVerified,
+          kycTier: status === 'Verified' ? 'Tier 3' : u.kycTier,
+          kycApprovedBy: status === 'Verified' ? reviewerName : undefined,
+          kycApprovedAt: status === 'Verified' ? approvedAt : undefined,
+          kycRejectionReason: status === 'Incomplete' ? notes : undefined,
+        } : u));
+      } else if (category === 'mentor') {
+        setMentors(prev => prev.map(m => (m.id === userId || m.email?.toLowerCase() === userId.toLowerCase()) ? {
+          ...m,
+          kycStatus: status,
+          isAccountVerified: status === 'Verified' ? true : m.isAccountVerified,
+          bankVerified: status === 'Verified' ? true : m.bankVerified,
+          kycTier: status === 'Verified' ? 'Tier 3' : m.kycTier,
+          kycApprovedBy: status === 'Verified' ? reviewerName : undefined,
+          kycApprovedAt: status === 'Verified' ? approvedAt : undefined,
+          kycRejectionReason: status === 'Incomplete' ? notes : undefined,
+        } : m));
+      } else if (category === 'student') {
+        setStudents(prev => prev.map(s => (s.id === userId || s.email?.toLowerCase() === userId.toLowerCase()) ? {
+          ...s,
+          kycStatus: status,
+          isBankVerified: status === 'Verified' ? true : s.isBankVerified,
+          kycTier: status === 'Verified' ? 'Tier 3' : s.kycTier,
+          kycApprovedBy: status === 'Verified' ? reviewerName : undefined,
+          kycApprovedAt: status === 'Verified' ? approvedAt : undefined,
+          kycRejectionReason: status === 'Incomplete' ? notes : undefined,
+        } : s));
+      }
+
+      if (currentUser?.id === userId) {
+        const updatedCurrent: AuthUser = {
+          ...currentUser,
+          kycStatus: status,
+          isBankVerified: status === 'Verified' ? true : currentUser.isBankVerified,
+          kycTier: status === 'Verified' ? 'Tier 3' : currentUser.kycTier,
+          kycApprovedBy: status === 'Verified' ? reviewerName : undefined,
+          kycApprovedAt: status === 'Verified' ? approvedAt : undefined,
+          kycRejectionReason: status === 'Incomplete' ? notes : undefined,
+        };
+        setCurrentUser(updatedCurrent);
+        localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(updatedCurrent));
+      }
+
+      setSelectedBiodataUser(prev => {
+        if (!prev || !prev.data) return prev;
+        if (prev.id === userId || prev.data.id === userId) {
+          return {
+            ...prev,
+            data: {
+              ...prev.data,
+              kycStatus: status,
+              isBankVerified: status === 'Verified' ? true : prev.data.isBankVerified,
+              kycTier: status === 'Verified' ? 'Tier 3' : prev.data.kycTier,
+              kycApprovedBy: status === 'Verified' ? reviewerName : undefined,
+              kycApprovedAt: status === 'Verified' ? approvedAt : undefined,
+              kycRejectionReason: status === 'Incomplete' ? notes : undefined,
+            }
+          };
+        }
+        return prev;
+      });
+
+      const actionText = status === 'Verified' ? 'Approved & Marked Verified' : status === 'Incomplete' ? 'Rejected with Change Request' : 'Set to Pending Review';
+      showToast('KYC Compliance Updated', `Dossier for user has been ${actionText}.`, 'success');
+      logActivity({
+        title: 'KYC Compliance Review',
+        description: `${reviewerName} ${actionText} for user ${userId}.`,
+        type: 'system',
+        user: reviewerName,
+      });
+
+      return true;
+    } catch (err: any) {
+      showToast('Review Failed', err.message || 'Could not update KYC compliance status.', 'error');
       return false;
     }
   };
@@ -5115,6 +5233,9 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         selectedStudentForAssignmentId,
         selectedCourseForEditId,
         selectedMentorForEditId,
+        selectedStaffForEditId,
+        setSelectedStaffForEditId,
+        reviewUserKYC,
         kpis,
         lmsModules,
         assignments,

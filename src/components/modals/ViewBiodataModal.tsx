@@ -15,10 +15,15 @@ export const ViewBiodataModal: React.FC<ViewBiodataModalProps> = ({ isOpen, onCl
     openModal,
     setSelectedStudentId,
     setSelectedMentorForEditId,
+    setSelectedStaffForEditId,
+    reviewUserKYC,
   } = useCRM();
 
   const [activeTab, setActiveTab] = useState<'demographics' | 'identity' | 'address' | 'bank'>('demographics');
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [isReviewingKYC, setIsReviewingKYC] = useState(false);
+  const [showRejectionPrompt, setShowRejectionPrompt] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const target = selectedBiodataUser?.data as (NigerianBiodataKYC & {
     id?: string;
@@ -64,6 +69,31 @@ export const ViewBiodataModal: React.FC<ViewBiodataModalProps> = ({ isOpen, onCl
     } else if (category === 'mentor' && target.id) {
       setSelectedMentorForEditId(target.id);
       openModal('edit-mentor');
+    } else if (category === 'staff' && target.id) {
+      setSelectedStaffForEditId(target.id);
+      openModal('edit-staff');
+    }
+  };
+
+  const handleApproveKYC = async () => {
+    if (!target.id) return;
+    setIsReviewingKYC(true);
+    try {
+      await reviewUserKYC(target.id, category, 'Verified');
+    } finally {
+      setIsReviewingKYC(false);
+    }
+  };
+
+  const handleRejectKYC = async () => {
+    if (!target.id || !rejectionReason.trim()) return;
+    setIsReviewingKYC(true);
+    try {
+      await reviewUserKYC(target.id, category, 'Incomplete', rejectionReason.trim());
+      setShowRejectionPrompt(false);
+      setRejectionReason('');
+    } finally {
+      setIsReviewingKYC(false);
     }
   };
 
@@ -176,6 +206,118 @@ export const ViewBiodataModal: React.FC<ViewBiodataModalProps> = ({ isOpen, onCl
               <span className="material-symbols-outlined text-[22px]">close</span>
             </button>
           </div>
+
+          {/* Institutional Compliance Officer Review Panel (Super Admin) */}
+          {isSuperAdmin && (
+            <div className="mt-4 p-3 rounded-xl bg-surface-container-low border border-outline-variant flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[20px]">verified_user</span>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-on-surface">Institutional Compliance Officer Review</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      kycStatus === 'Verified' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {kycStatus === 'Verified' ? 'Verified & Cleared' : 'Pending Administrative Review'}
+                    </span>
+                  </div>
+                  {target.kycApprovedBy && (
+                    <p className="text-[11px] text-secondary">
+                      Cleared by <strong className="text-on-surface">{target.kycApprovedBy}</strong>
+                      {target.kycApprovedAt ? ` on ${new Date(target.kycApprovedAt).toLocaleDateString()}` : ''}
+                    </p>
+                  )}
+                  {target.kycRejectionReason && (
+                    <p className="text-[11px] text-rose-700 font-medium">
+                      Action Required: {target.kycRejectionReason}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {kycStatus !== 'Verified' ? (
+                  <button
+                    type="button"
+                    onClick={handleApproveKYC}
+                    disabled={isReviewingKYC}
+                    className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                    title="Approve submitted KYC documents and mark as Verified"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">check_circle</span>
+                    <span>{isReviewingKYC ? 'Approving...' : 'Approve & Mark Verified'}</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowRejectionPrompt(true)}
+                    disabled={isReviewingKYC}
+                    className="px-3 py-1.5 rounded-lg bg-surface border border-outline-variant hover:border-amber-400 text-secondary hover:text-amber-700 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                    title="Revoke clearance or request document resubmission"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">edit</span>
+                    <span>Revoke / Request Changes</span>
+                  </button>
+                )}
+
+                {kycStatus !== 'Verified' && (
+                  <button
+                    type="button"
+                    onClick={() => setShowRejectionPrompt(true)}
+                    disabled={isReviewingKYC}
+                    className="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+                    title="Reject submitted KYC documents with rejection notes"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">cancel</span>
+                    <span>Reject KYC</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Rejection Prompt Dialog */}
+          {showRejectionPrompt && (
+            <div className="mt-3 p-3.5 rounded-xl bg-rose-50 border border-rose-200 space-y-2 text-xs">
+              <div className="flex items-center justify-between font-bold text-rose-900">
+                <span className="flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px]">report</span>
+                  <span>Specify Reason for Document Rejection / Change Request</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowRejectionPrompt(false)}
+                  className="text-rose-600 hover:text-rose-900 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">close</span>
+                </button>
+              </div>
+              <textarea
+                value={rejectionReason}
+                onChange={e => setRejectionReason(e.target.value)}
+                placeholder="e.g. Utility bill is blurred or older than 3 months. Please upload recent EKEDC/PHCN bill."
+                className="w-full p-2 bg-white border border-rose-300 rounded-lg text-rose-950 outline-none text-xs"
+                rows={2}
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowRejectionPrompt(false)}
+                  className="px-3 py-1 rounded bg-white border border-rose-300 text-rose-800 font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRejectKYC}
+                  disabled={!rejectionReason.trim() || isReviewingKYC}
+                  className="px-3 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white font-bold disabled:opacity-50 cursor-pointer"
+                >
+                  Confirm Rejection
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Dossier Tabs */}
           <div className="flex items-center gap-1 mt-6 border-b border-outline-variant -mb-4 sm:-mb-6 pt-1 overflow-x-auto scrollbar-none">

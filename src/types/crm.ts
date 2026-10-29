@@ -130,6 +130,9 @@ export interface NigerianBiodataKYC {
   kycTier?: 'Tier 1' | 'Tier 2' | 'Tier 3' | 1 | 2 | 3;
   kycStatus?: 'Verified' | 'Pending Review' | 'Pending' | 'Incomplete';
   kycSubmittedAt?: string;
+  kycApprovedBy?: string;
+  kycApprovedAt?: string;
+  kycRejectionReason?: string;
 }
 
 export interface AuthUser extends NigerianBiodataKYC {
@@ -869,6 +872,7 @@ export type ModalType =
   | 'assign-mentor' 
   | 'edit-mentor' 
   | 'edit-student' 
+  | 'edit-staff'
   | 'change-password'
   | 'clock-in'
   | 'clock-out'

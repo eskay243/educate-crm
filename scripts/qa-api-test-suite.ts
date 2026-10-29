@@ -955,6 +955,50 @@ async function main() {
   });
 
   // ============================================================================
+  // KYC REVIEW & CLEARANCE WORKFLOW TESTS
+  // ============================================================================
+  console.log('\n--------------------------------------------------------------------------------');
+  console.log('🏛️ MODULE 12: 3-TIER KYC REVIEW & NUBAN SETTLEMENT TESTS');
+  console.log('--------------------------------------------------------------------------------');
+
+  await runTest('QA-KYC-001', 'KYC Review', 'Super Admin approves user KYC via PATCH /api/kyc/review/:userId', async () => {
+    // Test on Oyinkansola or existing staff user
+    const staffRes = await request('/api/staff');
+    assert(staffRes.status === 200, `Expected 200, got ${staffRes.status}`);
+    const staffList = Array.isArray(staffRes.body) ? staffRes.body : staffRes.body?.data;
+    assert(Array.isArray(staffList) && staffList.length > 0, 'Expected non-empty staff list');
+    const target = staffList.find((s: any) => s.email === 'oyinojobo@gmail.com') || staffList[0];
+
+    const reviewRes = await request(`/api/kyc/review/${target.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kycStatus: 'Verified',
+        kycTier: 3,
+        isBankVerified: true,
+        isIdVerified: true,
+        reviewedBy: 'Super Admin Compliance Desk',
+        notes: 'CBN Tier 3 Address and NUBAN Settlement verified'
+      })
+    });
+
+    assert(reviewRes.status === 200, `Expected 200, got ${reviewRes.status}`);
+    assert(reviewRes.body.success === true, 'Expected success: true');
+    assert(reviewRes.body.data.kycStatus === 'Verified', `Expected Verified, got ${reviewRes.body.data.kycStatus}`);
+    assert(reviewRes.body.data.kycTier === 3 || reviewRes.body.data.kycTier === 'Tier 3', 'Expected Tier 3');
+    assert(reviewRes.body.data.isBankVerified === true, 'Expected isBankVerified to be true');
+  });
+
+  await runTest('QA-KYC-002', 'KYC Review', 'Persisted KYC changes are reflected on GET /api/staff', async () => {
+    const staffRes = await request('/api/staff');
+    assert(staffRes.status === 200, `Expected 200, got ${staffRes.status}`);
+    const staffList = Array.isArray(staffRes.body) ? staffRes.body : staffRes.body?.data;
+    const target = staffList.find((s: any) => s.email === 'oyinojobo@gmail.com') || staffList[0];
+    assert(target.kycStatus === 'Verified', `Expected Verified on staff record, got ${target.kycStatus}`);
+    assert(target.isBankVerified === true, 'Expected isBankVerified to be true on staff record');
+  });
+
+  // ============================================================================
   // SUMMARY REPORT
   // ============================================================================
   console.log('\n================================================================================');

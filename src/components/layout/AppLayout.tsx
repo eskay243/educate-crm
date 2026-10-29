@@ -18,6 +18,7 @@ import { EditCourseModal } from '../modals/EditCourseModal';
 import { AssignMentorModal } from '../modals/AssignMentorModal';
 import { EditMentorModal } from '../modals/EditMentorModal';
 import { EditStudentModal } from '../modals/EditStudentModal';
+import { EditStaffModal } from '../modals/EditStaffModal';
 import { ViewBiodataModal } from '../modals/ViewBiodataModal';
 import { ChangePasswordModal } from '../modals/ChangePasswordModal';
 import { ClockInModal } from '../modals/ClockInModal';
@@ -146,6 +147,10 @@ export const AppLayout: React.FC = () => {
       />
       <EditStudentModal
         isOpen={activeModal === 'edit-student'}
+        onClose={closeModal}
+      />
+      <EditStaffModal
+        isOpen={activeModal === 'edit-staff'}
         onClose={closeModal}
       />
       <ViewBiodataModal
