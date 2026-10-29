@@ -526,8 +526,8 @@ export const SettingsPage: React.FC = () => {
   const [bankName, setBankName] = useState(settings.defaultNIBSSBank.bankName);
   const [accountNumber, setAccountNumber] = useState(settings.defaultNIBSSBank.accountNumber);
   const [accountName, setAccountName] = useState(settings.defaultNIBSSBank.accountName);
-  const [paystackPublicKey, setPaystackPublicKey] = useState(settings.paystackPublicKey || 'pk_test_cd572a18dd78ed5493d15433b0e1f3c2057fce2a');
-  const [paystackSecretKey, setPaystackSecretKey] = useState(settings.paystackSecretKey || 'sk_test_5a3331f29eadb22de95a766cdd1dc432e186ab7f');
+  const [paystackPublicKey, setPaystackPublicKey] = useState(settings.paystackPublicKey || '');
+  const [paystackSecretKey, setPaystackSecretKey] = useState(settings.paystackSecretKey || '');
   const [paystackLiveMode, setPaystackLiveMode] = useState(settings.paystackLiveMode || false);
   const [showPaystackSecret, setShowPaystackSecret] = useState(false);
   const [testingPaystack, setTestingPaystack] = useState(false);

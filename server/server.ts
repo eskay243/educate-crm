@@ -704,8 +704,39 @@ app.post('/api/auth/reset-password', (req: Request, res: Response) => {
 });
 
 // ----------------------------------------------------
-// Data Sanitization Helpers for Security
+// Data Sanitization Helpers for Security & Paystack Resolution
 // ----------------------------------------------------
+const getEffectivePaystackSecretKey = (): string | undefined => {
+  const isLive = Boolean(db.settings?.paystackLiveMode || process.env.PAYSTACK_LIVE_MODE === 'true');
+  const envKey = process.env.PAYSTACK_SECRET_KEY;
+  const dbKey = db.settings?.paystackSecretKey;
+
+  // In live mode, prioritize valid live secret keys
+  if (isLive) {
+    if (envKey && envKey.startsWith('sk_live_')) return envKey;
+    if (dbKey && dbKey.startsWith('sk_live_')) return dbKey;
+  }
+
+  // If env has a live key and db has a test/sample key, prefer env
+  if (envKey && envKey.startsWith('sk_live_') && (!dbKey || dbKey.startsWith('sk_test_') || dbKey.includes('sample'))) {
+    return envKey;
+  }
+
+  return dbKey || envKey;
+};
+
+const getEffectivePaystackPublicKey = (): string | undefined => {
+  const isLive = Boolean(db.settings?.paystackLiveMode || process.env.PAYSTACK_LIVE_MODE === 'true');
+  const envKey = process.env.VITE_PAYSTACK_PUBLIC_KEY;
+  const dbKey = db.settings?.paystackPublicKey;
+
+  if (isLive) {
+    if (envKey && envKey.startsWith('pk_live_')) return envKey;
+    if (dbKey && dbKey.startsWith('pk_live_')) return dbKey;
+  }
+  return dbKey || envKey;
+};
+
 const sanitizeSettings = (settings: any) => {
   if (!settings) return settings;
   const copy = { ...settings };
@@ -718,9 +749,9 @@ const sanitizeSettings = (settings: any) => {
   if (copy.smtpPassword) {
     copy.smtpPassword = '••••••••••••';
   }
-  if (copy.paystackSecretKey) {
-    const key = copy.paystackSecretKey;
-    copy.paystackSecretKey = key.length > 8 ? `${key.slice(0, 7)}••••••••${key.slice(-4)}` : '••••••••';
+  const effectiveKey = getEffectivePaystackSecretKey() || copy.paystackSecretKey;
+  if (effectiveKey) {
+    copy.paystackSecretKey = effectiveKey.length > 8 ? `${effectiveKey.slice(0, 7)}••••••••${effectiveKey.slice(-4)}` : '••••••••';
   }
   return copy;
 };
@@ -2858,7 +2889,7 @@ app.post('/api/banks/verify-account', async (req: Request, res: Response) => {
   }
 
   // 1. Try Paystack Live Resolution if secret key exists
-  const paystackKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
+  const paystackKey = getEffectivePaystackSecretKey();
   if (paystackKey && bankCode) {
     try {
       const response = await fetch(`https://api.paystack.co/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`, {
@@ -4054,8 +4085,8 @@ app.post('/api/attendance/clock-out/:id', (req: Request, res: Response) => {
 // ----------------------------------------------------
 app.get('/api/paystack/test-connection', async (_req: Request, res: Response) => {
   try {
-    const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
-    const publicKey = db.settings?.paystackPublicKey;
+    const secretKey = getEffectivePaystackSecretKey();
+    const publicKey = getEffectivePaystackPublicKey();
 
     if (!secretKey || secretKey.includes('sample')) {
       return res.json({
@@ -4102,7 +4133,7 @@ app.post('/api/paystack/initialize', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Email and amount are required' });
     }
 
-    const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
+    const secretKey = getEffectivePaystackSecretKey();
     const amountInKobo = Math.round(Number(amount) * 100);
     const reference = `CDL-PAY-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
@@ -4153,7 +4184,7 @@ app.post('/api/paystack/initialize', async (req: Request, res: Response) => {
 app.get('/api/paystack/verify/:reference', async (req: Request, res: Response) => {
   try {
     const { reference } = req.params;
-    const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
+    const secretKey = getEffectivePaystackSecretKey();
 
     let verified = false;
     let amountPaidNaira = 0;
@@ -4396,7 +4427,7 @@ app.post('/api/paystack/disburse-mentor', async (req: Request, res: Response) =>
       }
     }
 
-    const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
+    const secretKey = getEffectivePaystackSecretKey();
     const transferRef = `TRF-MEN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
     let paystackTransferCode = '';
 
@@ -4638,6 +4669,8 @@ async function reconcileLivePaystackWallet(secretKey: string) {
           t.channel === 'dedicated_nuban' ||
           t.customer?.customer_code === db.wallet?.virtualAccount?.customerCode ||
           t.customer?.email === db.wallet?.virtualAccount?.customerEmail ||
+          t.customer?.email === 'wallet-test@growpot.cloud' ||
+          t.customer?.email === 'wallet-operations@growpot.cloud' ||
           t.metadata?.target === 'expense_wallet' ||
           t.metadata?.receiver_account_number === '9817707007' ||
           t.metadata?.receiver_account_number === db.wallet?.virtualAccount?.accountNumber
@@ -4769,7 +4802,7 @@ async function reconcileLivePaystackWallet(secretKey: string) {
 
 app.post('/api/wallet/reconcile', async (_req: Request, res: Response) => {
   try {
-    const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
+    const secretKey = getEffectivePaystackSecretKey();
     if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
       const reconciled = await reconcileLivePaystackWallet(secretKey);
       return res.json({
@@ -4794,7 +4827,7 @@ app.get('/api/wallet/summary', async (_req: Request, res: Response) => {
   try {
     if (!db.wallet) db.wallet = defaultWallet;
 
-    const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
+    const secretKey = getEffectivePaystackSecretKey();
     if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample')) {
       // Non-destructive read of Paystack transfer balance
       try {
@@ -4842,7 +4875,7 @@ app.post('/api/wallet/virtual-account', async (_req: Request, res: Response) => 
   try {
     if (!db.wallet) db.wallet = defaultWallet;
 
-    const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
+    const secretKey = getEffectivePaystackSecretKey();
     const walletEmail = 'wallet-operations@codelab.institute';
 
     // If live or real test Paystack key is available:
@@ -4939,7 +4972,7 @@ app.post('/api/wallet/topup/verify', async (req: Request, res: Response) => {
     }
 
     const amount = Number(amountNaira);
-    const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
+    const secretKey = getEffectivePaystackSecretKey();
     const topupRef = reference || `CDL-WAL-TOP-${Date.now()}`;
 
     if (secretKey && secretKey.startsWith('sk_live_') && reference && !reference.includes('TEST') && !reference.includes('SIM') && !reference.includes('mock') && !reference.startsWith('QA-')) {
@@ -5046,7 +5079,7 @@ app.post('/api/wallet/disburse-expense', async (req: Request, res: Response) => 
     }
 
     const isCorporateNip = disbursementMethod === 'corporate_nip';
-    const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
+    const secretKey = getEffectivePaystackSecretKey();
     let transferRef = '';
     let paystackTransferCode = '';
     let bankDeliveryStatus = isCorporateNip ? 'disbursed_corporate_nip' : 'processing_at_switch';
@@ -5192,7 +5225,7 @@ app.post('/api/wallet/disburse-expense', async (req: Request, res: Response) => 
 
 app.get('/api/wallet/paystack-balance', async (req: Request, res: Response) => {
   try {
-    const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
+    const secretKey = getEffectivePaystackSecretKey();
     if (!secretKey || !secretKey.startsWith('sk_') || secretKey.includes('sample')) {
       return res.json({ success: true, balance: 0, currency: 'NGN', isLive: false });
     }
@@ -5227,7 +5260,7 @@ app.get('/api/wallet/verify-transfer/:reference', async (req: Request, res: Resp
       });
     }
 
-    const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
+    const secretKey = getEffectivePaystackSecretKey();
     if (secretKey && secretKey.startsWith('sk_') && !secretKey.includes('sample') && !reference.startsWith('TEST-') && !reference.startsWith('SIM-') && !reference.startsWith('mock_')) {
       try {
         const psRes = await fetch(`https://api.paystack.co/transfer/verify/${encodeURIComponent(reference)}`, {
@@ -5319,7 +5352,7 @@ app.put('/api/wallet/budget-limit', (req: Request, res: Response) => {
 
 app.post('/api/paystack/webhook', async (req: Request, res: Response) => {
   try {
-    const secretKey = db.settings?.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY;
+    const secretKey = getEffectivePaystackSecretKey();
     const signature = req.headers['x-paystack-signature'] as string;
 
     if (secretKey && signature && !secretKey.includes('sample')) {
