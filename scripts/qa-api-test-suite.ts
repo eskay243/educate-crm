@@ -954,6 +954,60 @@ async function main() {
     assert(firstStandup.department !== undefined, 'Expected department on standup');
   });
 
+  await runTest('QA-SCRUM-004', 'Scrum', 'Update existing daily standup: preserves original ID and submittedAt, sets updatedAt & updateCount', async () => {
+    // Re-submit updated tasks for usr-admin-1 for today
+    const updateRes = await request('/api/scrum/standup', {
+      method: 'POST',
+      body: JSON.stringify({
+        userId: 'usr-admin-1',
+        userName: 'Abiola Adefowope',
+        userRole: 'super_admin',
+        userEmail: 'abiola.adefowope@codelab.institute',
+        tasksYesterday: [
+          {
+            id: 'task-1',
+            description: 'Resolved student admission inquiries and approved OpEx payouts',
+            moduleId: 'expenses',
+            status: 'completed'
+          }
+        ],
+        tasksToday: [
+          {
+            id: 'task-2',
+            description: 'Review faculty lectured hours and run weekly curriculum sync',
+            moduleId: 'mentors',
+            status: 'completed' // Progressed to completed!
+          },
+          {
+            id: 'task-3',
+            description: 'Audit live Paystack wallet balances',
+            moduleId: 'expenses',
+            status: 'in_progress'
+          }
+        ],
+        blockers: [],
+        taggedModuleIds: ['expenses', 'mentors']
+      })
+    });
+
+    assert(updateRes.status === 200 || updateRes.status === 201, `Expected 200/201, got ${updateRes.status}`);
+    assert(updateRes.body?.updated === true, 'Expected updated flag to be true');
+    const updatedStandup = updateRes.body?.data;
+    assert(updatedStandup?.updatedAt !== undefined, 'Expected updatedAt timestamp');
+    assert(typeof updatedStandup?.updateCount === 'number' && updatedStandup.updateCount >= 1, 'Expected updateCount to be incremented');
+    assert(updatedStandup?.tasksToday?.length === 2, 'Expected 2 tasks today after update');
+  });
+
+  await runTest('QA-SCRUM-005', 'Scrum', 'Trigger morning standup reminder engine: detects clocked-in staff missing DSU and dispatches alerts', async () => {
+    const reminderRes = await request('/api/scrum/trigger-standup-reminders', {
+      method: 'POST'
+    });
+    assert(reminderRes.status === 200, `Expected 200, got ${reminderRes.status}`);
+    assert(reminderRes.body?.success === true, 'Expected success: true');
+    assert(typeof reminderRes.body?.data?.clockedInCount === 'number', 'Expected clockedInCount to be a number');
+    assert(typeof reminderRes.body?.data?.remindersSent === 'number', 'Expected remindersSent to be a number');
+  });
+
   // ============================================================================
   // KYC REVIEW & CLEARANCE WORKFLOW TESTS
   // ============================================================================

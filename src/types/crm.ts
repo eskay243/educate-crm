@@ -921,6 +921,8 @@ export interface DailyStandupReport {
   aiAgentFeedback?: string;
   sentiment: 'positive' | 'neutral' | 'blocked';
   submittedAt: string;
+  updatedAt?: string;
+  updateCount?: number;
 }
 
 export interface WeeklyScrumPerformance {

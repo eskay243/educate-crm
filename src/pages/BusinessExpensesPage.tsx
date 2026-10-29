@@ -79,6 +79,11 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
         setLivePaystackBal(res.balance);
       }
     }).catch(() => {});
+
+    // If wallet balance is 0 or transactions empty, automatically reconcile with live Paystack
+    if (!wallet || wallet.balance === 0 || !wallet.transactions || wallet.transactions.length === 0) {
+      reconcileWalletWithPaystack().catch(() => {});
+    }
   }, []);
 
   const handleSyncWallet = async () => {
@@ -232,13 +237,25 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
   );
   const pendingCount = pendingExpenses.length;
 
+  const effectivePaystackTransferBalance = useMemo(() => {
+    if (typeof wallet?.paystackLiveBalance === 'number' && wallet.paystackLiveBalance > 0) {
+      return wallet.paystackLiveBalance;
+    }
+    return livePaystackBal || 0;
+  }, [wallet?.paystackLiveBalance, livePaystackBal]);
+
+  const effectiveLiquidBalance = useMemo(() => {
+    const bal = wallet?.balance || 0;
+    return Math.max(bal, effectivePaystackTransferBalance);
+  }, [wallet?.balance, effectivePaystackTransferBalance]);
+
   const computedTotalInflow = useMemo(() => {
     if (typeof wallet?.totalInflow === 'number' && wallet.totalInflow > 0) return wallet.totalInflow;
     const txCredits = (wallet?.transactions || [])
       .filter(t => t.type === 'credit')
       .reduce((sum, t) => sum + (t.amount || 0), 0);
-    return txCredits > 0 ? txCredits : (wallet?.balance || 0);
-  }, [wallet]);
+    return txCredits > 0 ? txCredits : effectiveLiquidBalance;
+  }, [wallet, effectiveLiquidBalance]);
 
   const computedTotalOutflow = useMemo(() => {
     if (typeof wallet?.totalOutflow === 'number' && wallet.totalOutflow > 0) return wallet.totalOutflow;
@@ -335,9 +352,9 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
         </div>
         <div className="flex gap-2 sm:gap-3 flex-wrap">
           <button 
-            onClick={reconcileWalletWithPaystack}
+            onClick={handleSyncWallet}
             disabled={isSyncingWallet}
-            className="btn-secondary h-10 px-3.5 text-xs disabled:opacity-50"
+            className="btn-secondary h-10 px-3.5 text-xs disabled:opacity-50 cursor-pointer"
             title="Force real-time reconciliation with live Paystack account"
           >
             <span className={`material-symbols-outlined text-[18px] ${isSyncingWallet ? 'animate-spin' : ''}`}>sync</span>
@@ -384,7 +401,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
               <div>
                 <span className="text-white/70 text-xs font-medium">Available Liquid Balance</span>
                 <div className="font-display text-3xl sm:text-4xl font-bold font-data-tabular text-white flex items-baseline gap-2 mt-0.5">
-                  <span>{formatNaira(wallet?.balance || 0)}</span>
+                  <span>{formatNaira(effectiveLiquidBalance)}</span>
                   <span className="text-xs text-emerald-300 font-sans font-semibold bg-white/10 px-2 py-0.5 rounded-full">
                     Liquid Funds
                   </span>
@@ -463,7 +480,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                 <div className="bg-black/30 rounded-lg p-3 border border-white/10 mt-3">
                   <span className="text-[10px] text-white/70 block">Paystack Live Transfer Balance</span>
                   <div className="font-mono text-xl font-bold text-emerald-300 font-data-tabular mt-0.5">
-                    {formatNaira(wallet?.paystackLiveBalance ?? livePaystackBal ?? 0)}
+                    {formatNaira(effectivePaystackTransferBalance)}
                   </div>
                   <span className="text-[10px] text-white/60 block mt-0.5">Available for instant NIBSS bank transfers</span>
                 </div>

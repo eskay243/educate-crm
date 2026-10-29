@@ -259,7 +259,11 @@ const loadDatabase = (): DatabaseSchema => {
 
 const saveDatabase = (db: DatabaseSchema) => {
   try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf-8');
+    const toSave = { ...db };
+    if (toSave.settings?.paystackSecretKey && toSave.settings.paystackSecretKey.startsWith('sk_live_')) {
+      toSave.settings = { ...toSave.settings, paystackSecretKey: '' };
+    }
+    fs.writeFileSync(DB_FILE, JSON.stringify(toSave, null, 2), 'utf-8');
   } catch (err) {
     console.error('Error saving database:', err);
   }
@@ -6644,13 +6648,22 @@ app.post('/api/scrum/standup', (req: Request, res: Response) => {
 
   const existingIndex = (db as any).dailyStandups.findIndex((s: any) => s.userId === userId && s.date === today);
   if (existingIndex !== -1) {
+    const existing = (db as any).dailyStandups[existingIndex];
+    newStandup.id = existing.id;
+    newStandup.submittedAt = existing.submittedAt || newStandup.submittedAt;
+    (newStandup as any).updatedAt = new Date().toISOString();
+    (newStandup as any).updateCount = ((existing as any).updateCount || 0) + 1;
     (db as any).dailyStandups[existingIndex] = newStandup;
   } else {
     (db as any).dailyStandups.unshift(newStandup);
   }
 
   saveDatabase(db);
-  res.status(201).json({ success: true, data: newStandup });
+  res.status(201).json({ 
+    success: true, 
+    updated: existingIndex !== -1, 
+    data: newStandup 
+  });
 });
 
 app.get('/api/scrum/standups', (req: Request, res: Response) => {
@@ -6791,6 +6804,162 @@ app.get('/api/scrum/weekly-reports', (req: Request, res: Response) => {
   if (!Array.isArray((db as any).weeklyScrumReports)) (db as any).weeklyScrumReports = [];
   const list = userId ? (db as any).weeklyScrumReports.filter((r: any) => r.userId === userId) : (db as any).weeklyScrumReports;
   res.json({ success: true, data: list });
+});
+
+// ----------------------------------------------------
+// Automated Daily Standup (DSU) 09:15 AM WAT Reminder Engine
+// ----------------------------------------------------
+let lastStandupReminderDate = '';
+
+function triggerStandupReminders() {
+  const todayStr = new Date().toISOString().split('T')[0];
+  if (!Array.isArray(db.attendance)) db.attendance = [];
+  if (!Array.isArray((db as any).dailyStandups)) (db as any).dailyStandups = [];
+  if (!Array.isArray(db.notifications)) db.notifications = [];
+  if (!Array.isArray(db.chatConversations)) db.chatConversations = [];
+  if (!Array.isArray(db.chatMessages)) db.chatMessages = [];
+
+  // 1. Identify clocked-in users for today
+  const clockedInToday = db.attendance.filter((a: any) => 
+    (a.date === todayStr || (a.clockInTimestamp && new Date(a.clockInTimestamp).toISOString().split('T')[0] === todayStr)) &&
+    a.status === 'Clocked In'
+  );
+
+  const remindedStaff: Array<{ userId: string; userName: string; userEmail: string }> = [];
+
+  for (const record of clockedInToday) {
+    const staffId = record.userId || record.staffId;
+    if (!staffId) continue;
+
+    // 2. Check if this staff member already submitted a standup for today
+    const hasSubmitted = (db as any).dailyStandups.some((s: any) => 
+      s.userId === staffId && s.date === todayStr
+    );
+
+    if (hasSubmitted) continue;
+
+    const staffName = record.userName || record.staffName || 'Team Member';
+    const staffEmail = record.userEmail || record.staffEmail || '';
+    const firstName = staffName.split(' ')[0] || staffName;
+
+    // 3. Dispatch In-App Notification
+    db.notifications.unshift({
+      id: `notif-standup-${Date.now()}-${staffId}`,
+      userId: staffId,
+      title: 'Daily Standup Reminder ⏱️',
+      message: `Good morning ${firstName}! You're clocked in today. Please take 2 minutes to submit your daily standup.`,
+      timestamp: new Date().toISOString(),
+      read: false,
+      type: 'system',
+      link: '/?action=daily-standup'
+    });
+
+    // 4. Dispatch Native Web Push Notification
+    sendPushNotification(
+      (sub) => sub.userId === staffId || (staffEmail && sub.userEmail?.toLowerCase() === staffEmail.toLowerCase()),
+      {
+        title: 'Daily Standup Reminder ⏱️',
+        body: `Good morning ${firstName}! You're clocked in today. Please submit your daily standup to stay aligned.`,
+        data: { url: '/?action=daily-standup' },
+        tag: `standup-reminder-${todayStr}-${staffId}`
+      }
+    ).catch(err => console.warn('Push error dispatching standup reminder:', err));
+
+    // 5. Inject Scrum Master Bot Chat DM
+    const botConvId = `conv-scrum-${staffId}`;
+    let conv = db.chatConversations.find((c: any) => 
+      c.id === botConvId || 
+      (c.isDirect && Array.isArray(c.participants) && c.participants.includes('scrum-master-bot') && c.participants.includes(staffId))
+    );
+
+    if (!conv) {
+      conv = {
+        id: botConvId,
+        name: 'AI Scrum Master',
+        isDirect: true,
+        participants: ['scrum-master-bot', staffId],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        lastMessage: {
+          content: 'Good morning! Please remember to log your daily standup.',
+          senderName: 'Scrum Master AI',
+          timestamp: new Date().toISOString()
+        }
+      };
+      db.chatConversations.unshift(conv);
+    }
+
+    const botMessage = {
+      id: `msg-scrum-${Date.now()}-${staffId}`,
+      conversationId: conv.id,
+      senderId: 'scrum-master-bot',
+      senderName: 'Scrum Master AI',
+      senderEmail: 'scrum@codelab.institute',
+      senderRole: 'scrum_bot',
+      senderRoleTitle: 'Autonomous Agile Coach',
+      senderAvatar: '/icons/scrum-bot.png',
+      content: `Good morning ${firstName}! 🌅\n\nYou are clocked in for today's shift. Please log your daily standup to keep your team and leads aligned on deliverables and blockers.\n\n👉 [Submit Daily Standup](/?action=daily-standup)`,
+      messageType: 'text',
+      timestamp: new Date().toISOString(),
+      readBy: ['scrum-master-bot']
+    };
+
+    db.chatMessages.push(botMessage);
+    conv.lastMessage = {
+      content: `Good morning ${firstName}! 🌅 Daily standup reminder.`,
+      senderName: 'Scrum Master AI',
+      timestamp: botMessage.timestamp
+    };
+    conv.updatedAt = botMessage.timestamp;
+
+    remindedStaff.push({ userId: staffId, userName: staffName, userEmail: staffEmail });
+  }
+
+  if (remindedStaff.length > 0) {
+    saveDatabase(db);
+    console.log(`⏰ [STANDUP REMINDER ENGINE] Dispatched reminders to ${remindedStaff.length} staff member(s):`, remindedStaff.map(s => s.userName).join(', '));
+  }
+
+  return {
+    date: todayStr,
+    clockedInCount: clockedInToday.length,
+    remindersSent: remindedStaff.length,
+    remindedStaff
+  };
+}
+
+// Scheduled check at 09:15 AM WAT (UTC+1) on weekdays (Mon-Fri)
+setInterval(() => {
+  const now = new Date();
+  const watHours = (now.getUTCHours() + 1) % 24;
+  const watMinutes = now.getUTCMinutes();
+  const dayOfWeek = now.getUTCDay(); // 1 = Mon, 5 = Fri
+  const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+  const todayStr = now.toISOString().split('T')[0];
+
+  if (isWeekday && watHours === 9 && watMinutes === 15 && lastStandupReminderDate !== todayStr) {
+    lastStandupReminderDate = todayStr;
+    console.log('⏰ [09:15 AM WAT TRIGGER] Checking clocked-in staff missing DSU...');
+    try {
+      triggerStandupReminders();
+    } catch (err) {
+      console.error('Error in 09:15 AM standup runner:', err);
+    }
+  }
+}, 60000);
+
+app.post('/api/scrum/trigger-standup-reminders', (_req: Request, res: Response) => {
+  try {
+    const result = triggerStandupReminders();
+    res.json({
+      success: true,
+      message: `Triggered standup reminder check for today. Dispatched ${result.remindersSent} reminder(s).`,
+      data: result
+    });
+  } catch (error: any) {
+    console.error('Manual standup reminder trigger error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
 });
 
 app.listen(PORT, () => {

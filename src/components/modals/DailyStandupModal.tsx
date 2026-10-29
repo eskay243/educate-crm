@@ -26,6 +26,7 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
     submitDailyStandup,
     generateWeeklyScrumEvaluation,
     weeklyScrumReports,
+    triggerStandupReminders,
     hasFeaturePermission,
     showToast,
   } = useCRM();
@@ -51,6 +52,17 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
   const [reportModule, setReportModule] = useState<string>('all');
   const [managementReport, setManagementReport] = useState<any | null>(null);
   const [isLoadingReport, setIsLoadingReport] = useState(false);
+  const [isTriggeringReminders, setIsTriggeringReminders] = useState(false);
+
+  const handleTriggerReminders = async () => {
+    setIsTriggeringReminders(true);
+    try {
+      await triggerStandupReminders();
+      await fetchManagementReport(reportDate, reportModule);
+    } finally {
+      setIsTriggeringReminders(false);
+    }
+  };
 
   const fetchManagementReport = async (dateStr = reportDate, moduleStr = reportModule) => {
     setIsLoadingReport(true);
@@ -130,6 +142,34 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
       }
     }
   }, [isOpen, currentUser, fetchTodayStandup, weeklyScrumReports]);
+
+  // Prefill form states when todayStandup is loaded
+  useEffect(() => {
+    if (isOpen && todayStandup) {
+      if (Array.isArray(todayStandup.tasksYesterday) && todayStandup.tasksYesterday.length > 0) {
+        setTasksYesterday(todayStandup.tasksYesterday);
+      }
+      if (Array.isArray(todayStandup.tasksToday) && todayStandup.tasksToday.length > 0) {
+        setTasksToday(todayStandup.tasksToday);
+      }
+      if (Array.isArray(todayStandup.blockers) && todayStandup.blockers.length > 0) {
+        setBlockers(todayStandup.blockers);
+      } else {
+        setBlockers(['']);
+      }
+      if (Array.isArray(todayStandup.taggedModuleIds) && todayStandup.taggedModuleIds.length > 0) {
+        setSelectedModules(todayStandup.taggedModuleIds);
+      }
+    } else if (isOpen && !todayStandup) {
+      setTasksYesterday([
+        { id: `y-${Date.now()}-1`, description: '', moduleId: selectedModules[0] || 'leads', status: 'completed' },
+      ]);
+      setTasksToday([
+        { id: `t-${Date.now()}-1`, description: '', moduleId: selectedModules[0] || 'leads', status: 'in_progress' },
+      ]);
+      setBlockers(['']);
+    }
+  }, [isOpen, todayStandup]);
 
   if (!isOpen) return null;
 
@@ -338,10 +378,22 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                       <span className="material-symbols-outlined text-[18px] text-emerald-600">check_circle</span>
                       <span>Standup Recorded for Today ({todayStandup.date})</span>
                     </div>
-                    <span className="text-[11px] text-emerald-700 font-mono">
-                      Logged at {new Date(todayStandup.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                    <div className="flex items-center gap-2 text-[11px] font-mono">
+                      <span className="text-emerald-700">
+                        Logged at {new Date(todayStandup.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      {todayStandup.updatedAt && (
+                        <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-semibold border border-emerald-300">
+                          Updated {new Date(todayStandup.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {todayStandup.updateCount ? ` (Rev #${todayStandup.updateCount})` : ''}
+                        </span>
+                      )}
+                    </div>
                   </div>
+
+                  <p className="text-[11px] text-emerald-900 bg-emerald-100/60 p-2 rounded-lg border border-emerald-200/50 mt-2">
+                    💡 <strong>Update anytime:</strong> You can mark your tasks completed, add new deliverables, or clear blockers below. Submitting will update your live daily record.
+                  </p>
 
                   {todayStandup.aiAgentFeedback && (
                     <div className="mt-3 p-3.5 bg-surface rounded-lg border border-primary/20 text-xs text-on-surface shadow-xs">
@@ -481,38 +533,90 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                   </div>
 
                   <div className="space-y-2">
-                    {tasksToday.map((task, idx) => (
-                      <div key={task.id} className="flex items-center gap-2 bg-canvas p-2.5 rounded-lg border border-outline">
-                        <input
-                          type="text"
-                          placeholder={`Today commitment #${idx + 1}...`}
-                          value={task.description}
-                          onChange={e => handleUpdateTodayTask(task.id, { description: e.target.value })}
-                          className="flex-1 bg-transparent text-xs sm:text-sm text-on-surface placeholder:text-secondary outline-none font-medium"
-                        />
-                        <select
-                          value={task.moduleId}
-                          onChange={e => handleUpdateTodayTask(task.id, { moduleId: e.target.value })}
-                          className="bg-surface border border-outline text-xs text-on-surface font-semibold rounded-lg px-2 py-1 outline-none"
+                    {tasksToday.map((task, idx) => {
+                      const isCompleted = task.status === 'completed';
+                      const isBlocked = task.status === 'blocked';
+                      return (
+                        <div 
+                          key={task.id} 
+                          className={`flex items-center gap-2 p-2.5 rounded-lg border transition-all ${
+                            isCompleted ? 'bg-emerald-50/40 border-emerald-200' : isBlocked ? 'bg-red-50/40 border-red-200' : 'bg-canvas border-outline'
+                          }`}
                         >
-                          {AVAILABLE_MODULES.map(m => (
-                            <option key={m.id} value={m.id}>
-                              {m.name}
-                            </option>
-                          ))}
-                        </select>
-                        {tasksToday.length > 1 && (
+                          {/* Quick-toggle Completion Button */}
                           <button
                             type="button"
-                            onClick={() => handleRemoveTodayTask(task.id)}
-                            className="text-secondary hover:text-error p-1 cursor-pointer transition-colors"
-                            title="Remove task"
+                            onClick={() =>
+                              handleUpdateTodayTask(task.id, {
+                                status: isCompleted ? 'in_progress' : 'completed',
+                              })
+                            }
+                            className={`w-6 h-6 rounded-md flex items-center justify-center transition-all cursor-pointer shrink-0 border ${
+                              isCompleted
+                                ? 'bg-emerald-600 border-emerald-600 text-white'
+                                : isBlocked
+                                ? 'bg-red-50 border-red-300 text-red-600'
+                                : 'bg-surface border-outline text-transparent hover:border-primary'
+                            }`}
+                            title={isCompleted ? 'Mark In Progress' : 'Mark Completed'}
                           >
-                            <span className="material-symbols-outlined text-[16px]">delete</span>
+                            <span className="material-symbols-outlined text-[16px]">
+                              {isCompleted ? 'check' : isBlocked ? 'priority_high' : 'check'}
+                            </span>
                           </button>
-                        )}
-                      </div>
-                    ))}
+
+                          <input
+                            type="text"
+                            placeholder={`Today commitment #${idx + 1}...`}
+                            value={task.description}
+                            onChange={e => handleUpdateTodayTask(task.id, { description: e.target.value })}
+                            className={`flex-1 bg-transparent text-xs sm:text-sm placeholder:text-secondary outline-none font-medium ${
+                              isCompleted ? 'line-through text-secondary' : 'text-on-surface'
+                            }`}
+                          />
+                          <select
+                            value={task.moduleId}
+                            onChange={e => handleUpdateTodayTask(task.id, { moduleId: e.target.value })}
+                            className="bg-surface border border-outline text-xs text-on-surface font-semibold rounded-lg px-2 py-1 outline-none"
+                          >
+                            {AVAILABLE_MODULES.map(m => (
+                              <option key={m.id} value={m.id}>
+                                {m.name}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            value={task.status || 'in_progress'}
+                            onChange={e =>
+                              handleUpdateTodayTask(task.id, {
+                                status: e.target.value as 'completed' | 'in_progress' | 'blocked',
+                              })
+                            }
+                            className={`bg-surface border text-xs font-bold rounded-lg px-2 py-1 outline-none ${
+                              isCompleted
+                                ? 'border-emerald-300 text-emerald-700'
+                                : isBlocked
+                                ? 'border-red-300 text-red-700'
+                                : 'border-blue-300 text-blue-700'
+                            }`}
+                          >
+                            <option value="in_progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="blocked">Blocked</option>
+                          </select>
+                          {tasksToday.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveTodayTask(task.id)}
+                              className="text-secondary hover:text-error p-1 cursor-pointer transition-colors"
+                              title="Remove task"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">delete</span>
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -797,7 +901,20 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                   </div>
                 </div>
 
-                <div className="self-end">
+                <div className="self-end flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={handleTriggerReminders}
+                    disabled={isTriggeringReminders}
+                    className="px-3.5 py-1.5 rounded-lg border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                    title="Dispatch automated push & chat reminders to clocked-in staff who haven't submitted their DSU"
+                  >
+                    <span className={`material-symbols-outlined text-[15px] ${isTriggeringReminders ? 'animate-spin' : ''}`}>
+                      notifications_active
+                    </span>
+                    <span>{isTriggeringReminders ? 'Reminding...' : 'Send Morning Reminders'}</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={handleExportCSV}

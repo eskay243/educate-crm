@@ -289,6 +289,7 @@ interface CRMContextType {
   fetchTodayStandup: () => Promise<void>;
   submitDailyStandup: (data: { tasksYesterday: DailyStandupTask[]; tasksToday: DailyStandupTask[]; blockers: string[]; taggedModuleIds: string[]; }) => Promise<boolean>;
   generateWeeklyScrumEvaluation: (userId?: string) => Promise<WeeklyScrumPerformance | null>;
+  triggerStandupReminders: () => Promise<{ success: boolean; remindersSent: number } | null>;
 
   // Mutators
   addLead: (lead: Omit<Lead, 'id' | 'dateAdded'>) => void;
@@ -4415,10 +4416,14 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (resData.success && resData.data) {
         setTodayStandup(resData.data);
         setDailyStandups(prev => [resData.data, ...prev.filter(s => s.id !== resData.data.id)]);
-        showToast('Standup Logged 🚀', 'Your daily scrum updates and AI feedback have been recorded!', 'success');
+        showToast(
+          resData.updated ? 'Standup Updated 🚀' : 'Standup Logged 🚀',
+          resData.updated ? 'Your daily commitments and task statuses have been updated!' : 'Your daily scrum updates and AI feedback have been recorded!',
+          'success'
+        );
         logActivity({
-          title: 'Daily Standup Submitted',
-          description: `${currentUser.name} completed daily scrum standup with AI evaluation.`,
+          title: resData.updated ? 'Daily Standup Updated' : 'Daily Standup Submitted',
+          description: `${currentUser.name} ${resData.updated ? 'updated tasks and commitments in daily standup' : 'completed daily scrum standup with AI evaluation'}.`,
           type: 'system',
           user: currentUser.name,
         });
@@ -4430,6 +4435,25 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e: any) {
       showToast('Network Error', e.message || 'Failed to submit standup.', 'error');
       return false;
+    }
+  };
+
+  const triggerStandupReminders = async (): Promise<{ success: boolean; remindersSent: number } | null> => {
+    try {
+      const res = await fetch('/api/scrum/trigger-standup-reminders', { method: 'POST' });
+      const json = await res.json();
+      if (json.success) {
+        showToast(
+          'Reminders Dispatched ⏱️',
+          json.message || `Dispatched ${json.data?.remindersSent || 0} standup reminders.`,
+          'info'
+        );
+        return { success: true, remindersSent: json.data?.remindersSent || 0 };
+      }
+      return null;
+    } catch (e: any) {
+      showToast('Error', e.message || 'Failed to trigger standup reminders', 'error');
+      return null;
     }
   };
 
@@ -5366,6 +5390,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         fetchTodayStandup,
         submitDailyStandup,
         generateWeeklyScrumEvaluation,
+        triggerStandupReminders,
         updateUserProfile,
         deleteStaffUser,
         deleteMentorUser,
