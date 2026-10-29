@@ -1,21 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useCRM } from '../../context/CRMContext';
-import {
-  Sparkles,
-  CheckCircle2,
-  AlertTriangle,
-  Plus,
-  Trash2,
-  X,
-  Layers,
-  TrendingUp,
-  Brain,
-  Award,
-  BarChart2,
-  Calendar,
-  RefreshCw,
-  Flame
-} from 'lucide-react';
 import { DailyStandupTask, WeeklyScrumPerformance } from '../../types/crm';
 
 export interface DailyStandupModalProps {
@@ -188,62 +172,70 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl shadow-2xl flex flex-col overflow-hidden max-h-[92vh]">
-        {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-slate-800 bg-slate-950/70">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex flex-col justify-start items-center animate-in fade-in duration-200">
+      <div className="fixed inset-0 -z-10" onClick={onClose} aria-hidden="true" />
+      <div 
+        className="my-auto relative w-full max-w-3xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-3rem)] rounded-t-2xl sm:rounded-2xl shadow-modal flex flex-col overflow-hidden bg-surface border border-outline z-10 animate-in zoom-in-95 duration-150"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header - Kinetic Enterprise Institutional Black */}
+        <div className="shrink-0 p-4 sm:p-5 bg-crisp-black text-white flex justify-between items-start border-b border-outline">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500/20 to-indigo-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
-              <Brain className="w-5 h-5 text-amber-400" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/10 flex items-center justify-center text-white shrink-0">
+              <span className="material-symbols-outlined text-[22px] sm:text-[24px]">psychology</span>
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-white tracking-tight">AI Scrum & Daily Standup</h2>
-                <span className="text-[10px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-full border border-indigo-500/20 font-semibold flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-indigo-400" /> AI Coach
+                <h3 className="font-display text-base sm:text-lg font-bold">AI Scrum &amp; Daily Standup</h3>
+                <span className="text-[10px] bg-primary/20 text-blue-200 px-2 py-0.5 rounded-full border border-blue-400/30 font-bold flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[12px]">auto_awesome</span> AI Coach
                 </span>
               </div>
-              <p className="text-xs text-slate-400">
-                Log daily task progress across assigned CRM modules & measure weekly team velocity
+              <p className="text-xs text-white/70">
+                Log daily task progress across assigned CRM modules &amp; measure weekly team velocity
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-200 p-2 rounded-xl hover:bg-slate-800 transition-colors"
+            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer shrink-0"
+            aria-label="Close dialog"
           >
-            <X className="w-5 h-5" />
+            <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-slate-800 bg-slate-950/40 px-5 pt-3 gap-2">
+        <div className="shrink-0 flex border-b border-outline bg-surface-bright px-4 sm:px-6 pt-2 gap-2">
           <button
+            type="button"
             onClick={() => setActiveTab('standup')}
-            className={`pb-3 px-3 text-xs font-semibold flex items-center gap-2 border-b-2 transition-all ${
+            className={`pb-3 px-3 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer ${
               activeTab === 'standup'
-                ? 'border-indigo-500 text-indigo-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-secondary hover:text-on-surface'
             }`}
           >
-            <Calendar className="w-4 h-4" />
+            <span className="material-symbols-outlined text-[16px]">calendar_today</span>
             <span>Today&apos;s Standup</span>
             {todayStandup && (
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Submitted for today" />
             )}
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('weekly')}
-            className={`pb-3 px-3 text-xs font-semibold flex items-center gap-2 border-b-2 transition-all ${
+            className={`pb-3 px-3 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer ${
               activeTab === 'weekly'
-                ? 'border-indigo-500 text-indigo-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-secondary hover:text-on-surface'
             }`}
           >
-            <BarChart2 className="w-4 h-4" />
-            <span>Weekly Performance & Velocity</span>
+            <span className="material-symbols-outlined text-[16px]">bar_chart</span>
+            <span>Weekly Performance &amp; Velocity</span>
             {activeWeeklyReport && (
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-mono">
+              <span className="text-[10px] px-1.5 py-0.2 rounded bg-primary/10 text-primary font-mono font-bold">
                 {activeWeeklyReport.letterGrade}
               </span>
             )}
@@ -251,49 +243,52 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5 bg-canvas">
           {activeTab === 'standup' ? (
             <div>
               {/* Today's Existing Submission Banner if present */}
               {todayStandup && (
-                <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 to-indigo-500/10 border border-emerald-500/20">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
-                      <CheckCircle2 className="w-4 h-4" />
+                <div className="mb-5 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950">
+                  <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                    <div className="flex items-center gap-2 text-emerald-800 font-bold text-xs sm:text-sm">
+                      <span className="material-symbols-outlined text-[18px] text-emerald-600">check_circle</span>
                       <span>Standup Recorded for Today ({todayStandup.date})</span>
                     </div>
-                    <span className="text-[11px] text-slate-400">
+                    <span className="text-[11px] text-emerald-700 font-mono">
                       Logged at {new Date(todayStandup.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
 
                   {todayStandup.aiAgentFeedback && (
-                    <div className="mt-3 p-3 bg-slate-900/80 rounded-lg border border-slate-800 text-xs text-slate-300">
-                      <div className="flex items-center gap-1.5 text-indigo-300 font-semibold mb-1">
-                        <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                    <div className="mt-3 p-3.5 bg-surface rounded-lg border border-primary/20 text-xs text-on-surface shadow-xs">
+                      <div className="flex items-center gap-1.5 text-primary font-bold mb-1">
+                        <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
                         AI Scrum Master Feedback:
                       </div>
-                      <p className="leading-relaxed text-slate-300">{todayStandup.aiAgentFeedback}</p>
+                      <p className="leading-relaxed text-secondary">{todayStandup.aiAgentFeedback}</p>
                     </div>
                   )}
 
-                  <div className="mt-3 flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800/60">
+                  <div className="mt-3 flex items-center justify-between text-xs text-emerald-800 pt-2 border-t border-emerald-200/60 font-medium flex-wrap gap-2">
                     <span>
-                      Yesterday Tasks: <strong className="text-white">{todayStandup.tasksYesterday.length}</strong> | Today
-                      Commitments: <strong className="text-white">{todayStandup.tasksToday.length}</strong> | Blockers:{' '}
-                      <strong className="text-white">{todayStandup.blockers.length}</strong>
+                      Yesterday Tasks: <strong className="text-on-surface">{todayStandup.tasksYesterday.length}</strong> | Today
+                      Commitments: <strong className="text-on-surface">{todayStandup.tasksToday.length}</strong> | Blockers:{' '}
+                      <strong className="text-on-surface">{todayStandup.blockers.length}</strong>
                     </span>
-                    <span className="text-emerald-400 font-medium">Status: Active & Tracked</span>
+                    <span className="text-emerald-700 font-bold flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">verified</span>
+                      Status: Active &amp; Tracked
+                    </span>
                   </div>
                 </div>
               )}
 
-              <form onSubmit={handleSubmitStandup} className="space-y-6">
+              <form onSubmit={handleSubmitStandup} className="space-y-5">
                 {/* Module Scope Selector */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-2 flex items-center gap-2">
-                    <Layers className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>Modules Assigned to You ({currentUser?.role})</span>
+                <div className="p-4 rounded-xl bg-surface border border-outline shadow-xs">
+                  <label className="text-xs font-bold text-on-surface mb-2.5 flex items-center gap-1.5 uppercase tracking-wider">
+                    <span className="material-symbols-outlined text-[16px] text-primary">layers</span>
+                    <span>Assigned Operational Modules ({currentUser?.role})</span>
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {AVAILABLE_MODULES.map(mod => {
@@ -303,10 +298,10 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                           key={mod.id}
                           type="button"
                           onClick={() => toggleModuleSelection(mod.id)}
-                          className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all ${
+                          className={`text-xs px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
                             isSelected
-                              ? 'bg-indigo-600/20 border-indigo-500/50 text-indigo-300 font-medium'
-                              : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'
+                              ? 'bg-primary text-white border-primary shadow-xs font-bold'
+                              : 'bg-surface border-outline text-secondary hover:border-outline-variant hover:text-on-surface'
                           }`}
                         >
                           {mod.name}
@@ -317,37 +312,37 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                 </div>
 
                 {/* Section 1: Tasks Yesterday */}
-                <div className="space-y-3">
+                <div className="p-4 rounded-xl bg-surface border border-outline shadow-xs space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold">
+                      <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs font-bold">
                         1
                       </div>
-                      <h3 className="text-sm font-bold text-white">What did you complete or work on yesterday?</h3>
+                      <h4 className="text-xs sm:text-sm font-bold text-on-surface">What did you complete or work on yesterday?</h4>
                     </div>
                     <button
                       type="button"
                       onClick={handleAddYesterdayTask}
-                      className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-medium"
+                      className="text-xs text-primary hover:text-primary-hover flex items-center gap-1 font-bold cursor-pointer"
                     >
-                      <Plus className="w-3.5 h-3.5" /> Add Task
+                      <span className="material-symbols-outlined text-[16px]">add</span> Add Task
                     </button>
                   </div>
 
                   <div className="space-y-2">
                     {tasksYesterday.map((task, idx) => (
-                      <div key={task.id} className="flex items-center gap-2 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
+                      <div key={task.id} className="flex items-center gap-2 bg-canvas p-2.5 rounded-lg border border-outline">
                         <input
                           type="text"
                           placeholder={`Yesterday task #${idx + 1}...`}
                           value={task.description}
                           onChange={e => handleUpdateYesterdayTask(task.id, { description: e.target.value })}
-                          className="flex-1 bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none"
+                          className="flex-1 bg-transparent text-xs sm:text-sm text-on-surface placeholder:text-secondary outline-none font-medium"
                         />
                         <select
                           value={task.moduleId}
                           onChange={e => handleUpdateYesterdayTask(task.id, { moduleId: e.target.value })}
-                          className="bg-slate-900 border border-slate-800 text-xs text-slate-300 rounded-lg px-2 py-1 focus:outline-none"
+                          className="bg-surface border border-outline text-xs text-on-surface font-semibold rounded-lg px-2 py-1 outline-none"
                         >
                           {AVAILABLE_MODULES.map(m => (
                             <option key={m.id} value={m.id}>
@@ -362,7 +357,7 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                               status: e.target.value as 'completed' | 'in_progress' | 'blocked',
                             })
                           }
-                          className="bg-slate-900 border border-slate-800 text-xs text-emerald-400 rounded-lg px-2 py-1 focus:outline-none"
+                          className="bg-surface border border-outline text-xs text-emerald-700 font-bold rounded-lg px-2 py-1 outline-none"
                         >
                           <option value="completed">Completed</option>
                           <option value="in_progress">In Progress</option>
@@ -372,9 +367,10 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                           <button
                             type="button"
                             onClick={() => handleRemoveYesterdayTask(task.id)}
-                            className="text-slate-500 hover:text-rose-400 p-1"
+                            className="text-secondary hover:text-error p-1 cursor-pointer transition-colors"
+                            title="Remove task"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <span className="material-symbols-outlined text-[16px]">delete</span>
                           </button>
                         )}
                       </div>
@@ -383,37 +379,37 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                 </div>
 
                 {/* Section 2: Tasks Today */}
-                <div className="space-y-3">
+                <div className="p-4 rounded-xl bg-surface border border-outline shadow-xs space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold">
+                      <div className="w-5 h-5 rounded-full bg-blue-100 text-primary flex items-center justify-center text-xs font-bold">
                         2
                       </div>
-                      <h3 className="text-sm font-bold text-white">What are you committing to accomplish today?</h3>
+                      <h4 className="text-xs sm:text-sm font-bold text-on-surface">What are you committing to accomplish today?</h4>
                     </div>
                     <button
                       type="button"
                       onClick={handleAddTodayTask}
-                      className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-medium"
+                      className="text-xs text-primary hover:text-primary-hover flex items-center gap-1 font-bold cursor-pointer"
                     >
-                      <Plus className="w-3.5 h-3.5" /> Add Task
+                      <span className="material-symbols-outlined text-[16px]">add</span> Add Task
                     </button>
                   </div>
 
                   <div className="space-y-2">
                     {tasksToday.map((task, idx) => (
-                      <div key={task.id} className="flex items-center gap-2 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
+                      <div key={task.id} className="flex items-center gap-2 bg-canvas p-2.5 rounded-lg border border-outline">
                         <input
                           type="text"
                           placeholder={`Today commitment #${idx + 1}...`}
                           value={task.description}
                           onChange={e => handleUpdateTodayTask(task.id, { description: e.target.value })}
-                          className="flex-1 bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none"
+                          className="flex-1 bg-transparent text-xs sm:text-sm text-on-surface placeholder:text-secondary outline-none font-medium"
                         />
                         <select
                           value={task.moduleId}
                           onChange={e => handleUpdateTodayTask(task.id, { moduleId: e.target.value })}
-                          className="bg-slate-900 border border-slate-800 text-xs text-slate-300 rounded-lg px-2 py-1 focus:outline-none"
+                          className="bg-surface border border-outline text-xs text-on-surface font-semibold rounded-lg px-2 py-1 outline-none"
                         >
                           {AVAILABLE_MODULES.map(m => (
                             <option key={m.id} value={m.id}>
@@ -425,9 +421,10 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                           <button
                             type="button"
                             onClick={() => handleRemoveTodayTask(task.id)}
-                            className="text-slate-500 hover:text-rose-400 p-1"
+                            className="text-secondary hover:text-error p-1 cursor-pointer transition-colors"
+                            title="Remove task"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <span className="material-symbols-outlined text-[16px]">delete</span>
                           </button>
                         )}
                       </div>
@@ -436,41 +433,42 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                 </div>
 
                 {/* Section 3: Blockers / Impediments */}
-                <div className="space-y-3">
+                <div className="p-4 rounded-xl bg-surface border border-outline shadow-xs space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold">
+                      <div className="w-5 h-5 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center text-xs font-bold">
                         3
                       </div>
-                      <h3 className="text-sm font-bold text-white">Any blockers, dependencies, or impediments?</h3>
+                      <h4 className="text-xs sm:text-sm font-bold text-on-surface">Any blockers, dependencies, or impediments?</h4>
                     </div>
                     <button
                       type="button"
                       onClick={handleAddBlocker}
-                      className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1 font-medium"
+                      className="text-xs text-amber-700 hover:text-amber-800 flex items-center gap-1 font-bold cursor-pointer"
                     >
-                      <Plus className="w-3.5 h-3.5" /> Add Blocker
+                      <span className="material-symbols-outlined text-[16px]">add</span> Add Blocker
                     </button>
                   </div>
 
                   <div className="space-y-2">
                     {blockers.map((b, idx) => (
-                      <div key={idx} className="flex items-center gap-2 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
-                        <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                      <div key={idx} className="flex items-center gap-2 bg-canvas p-2.5 rounded-lg border border-outline">
+                        <span className="material-symbols-outlined text-amber-600 text-[18px] shrink-0">warning</span>
                         <input
                           type="text"
                           placeholder="E.g. Waiting on student payment proof, mentor syllabus sign-off..."
                           value={b}
                           onChange={e => handleUpdateBlocker(idx, e.target.value)}
-                          className="flex-1 bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none"
+                          className="flex-1 bg-transparent text-xs sm:text-sm text-on-surface placeholder:text-secondary outline-none font-medium"
                         />
                         {blockers.length > 1 && (
                           <button
                             type="button"
                             onClick={() => handleRemoveBlocker(idx)}
-                            className="text-slate-500 hover:text-rose-400 p-1"
+                            className="text-secondary hover:text-error p-1 cursor-pointer transition-colors"
+                            title="Remove blocker"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <span className="material-symbols-outlined text-[16px]">delete</span>
                           </button>
                         )}
                       </div>
@@ -478,15 +476,15 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                   </div>
                 </div>
 
-                {/* Submit Action */}
-                <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
-                  <p className="text-xs text-slate-400">
+                {/* Submit Action Button pinned in form */}
+                <div className="pt-2 flex items-center justify-between flex-wrap gap-2">
+                  <p className="text-xs text-secondary">
                     Logged tasks will be cross-referenced with your weekly performance velocity.
                   </p>
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-medium text-sm flex items-center gap-2 shadow-lg shadow-indigo-600/20 disabled:opacity-50 transition-all"
+                    className="px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-hover text-white font-bold text-xs flex items-center gap-2 shadow-xs disabled:opacity-50 transition-all cursor-pointer"
                   >
                     {isSubmitting ? (
                       <>
@@ -495,7 +493,7 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                       </>
                     ) : (
                       <>
-                        <Sparkles className="w-4 h-4" />
+                        <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
                         <span>{todayStandup ? 'Update & Re-Evaluate Standup' : 'Submit Daily Standup'}</span>
                       </>
                     )}
@@ -505,102 +503,105 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
             </div>
           ) : (
             /* Weekly Scrum Performance Tab */
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
+            <div className="space-y-5">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-indigo-400" />
-                    <span>Weekly Performance & Scrum Velocity</span>
-                  </h3>
-                  <p className="text-xs text-slate-400">
+                  <h4 className="text-sm sm:text-base font-bold text-on-surface flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[20px] text-primary">trending_up</span>
+                    <span>Weekly Performance &amp; Scrum Velocity</span>
+                  </h4>
+                  <p className="text-xs text-secondary">
                     Calculated by autonomous AI agent based on completed tasks, module coverage, and blocker resolution
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={handleGenerateWeekly}
                   disabled={isEvaluatingWeekly}
-                  className="px-4 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-semibold flex items-center gap-2 transition-all disabled:opacity-50"
+                  className="px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary text-xs font-bold flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer shadow-xs"
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isEvaluatingWeekly ? 'animate-spin' : ''}`} />
+                  <span className={`material-symbols-outlined text-[16px] ${isEvaluatingWeekly ? 'animate-spin' : ''}`}>
+                    sync
+                  </span>
                   <span>{isEvaluatingWeekly ? 'Evaluating...' : 'Run Weekly AI Audit'}</span>
                 </button>
               </div>
 
               {activeWeeklyReport ? (
-                <div className="space-y-6">
+                <div className="space-y-5">
                   {/* Top Stats Banner */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-500/10 to-blue-500/10 border border-indigo-500/20 flex flex-col items-center justify-center text-center">
-                      <span className="text-xs font-semibold text-indigo-300 uppercase tracking-wider mb-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="p-4 rounded-xl bg-surface border border-primary/20 flex flex-col items-center justify-center text-center shadow-xs">
+                      <span className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-1">
                         Scrum Grade
                       </span>
-                      <div className="text-4xl font-extrabold text-white flex items-baseline gap-1">
+                      <div className="text-3xl font-extrabold text-primary flex items-baseline gap-1 font-data-tabular">
                         <span>{activeWeeklyReport.letterGrade}</span>
-                        <span className="text-sm font-normal text-indigo-300">({activeWeeklyReport.overallScore}/100)</span>
+                        <span className="text-xs font-normal text-secondary">({activeWeeklyReport.overallScore}/100)</span>
                       </div>
-                      <span className="text-[11px] text-slate-400 mt-1">Week #{activeWeeklyReport.weekNumber}</span>
+                      <span className="text-[10px] text-secondary mt-1">Week #{activeWeeklyReport.weekNumber}</span>
                     </div>
 
-                    <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col justify-center">
-                      <span className="text-xs text-slate-400 mb-1">Task Completion Rate</span>
-                      <div className="text-2xl font-bold text-emerald-400">
+                    <div className="p-4 rounded-xl bg-surface border border-outline flex flex-col justify-center shadow-xs">
+                      <span className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-1">Task Completion Rate</span>
+                      <div className="text-2xl font-bold text-emerald-700 font-data-tabular">
                         {activeWeeklyReport.metrics.completionRatePercent}%
                       </div>
-                      <span className="text-[11px] text-slate-500">
-                        {activeWeeklyReport.metrics.totalTasksCompleted} of {activeWeeklyReport.metrics.totalTasksLogged} tasks resolved
+                      <span className="text-[11px] text-secondary">
+                        {activeWeeklyReport.metrics.totalTasksCompleted} of {activeWeeklyReport.metrics.totalTasksLogged} resolved
                       </span>
                     </div>
 
-                    <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col justify-center">
-                      <span className="text-xs text-slate-400 mb-1">Module Coverage</span>
-                      <div className="text-2xl font-bold text-blue-400">
+                    <div className="p-4 rounded-xl bg-surface border border-outline flex flex-col justify-center shadow-xs">
+                      <span className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-1">Module Coverage</span>
+                      <div className="text-2xl font-bold text-primary font-data-tabular">
                         {activeWeeklyReport.metrics.moduleCoverageScore}%
                       </div>
-                      <span className="text-[11px] text-slate-500">Cross-department delivery</span>
+                      <span className="text-[11px] text-secondary">Cross-department delivery</span>
                     </div>
 
-                    <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col justify-center">
-                      <span className="text-xs text-slate-400 mb-1">Blocker Resolution</span>
-                      <div className="text-2xl font-bold text-amber-400">
+                    <div className="p-4 rounded-xl bg-surface border border-outline flex flex-col justify-center shadow-xs">
+                      <span className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-1">Blocker Resolution</span>
+                      <div className="text-2xl font-bold text-amber-700 font-data-tabular">
                         {activeWeeklyReport.metrics.blockerResolutionScore}%
                       </div>
-                      <span className="text-[11px] text-slate-500">Unblocking agility</span>
+                      <span className="text-[11px] text-secondary">Unblocking agility</span>
                     </div>
                   </div>
 
                   {/* AI Executive Summary Card */}
-                  <div className="p-5 rounded-xl bg-gradient-to-br from-slate-950 to-slate-900 border border-slate-800 space-y-4">
-                    <div className="flex items-center gap-2 text-indigo-400 text-sm font-bold">
-                      <Sparkles className="w-4 h-4 text-indigo-400" />
+                  <div className="p-5 rounded-xl bg-surface border border-outline space-y-4 shadow-xs">
+                    <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider">
+                      <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
                       <span>AI Scrum Master Executive Summary</span>
                     </div>
-                    <p className="text-sm leading-relaxed text-slate-200">
+                    <p className="text-xs sm:text-sm leading-relaxed text-on-surface">
                       {activeWeeklyReport.aiExecutiveSummary}
                     </p>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                      <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
-                        <div className="text-xs font-semibold text-emerald-400 mb-2 flex items-center gap-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Key Strengths
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                      <div className="p-3.5 rounded-lg bg-emerald-50/70 border border-emerald-200">
+                        <div className="text-xs font-bold text-emerald-800 mb-2 flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-[16px] text-emerald-600">check_circle</span> Key Strengths
                         </div>
                         <ul className="space-y-1.5">
                           {activeWeeklyReport.aiStrengths.map((str, i) => (
-                            <li key={i} className="text-xs text-slate-300 flex items-start gap-1.5">
-                              <span className="text-emerald-400 mt-0.5">•</span>
+                            <li key={i} className="text-xs text-emerald-950 flex items-start gap-1.5">
+                              <span className="text-emerald-600 mt-0.5">•</span>
                               <span>{str}</span>
                             </li>
                           ))}
                         </ul>
                       </div>
 
-                      <div className="p-3 rounded-lg bg-indigo-500/5 border border-indigo-500/20">
-                        <div className="text-xs font-semibold text-indigo-400 mb-2 flex items-center gap-1.5">
-                          <Flame className="w-3.5 h-3.5" /> High-Impact Growth Areas
+                      <div className="p-3.5 rounded-lg bg-blue-50/70 border border-blue-200">
+                        <div className="text-xs font-bold text-blue-900 mb-2 flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-[16px] text-primary">local_fire_department</span> High-Impact Growth Areas
                         </div>
                         <ul className="space-y-1.5">
                           {activeWeeklyReport.aiGrowthAreas.map((ga, i) => (
-                            <li key={i} className="text-xs text-slate-300 flex items-start gap-1.5">
-                              <span className="text-indigo-400 mt-0.5">•</span>
+                            <li key={i} className="text-xs text-blue-950 flex items-start gap-1.5">
+                              <span className="text-primary mt-0.5">•</span>
                               <span>{ga}</span>
                             </li>
                           ))}
@@ -611,25 +612,25 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
 
                   {/* Module Breakdown */}
                   {activeWeeklyReport.moduleBreakdown && (
-                    <div className="p-5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
-                      <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    <div className="p-5 rounded-xl bg-surface border border-outline space-y-3 shadow-xs">
+                      <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider">
                         Assigned Module Throughput Breakdown
                       </h4>
-                      <div className="space-y-2">
+                      <div className="space-y-2.5">
                         {Object.entries(activeWeeklyReport.moduleBreakdown).map(([modId, data]) => {
                           const modInfo = AVAILABLE_MODULES.find(m => m.id === modId);
                           const percentage = data.tasksPlanned > 0 ? Math.round((data.tasksCompleted / data.tasksPlanned) * 100) : 100;
                           return (
                             <div key={modId} className="space-y-1">
                               <div className="flex items-center justify-between text-xs">
-                                <span className="text-slate-300 font-medium">{modInfo?.name || modId}</span>
-                                <span className="text-slate-400 font-mono">
+                                <span className="text-on-surface font-semibold">{modInfo?.name || modId}</span>
+                                <span className="text-secondary font-mono">
                                   {data.tasksCompleted}/{data.tasksPlanned} tasks ({percentage}%)
                                 </span>
                               </div>
-                              <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                              <div className="w-full h-2 rounded-full bg-surface-container-high overflow-hidden">
                                 <div
-                                  className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 rounded-full"
+                                  className="h-full bg-primary rounded-full transition-all duration-300"
                                   style={{ width: `${Math.min(100, percentage)}%` }}
                                 />
                               </div>
@@ -641,16 +642,32 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                   )}
                 </div>
               ) : (
-                <div className="py-16 text-center text-slate-500 flex flex-col items-center">
-                  <Award className="w-12 h-12 mb-3 stroke-[1.2] text-slate-600" />
-                  <p className="text-sm font-medium text-slate-400">No Weekly Scrum Evaluation on record</p>
-                  <p className="text-xs text-slate-500 mt-1 max-w-sm">
+                <div className="py-16 text-center text-secondary flex flex-col items-center bg-surface rounded-xl border border-outline">
+                  <div className="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-secondary mb-3">
+                    <span className="material-symbols-outlined text-[28px]">military_tech</span>
+                  </div>
+                  <p className="text-sm font-bold text-on-surface">No Weekly Scrum Evaluation on record</p>
+                  <p className="text-xs text-secondary mt-1 max-w-sm">
                     Click &apos;Run Weekly AI Audit&apos; to let the autonomous AI Scrum Master analyze your tasks across all modules.
                   </p>
                 </div>
               )}
             </div>
           )}
+        </div>
+
+        {/* Footer Actions */}
+        <div className="shrink-0 p-3 sm:p-4 bg-surface-bright border-t border-outline flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-secondary hover:text-on-surface rounded-lg text-xs font-semibold cursor-pointer"
+          >
+            Close
+          </button>
+          <div className="text-[11px] text-secondary">
+            CODELAB EDUCARE &bull; Agile Scrum Operations
+          </div>
         </div>
       </div>
     </div>

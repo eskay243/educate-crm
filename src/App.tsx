@@ -36,8 +36,8 @@ const OperationalDashboardPage = lazy(() => import('./pages/OperationalDashboard
 const PageLoadingFallback: React.FC = () => (
   <div className="flex min-h-[60vh] w-full flex-col items-center justify-center p-8">
     <div className="flex flex-col items-center gap-3">
-      <div className="h-9 w-9 animate-spin rounded-full border-3 border-indigo-600 border-t-transparent dark:border-indigo-400" />
-      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Loading Module...</span>
+      <div className="h-9 w-9 animate-spin rounded-full border-3 border-primary border-t-transparent" />
+      <span className="text-xs font-bold uppercase tracking-wider text-secondary">Loading Module...</span>
     </div>
   </div>
 );
