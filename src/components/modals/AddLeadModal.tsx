@@ -173,9 +173,12 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) =
                 className="w-full h-10 px-3 border border-outline-variant/80 rounded-md bg-surface text-body-md focus:border-primary focus:ring-1 focus:ring-primary outline-hidden cursor-pointer"
               >
                 <option value="Organic Search">Organic Search</option>
+                <option value="IG campaign">IG campaign (Instagram Ads / Reels)</option>
+                <option value="FB advert">FB advert (Facebook / Meta Ads)</option>
+                <option value="Tiktok Advert">Tiktok Advert (TikTok Ads &amp; Videos)</option>
                 <option value="LinkedIn Campaign">LinkedIn Campaign</option>
-                <option value="Webinar Referral">Webinar Referral</option>
                 <option value="Google Ads">Google Ads</option>
+                <option value="Webinar Referral">Webinar Referral</option>
                 <option value="Community Discord">Community Discord</option>
                 <option value="Direct Referral">Direct Referral</option>
               </select>

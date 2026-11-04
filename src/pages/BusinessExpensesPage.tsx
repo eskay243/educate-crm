@@ -146,7 +146,8 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   }, []);
 
-  const [selectedMonth, setSelectedMonth] = useState<string>(() => currentCalendarMonth);
+  // Default to 'all' so that all institutional requisitions are immediately visible across historical months
+  const [selectedMonth, setSelectedMonth] = useState<string>('all');
 
   // Discover all months present in expenses + current month
   const availableMonths = useMemo(() => {
@@ -585,7 +586,15 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
 
         {/* Card 2: Pending Verification (OpEx Pipeline) */}
         <div 
-          onClick={() => setSelectedStatus(selectedStatus === 'Awaiting Approval' ? 'All' : 'Awaiting Approval')}
+          onClick={() => {
+            if (selectedStatus === 'Awaiting Approval') {
+              setSelectedStatus('All');
+            } else {
+              setSelectedStatus('Awaiting Approval');
+              setSelectedMonth('all');
+              setActiveLedgerView('expenses');
+            }
+          }}
           className={`bg-surface-container-lowest border rounded-xl p-stack-md flex flex-col justify-between shadow-xs cursor-pointer transition-all hover:border-primary/50 ${
             selectedStatus === 'Awaiting Approval' ? 'ring-2 ring-primary border-primary bg-primary/5' : 'border-outline-variant'
           }`}
@@ -801,7 +810,9 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
             }`}
           >
             <span className="material-symbols-outlined text-[17px]">receipt_long</span>
-            <span>OpEx Requisitions Ledger ({expenses.length})</span>
+            <span>
+              OpEx Requisitions Ledger ({filteredExpenses.length === expenses.length ? expenses.length : `${filteredExpenses.length} of ${expenses.length}`})
+            </span>
           </button>
 
           <button
@@ -856,6 +867,21 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
 
                 <div className="h-5 w-[1px] bg-outline-variant mx-1 hidden sm:block" />
 
+                {/* Period / Month Filter */}
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="h-8 px-2.5 rounded-lg border border-outline-variant bg-surface text-xs font-semibold text-on-surface outline-none cursor-pointer hover:border-primary transition-colors"
+                  title="Filter Requisitions by Month / Period"
+                >
+                  <option value="all">Period: All Time (All Records)</option>
+                  {availableMonths.map((m) => (
+                    <option key={m} value={m}>
+                      {formatMonthLabel(m)} {m === currentCalendarMonth ? '(Current Month)' : ''}
+                    </option>
+                  ))}
+                </select>
+
                 {/* Category Dropdown */}
                 <select
                   value={selectedCategory}
@@ -878,10 +904,10 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                   value={tableSearch}
                   onChange={(e) => setTableSearch(e.target.value)}
                   placeholder="Search requisitions, items, notes..."
-              className="w-full h-8 pl-8 pr-3 rounded-lg bg-surface border border-outline-variant text-body-sm focus:border-primary outline-none text-xs"
-            />
-          </div>
-        </div>
+                  className="w-full h-8 pl-8 pr-3 rounded-lg bg-surface border border-outline-variant text-body-sm focus:border-primary outline-none text-xs"
+                />
+              </div>
+            </div>
 
         {/* Expenses Ledger Table */}
         <div className="overflow-x-auto">
@@ -895,14 +921,26 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                 <p className="text-xs text-secondary">
                   {selectedStatus === 'Awaiting Approval'
                     ? 'All OpEx requisitions have been processed. No pending approvals.'
+                    : selectedMonth !== 'all'
+                    ? `No expenses found for ${formatMonthLabel(selectedMonth)}.`
                     : selectedStatus !== 'All'
                     ? `No expenses found with status "${selectedStatus}".`
                     : 'No operational office expenses recorded yet.'}
                 </p>
+                {selectedMonth !== 'all' && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMonth('all')}
+                    className="text-xs text-primary font-bold hover:underline inline-flex items-center gap-1 mt-1 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">calendar_month</span>
+                    <span>Show All Time Records (Clear Period Filter)</span>
+                  </button>
+                )}
               </div>
               <button
                 onClick={() => openModal('log-expense')}
-                className="px-4 h-9 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 flex items-center gap-1.5 cursor-pointer shadow-xs"
+                className="px-4 h-9 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 flex items-center gap-1.5 cursor-pointer shadow-xs mt-2"
               >
                 <span className="material-symbols-outlined text-[16px]">add</span>
                 <span>+ Request Office Expense</span>

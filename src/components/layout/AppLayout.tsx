@@ -33,6 +33,7 @@ import { ResetUserPasswordModal } from '../modals/ResetUserPasswordModal';
 import { CourseOutlineModal } from '../modals/CourseOutlineModal';
 import { RequestPayoutModal } from '../modals/RequestPayoutModal';
 import { BulkUploadCoursesModal } from '../modals/BulkUploadCoursesModal';
+import { StudentProfileModal } from '../modals/StudentProfileModal';
 import { LogFollowUpModal } from '../modals/LogFollowUpModal';
 import { RecordInstallmentPaymentModal } from '../modals/RecordInstallmentPaymentModal';
 import { CreateSubgroupModal } from '../modals/CreateSubgroupModal';
@@ -42,7 +43,7 @@ import { MobileBottomNav } from './MobileBottomNav';
 import { FloatingChatWidget } from '../chat/FloatingChatWidget';
 
 export const AppLayout: React.FC = () => {
-  const { activeModal, closeModal } = useCRM();
+  const { activeModal, closeModal, sessionWarningSeconds, resetActivityTimer } = useCRM();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   return (
@@ -149,6 +150,10 @@ export const AppLayout: React.FC = () => {
         isOpen={activeModal === 'edit-student'}
         onClose={closeModal}
       />
+      <StudentProfileModal
+        isOpen={activeModal === 'student-profile'}
+        onClose={closeModal}
+      />
       <EditStaffModal
         isOpen={activeModal === 'edit-staff'}
         onClose={closeModal}
@@ -226,6 +231,28 @@ export const AppLayout: React.FC = () => {
         onClose={closeModal}
       />
       <ChangePasswordModal />
+
+      {/* Inactivity Session Timeout Warning Banner */}
+      {sessionWarningSeconds !== null && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 max-w-md w-[calc(100%-2rem)] bg-amber-950/95 text-white border border-amber-500/80 rounded-2xl px-5 py-3.5 shadow-2xl backdrop-blur-md flex items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="material-symbols-outlined text-amber-400 text-2xl animate-pulse shrink-0">timer</span>
+            <div className="text-xs min-w-0">
+              <div className="font-bold text-amber-200">Session Inactivity Alert</div>
+              <div className="text-white/80 truncate">
+                Logging out in <span className="font-mono font-bold text-amber-400 text-sm">{sessionWarningSeconds}s</span> due to inactivity.
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={resetActivityTimer}
+            className="shrink-0 px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-black rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer"
+          >
+            Stay Signed In
+          </button>
+        </div>
+      )}
 
       {/* Omnipresent Floating Chat Popout Widget */}
       <FloatingChatWidget />

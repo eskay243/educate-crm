@@ -99,6 +99,20 @@ export const initialCourses: CourseProgram[] = [
     tuitionFee: 350000,
     syllabusModules: ['mod-1', 'mod-2', 'mod-3'],
     leadInstructor: 'Dr. Chidi Okeke',
+    assignedMentors: [
+      {
+        mentorId: 'user-mentor-demo',
+        mentorName: 'Dr. Chidi Okeke',
+        sharePercentage: 50,
+        role: 'Lead Engineering Faculty'
+      },
+      {
+        mentorId: 'men-abiola-adefowope',
+        mentorName: 'Abiola Adefowope',
+        sharePercentage: 50,
+        role: 'Co-Faculty Instructor'
+      }
+    ],
     enrolledCount: 1,
     status: 'Active',
     rating: 4.9,
@@ -326,6 +340,431 @@ export const initialStudents: Student[] = [
     isBankVerified: true,
     kycTier: 3,
     kycStatus: 'Verified',
+    // 360 Profile Enhancements
+    whatsapp: '+2348091112233',
+    currentStage: 'Intermediate',
+    skillsAcquired: [
+      'Prompt Engineering',
+      'Zapier Integrations',
+      'Make.com Workflows',
+      'n8n Custom Nodes',
+      'REST APIs & Webhooks',
+      'AI Chatbot Pipelines',
+      'React & Tailwind CSS',
+      'PostgreSQL & Supabase'
+    ],
+    startDate: '2026-02-01',
+    expectedCompletionDate: '2026-06-30',
+    mentorHistory: [
+      {
+        id: 'mh-001',
+        previousMentorName: 'Engr. Folake Balogun',
+        previousMentorId: 'men-demo-002',
+        newMentorName: 'Dr. Chidi Okeke',
+        newMentorId: 'user-mentor-demo',
+        reassignedAt: '2026-02-15T10:00:00Z',
+        reassignedBy: 'Admissions Officer (Bolanle)',
+        reason: 'Transferred to Advanced AI Engineering Track under Dr. Chidi'
+      }
+    ],
+    sessionAttendance: [
+      {
+        id: 'att-001',
+        sessionId: 'slot-001',
+        sessionTitle: '1.1 Deep Dive: TypeScript Generics & Strict Typing Systems',
+        date: '2026-09-12',
+        time: '10:00 AM - 12:00 PM',
+        type: 'lecture',
+        status: 'Present',
+        hoursCredited: 2,
+        mentorNotes: 'Active participation in generics architecture.'
+      },
+      {
+        id: 'att-002',
+        sessionId: 'slot-002',
+        sessionTitle: '1.2 State Architecture: TanStack Query & Optimistic Mutations',
+        date: '2026-09-19',
+        time: '10:00 AM - 12:00 PM',
+        type: 'lecture',
+        status: 'Present',
+        hoursCredited: 2,
+        mentorNotes: 'Understood cache invalidation well.'
+      },
+      {
+        id: 'att-003',
+        sessionId: 'slot-003',
+        sessionTitle: 'Special Workshop: Automating Workflows with Zapier and Make',
+        date: '2026-09-26',
+        time: '02:00 PM - 04:30 PM',
+        type: 'workshop',
+        status: 'Present',
+        hoursCredited: 2.5,
+        mentorNotes: 'Built live multi-branch automation.'
+      },
+      {
+        id: 'att-004',
+        sessionId: 'slot-004',
+        sessionTitle: 'Webinar: Deploying Production AI Chatbots at Scale',
+        date: '2026-10-03',
+        time: '04:00 PM - 06:00 PM',
+        type: 'webinar',
+        status: 'Late',
+        hoursCredited: 1.5,
+        mentorNotes: 'Arrived 20 mins late due to network glitch, completed recording review.'
+      },
+      {
+        id: 'att-005',
+        sessionId: 'slot-005',
+        sessionTitle: '1-on-1 Coaching & Capstone Review',
+        date: '2026-10-10',
+        time: '11:00 AM - 12:00 PM',
+        type: 'coaching',
+        status: 'Present',
+        hoursCredited: 1,
+        mentorNotes: 'Refined capstone architecture.'
+      }
+    ],
+    mentorGoals: [
+      {
+        id: 'goal-001',
+        title: 'Master Prompt Engineering and LLM Chains',
+        category: 'Technical',
+        targetDate: '2026-03-15',
+        status: 'Achieved',
+        mentorNotes: 'Demonstrated high fluency with multi-shot prompts and structured outputs.',
+        achievedAt: '2026-03-14T16:00:00Z'
+      },
+      {
+        id: 'goal-002',
+        title: 'Build Autonomous n8n CRM Sync Pipeline',
+        category: 'Portfolio',
+        targetDate: '2026-04-10',
+        status: 'Achieved',
+        mentorNotes: 'Pipeline handles error fallbacks and webhook retries flawlessly.',
+        achievedAt: '2026-04-08T18:30:00Z'
+      },
+      {
+        id: 'goal-003',
+        title: 'Complete Production Capstone Project',
+        category: 'Technical',
+        targetDate: '2026-05-30',
+        status: 'In Progress',
+        mentorNotes: 'Draft schema and UI prototypes completed.'
+      }
+    ],
+    projects: [
+      {
+        id: 'proj-001',
+        title: 'Automated Lead Qualification Pipeline with Make & n8n',
+        type: 'automation_pipeline',
+        description: 'End-to-end webhook workflow that ingests social leads, enriches via AI, and stores in CRM.',
+        submissionStatus: 'Reviewed',
+        deadline: '2026-03-25',
+        projectLink: 'https://lead-flow-pipeline.up.railway.app',
+        githubUrl: 'https://github.com/adebayo-adeleke/lead-flow-pipeline',
+        score: 95,
+        maxScore: 100,
+        grade: 'A+',
+        mentorFeedback: 'Superb architecture. Clean error handling nodes and webhook retry strategy.',
+        reviewedBy: 'Dr. Chidi Okeke',
+        reviewedAt: '2026-03-26T14:20:00Z'
+      },
+      {
+        id: 'proj-002',
+        title: 'AI Customer Support Chatbot with Tool Calling',
+        type: 'chatbot',
+        description: 'RAG-augmented assistant capable of looking up student invoices and office hours.',
+        submissionStatus: 'Reviewed',
+        deadline: '2026-04-20',
+        projectLink: 'https://chat-assistant-demo.vercel.app',
+        githubUrl: 'https://github.com/adebayo-adeleke/support-bot-ai',
+        score: 91,
+        maxScore: 100,
+        grade: 'A',
+        mentorFeedback: 'Prompt injection defenses were well implemented. Keep refining token usage.',
+        reviewedBy: 'Dr. Chidi Okeke',
+        reviewedAt: '2026-04-22T11:00:00Z'
+      }
+    ],
+    assessments: [
+      {
+        id: 'ass-001',
+        title: 'TypeScript & Object-Oriented Patterns Quiz',
+        type: 'quiz',
+        score: 19,
+        maxScore: 20,
+        grade: 'A',
+        date: '2026-02-28',
+        strengths: 'Solid understanding of generic type constraints and conditional types.',
+        areasToImprove: 'Review recursive type aliases.'
+      },
+      {
+        id: 'ass-002',
+        title: 'Practical API & Webhook Stress Exercise',
+        type: 'practical',
+        score: 48,
+        maxScore: 50,
+        grade: 'A+',
+        date: '2026-03-20',
+        strengths: 'Built resilient backoff strategies for rate-limited endpoints.',
+        areasToImprove: 'Add distributed tracing headers.'
+      }
+    ],
+    mentorFeedbackNotes: [
+      {
+        id: 'mfn-001',
+        mentorId: 'user-mentor-demo',
+        mentorName: 'Dr. Chidi Okeke',
+        date: '2026-03-10',
+        feedbackType: 'regular',
+        content: 'Adebayo has demonstrated steady dedication and strong analytical problem-solving in class.'
+      },
+      {
+        id: 'mfn-002',
+        mentorId: 'user-mentor-demo',
+        mentorName: 'Dr. Chidi Okeke',
+        date: '2026-03-28',
+        feedbackType: 'commendation',
+        content: 'Exceptional submission for the automated webhook workflow. Selected as cohort reference code.'
+      }
+    ],
+    studentFeedbackHistory: [
+      {
+        id: 'sf-001',
+        studentId: 'stu-demo-001',
+        mentorRating: 5,
+        mentorReview: 'Dr. Chidi explains difficult concepts with real production examples. Highly engaging!',
+        courseRating: 5,
+        courseReview: 'The hands-on automation pipelines with n8n and Make gave me practical job skills immediately.',
+        complaintsOrSuggestions: 'Could we have an extra Q&A hour on Saturday mornings for complex bugs?',
+        submittedAt: '2026-04-01T15:30:00Z'
+      }
+    ],
+    placementOutcome: {
+      status: 'Internship',
+      company: 'Interswitch Group',
+      jobRole: 'Junior Workflow & Automation Specialist',
+      placementDate: '2026-07-01',
+      salaryRange: '₦300,000 - ₦400,000 / month'
+    },
+    documents: [
+      {
+        id: 'doc-001',
+        title: 'Signed Student Handbook & Code of Conduct',
+        type: 'handbook',
+        fileUrl: 'https://codelab.institute/docs/student_handbook_2026.pdf',
+        fileName: 'Student_Handbook_Signed_STU-8492.pdf',
+        uploadedAt: '2026-02-02T10:14:00Z',
+        isVisibleToStudent: true
+      },
+      {
+        id: 'doc-002',
+        title: 'Official Admission & Enrollment Offer Letter',
+        type: 'admission_letter',
+        fileUrl: 'https://codelab.institute/docs/admission_letter_STU-8492.pdf',
+        fileName: 'Official_Admission_Letter_STU-8492.pdf',
+        uploadedAt: '2026-02-01T08:00:00Z',
+        isVisibleToStudent: true
+      },
+      {
+        id: 'doc-003',
+        title: 'Lab 2 Submission - n8n Webhook Export JSON',
+        type: 'assignment_file',
+        fileUrl: 'https://codelab.institute/docs/n8n_pipeline_export.json',
+        fileName: 'n8n_pipeline_export.json',
+        uploadedAt: '2026-03-24T19:45:00Z',
+        isVisibleToStudent: true
+      }
+    ],
+    handbookSigned: true,
+    handbookSignedAt: '2026-02-02T10:14:00Z',
+    admissionLetterUrl: 'https://codelab.institute/docs/admission_letter_STU-8492.pdf',
+    handbookDriveUrl: 'https://codelab.institute/docs/student_handbook_2026.pdf',
+    isAtRisk: false,
+  },
+  {
+    id: 'stu-demo-002',
+    studentCode: 'STU-9104',
+    name: 'Chiamaka Eze',
+    email: 'chiamaka.eze@codelab.institute',
+    phone: '+234 812 345 6789',
+    program: 'AI & Workflow Automation',
+    cohort: 'Cohort Alpha 2026',
+    mentorId: 'men-demo-002',
+    mentorName: 'Engr. Folake Balogun',
+    status: 'Active',
+    isActive: true,
+    attendanceRate: 88,
+    tuitionStatus: 'Partial',
+    enrolledDate: '2026-02-10',
+    totalFees: 380000,
+    paidAmount: 200000,
+    outstandingBalance: 180000,
+    tuitionAmount: 380000,
+    courses: [
+      {
+        id: 'course-ai-01',
+        code: 'CAI-102',
+        name: 'AI & Workflow Automation',
+        semester: 'Semester 1 2026',
+        instructor: 'Engr. Folake Balogun',
+        fee: 380000,
+        billedDate: '2026-02-10',
+      }
+    ],
+    installments: [
+      {
+        id: 'inst-001',
+        installmentNumber: 1,
+        description: 'First Tranche (Tuition Deposit)',
+        amount: 200000,
+        dueDate: '2026-02-10',
+        amountDue: 200000,
+        amountPaid: 200000,
+        status: 'Paid',
+        paidAt: '2026-02-10T11:00:00Z',
+        paymentMethod: 'Paystack Card'
+      },
+      {
+        id: 'inst-002',
+        installmentNumber: 2,
+        description: 'Second Tranche (Mid-Term Balance)',
+        amount: 180000,
+        dueDate: '2026-04-15',
+        amountDue: 180000,
+        amountPaid: 0,
+        status: 'Pending'
+      }
+    ],
+    progressPercent: 55,
+    attendedLearningHours: 28,
+    minimumRequiredHours: 40,
+    avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+    dateOfBirth: '2002-11-05',
+    gender: 'Female',
+    nationality: 'Nigerian',
+    stateOfOrigin: 'Anambra',
+    lga: 'Awka South',
+    idType: 'NIN',
+    idNumber: '38192039485',
+    isIdVerified: true,
+    residentialAddress: '22 Admiralty Way, Lekki Phase 1',
+    city: 'Lekki',
+    stateOfResidence: 'Lagos',
+    nextOfKinName: 'Emeka Eze',
+    nextOfKinRelationship: 'Brother',
+    nextOfKinPhone: '+234 803 112 2334',
+    nextOfKinAddress: '22 Admiralty Way, Lekki Phase 1, Lagos',
+    bankName: 'Access Bank',
+    bankCode: '044',
+    accountNumber: '0691234567',
+    accountName: 'Chiamaka Eze',
+    bvn: '22119988776',
+    isBankVerified: true,
+    kycTier: 3,
+    kycStatus: 'Verified',
+    whatsapp: '+2348123456789',
+    currentStage: 'Intermediate',
+    skillsAcquired: ['Zapier', 'Make.com', 'Prompt Engineering', 'Customer Service AI'],
+    startDate: '2026-02-10',
+    expectedCompletionDate: '2026-06-30',
+    mentorHistory: [],
+    sessionAttendance: [
+      {
+        id: 'att-101',
+        sessionId: 'slot-001',
+        sessionTitle: 'Orientation & Automation Architecture Fundamentals',
+        date: '2026-02-12',
+        type: 'lecture',
+        status: 'Present',
+        hoursCredited: 2,
+      },
+      {
+        id: 'att-102',
+        sessionId: 'slot-002',
+        sessionTitle: 'Zapier Webhooks & Multi-Action Zaps',
+        date: '2026-02-19',
+        type: 'lecture',
+        status: 'Present',
+        hoursCredited: 2,
+      },
+      {
+        id: 'att-103',
+        sessionId: 'slot-003',
+        sessionTitle: 'Intermediate Make.com Data Parsers & Routers',
+        date: '2026-02-26',
+        type: 'lecture',
+        status: 'Absent',
+        hoursCredited: 0,
+        mentorNotes: 'Reported family emergency, scheduled makeup session.'
+      },
+      {
+        id: 'att-104',
+        sessionId: 'slot-004',
+        sessionTitle: 'Make-up Session: Routers & Error Handling in Make',
+        date: '2026-03-02',
+        type: 'makeup',
+        status: 'Present',
+        hoursCredited: 2,
+        mentorNotes: 'Completed makeup exercise successfully.'
+      }
+    ],
+    mentorGoals: [
+      {
+        id: 'goal-101',
+        title: 'Master Make.com JSON Parsers',
+        category: 'Technical',
+        targetDate: '2026-03-20',
+        status: 'Achieved',
+        achievedAt: '2026-03-18T12:00:00Z'
+      }
+    ],
+    projects: [
+      {
+        id: 'proj-101',
+        title: 'E-commerce Auto-Order Fulfillment Zap',
+        type: 'automation_pipeline',
+        description: 'Connects Shopify store webhooks to Google Sheets and sends WhatsApp tracking notifications.',
+        submissionStatus: 'Reviewed',
+        deadline: '2026-03-15',
+        projectLink: 'https://zapier.com/shared/demo-fulfillment',
+        score: 88,
+        maxScore: 100,
+        grade: 'B+',
+        mentorFeedback: 'Very neat mapping. Recommend adding retry conditions for SMS carrier downtime.',
+        reviewedBy: 'Engr. Folake Balogun',
+        reviewedAt: '2026-03-17T09:30:00Z'
+      }
+    ],
+    assessments: [],
+    mentorFeedbackNotes: [
+      {
+        id: 'mfn-101',
+        mentorId: 'men-demo-002',
+        mentorName: 'Engr. Folake Balogun',
+        date: '2026-03-03',
+        feedbackType: 'regular',
+        content: 'Chiamaka caught up quickly after the makeup session. Excellent grasp of router filters.'
+      }
+    ],
+    studentFeedbackHistory: [],
+    placementOutcome: {
+      status: 'Seeking Placement'
+    },
+    documents: [
+      {
+        id: 'doc-101',
+        title: 'Official Admission Letter',
+        type: 'admission_letter',
+        fileUrl: 'https://codelab.institute/docs/admission_letter_STU-9104.pdf',
+        fileName: 'Admission_Letter_STU-9104.pdf',
+        uploadedAt: '2026-02-10T09:00:00Z',
+        isVisibleToStudent: true
+      }
+    ],
+    handbookSigned: true,
+    handbookSignedAt: '2026-02-11T14:00:00Z',
+    isAtRisk: false
   }
 ];
 
@@ -415,6 +854,7 @@ export const initialSettings: OrganizationSettings = {
   autoInvoiceGeneration: true,
   operatingBudget: 1500000,
   showBudgetToStaff: true,
+  sessionTimeoutMinutes: 30, // 30-minute default inactivity auto-logout
   officeLocation: {
     name: 'Lagos Headquarters Hub (Yaba, Lagos)',
     latitude: 6.5181,

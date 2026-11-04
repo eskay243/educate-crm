@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCRM, formatNaira } from '../../context/CRMContext';
+import { CourseMentorShare } from '../../types/crm';
 
 export interface EditCourseModalProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export const EditCourseModal: React.FC<EditCourseModalProps> = ({ isOpen, onClos
   const [durationWeeks, setDurationWeeks] = useState(12);
   const [tuitionFee, setTuitionFee] = useState(850000);
   const [leadInstructor, setLeadInstructor] = useState('');
+  const [assignedMentors, setAssignedMentors] = useState<CourseMentorShare[]>([]);
   const [modules, setModules] = useState<string[]>([]);
   const [newModuleText, setNewModuleText] = useState('');
   const [status, setStatus] = useState<'Active' | 'Draft'>('Active');
@@ -54,12 +56,101 @@ export const EditCourseModal: React.FC<EditCourseModalProps> = ({ isOpen, onClos
       setDescription(currentCourse.description || '');
       setDurationWeeks(currentCourse.durationWeeks || 12);
       setTuitionFee(currentCourse.tuitionFee || 850000);
-      setLeadInstructor(currentCourse.leadInstructor || (activeMentors[0]?.name || ''));
+      const lead = currentCourse.leadInstructor || (activeMentors[0]?.name || 'General Faculty');
+      setLeadInstructor(lead);
       setModules(currentCourse.syllabusModules || []);
       setStatus(currentCourse.status || 'Active');
       setCurriculumDriveUrl(currentCourse.curriculumDriveUrl || '');
+
+      if (currentCourse.assignedMentors && currentCourse.assignedMentors.length > 0) {
+        setAssignedMentors(currentCourse.assignedMentors);
+      } else {
+        const leadObj = activeMentors.find(m => m.name === lead) || activeMentors[0];
+        setAssignedMentors([
+          {
+            mentorId: leadObj?.id || 'm-1',
+            mentorName: lead,
+            sharePercentage: 100,
+            role: 'Lead Instructor'
+          }
+        ]);
+      }
     }
   }, [currentCourse, isOpen]);
+
+  const handleAddCoMentor = () => {
+    const assignedIds = new Set(assignedMentors.map(m => m.mentorId));
+    const available = activeMentors.find(m => !assignedIds.has(m.id) && m.name !== leadInstructor) || activeMentors[1] || activeMentors[0];
+    if (!available) return;
+
+    setAssignedMentors([
+      {
+        mentorId: assignedMentors[0]?.mentorId || activeMentors[0]?.id || 'm-1',
+        mentorName: assignedMentors[0]?.mentorName || leadInstructor,
+        sharePercentage: 50,
+        role: 'Lead Instructor'
+      },
+      {
+        mentorId: available.id,
+        mentorName: available.name,
+        sharePercentage: 50,
+        role: 'Co-Instructor'
+      }
+    ]);
+  };
+
+  const handleRemoveCoMentor = (index: number) => {
+    const updated = assignedMentors.filter((_, i) => i !== index);
+    if (updated.length === 1) {
+      updated[0] = { ...updated[0], sharePercentage: 100, role: 'Lead Instructor' };
+    }
+    setAssignedMentors(updated);
+  };
+
+  const handleSplitPreset = (leadPct: number, coPct: number) => {
+    if (assignedMentors.length >= 2) {
+      setAssignedMentors([
+        { ...assignedMentors[0], sharePercentage: leadPct },
+        { ...assignedMentors[1], sharePercentage: coPct }
+      ]);
+    }
+  };
+
+  const handleLeadMentorChange = (name: string) => {
+    setLeadInstructor(name);
+    const leadObj = activeMentors.find(m => m.name === name);
+    setAssignedMentors(prev => {
+      if (prev.length === 0) {
+        return [{
+          mentorId: leadObj?.id || 'm-1',
+          mentorName: name,
+          sharePercentage: 100,
+          role: 'Lead Instructor'
+        }];
+      }
+      const updated = [...prev];
+      updated[0] = {
+        ...updated[0],
+        mentorId: leadObj?.id || updated[0].mentorId,
+        mentorName: name,
+      };
+      return updated;
+    });
+  };
+
+  const handleCoMentorChange = (name: string) => {
+    const mentorObj = activeMentors.find(m => m.name === name);
+    setAssignedMentors(prev => {
+      if (prev.length < 2) return prev;
+      const updated = [...prev];
+      updated[1] = {
+        ...updated[1],
+        mentorId: mentorObj?.id || updated[1].mentorId,
+        mentorName: name,
+      };
+      return updated;
+    });
+  };
 
   if (!isOpen || !currentCourse) return null;
 
@@ -86,7 +177,8 @@ export const EditCourseModal: React.FC<EditCourseModalProps> = ({ isOpen, onClos
       durationWeeks: Number(durationWeeks),
       tuitionFee: Number(tuitionFee),
       syllabusModules: modules.length > 0 ? modules : ['Curriculum Overview'],
-      leadInstructor,
+      leadInstructor: assignedMentors[0]?.mentorName || leadInstructor,
+      assignedMentors,
       status,
       curriculumDriveUrl: curriculumDriveUrl.trim() || undefined,
     });
@@ -238,23 +330,171 @@ export const EditCourseModal: React.FC<EditCourseModalProps> = ({ isOpen, onClos
               />
             </div>
 
-            <div className="space-y-1 sm:col-span-2">
-              <label className="font-label-md text-xs text-secondary font-semibold">Lead Faculty Instructor</label>
-              <select
-                value={leadInstructor}
-                onChange={e => setLeadInstructor(e.target.value)}
-                className="w-full h-10 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
-              >
-                {activeMentors.length === 0 ? (
-                  <option value="General Faculty">General Faculty Pool (Unassigned)</option>
-                ) : (
-                  activeMentors.map(m => (
-                    <option key={m.id} value={m.name}>
-                      {m.name} ({m.department})
-                    </option>
-                  ))
+            {/* Multi-Mentor Assignment & Revenue Split Section */}
+            <div className="space-y-3 sm:col-span-2 p-3.5 rounded-xl border border-outline-variant bg-surface-container/30">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="font-label-md text-xs text-on-surface font-bold flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px] text-primary">groups</span>
+                    Faculty Mentors & Revenue Split (37% Tuition Pool)
+                  </label>
+                  <p className="font-body-sm text-[11px] text-secondary">
+                    Allocate up to 2 instructors to co-mentor this track. Revenue pool (37% of tuition: {formatNaira(Math.round(Number(tuitionFee || 0) * 0.37))}) is shared automatically.
+                  </p>
+                </div>
+                {assignedMentors.length < 2 && activeMentors.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={handleAddCoMentor}
+                    className="px-2.5 py-1 text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">person_add</span>
+                    <span>Add Co-Mentor</span>
+                  </button>
                 )}
-              </select>
+              </div>
+
+              {/* Lead Instructor */}
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                <div className={assignedMentors.length > 1 ? "sm:col-span-7" : "sm:col-span-12"}>
+                  <label className="font-label-md text-[11px] text-secondary font-semibold">Lead Faculty Instructor</label>
+                  <select
+                    value={assignedMentors[0]?.mentorName || leadInstructor}
+                    onChange={e => handleLeadMentorChange(e.target.value)}
+                    className="w-full h-9 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
+                  >
+                    {activeMentors.length === 0 ? (
+                      <option value="General Faculty">General Faculty Pool (Unassigned)</option>
+                    ) : (
+                      activeMentors.map(m => (
+                        <option key={m.id} value={m.name}>
+                          {m.name} ({m.department})
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+                {assignedMentors.length > 1 && (
+                  <div className="sm:col-span-5 flex items-center gap-2">
+                    <div className="flex-1">
+                      <label className="font-label-md text-[11px] text-secondary font-semibold">Share (%)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="99"
+                        value={assignedMentors[0]?.sharePercentage || 50}
+                        onChange={e => {
+                          const val = Math.min(99, Math.max(1, Number(e.target.value) || 50));
+                          setAssignedMentors([
+                            { ...assignedMentors[0], sharePercentage: val },
+                            { ...assignedMentors[1], sharePercentage: 100 - val }
+                          ]);
+                        }}
+                        className="w-full h-9 px-3 bg-surface border border-outline-variant rounded font-data-tabular text-sm font-bold text-primary focus:border-primary outline-none"
+                      />
+                    </div>
+                    <div className="text-right pt-4">
+                      <span className="text-xs font-data-tabular font-bold text-primary">
+                        {formatNaira(Math.round((Number(tuitionFee || 0) * 0.37) * ((assignedMentors[0]?.sharePercentage || 50) / 100)))}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Co-Instructor if added */}
+              {assignedMentors.length > 1 && (
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center pt-2 border-t border-outline-variant/60">
+                  <div className="sm:col-span-7">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <label className="font-label-md text-[11px] text-secondary font-semibold">Co-Faculty Mentor</label>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCoMentor(1)}
+                        className="text-[11px] text-rose-500 hover:text-rose-600 font-semibold flex items-center gap-0.5 cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[13px]">delete</span>
+                        <span>Remove</span>
+                      </button>
+                    </div>
+                    <select
+                      value={assignedMentors[1]?.mentorName}
+                      onChange={e => handleCoMentorChange(e.target.value)}
+                      className="w-full h-9 px-3 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
+                    >
+                      {activeMentors.map(m => (
+                        <option key={m.id} value={m.name}>
+                          {m.name} ({m.department})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="sm:col-span-5 flex items-center gap-2">
+                    <div className="flex-1">
+                      <label className="font-label-md text-[11px] text-secondary font-semibold">Share (%)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="99"
+                        value={assignedMentors[1]?.sharePercentage || 50}
+                        onChange={e => {
+                          const val = Math.min(99, Math.max(1, Number(e.target.value) || 50));
+                          setAssignedMentors([
+                            { ...assignedMentors[0], sharePercentage: 100 - val },
+                            { ...assignedMentors[1], sharePercentage: val }
+                          ]);
+                        }}
+                        className="w-full h-9 px-3 bg-surface border border-outline-variant rounded font-data-tabular text-sm font-bold text-primary focus:border-primary outline-none"
+                      />
+                    </div>
+                    <div className="text-right pt-4">
+                      <span className="text-xs font-data-tabular font-bold text-primary">
+                        {formatNaira(Math.round((Number(tuitionFee || 0) * 0.37) * ((assignedMentors[1]?.sharePercentage || 50) / 100)))}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Split Presets */}
+              {assignedMentors.length > 1 && (
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="text-[11px] text-secondary font-semibold">Presets:</span>
+                  <button
+                    type="button"
+                    onClick={() => handleSplitPreset(50, 50)}
+                    className={`px-2 py-0.5 rounded text-[11px] font-bold border transition-colors cursor-pointer ${
+                      assignedMentors[0]?.sharePercentage === 50
+                        ? 'bg-primary text-on-primary border-primary'
+                        : 'bg-surface border-outline-variant text-secondary hover:text-on-surface'
+                    }`}
+                  >
+                    50 / 50 Equal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSplitPreset(60, 40)}
+                    className={`px-2 py-0.5 rounded text-[11px] font-bold border transition-colors cursor-pointer ${
+                      assignedMentors[0]?.sharePercentage === 60
+                        ? 'bg-primary text-on-primary border-primary'
+                        : 'bg-surface border-outline-variant text-secondary hover:text-on-surface'
+                    }`}
+                  >
+                    60 / 40 Lead Heavy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSplitPreset(70, 30)}
+                    className={`px-2 py-0.5 rounded text-[11px] font-bold border transition-colors cursor-pointer ${
+                      assignedMentors[0]?.sharePercentage === 70
+                        ? 'bg-primary text-on-primary border-primary'
+                        : 'bg-surface border-outline-variant text-secondary hover:text-on-surface'
+                    }`}
+                  >
+                    70 / 30 Advisory
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="space-y-1 sm:col-span-2">

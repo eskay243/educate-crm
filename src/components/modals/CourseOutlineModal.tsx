@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useCRM } from '../../context/CRMContext';
-import { LMSLesson, CourseDurationTrack } from '../../types/crm';
+import { LMSLesson, LMSModule, CourseDurationTrack } from '../../types/crm';
 
 interface CourseOutlineModalProps {
   isOpen: boolean;
@@ -53,8 +53,19 @@ export const CourseOutlineModal: React.FC<CourseOutlineModalProps> = ({ isOpen, 
     ? activeTabCourse 
     : (filteredCourses[0] || 'Full-Stack Software Engineering');
 
-  const currentCourseObj = courses.find(c => c.title === currentCourse);
-  const currentModules = lmsModules.filter(m => m.courseTitle === currentCourse);
+  const currentCourseObj = courses.find(c => (c.title || '').trim().toLowerCase() === (currentCourse || '').trim().toLowerCase()) || courses.find(c => c.id === currentCourse);
+  const currentModules = useMemo(() => {
+    if (currentCourseObj?.syllabusModules && currentCourseObj.syllabusModules.length > 0) {
+      const explicit = currentCourseObj.syllabusModules
+        .map(id => lmsModules.find(m => m.id === id))
+        .filter((m): m is LMSModule => Boolean(m));
+      if (explicit.length > 0) return explicit;
+    }
+    const targetTitle = (currentCourse || '').trim().toLowerCase();
+    const byTitle = lmsModules.filter(m => (m.courseTitle || '').trim().toLowerCase() === targetTitle);
+    if (byTitle.length > 0) return byTitle;
+    return lmsModules.filter(m => m.courseTitle?.toLowerCase().includes('software engineering') || m.courseTitle?.toLowerCase().includes('full-stack'));
+  }, [currentCourseObj, currentCourse, lmsModules]);
 
   const toggleGuidelines = (moduleId: string) => {
     setExpandedGuidelines(prev => ({

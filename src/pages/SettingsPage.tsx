@@ -3010,6 +3010,52 @@ export const SettingsPage: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {/* Institutional Session Security & Inactivity Timeout */}
+          {canManageSettings && (
+            <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-outline-variant pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-[22px]">timer</span>
+                  </div>
+                  <div>
+                    <h3 className="font-headline-sm text-base font-bold text-on-surface">
+                      Inactivity Session Security Timeout
+                    </h3>
+                    <p className="text-xs text-secondary">
+                      Automatically terminate idle portal sessions to protect institutional student and financial records.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-on-surface">Auto-Logout Inactivity Duration</label>
+                  <p className="text-[11px] text-secondary">Users receive an interactive 60-second warning countdown before being logged out.</p>
+                </div>
+
+                <div>
+                  <select
+                    value={settings.sessionTimeoutMinutes ?? 30}
+                    onChange={e => {
+                      const val = Number(e.target.value);
+                      updateSettings({ sessionTimeoutMinutes: val });
+                      showToast('Security Policy Updated', val === 0 ? 'Session timeout disabled.' : `Inactivity auto-logout set to ${val} minutes.`, 'success');
+                    }}
+                    className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-lg font-body-md text-sm text-on-surface focus:border-primary outline-none cursor-pointer"
+                  >
+                    <option value="15">15 Minutes (High Security)</option>
+                    <option value="30">30 Minutes (Standard Recommended)</option>
+                    <option value="60">60 Minutes (1 Hour)</option>
+                    <option value="120">120 Minutes (2 Hours)</option>
+                    <option value="0">Disabled / Never (Development Only)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
         </form>
       )}
 

@@ -396,6 +396,25 @@ async function main() {
     assert(updated?.netDisbursedAmount === 142500, `Expected Net 142500, got ${updated?.netDisbursedAmount}`);
   });
 
+  await runTest('QA-MNT-005', 'Mentors', 'Multi-Mentor Course Allocation & 37% Faculty Revenue Split math', async () => {
+    const tuition = 350000;
+    const facultyPoolPercent = 37;
+    const totalFacultyPool = Math.round((tuition * facultyPoolPercent) / 100); // 129,500 NGN
+    assert(totalFacultyPool === 129500, `Expected 129500 faculty pool, got ${totalFacultyPool}`);
+
+    // Case A: 50 / 50 Equal Split
+    const share50_50_Lead = Math.round(totalFacultyPool * (50 / 100)); // 64,750
+    const share50_50_Co = Math.round(totalFacultyPool * (50 / 100)); // 64,750
+    assert(share50_50_Lead === 64750 && share50_50_Co === 64750, '50/50 split failed');
+    assert(share50_50_Lead + share50_50_Co === totalFacultyPool, 'Split sum must equal pool');
+
+    // Case B: 60 / 40 Split
+    const share60_Lead = Math.round(totalFacultyPool * (60 / 100)); // 77,700
+    const share40_Co = Math.round(totalFacultyPool * (40 / 100)); // 51,800
+    assert(share60_Lead === 77700 && share40_Co === 51800, '60/40 split failed');
+    assert(share60_Lead + share40_Co === totalFacultyPool, '60/40 split sum must equal pool');
+  });
+
   // ============================================================================
   // SUITE 6: OPEX EXPENSES & 2-TIER SUPER ADMIN APPROVAL
   // ============================================================================

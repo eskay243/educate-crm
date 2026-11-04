@@ -105,7 +105,14 @@ export const StudentDashboardPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              to="/student/profile"
+              className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold backdrop-blur-md border border-white/30 active:scale-95 transition-all text-sm shadow-xs"
+            >
+              <span className="material-symbols-outlined text-lg">badge</span>
+              <span>My 360° Profile</span>
+            </Link>
             <Link
               to="/student/courses"
               className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white text-primary font-bold shadow-md hover:bg-white/90 active:scale-95 transition-all text-sm"

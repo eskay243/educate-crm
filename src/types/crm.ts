@@ -194,8 +194,122 @@ export interface Lead {
   followUpHistory?: LeadFollowUpActivity[];
 }
 
-export type StudentStatus = 'Active' | 'Pending' | 'Completed' | 'Paused' | 'Deactivated';
+export type StudentStatus = 'Active' | 'Paused' | 'Completed' | 'Dropped' | 'Pending' | 'Deactivated';
 export type TuitionStatus = 'Paid' | 'Partial' | 'Overdue';
+
+// Mentor Reassignment Audit Record
+export interface MentorChangeRecord {
+  id: string;
+  previousMentorId?: string;
+  previousMentorName: string;
+  newMentorId: string;
+  newMentorName: string;
+  reassignedAt: string;
+  reassignedBy: string;
+  reason?: string;
+}
+
+// Session-by-Session Attendance
+export interface StudentSessionAttendance {
+  id: string;
+  sessionId: string;
+  sessionTitle: string;
+  date: string;
+  time?: string;
+  type: 'lecture' | 'workshop' | 'webinar' | 'coaching' | 'makeup';
+  status: 'Present' | 'Absent' | 'Late' | 'Excused';
+  hoursCredited: number;
+  mentorNotes?: string;
+  makeupSessionId?: string;
+}
+
+// Goals set with Mentor
+export interface StudentGoal {
+  id: string;
+  title: string;
+  category?: 'Technical' | 'Soft Skills' | 'Portfolio' | 'Career';
+  targetDate?: string;
+  status: 'In Progress' | 'Achieved' | 'Deferred';
+  mentorNotes?: string;
+  achievedAt?: string;
+}
+
+// Hands-on Projects
+export interface StudentProject {
+  id: string;
+  title: string;
+  type: 'hands_on' | 'mini_project' | 'capstone' | 'automation_pipeline' | 'chatbot';
+  description?: string;
+  submissionStatus: 'Pending' | 'Submitted' | 'Reviewed' | 'Needs Revision';
+  deadline?: string;
+  projectLink?: string;
+  githubUrl?: string;
+  fileUrl?: string;
+  score?: number;
+  maxScore?: number;
+  grade?: string;
+  mentorFeedback?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+}
+
+// Assessments & Quizzes
+export interface StudentAssessment {
+  id: string;
+  title: string;
+  type: 'quiz' | 'test' | 'assignment' | 'practical';
+  score: number;
+  maxScore: number;
+  grade: string;
+  date: string;
+  strengths?: string;
+  areasToImprove?: string;
+  evaluatedBy?: string;
+}
+
+// Mentor Feedback, Warnings & Commendations
+export interface MentorFeedbackEntry {
+  id: string;
+  mentorId: string;
+  mentorName: string;
+  date: string;
+  feedbackType: 'regular' | 'warning' | 'commendation';
+  content: string;
+  isAtRiskWarning?: boolean;
+}
+
+// Student Voice & Ratings
+export interface StudentFeedbackEntry {
+  id: string;
+  studentId: string;
+  mentorRating: number; // 1 - 5
+  mentorReview?: string;
+  courseRating: number; // 1 - 5
+  courseReview?: string;
+  complaintsOrSuggestions?: string;
+  submittedAt: string;
+}
+
+// Career Placement Outcome
+export interface PlacementOutcome {
+  status: 'Employed' | 'Internship' | 'Freelancing' | 'Seeking Placement' | 'Not Seeking';
+  company?: string;
+  jobRole?: string;
+  placementDate?: string;
+  salaryRange?: string;
+}
+
+// Student Document Repository
+export interface StudentDocumentItem {
+  id: string;
+  title: string;
+  type: 'handbook' | 'admission_letter' | 'assignment_file' | 'project_file' | 'other';
+  fileUrl: string;
+  fileName: string;
+  uploadedAt: string;
+  uploadedBy?: string;
+  isVisibleToStudent: boolean;
+}
 
 export interface EnrolledCourse {
   id: string;
@@ -213,6 +327,11 @@ export interface PaymentInstallment {
   dueDate: string;
   amount: number;
   status: 'Paid' | 'Scheduled' | 'Pending';
+  installmentNumber?: number;
+  amountDue?: number;
+  amountPaid?: number;
+  paidAt?: string;
+  paymentMethod?: string;
 }
 
 export interface LMSLesson {
@@ -323,6 +442,23 @@ export interface Student extends NigerianBiodataKYC {
   curriculumDriveUrl?: string;
   handbookDriveUrl?: string;
   admissionLetterUrl?: string;
+  whatsapp?: string;
+  currentStage?: 'Beginner' | 'Intermediate' | 'Advanced';
+  skillsAcquired?: string[];
+  startDate?: string;
+  expectedCompletionDate?: string;
+  mentorHistory?: MentorChangeRecord[];
+  sessionAttendance?: StudentSessionAttendance[];
+  mentorGoals?: StudentGoal[];
+  projects?: StudentProject[];
+  assessments?: StudentAssessment[];
+  mentorFeedbackNotes?: MentorFeedbackEntry[];
+  studentFeedbackHistory?: StudentFeedbackEntry[];
+  placementOutcome?: PlacementOutcome;
+  documents?: StudentDocumentItem[];
+  handbookSigned?: boolean;
+  handbookSignedAt?: string;
+  isAtRisk?: boolean;
 }
 
 export type MentorStatus = 'Active' | 'Available' | 'On Leave' | 'Deactivated';
@@ -516,6 +652,13 @@ export interface ExecutiveKPIs {
   operatingMargin: number;
 }
 
+export interface CourseMentorShare {
+  mentorId: string;
+  mentorName: string;
+  role?: 'Lead Mentor' | 'Co-Mentor' | 'Assistant Mentor' | string;
+  sharePercentage: number; // Percentage share of the 37% faculty revenue pool (e.g. 50 = 50% split)
+}
+
 export interface CourseProgram {
   id: string;
   code: string;
@@ -528,6 +671,7 @@ export interface CourseProgram {
   tuitionFee: number;
   syllabusModules: string[];
   leadInstructor: string;
+  assignedMentors?: CourseMentorShare[];
   enrolledCount: number;
   status: 'Active' | 'Draft';
   rating: number;
@@ -724,6 +868,7 @@ export interface OrganizationSettings {
   expenseWallet?: ExpenseAndBudgetWallet;
   studentHandbookUrl?: string; // Google Drive link to universal student handbook
   defaultCurriculumUrl?: string; // Fallback Google Drive link for course curriculum
+  sessionTimeoutMinutes?: number; // Inactivity timeout in minutes (default 30, 0 = disabled)
 }
 
 export interface VirtualAccountDetails {
@@ -897,6 +1042,7 @@ export type ModalType =
   | 'create-subgroup'
   | 'forward-message'
   | 'daily-standup'
+  | 'student-profile'
   | null;
 
 export interface DailyStandupTask {

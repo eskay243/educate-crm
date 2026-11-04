@@ -454,12 +454,45 @@ export const CoursesCohortsPage: React.FC = () => {
                         {course.description}
                       </p>
 
+                      {/* Faculty Mentors & Revenue Allocation */}
+                      <div className="mb-3.5 p-2 rounded-lg bg-surface-container/50 border border-outline-variant/60">
+                        <div className="flex items-center justify-between text-[11px] mb-1.5 text-secondary font-semibold">
+                          <span className="flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[13px] text-primary">school</span>
+                            Faculty Mentorship
+                          </span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-bold">
+                            37% Pool Split
+                          </span>
+                        </div>
+                        {course.assignedMentors && course.assignedMentors.length > 1 ? (
+                          <div className="flex flex-wrap gap-1.5 items-center">
+                            {course.assignedMentors.map((m, idx) => (
+                              <span 
+                                key={idx}
+                                className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-surface border border-outline-variant text-on-surface font-medium"
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                <span>{m.mentorName}</span>
+                                <span className="text-[10px] font-bold text-primary">({m.sharePercentage}%)</span>
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-xs font-medium text-on-surface flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            <span>{course.assignedMentors?.[0]?.mentorName || course.leadInstructor || 'General Faculty'}</span>
+                            <span className="text-[10px] text-secondary font-medium">(100% share)</span>
+                          </div>
+                        )}
+                      </div>
+
                       {/* Syllabus Modules */}
                       <div className="space-y-1.5 mb-4">
                         <div className="flex justify-between items-center">
                           <p className="font-label-md text-xs text-secondary font-semibold uppercase tracking-wider">Curriculum Modules</p>
                           <Link
-                            to="/mentors/course-outlines"
+                            to={`/mentors/course-outlines?courseId=${encodeURIComponent(course.id)}&courseTitle=${encodeURIComponent(course.title)}`}
                             className="text-[11px] text-primary font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
                           >
                             <span>Open Outline</span>
@@ -1005,7 +1038,7 @@ export const CoursesCohortsPage: React.FC = () => {
 
               <div className="flex items-center gap-2 self-stretch md:self-auto shrink-0">
                 <Link
-                  to="/mentors/course-outlines"
+                  to="/mentors/course-outlines?courseTitle=Financial%20Trading%20%26%20Investment%20Analysis"
                   className="px-3.5 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all flex items-center gap-1.5 border border-white/20"
                 >
                   <span className="material-symbols-outlined text-[16px]">play_circle</span>
@@ -1234,7 +1267,7 @@ export const CoursesCohortsPage: React.FC = () => {
                     <div className="pt-2.5 border-t border-outline-variant/60 flex justify-between items-center text-xs">
                       <span className="text-[10px] text-secondary font-medium">Gate: <strong className="text-on-surface">{item.checkpoint}</strong></span>
                       <Link
-                        to="/mentors/course-outlines"
+                        to="/mentors/course-outlines?courseTitle=Financial%20Trading%20%26%20Investment%20Analysis"
                         className="text-[11px] text-primary font-bold hover:underline flex items-center gap-0.5"
                       >
                         <span>Inspect</span>

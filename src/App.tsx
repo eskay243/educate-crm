@@ -29,6 +29,7 @@ const StudentDashboardPage = lazy(() => import('./pages/student/StudentDashboard
 const StudentCoursesPage = lazy(() => import('./pages/student/StudentCoursesPage').then(m => ({ default: m.StudentCoursesPage })));
 const StudentMentorPage = lazy(() => import('./pages/student/StudentMentorPage').then(m => ({ default: m.StudentMentorPage })));
 const StudentBillingPage = lazy(() => import('./pages/student/StudentBillingPage').then(m => ({ default: m.StudentBillingPage })));
+const StudentProfilePage = lazy(() => import('./pages/student/StudentProfilePage').then(m => ({ default: m.StudentProfilePage })));
 const TicketsPage = lazy(() => import('./pages/TicketsPage').then(m => ({ default: m.TicketsPage })));
 const ChatPage = lazy(() => import('./pages/ChatPage').then(m => ({ default: m.ChatPage })));
 const OperationalDashboardPage = lazy(() => import('./pages/OperationalDashboardPage').then(m => ({ default: m.OperationalDashboardPage })));
@@ -76,8 +77,8 @@ const HomeRoute: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <PWAProvider>
-      <CRMProvider>
-        <BrowserRouter>
+      <BrowserRouter>
+        <CRMProvider>
           <Suspense fallback={<PageLoadingFallback />}>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
@@ -234,6 +235,14 @@ export const App: React.FC = () => {
                     </ProtectedRoute>
                   }
                 />
+                <Route
+                  path="student/profile"
+                  element={
+                    <ProtectedRoute allowedRoles={['student', 'super_admin']}>
+                      <StudentProfilePage />
+                    </ProtectedRoute>
+                  }
+                />
 
                 <Route
                   path="tickets"
@@ -257,11 +266,11 @@ export const App: React.FC = () => {
               </Route>
             </Routes>
           </Suspense>
-        </BrowserRouter>
-        <ToastContainer />
-        <PWAInstallPrompt />
-        <OfflineIndicator />
-      </CRMProvider>
+          <ToastContainer />
+          <PWAInstallPrompt />
+          <OfflineIndicator />
+        </CRMProvider>
+      </BrowserRouter>
     </PWAProvider>
   );
 };

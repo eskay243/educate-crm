@@ -23,6 +23,7 @@ export const LeadManagementPage: React.FC = () => {
   // Loss Reason dialog
   const [lossModalLeadId, setLossModalLeadId] = useState<string | null>(null);
   const [lossReason, setLossReason] = useState('Price / Budget Constraint');
+  const [selectedSource, setSelectedSource] = useState<string>('All');
 
   const effectiveSearch = globalSearch || tableSearch;
 
@@ -41,15 +42,16 @@ export const LeadManagementPage: React.FC = () => {
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
       const matchesTab = activeTab === 'All' || lead.status === activeTab;
+      const matchesSource = selectedSource === 'All' || lead.source.toLowerCase() === selectedSource.toLowerCase();
       const matchesSearch = 
         lead.name.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
         lead.email.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
         lead.company?.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
         lead.programInterest.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
         lead.source.toLowerCase().includes(effectiveSearch.toLowerCase());
-      return matchesTab && matchesSearch;
+      return matchesTab && matchesSearch && matchesSource;
     });
-  }, [leads, activeTab, effectiveSearch]);
+  }, [leads, activeTab, selectedSource, effectiveSearch]);
 
   const toggleSelectAll = () => {
     if (selectedLeads.length === filteredLeads.length) {
@@ -160,6 +162,27 @@ export const LeadManagementPage: React.FC = () => {
             <span className="material-symbols-outlined text-[18px]">contact_phone</span>
             <span>Contacts &amp; Follow-ups</span>
           </Link>
+
+          <div className="flex items-center gap-1.5 h-10 px-2.5 rounded-lg border border-outline-variant bg-surface text-secondary">
+            <span className="material-symbols-outlined text-[17px] text-primary">campaign</span>
+            <select
+              value={selectedSource}
+              onChange={e => setSelectedSource(e.target.value)}
+              className="bg-transparent text-xs font-semibold text-on-surface outline-none cursor-pointer"
+              title="Filter leads by marketing attribution source"
+            >
+              <option value="All">All Sources</option>
+              <option value="IG campaign">IG campaign</option>
+              <option value="FB advert">FB advert</option>
+              <option value="Tiktok Advert">Tiktok Advert</option>
+              <option value="Organic Search">Organic Search</option>
+              <option value="LinkedIn Campaign">LinkedIn Campaign</option>
+              <option value="Google Ads">Google Ads</option>
+              <option value="Webinar Referral">Webinar Referral</option>
+              <option value="Community Discord">Community Discord</option>
+              <option value="Direct Referral">Direct Referral</option>
+            </select>
+          </div>
 
           <button 
             onClick={() => setActiveTab(activeTab === 'All' ? 'Qualified' : 'All')}

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
   Lead, 
   LeadFollowUpActivity, 
@@ -42,7 +42,12 @@ import {
   RecordInstallmentPayload,
   DailyStandupReport,
   DailyStandupTask,
-  WeeklyScrumPerformance
+  WeeklyScrumPerformance,
+  MentorChangeRecord,
+  StudentSessionAttendance,
+  MentorFeedbackEntry,
+  StudentFeedbackEntry,
+  StudentDocumentItem
 } from '../types/crm';
 import { ChatMessage } from '../types/chat';
 import { 
@@ -204,6 +209,8 @@ interface CRMContextType {
   // Auth actions
   login: (role: UserRole, email?: string, password?: string) => Promise<{ success: boolean; message?: string; user?: AuthUser }>;
   logout: () => void;
+  sessionWarningSeconds: number | null;
+  resetActivityTimer: () => void;
   hasPermission: (requiredRole: UserRole | UserRole[], moduleName?: keyof EnabledModules | string) => boolean;
   hasModulePermission: (moduleName: string) => boolean;
   toggleRoleModule: (roleId: string, moduleName: string) => Promise<void>;
@@ -309,7 +316,12 @@ interface CRMContextType {
   enrollStudent: (student: Omit<Student, 'id' | 'enrolledDate' | 'studentCode'>) => Student;
   updateStudent: (id: string, updatedData: Partial<Student>) => void;
   updateStudentStatus: (id: string, status: StudentStatus) => void;
-  assignMentorToStudent: (studentId: string, mentorId: string) => void;
+  assignMentorToStudent: (studentId: string, mentorId: string, reason?: string) => void;
+  updateStudentAttendanceRecord: (studentId: string, record: StudentSessionAttendance) => Promise<void>;
+  submitStudentFeedback: (feedback: Omit<StudentFeedbackEntry, 'id' | 'submittedAt'>) => Promise<void>;
+  addMentorFeedbackNote: (studentId: string, note: Omit<MentorFeedbackEntry, 'id' | 'date'>) => Promise<void>;
+  toggleStudentAtRisk: (studentId: string, isAtRisk: boolean) => Promise<void>;
+  uploadStudentDocument: (studentId: string, doc: Omit<StudentDocumentItem, 'id' | 'uploadedAt'>) => Promise<void>;
   
   recruitMentor: (mentor: Omit<Mentor, 'id' | 'joinedDate' | 'mentorCode' | 'sessionsCount'>) => void;
   updateMentorStatus: (id: string, status: Mentor['status']) => void;
@@ -1231,6 +1243,66 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  // Inactivity Session Security Timeout
+  const lastActivityTimeRef = useRef<number>(Date.now());
+  const [sessionWarningSeconds, setSessionWarningSeconds] = useState<number | null>(null);
+
+  const resetActivityTimer = useCallback(() => {
+    lastActivityTimeRef.current = Date.now();
+    setSessionWarningSeconds(null);
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser) {
+      setSessionWarningSeconds(null);
+      return;
+    }
+
+    const timeoutMinutes = settings.sessionTimeoutMinutes ?? 30;
+    if (timeoutMinutes <= 0) {
+      setSessionWarningSeconds(null);
+      return;
+    }
+
+    const timeoutMs = timeoutMinutes * 60 * 1000;
+    const warningMs = Math.max(0, timeoutMs - 60000); // 60s warning threshold
+
+    let lastThrottleTime = 0;
+    const handleUserActivity = () => {
+      const now = Date.now();
+      if (now - lastThrottleTime > 1500) {
+        lastThrottleTime = now;
+        lastActivityTimeRef.current = now;
+        setSessionWarningSeconds(prev => (prev !== null ? null : prev));
+      }
+    };
+
+    const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
+    events.forEach(evt => window.addEventListener(evt, handleUserActivity, { passive: true }));
+
+    const intervalId = setInterval(() => {
+      const now = Date.now();
+      const idleTime = now - lastActivityTimeRef.current;
+
+      if (idleTime >= timeoutMs) {
+        clearInterval(intervalId);
+        setSessionWarningSeconds(null);
+        logout();
+        showToast('Session Expired', `You were logged out after ${timeoutMinutes} minutes of inactivity for your security.`, 'warning');
+      } else if (idleTime >= warningMs) {
+        const remainingSec = Math.max(1, Math.ceil((timeoutMs - idleTime) / 1000));
+        setSessionWarningSeconds(remainingSec);
+      } else {
+        setSessionWarningSeconds(null);
+      }
+    }, 1000);
+
+    return () => {
+      clearInterval(intervalId);
+      events.forEach(evt => window.removeEventListener(evt, handleUserActivity));
+    };
+  }, [currentUser, settings.sessionTimeoutMinutes, logout, showToast]);
+
   const updateUserProfile = async (data: Partial<AuthUser>): Promise<boolean> => {
     if (!currentUser) return false;
 
@@ -2141,7 +2213,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (typeof window !== 'undefined' && window.location.search.includes('action=')) {
       const url = new URL(window.location.href);
       url.searchParams.delete('action');
-      window.history.replaceState({}, '', url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : ''));
+      window.history.replaceState(window.history.state, '', url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : ''));
     }
   };
 
@@ -2504,8 +2576,33 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }).catch(err => console.error('Error sending student welcome email:', err));
     }
 
-    // If student has an assigned mentor, calculate 37% enrollment commission share for mentor
-    if (newStudent.mentorName || (studentData as any).mentorId) {
+    // If course has multi-mentor split, allocate 37% faculty pool proportionally across all assigned mentors
+    const enrolledCourse = courses.find(c => c.title === newStudent.program || c.id === (studentData as any).courseId);
+    if (enrolledCourse?.assignedMentors && enrolledCourse.assignedMentors.length > 1) {
+      const totalPool = Math.round(((newStudent.totalFees || 0) * 37) / 100);
+      enrolledCourse.assignedMentors.forEach(share => {
+        const shareAmount = Math.round(totalPool * (share.sharePercentage / 100));
+        setMentors(prev => prev.map(m => {
+          if (m.id !== share.mentorId && m.name !== share.mentorName) return m;
+          return {
+            ...m,
+            activeMentees: (m.activeMentees || 0) + 1,
+            assignedEnrollmentsCount: (m.assignedEnrollmentsCount || 0) + 1,
+            pendingPayout: (m.pendingPayout || 0) + shareAmount,
+            totalEarned: (m.totalEarned || 0) + shareAmount,
+          };
+        }));
+        const target = mentors.find(m => m.id === share.mentorId || m.name === share.mentorName);
+        if (target) {
+          apiService.updateMentor(target.id, {
+            activeMentees: (target.activeMentees || 0) + 1,
+            assignedEnrollmentsCount: (target.assignedEnrollmentsCount || 0) + 1,
+            pendingPayout: (target.pendingPayout || 0) + shareAmount,
+            totalEarned: (target.totalEarned || 0) + shareAmount,
+          });
+        }
+      });
+    } else if (newStudent.mentorName || (studentData as any).mentorId) {
       const assignedMentor = mentors.find(m => 
         (studentData as any).mentorId ? m.id === (studentData as any).mentorId : m.name === newStudent.mentorName
       );
@@ -2560,20 +2657,39 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     apiService.updateStudent(id, { status });
   };
 
-  const assignMentorToStudent = (studentId: string, mentorId: string) => {
+  const assignMentorToStudent = (studentId: string, mentorId: string, reason?: string) => {
     const mentor = mentors.find(m => m.id === mentorId);
     if (!mentor) return;
 
     let studentName = 'Student';
     let studentFees = 0;
+    let newHistory: MentorChangeRecord[] = [];
+
     setStudents(prev => prev.map(s => {
       if (s.id === studentId) {
         studentName = s.name;
         studentFees = s.totalFees || 0;
+        
+        const history = s.mentorHistory ? [...s.mentorHistory] : [];
+        if (s.mentorName && s.mentorName !== mentor.name) {
+          history.unshift({
+            id: `mh-${Date.now()}`,
+            previousMentorId: s.mentorId,
+            previousMentorName: s.mentorName,
+            newMentorId: mentor.id,
+            newMentorName: mentor.name,
+            reassignedAt: new Date().toISOString(),
+            reassignedBy: currentUser?.name || 'Administrator',
+            reason: reason || 'Academic reassignment',
+          });
+        }
+        newHistory = history;
+
         return {
           ...s,
           mentorName: mentor.name,
           mentorId: mentor.id,
+          mentorHistory: history,
         };
       }
       return s;
@@ -2596,7 +2712,11 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return m;
     }));
 
-    apiService.updateStudent(studentId, { mentorName: mentor.name, mentorId: mentor.id });
+    apiService.updateStudent(studentId, { 
+      mentorName: mentor.name, 
+      mentorId: mentor.id,
+      mentorHistory: newHistory 
+    });
     apiService.updateMentor(mentorId, { 
       activeMentees: (mentor.activeMentees || 0) + 1,
       assignedEnrollmentsCount: (mentor.assignedEnrollmentsCount || 0) + 1,
@@ -2616,8 +2736,145 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       title: 'Faculty Mentor Assigned',
       description: `${studentName} assigned to ${mentor.name} (${mentor.department}) with 37% tuition share credited.`,
       type: 'mentor',
-      user: 'Super Admin',
+      user: currentUser?.name || 'Super Admin',
     });
+  };
+
+  // Student 360 Attendance, Feedback, and Dossier Handlers
+  const updateStudentAttendanceRecord = async (studentId: string, record: StudentSessionAttendance) => {
+    let studentName = '';
+    let newAttendanceRate = 100;
+    let newTotalHours = 0;
+
+    setStudents(prev => prev.map(s => {
+      if (s.id !== studentId) return s;
+      studentName = s.name;
+      const existingAttendance = s.sessionAttendance ? [...s.sessionAttendance] : [];
+      const index = existingAttendance.findIndex(r => r.id === record.id || r.sessionId === record.sessionId);
+      
+      if (index >= 0) {
+        existingAttendance[index] = record;
+      } else {
+        existingAttendance.unshift(record);
+      }
+
+      // Recalculate attendance rate (Percentage present)
+      const validRecords = existingAttendance.filter(r => r.status !== 'Excused');
+      const presentCount = validRecords.filter(r => r.status === 'Present').length;
+      newAttendanceRate = validRecords.length > 0 ? Math.round((presentCount / validRecords.length) * 100) : 100;
+
+      // Recalculate total hours credited
+      newTotalHours = existingAttendance.reduce((acc, r) => acc + (r.hoursCredited || 0), 0);
+
+      const updated = {
+        ...s,
+        sessionAttendance: existingAttendance,
+        attendanceRate: newAttendanceRate,
+        attendedLearningHours: Math.max(s.attendedLearningHours || 0, newTotalHours),
+      };
+
+      if (isBackendConnected) {
+        apiService.updateStudent(studentId, {
+          sessionAttendance: existingAttendance,
+          attendanceRate: newAttendanceRate,
+          attendedLearningHours: updated.attendedLearningHours
+        }).catch(err => console.warn('Attendance backend sync error:', err));
+      }
+
+      return updated;
+    }));
+
+    showToast('Attendance Logged', `Marked ${record.status} for ${studentName} (${newAttendanceRate}% overall attendance).`, 'success');
+  };
+
+  const submitStudentFeedback = async (feedbackData: Omit<StudentFeedbackEntry, 'id' | 'submittedAt'>) => {
+    const newEntry: StudentFeedbackEntry = {
+      ...feedbackData,
+      id: `sf-${Date.now()}`,
+      submittedAt: new Date().toISOString(),
+    };
+
+    setStudents(prev => prev.map(s => {
+      if (s.id !== feedbackData.studentId) return s;
+      const updatedList = [newEntry, ...(s.studentFeedbackHistory || [])];
+      
+      if (isBackendConnected) {
+        apiService.updateStudent(s.id, { studentFeedbackHistory: updatedList }).catch(e => console.warn(e));
+      }
+
+      return {
+        ...s,
+        studentFeedbackHistory: updatedList,
+      };
+    }));
+
+    showToast('Feedback Submitted', 'Thank you! Your feedback for mentor & course has been recorded.', 'success');
+  };
+
+  const addMentorFeedbackNote = async (studentId: string, noteData: Omit<MentorFeedbackEntry, 'id' | 'date'>) => {
+    const newEntry: MentorFeedbackEntry = {
+      ...noteData,
+      id: `mfn-${Date.now()}`,
+      date: new Date().toISOString().split('T')[0],
+    };
+
+    setStudents(prev => prev.map(s => {
+      if (s.id !== studentId) return s;
+      const updatedNotes = [newEntry, ...(s.mentorFeedbackNotes || [])];
+      const isAtRisk = noteData.isAtRiskWarning ? true : s.isAtRisk;
+
+      if (isBackendConnected) {
+        apiService.updateStudent(studentId, { 
+          mentorFeedbackNotes: updatedNotes,
+          isAtRisk
+        }).catch(e => console.warn(e));
+      }
+
+      return {
+        ...s,
+        mentorFeedbackNotes: updatedNotes,
+        isAtRisk
+      };
+    }));
+
+    showToast('Mentor Note Logged', `Note recorded as ${noteData.feedbackType.toUpperCase()}.`, 'success');
+  };
+
+  const toggleStudentAtRisk = async (studentId: string, isAtRisk: boolean) => {
+    setStudents(prev => prev.map(s => {
+      if (s.id !== studentId) return s;
+      if (isBackendConnected) {
+        apiService.updateStudent(studentId, { isAtRisk }).catch(e => console.warn(e));
+      }
+      return { ...s, isAtRisk };
+    }));
+
+    showToast('At-Risk Status Updated', isAtRisk ? 'Student flagged as At-Risk for welfare review.' : 'Student cleared from At-Risk list.', 'info');
+  };
+
+  const uploadStudentDocument = async (studentId: string, docData: Omit<StudentDocumentItem, 'id' | 'uploadedAt'>) => {
+    const newDoc: StudentDocumentItem = {
+      ...docData,
+      id: `doc-${Date.now()}`,
+      uploadedAt: new Date().toISOString(),
+      uploadedBy: currentUser?.name || 'Administrator',
+    };
+
+    setStudents(prev => prev.map(s => {
+      if (s.id !== studentId) return s;
+      const updatedDocs = [newDoc, ...(s.documents || [])];
+
+      if (isBackendConnected) {
+        apiService.updateStudent(studentId, { documents: updatedDocs }).catch(e => console.warn(e));
+      }
+
+      return {
+        ...s,
+        documents: updatedDocs,
+      };
+    }));
+
+    showToast('Document Saved', `${newDoc.title} is now visible to the student in their Document Vault.`, 'success');
   };
 
   const sendPaymentReminder = (studentId: string) => {
@@ -3693,66 +3950,68 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return [newInv, ...prev];
         });
 
-        const commission = Math.round(res.amountNaira * 0.37);
-        if (student.mentorId || student.mentorName) {
+        const totalPool = Math.round(res.amountNaira * 0.37);
+        const enrolledCourse = courses.find(c => c.title === student.program || c.id === (student as any).courseId);
+
+        if (enrolledCourse?.assignedMentors && enrolledCourse.assignedMentors.length > 1) {
+          // Multi-mentor revenue split across co-instructors
+          enrolledCourse.assignedMentors.forEach(share => {
+            const shareAmount = Math.round(totalPool * (share.sharePercentage / 100));
+            setMentors(prev => prev.map(m => {
+              if (m.id !== share.mentorId && m.name !== share.mentorName) return m;
+              return {
+                ...m,
+                pendingPayout: (m.pendingPayout || 0) + shareAmount,
+                totalEarned: (m.totalEarned || 0) + shareAmount,
+              };
+            }));
+
+            const targetMentor = mentors.find(m => m.id === share.mentorId || m.name === share.mentorName);
+            if (targetMentor?.email && shareAmount > 0) {
+              emailService.sendEmail({
+                to: targetMentor.email,
+                recipientName: targetMentor.name,
+                subject: `🎉 New Commission Credited: ${share.sharePercentage}% Faculty Share (₦${shareAmount.toLocaleString()})`,
+                type: 'mentor_commission_earned',
+                data: {
+                  studentName: student.name,
+                  program: student.program,
+                  tuitionPaid: res.amountNaira,
+                  commissionAmount: shareAmount,
+                  newPendingPayout: (targetMentor.pendingPayout || 0) + shareAmount,
+                  portalUrl: `${APP_BASE_URL}/mentors`,
+                }
+              }).catch(err => console.error('Error sending mentor commission alert email:', err));
+            }
+          });
+        } else if (student.mentorId || student.mentorName) {
+          // Single mentor default
           setMentors(prev => prev.map(m => {
             if (m.id !== student.mentorId && m.name !== student.mentorName) return m;
             return {
               ...m,
-              pendingPayout: (m.pendingPayout || 0) + commission,
-              totalEarned: (m.totalEarned || 0) + commission,
+              pendingPayout: (m.pendingPayout || 0) + totalPool,
+              totalEarned: (m.totalEarned || 0) + totalPool,
             };
           }));
-        }
 
-        showToast(
-          'Payment Verified & Recorded!',
-          `₦${res.amountNaira.toLocaleString()} paid via Paystack (Ref: ${res.reference}). 37% mentor commission accrued.`,
-          'success'
-        );
-
-        logActivity({
-          title: `Tuition Payment (₦${res.amountNaira.toLocaleString()})`,
-          description: `Paystack payment verified for ${student.name}. Reference: ${res.reference}`,
-          type: 'finance',
-          user: student.name,
-        });
-
-        // 1. Send Electronic Receipt to Student
-        if (student.email) {
-          emailService.sendEmail({
-            to: student.email,
-            recipientName: student.name,
-            subject: `💳 Payment Receipt & Confirmation: ${student.program || 'Tuition'} (₦${res.amountNaira.toLocaleString()})`,
-            type: 'invoice_receipt',
-            data: {
-              invoiceNumber: options.invoiceId || `INV-PAY-${Date.now().toString().slice(-4)}`,
-              program: student.program,
-              amount: res.amountNaira,
-              status: 'Paid',
-              paymentRef: res.reference,
-              invoiceNote: 'Verified electronic tuition settlement via Paystack payment gateway.',
-            }
-          }).catch(err => console.error('Error sending student tuition receipt email:', err));
-        }
-
-        // 2. Send 37% Commission Accrual Alert to Assigned Mentor
-        const assignedMentor = mentors.find(m => m.id === student.mentorId || m.name === student.mentorName);
-        if (assignedMentor?.email && commission > 0) {
-          emailService.sendEmail({
-            to: assignedMentor.email,
-            recipientName: assignedMentor.name,
-            subject: `🎉 New Commission Credited: 37% Enrollment Revenue Share (₦${commission.toLocaleString()})`,
-            type: 'mentor_commission_earned',
-            data: {
-              studentName: student.name,
-              program: student.program,
-              tuitionPaid: res.amountNaira,
-              commissionAmount: commission,
-              newPendingPayout: (assignedMentor.pendingPayout || 0) + commission,
-              portalUrl: `${APP_BASE_URL}/mentors`,
-            }
-          }).catch(err => console.error('Error sending mentor commission alert email:', err));
+          const assignedMentor = mentors.find(m => m.id === student.mentorId || m.name === student.mentorName);
+          if (assignedMentor?.email && totalPool > 0) {
+            emailService.sendEmail({
+              to: assignedMentor.email,
+              recipientName: assignedMentor.name,
+              subject: `🎉 New Commission Credited: 37% Enrollment Revenue Share (₦${totalPool.toLocaleString()})`,
+              type: 'mentor_commission_earned',
+              data: {
+                studentName: student.name,
+                program: student.program,
+                tuitionPaid: res.amountNaira,
+                commissionAmount: totalPool,
+                newPendingPayout: (assignedMentor.pendingPayout || 0) + totalPool,
+                portalUrl: `${APP_BASE_URL}/mentors`,
+              }
+            }).catch(err => console.error('Error sending mentor commission alert email:', err));
+          }
         }
 
         // 3. Send Transaction Audit to Finance
@@ -5222,6 +5481,8 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         staffUsers,
         login,
         logout,
+        sessionWarningSeconds,
+        resetActivityTimer,
         hasPermission,
         addStaffUser,
         updateUserRole,
@@ -5304,6 +5565,11 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateStudent,
         updateStudentStatus,
         assignMentorToStudent,
+        updateStudentAttendanceRecord,
+        submitStudentFeedback,
+        addMentorFeedbackNote,
+        toggleStudentAtRisk,
+        uploadStudentDocument,
         recruitMentor,
         updateMentorStatus,
         updateMentor,

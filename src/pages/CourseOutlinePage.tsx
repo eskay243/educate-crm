@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
-import { LMSLesson, CourseDurationTrack } from '../types/crm';
+import { LMSLesson, CourseDurationTrack, CourseProgram } from '../types/crm';
+import { getStudentEnrolledModules } from '../utils/courseCurriculum';
 
 export const CourseOutlinePage: React.FC = () => {
   const { 
@@ -13,6 +14,10 @@ export const CourseOutlinePage: React.FC = () => {
     openModal,
     showToast
   } = useCRM();
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const courseIdParam = searchParams.get('courseId');
+  const courseTitleParam = searchParams.get('courseTitle') || searchParams.get('course');
 
   const isProgramOfficerOrSuperAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'program_officer';
   const isMentor = currentUser?.role === 'mentor';
@@ -67,14 +72,41 @@ export const CourseOutlinePage: React.FC = () => {
     return list.filter(c => c && c.durationTrack === durationFilter);
   }, [allCourses, durationFilter, isMentor, currentUser]);
 
+  // Synchronize active course with URL search parameters (?courseId=... or ?courseTitle=...)
   useEffect(() => {
-    if (isMentor && filteredCourses.length > 0) {
+    if (courseIdParam) {
+      const match = allCourses.find(c => c.id === courseIdParam);
+      if (match) {
+        setDurationFilter('All');
+        setActiveCourseTitle(match.title);
+        return;
+      }
+    }
+    if (courseTitleParam) {
+      const target = courseTitleParam.trim().toLowerCase();
+      const match = allCourses.find(c => (c.title || '').trim().toLowerCase() === target);
+      if (match) {
+        setDurationFilter('All');
+        setActiveCourseTitle(match.title);
+        return;
+      }
+    }
+  }, [courseIdParam, courseTitleParam, allCourses]);
+
+  useEffect(() => {
+    if (isMentor && filteredCourses.length > 0 && !courseIdParam && !courseTitleParam) {
       const match = filteredCourses.find(c => c.title === activeCourseTitle);
       if (!match) {
         setActiveCourseTitle(filteredCourses[0].title);
       }
     }
-  }, [isMentor, filteredCourses, activeCourseTitle]);
+  }, [isMentor, filteredCourses, activeCourseTitle, courseIdParam, courseTitleParam]);
+
+  const handleSelectCourse = (course: CourseProgram) => {
+    if (!course?.title) return;
+    setActiveCourseTitle(course.title);
+    setSearchParams({ courseId: course.id, courseTitle: course.title }, { replace: true });
+  };
 
   const activeCourse = useMemo(() => {
     const normalize = (t?: string) => (t || '').trim().toLowerCase();
@@ -106,8 +138,16 @@ export const CourseOutlinePage: React.FC = () => {
       };
   }, [filteredCourses, allCourses, activeCourseTitle]);
 
-  // Active modules for selected course
+  // Active modules for selected course — dynamically bound to course's own updated syllabusModules & LMS modules
   const activeCourseModules = useMemo(() => {
+    if (!activeCourse) return [];
+
+    // 1. Resolve structured modules from course's syllabusModules or explicit LMSModules
+    const resolved = getStudentEnrolledModules(activeCourse.title, lmsModules, allCourses);
+    if (resolved && resolved.length > 0) {
+      return resolved;
+    }
+
     const activeTitle = (activeCourse?.title || '').trim().toLowerCase();
     const matched = (lmsModules || []).filter(m => (m?.courseTitle || '').trim().toLowerCase() === activeTitle);
     if (matched.length > 0) return matched;
@@ -386,7 +426,7 @@ export const CourseOutlinePage: React.FC = () => {
             return (
               <button
                 key={course.id || course.title}
-                onClick={() => course?.title && setActiveCourseTitle(course.title)}
+                onClick={() => course && handleSelectCourse(course)}
                 className={`p-3.5 rounded-xl border transition-all text-left min-w-[240px] shrink-0 cursor-pointer shadow-xs ${
                   isSelected
                     ? 'bg-primary/5 border-primary text-primary shadow-sm'

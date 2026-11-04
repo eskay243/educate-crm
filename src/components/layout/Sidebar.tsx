@@ -100,6 +100,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
 
     // Student Portal Links
     { to: '/student/dashboard', label: 'Student Dashboard', icon: 'dashboard', exact: true, allowedRoles: ['student'] },
+    { to: '/student/profile', label: 'My 360° Profile', icon: 'badge', allowedRoles: ['student'] },
     { to: '/chat', label: 'Team Chat', icon: 'chat', allowedRoles: ['student'] },
     { to: '/student/courses', label: 'Classroom & LMS', icon: 'local_library', allowedRoles: ['student'], module: 'lms' },
     { to: '/student/mentor', label: '1-on-1 Faculty Mentor', icon: 'support_agent', allowedRoles: ['student'], module: 'mentors' },
