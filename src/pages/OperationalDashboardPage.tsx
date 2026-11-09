@@ -121,11 +121,11 @@ export const OperationalDashboardPage: React.FC = () => {
         {/* Pending Mentor Payouts */}
         <Link
           to="/mentors"
-          className="group p-4 rounded-xl bg-surface border border-outline-variant hover:border-purple-500/50 hover:shadow-md transition-all duration-200"
+          className="group p-4 rounded-xl bg-surface border border-outline-variant hover:border-sky-500/50 hover:shadow-md transition-all duration-200"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-secondary">Faculty Payouts</span>
-            <span className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <span className="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-600 flex items-center justify-center group-hover:scale-110 transition-transform">
               <span className="material-symbols-outlined text-[20px]">account_balance_wallet</span>
             </span>
           </div>
@@ -133,7 +133,7 @@ export const OperationalDashboardPage: React.FC = () => {
             <span className="text-2xl font-black text-on-surface font-data-tabular">
               {pendingPayouts.length}
             </span>
-            <span className="text-xs font-bold text-purple-600 bg-purple-500/10 px-1.5 py-0.5 rounded">
+            <span className="text-xs font-bold text-sky-600 bg-sky-500/10 px-1.5 py-0.5 rounded">
               Pending Payouts
             </span>
           </div>

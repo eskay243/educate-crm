@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useCRM } from '../../context/CRMContext';
 
 export const StudentMentorPage: React.FC = () => {
@@ -201,6 +202,15 @@ export const StudentMentorPage: React.FC = () => {
                   </div>
                 )}
               </div>
+
+              {/* 1-Click Direct Chat Button */}
+              <Link
+                to="/chat"
+                className="w-full py-2.5 px-4 rounded-xl bg-primary hover:bg-primary/90 active:scale-[0.98] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all"
+              >
+                <span className="material-symbols-outlined text-[16px]">chat</span>
+                <span>Direct Message {mentor.name}</span>
+              </Link>
 
               {/* Weekly Office Hours Schedule */}
               <div className="p-4 rounded-xl bg-surface-container border border-outline-variant/60 space-y-3">
@@ -461,6 +471,15 @@ export const StudentMentorPage: React.FC = () => {
                       </div>
                       <h4 className="font-bold text-sm text-on-surface">{sess.topic}</h4>
                       <p className="text-xs text-on-surface-variant">{sess.notes}</p>
+                      {sess.mentorNotes && (
+                        <div className="p-2.5 rounded-lg bg-surface border border-outline-variant/80 text-xs text-secondary border-l-2 border-primary space-y-0.5">
+                          <span className="font-bold text-on-surface text-[11px] flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[13px] text-primary">fact_check</span>
+                            <span>Faculty Takeaways &amp; Next Steps:</span>
+                          </span>
+                          <p className="italic">"{sess.mentorNotes}"</p>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 shrink-0">

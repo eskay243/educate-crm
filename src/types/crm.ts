@@ -352,7 +352,8 @@ export interface LMSLesson {
   approvedByProgramOfficer?: boolean;
   approvedByProgramOfficerName?: string;
   approvedAt?: string;
-  approvalStatus?: 'Not Started' | 'Taught (Pending PO Approval)' | 'Approved & Published';
+  approvalStatus?: 'Not Started' | 'Taught (Pending PO Approval)' | 'Needs Revision (Returned by PO)' | 'Approved & Published';
+  poReviewNotes?: string;
   dayNumber?: number;
   practicalLabTask?: string;
   submissionRequired?: boolean;
@@ -479,6 +480,10 @@ export interface MentorWeeklyReport {
   challengesEncountered?: string;
   actionItemsNextWeek: string;
   submittedAt: string;
+  poReviewed?: boolean;
+  poReviewerName?: string;
+  poReviewNotes?: string;
+  poReviewedAt?: string;
 }
 
 export interface MentorCurriculumItem {
@@ -792,6 +797,17 @@ export interface CourseMentorShare {
   sharePercentage: number; // Percentage share of the 37% faculty revenue pool (e.g. 50 = 50% split)
 }
 
+export interface IQAReviewRecord {
+  id: string;
+  courseId: string;
+  stage: 1 | 2 | 3;
+  stageTitle: string;
+  auditorName: string;
+  notes: string;
+  status: 'Verified' | 'Action Required';
+  auditedAt: string;
+}
+
 export interface CourseProgram {
   id: string;
   code: string;
@@ -815,6 +831,7 @@ export interface CourseProgram {
   practicalHours?: number; // e.g. 60h (70% Practical Hands-on Labs)
   learningGuidelinesSummary?: string;
   curriculumDriveUrl?: string; // Google Drive link to official course curriculum
+  iqaAudits?: IQAReviewRecord[];
 }
 
 export interface Cohort {
@@ -873,6 +890,7 @@ export interface MentorshipSession {
   durationHours: number;
   topic: string;
   notes?: string;
+  mentorNotes?: string;
   meetingLink?: string;
   locationType?: string;
   status: 'Scheduled' | 'Completed' | 'Cancelled';

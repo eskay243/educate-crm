@@ -42,7 +42,15 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
 
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Link
-            to={currentUser.role === 'student' ? '/student/dashboard' : '/'}
+            to={
+              currentUser.role === 'student'
+                ? '/student/dashboard'
+                : currentUser.role === 'mentor'
+                ? '/mentor/dashboard'
+                : currentUser.role === 'program_officer'
+                ? '/courses'
+                : '/'
+            }
             className="px-4 h-10 rounded bg-surface border border-outline-variant font-label-md text-xs font-semibold text-on-surface hover:bg-surface-container transition-colors flex items-center gap-1.5"
           >
             <span className="material-symbols-outlined text-[16px]">arrow_back</span>

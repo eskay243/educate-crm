@@ -233,15 +233,15 @@ export const MentorManagementPage: React.FC = () => {
       )}
 
       {/* Faculty Onboarding Kit: Program Guide & Course Outline Banner */}
-      <div className="p-4 rounded-xl bg-purple-50/80 border border-purple-200 text-xs text-purple-950 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shadow-xs">
+      <div className="p-4 rounded-xl bg-sky-50/80 border border-sky-200 text-xs text-sky-950 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[22px]">assignment</span>
           </div>
           <div>
-            <h4 className="font-bold text-sm text-purple-950 flex items-center gap-2">
+            <h4 className="font-bold text-sm text-sky-950 flex items-center gap-2">
               <span>Faculty Academic Kit: Program Guide &amp; Course Outline</span>
-              <span className="px-2 py-0.5 rounded-full bg-purple-200 text-purple-900 text-[10px] font-bold">
+              <span className="px-2 py-0.5 rounded-full bg-sky-200 text-sky-900 text-[10px] font-bold">
                 Faculty Governance
               </span>
             </h4>
@@ -253,7 +253,7 @@ export const MentorManagementPage: React.FC = () => {
         <div className="flex items-center gap-2 self-stretch md:self-auto shrink-0">
           <Link
             to="/mentors/course-outlines"
-            className="h-8 px-3 rounded-lg bg-white border border-purple-300 hover:bg-purple-100 text-purple-900 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs"
+            className="h-8 px-3 rounded-lg bg-white border border-sky-300 hover:bg-sky-100 text-sky-900 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs"
           >
             <span className="material-symbols-outlined text-[15px]">account_tree</span>
             <span>Course Outlines</span>
@@ -261,7 +261,7 @@ export const MentorManagementPage: React.FC = () => {
           <a
             href="/Program_Officer_Module_QA_Checklist.xlsx"
             download="Program_Officer_Faculty_Governance_Guide.xlsx"
-            className="h-8 px-3 rounded-lg bg-purple-700 text-white hover:bg-purple-800 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs"
+            className="h-8 px-3 rounded-lg bg-primary text-white hover:bg-primary/90 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs"
           >
             <span className="material-symbols-outlined text-[15px]">download</span>
             <span>Download Guide (.xlsx)</span>

@@ -34,6 +34,14 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenMenu }) 
         { label: 'Payouts', to: '/mentor/payouts', icon: 'payments' },
       ];
     }
+    if (role === 'program_officer') {
+      return [
+        { label: 'Programs', to: '/courses', icon: 'menu_book' },
+        { label: 'Outlines', to: '/mentors/course-outlines', icon: 'account_tree' },
+        { label: 'Scholars', to: '/students', icon: 'school' },
+        { label: 'Faculty', to: '/mentors', icon: 'groups' },
+      ];
+    }
     if (role === 'admissions') {
       return [
         { label: 'Leads', to: '/leads', icon: 'person_search' },

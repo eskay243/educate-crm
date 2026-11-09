@@ -340,6 +340,7 @@ interface CRMContextType {
   submitStudentFeedback: (feedback: Omit<StudentFeedbackEntry, 'id' | 'submittedAt'>) => Promise<void>;
   addMentorFeedbackNote: (studentId: string, note: Omit<MentorFeedbackEntry, 'id' | 'date'>) => Promise<void>;
   toggleStudentAtRisk: (studentId: string, isAtRisk: boolean) => Promise<void>;
+  toggleStudentGoalStatus: (studentId: string, goalId: string, newStatus?: 'In Progress' | 'Achieved' | 'Deferred') => Promise<void>;
   uploadStudentDocument: (studentId: string, doc: Omit<StudentDocumentItem, 'id' | 'uploadedAt'>) => Promise<void>;
   
   recruitMentor: (mentor: Omit<Mentor, 'id' | 'joinedDate' | 'mentorCode' | 'sessionsCount'>) => void;
@@ -404,6 +405,9 @@ interface CRMContextType {
   // Course Outline Teaching & Program Officer Approval Gateway
   markTopicAsTaught: (lessonId: string, notes?: string) => Promise<void>;
   approveTopicByProgramOfficer: (lessonId: string, courseTitle?: string) => Promise<void>;
+  returnTopicByProgramOfficer: (lessonId: string, reason: string, courseTitle?: string) => Promise<void>;
+  reviewMentorWeeklyReport: (mentorId: string, reportId: string, reviewNotes: string) => Promise<void>;
+  logCourseIQAAudit: (courseId: string, stage: 1 | 2 | 3, notes: string, status?: 'Verified' | 'Action Required') => Promise<void>;
 
   // Super Admin User Administration
   toggleUserActiveStatus: (userId: string, isActive: boolean, reason?: string) => Promise<void>;
@@ -2904,6 +2908,36 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('At-Risk Status Updated', isAtRisk ? 'Student flagged as At-Risk for welfare review.' : 'Student cleared from At-Risk list.', 'info');
   };
 
+  const toggleStudentGoalStatus = async (studentId: string, goalId: string, newStatus?: 'In Progress' | 'Achieved' | 'Deferred') => {
+    let targetStatus: 'In Progress' | 'Achieved' | 'Deferred' = 'Achieved';
+    setStudents(prev => prev.map(s => {
+      if (s.id !== studentId) return s;
+      const existingGoals = s.mentorGoals || [];
+      const updatedGoals = existingGoals.map(g => {
+        if (g.id === goalId) {
+          targetStatus = newStatus || (g.status === 'Achieved' ? 'In Progress' : 'Achieved');
+          return {
+            ...g,
+            status: targetStatus,
+            achievedAt: targetStatus === 'Achieved' ? new Date().toISOString() : undefined,
+          };
+        }
+        return g;
+      });
+
+      if (isBackendConnected) {
+        apiService.updateStudent(studentId, { mentorGoals: updatedGoals }).catch(e => console.warn(e));
+      }
+
+      return {
+        ...s,
+        mentorGoals: updatedGoals,
+      };
+    }));
+
+    showToast('Milestone Goal Updated', `Goal milestone marked as ${targetStatus}.`, 'success');
+  };
+
   const uploadStudentDocument = async (studentId: string, docData: Omit<StudentDocumentItem, 'id' | 'uploadedAt'>) => {
     const newDoc: StudentDocumentItem = {
       ...docData,
@@ -5363,6 +5397,131 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const returnTopicByProgramOfficer = async (lessonId: string, reason: string, courseTitle?: string) => {
+    const poName = currentUser?.name || 'Academic Program Officer';
+
+    setLmsModules(prev => prev.map(mod => ({
+      ...mod,
+      lessons: mod.lessons.map(les => {
+        if (les.id !== lessonId) return les;
+        return {
+          ...les,
+          completedByMentor: false,
+          approvedByProgramOfficer: false,
+          approvalStatus: 'Needs Revision (Returned by PO)',
+          poReviewNotes: reason || 'Please review learning guidelines and re-deliver practical milestone.',
+        };
+      })
+    })));
+
+    addNotification({
+      title: 'Syllabus Topic Returned for Revision',
+      message: `${poName} returned topic #${lessonId}${courseTitle ? ` (${courseTitle})` : ''} for revision: ${reason}`,
+      type: 'mentor',
+      link: '/mentor/curriculum',
+    });
+
+    showToast(
+      'Topic Returned to Faculty',
+      'Mentor has been notified with your revision feedback.',
+      'warning'
+    );
+
+    logActivity({
+      title: 'Topic Returned by Program Officer',
+      description: `${poName} returned syllabus topic #${lessonId}: ${reason}`,
+      type: 'mentor',
+      user: poName,
+    });
+  };
+
+  const reviewMentorWeeklyReport = async (mentorId: string, reportId: string, reviewNotes: string) => {
+    const poName = currentUser?.name || 'Academic Program Officer';
+    const now = new Date().toISOString();
+
+    setMentors(prev => prev.map(m => {
+      if (m.id !== mentorId) return m;
+      const nextReports = (m.weeklyReports || []).map(rep => {
+        if (rep.id !== reportId) return rep;
+        return {
+          ...rep,
+          poReviewed: true,
+          poReviewerName: poName,
+          poReviewNotes: reviewNotes || 'Verified against cohort timetable and syllabus pacing.',
+          poReviewedAt: now,
+        };
+      });
+      return { ...m, weeklyReports: nextReports };
+    }));
+
+    addNotification({
+      title: 'Weekly Teaching Report Verified',
+      message: `${poName} verified your weekly faculty teaching report.`,
+      type: 'mentor',
+      link: '/mentor/curriculum',
+    });
+
+    showToast(
+      'Weekly Report Verified',
+      'Teaching report signed off and synchronized with the Faculty Dossier.',
+      'success'
+    );
+
+    logActivity({
+      title: 'Weekly Report Signed Off',
+      description: `${poName} reviewed weekly report #${reportId} for mentor ${mentorId}.`,
+      type: 'mentor',
+      user: poName,
+    });
+  };
+
+  const logCourseIQAAudit = async (
+    courseId: string,
+    stage: 1 | 2 | 3,
+    notes: string,
+    status: 'Verified' | 'Action Required' = 'Verified'
+  ) => {
+    const poName = currentUser?.name || 'Academic Program Officer';
+    const now = new Date().toISOString();
+    const stageTitles: Record<1 | 2 | 3, string> = {
+      1: 'IQA Audit 1: Foundation & Environment Verification',
+      2: 'IQA Audit 2: Mid-Cohort Practical & Rubric Sampling',
+      3: 'IQA Audit 3: Final Capstone & Certification Board Sign-off',
+    };
+
+    setCourses(prev => prev.map(c => {
+      if (c.id !== courseId && c.title !== courseId) return c;
+      const existing = (c.iqaAudits || []).filter(a => a.stage !== stage);
+      const nextAudit = {
+        id: `iqa-${c.id}-${stage}-${Date.now()}`,
+        courseId: c.id,
+        stage,
+        stageTitle: stageTitles[stage],
+        auditorName: poName,
+        notes: notes || `${stageTitles[stage]} verified according to NBTE/NITDA & VTCT standards.`,
+        status,
+        auditedAt: now,
+      };
+      return {
+        ...c,
+        iqaAudits: [...existing, nextAudit].sort((a, b) => a.stage - b.stage),
+      };
+    }));
+
+    showToast(
+      `IQA Stage ${stage} Recorded`,
+      `${stageTitles[stage]} logged by ${poName}.`,
+      'success'
+    );
+
+    logActivity({
+      title: `IQA Stage ${stage} Audit Logged`,
+      description: `${poName} completed ${stageTitles[stage]} for course ${courseId}.`,
+      type: 'system',
+      user: poName,
+    });
+  };
+
   // ----------------------------------------------------
   // Super Admin User Administration Actions
   // ----------------------------------------------------
@@ -5693,6 +5852,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         submitStudentFeedback,
         addMentorFeedbackNote,
         toggleStudentAtRisk,
+        toggleStudentGoalStatus,
         uploadStudentDocument,
         recruitMentor,
         updateMentorStatus,
@@ -5755,6 +5915,9 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSelectedSlotForAttendance,
         markTopicAsTaught,
         approveTopicByProgramOfficer,
+        returnTopicByProgramOfficer,
+        reviewMentorWeeklyReport,
+        logCourseIQAAudit,
         toggleUserActiveStatus,
         adminResetUserPassword,
         selectedUserForPasswordReset,

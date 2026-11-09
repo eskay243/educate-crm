@@ -27,7 +27,7 @@ interface NavItemConfig {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
-  const { openModal, resetAllData, currentUser, logout, settings, isModuleEnabled, hasPermission, hasModulePermission, hasFeaturePermission, tickets, unreadChatCount } = useCRM();
+  const { openModal, resetAllData, currentUser, logout, settings, isModuleEnabled, hasPermission, hasModulePermission, hasFeaturePermission, tickets, unreadChatCount, lmsModules } = useCRM();
   const { isStandalone, promptInstall, isIOS, setShowIOSInstallGuide } = usePWA();
   const navigate = useNavigate();
   const location = useLocation();
@@ -45,8 +45,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   const isStudent = currentUser?.role === 'student';
   const isSuperAdmin = currentUser?.role === 'super_admin';
   const isMentor = currentUser?.role === 'mentor';
+  const isProgramOfficer = currentUser?.role === 'program_officer';
   const canManageSettings = isSuperAdmin || hasFeaturePermission('canManageSettings') || hasModulePermission('settings');
   const canViewBiodata = isSuperAdmin || hasFeaturePermission('canViewBiodata');
+
+  const pendingPOTopicsCount = (lmsModules || []).reduce((acc, mod) => {
+    return acc + (mod.lessons || []).filter(
+      l => l.approvalStatus === 'Taught (Pending PO Approval)' || (l.completedByMentor && !l.approvedByProgramOfficer)
+    ).length;
+  }, 0);
 
   const settingsSubItems: NavSubItem[] = canManageSettings ? [
     { to: '/settings?section=profile', label: 'My Profile & KYC', icon: 'person', section: 'profile' },
@@ -74,10 +81,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
 
   const allNavItems: NavItemConfig[] = [
     // Staff & Admin Links
-    { to: '/', label: 'Dashboard', icon: 'dashboard', exact: true, allowedRoles: ['super_admin', 'admissions', 'finance', 'program_officer'] },
+    { to: '/', label: 'Dashboard', icon: 'dashboard', exact: true, allowedRoles: ['super_admin', 'admissions', 'finance'] },
     { to: '/chat', label: 'Team Chat', icon: 'chat', allowedRoles: ['super_admin', 'admissions', 'finance', 'program_officer', 'mentor'] },
-    { to: '/reports', label: 'Executive Reports', icon: 'monitoring', allowedRoles: ['super_admin', 'program_officer'], module: 'reports' },
     { to: '/courses', label: 'Programs & Cohorts', icon: 'menu_book', allowedRoles: ['super_admin', 'admissions', 'program_officer'], module: 'courses' },
+    { to: '/mentors/course-outlines', label: 'Course Outlines', icon: 'account_tree', allowedRoles: ['program_officer'], module: 'courses' },
+    { to: '/reports', label: 'Executive Reports', icon: 'monitoring', allowedRoles: ['super_admin', 'program_officer'], module: 'reports' },
     { to: '/leads', label: 'Leads Pipeline', icon: 'leaderboard', allowedRoles: ['super_admin', 'admissions'], module: 'leads' },
     { to: '/contacts', label: 'Contacts & Follow-ups', icon: 'contact_phone', allowedRoles: ['super_admin', 'admissions', 'program_officer'], module: 'leads' },
     { to: '/students', label: 'Students & Billing', icon: 'school', allowedRoles: ['super_admin', 'admissions', 'mentor', 'finance', 'program_officer'], module: 'students' },
@@ -95,7 +103,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
       to: '/settings', 
       label: 'Settings', 
       icon: 'settings', 
-      allowedRoles: ['super_admin', 'admissions', 'mentor', 'finance', 'program_officer', 'student'],
+      allowedRoles: ['super_admin', 'admissions', 'mentor', 'finance', 'student'],
       subItems: settingsSubItems,
     },
 
@@ -128,8 +136,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
       return false;
     }
 
-    // Settings is universal to all authenticated roles
-    if (item.to === '/settings') return true;
+    // Settings is universal to all authenticated roles except program_officer (per QA Checklist TC-1.2.2)
+    if (item.to === '/settings') return !isProgramOfficer;
 
     // Support & Tickets is universal to all authenticated roles (when module is enabled or for super admin)
     if (item.to === '/tickets') return true;
@@ -141,9 +149,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     } else if (isMentor) {
       roleAllowed = !!item.allowedRoles?.includes('mentor');
     } else if (isSuperAdmin) {
-      roleAllowed = (!item.allowedRoles?.includes('student') && !item.allowedRoles?.includes('mentor')) || item.allowedRoles?.includes('super_admin');
+      roleAllowed = Boolean((!item.allowedRoles?.includes('student') && !item.allowedRoles?.includes('mentor') && item.to !== '/mentors/course-outlines') || item.allowedRoles?.includes('super_admin'));
     } else {
-      if (item.to === '/' && !isStudent && !isMentor) {
+      if (item.to === '/' && !isStudent && !isMentor && !isProgramOfficer) {
         roleAllowed = true;
       } else {
         const allowedByRole = item.allowedRoles ? hasPermission(item.allowedRoles, item.module) : true;
@@ -166,7 +174,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
       {/* Brand Header */}
       <div className="px-gutter mb-stack-lg flex items-center justify-between">
         <Link 
-          to={isStudent ? "/student/dashboard" : "/"} 
+          to={isStudent ? "/student/dashboard" : isMentor ? "/mentor/dashboard" : isProgramOfficer ? "/courses" : "/"} 
           onClick={onCloseMobile}
           className="hover:opacity-90 transition-opacity"
         >
@@ -221,6 +229,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
               onClick={onCloseMobile}
               className="btn-secondary w-full h-8 text-xs"
               title="View NBTE & NITDA standard syllabus outlines"
+            >
+              <span className="material-symbols-outlined text-[16px] text-primary">account_tree</span>
+              <span>Course Outlines</span>
+            </Link>
+          </div>
+        ) : isProgramOfficer ? (
+          <div className="flex flex-col gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                openModal('schedule-class');
+                if (onCloseMobile) onCloseMobile();
+              }}
+              className="btn-primary w-full h-10 text-xs"
+              title="Schedule a new lecture or practical lab slot"
+            >
+              <span className="material-symbols-outlined text-[18px]">calendar_add_on</span>
+              <span>+ Schedule Class</span>
+            </button>
+            <Link
+              to="/mentors/course-outlines"
+              onClick={onCloseMobile}
+              className="btn-secondary w-full h-8 text-xs"
+              title="Review NBTE & NITDA syllabus outlines and approve topics"
             >
               <span className="material-symbols-outlined text-[16px] text-primary">account_tree</span>
               <span>Course Outlines</span>
@@ -394,6 +426,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
                       title={`${unreadChatCount} unread message${unreadChatCount > 1 ? 's' : ''}`}
                     >
                       {unreadChatCount > 99 ? '99+' : unreadChatCount}
+                    </span>
+                  )}
+                  {item.to === '/courses' && pendingPOTopicsCount > 0 && (
+                    <span
+                      className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-700 font-data-tabular"
+                      title={`${pendingPOTopicsCount} syllabus topic${pendingPOTopicsCount > 1 ? 's' : ''} awaiting Program Officer approval`}
+                    >
+                      {pendingPOTopicsCount}
                     </span>
                   )}
                   {item.to === '/tickets' && tickets.filter(t => t.status === 'open').length > 0 && (

@@ -46,13 +46,6 @@ export const ViewBiodataModal: React.FC<ViewBiodataModalProps> = ({ isOpen, onCl
 
   const category = selectedBiodataUser?.category || 'student';
 
-  const canEditTarget = useMemo(() => {
-    if (isSuperAdmin) return true;
-    if (category === 'student') return hasFeaturePermission('canModifyStudentBiodata');
-    if (category === 'mentor') return hasFeaturePermission('canModifyMentorBiodata');
-    return false; // Staff can only be modified by Super Admin
-  }, [isSuperAdmin, category, hasFeaturePermission]);
-
   const isReviewingSelf = useMemo(() => {
     if (!currentUser || !target) return false;
     const targetEmail = target.email?.toLowerCase().trim();
@@ -63,6 +56,14 @@ export const ViewBiodataModal: React.FC<ViewBiodataModalProps> = ({ isOpen, onCl
       (targetEmail && (targetEmail === currentEmail || targetEmail === currentSecondary))
     );
   }, [currentUser, target]);
+
+  const canEditTarget = useMemo(() => {
+    if (isSuperAdmin) return true;
+    if (isReviewingSelf) return true;
+    if (category === 'student') return hasFeaturePermission('canModifyStudentBiodata');
+    if (category === 'mentor') return hasFeaturePermission('canModifyMentorBiodata');
+    return false; // Staff can only be modified by Super Admin
+  }, [isSuperAdmin, isReviewingSelf, category, hasFeaturePermission]);
 
   const canReviewThisKYC = isSuperAdmin && !isReviewingSelf;
 
@@ -118,7 +119,7 @@ export const ViewBiodataModal: React.FC<ViewBiodataModalProps> = ({ isOpen, onCl
   const categoryBadgeColor = category === 'staff' 
     ? 'bg-blue-500/10 text-blue-700 border-blue-500/20'
     : category === 'mentor'
-    ? 'bg-purple-500/10 text-purple-700 border-purple-500/20'
+    ? 'bg-primary/10 text-primary border-primary/20'
     : 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20';
 
   const categoryLabel = category === 'staff'

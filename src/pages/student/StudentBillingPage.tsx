@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useCRM, formatNaira } from '../../context/CRMContext';
 import { BrandLogo } from '../../components/common/BrandLogo';
+import { Student, PaymentInstallment } from '../../types/crm';
 
 export const StudentBillingPage: React.FC = () => {
   const { 
@@ -15,7 +16,7 @@ export const StudentBillingPage: React.FC = () => {
     setSelectedInvoiceId
   } = useCRM();
 
-  const student = currentStudentProfile || {
+  const student: Student = currentStudentProfile || {
     id: 'stu-demo',
     studentCode: 'STU-8492',
     name: 'Scholar Student',
@@ -27,6 +28,13 @@ export const StudentBillingPage: React.FC = () => {
     totalFees: 450000,
     paidAmount: 250000,
     outstandingBalance: 200000,
+    attendanceRate: 95,
+    enrolledDate: '2026-01-15',
+    phone: '+234 800 000 0000',
+    mentorName: 'Dr. Chidi Okeke',
+    status: 'Active',
+    courses: [],
+    installments: [],
   };
 
   const matchedInvoices = invoices.filter(inv => 
@@ -53,6 +61,52 @@ export const StudentBillingPage: React.FC = () => {
       status: (student.outstandingBalance || 0) === 0 && (student.totalFees || student.tuitionAmount || 0) > 0 ? 'Paid' : (student.paidAmount || 0) > 0 ? 'Partial' : 'Pending',
     }
   ];
+
+  // Synthesized or stored installment roadmap
+  const effectiveInstallments: PaymentInstallment[] = useMemo(() => {
+    if (student.installments && student.installments.length > 0) {
+      return student.installments;
+    }
+    const total = student.totalFees || student.tuitionAmount || 450000;
+    const paid = student.paidAmount || 0;
+    const tranche1 = Math.round(total * 0.4);
+    const tranche2 = Math.round(total * 0.3);
+    const tranche3 = total - tranche1 - tranche2;
+
+    const t1Paid = paid >= tranche1;
+    const t2Paid = paid >= (tranche1 + tranche2);
+    const t3Paid = paid >= total;
+
+    return [
+      {
+        id: 'inst-1',
+        installmentNumber: 1,
+        description: 'Acceptance & 1st Semester Deposit (40%)',
+        amount: tranche1,
+        dueDate: 'On Admission',
+        status: t1Paid ? ('Paid' as const) : ('Pending' as const),
+        amountPaid: t1Paid ? tranche1 : Math.min(paid, tranche1),
+      },
+      {
+        id: 'inst-2',
+        installmentNumber: 2,
+        description: 'Mid-Term Project & Sprint Tranche (30%)',
+        dueDate: 'Week 6 Milestone',
+        amount: tranche2,
+        status: t2Paid ? ('Paid' as const) : t1Paid ? ('Pending' as const) : ('Scheduled' as const),
+        amountPaid: t2Paid ? tranche2 : Math.max(0, Math.min(tranche2, paid - tranche1)),
+      },
+      {
+        id: 'inst-3',
+        installmentNumber: 3,
+        description: 'Final Capstone & Graduation Tranche (30%)',
+        dueDate: 'Week 12 Milestone',
+        amount: tranche3,
+        status: t3Paid ? ('Paid' as const) : ('Scheduled' as const),
+        amountPaid: t3Paid ? tranche3 : Math.max(0, paid - tranche1 - tranche2),
+      },
+    ];
+  }, [student]);
 
   // Paystack Custom Payment state
   const [payAmount, setPayAmount] = useState<number>(student.outstandingBalance || 200000);
@@ -160,6 +214,107 @@ export const StudentBillingPage: React.FC = () => {
           <span className="text-xs text-on-surface-variant mt-1 block">
             {(student.outstandingBalance || 0) === 0 ? 'No fees outstanding' : 'Due for second semester tranche'}
           </span>
+        </div>
+      </div>
+
+      {/* Visual Tuition Installment Milestone Roadmap */}
+      <div className="rounded-2xl border border-outline-variant bg-surface-container-low p-6 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-[24px]">account_balance_wallet</span>
+              <h3 className="font-bold text-on-surface text-lg">Tuition Milestone Installment Roadmap</h3>
+            </div>
+            <p className="text-xs text-secondary">
+              Official institutional fee schedule broken down into milestone tranches. Clear pending tranches with 1-click Paystack checkout.
+            </p>
+          </div>
+          <span className="text-xs font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1 rounded-full border border-emerald-200">
+            {effectiveInstallments.filter(i => i.status === 'Paid').length} of {effectiveInstallments.length} Tranches Cleared
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {effectiveInstallments.map((inst, idx) => {
+            const isPaid = inst.status === 'Paid';
+            const isDue = inst.status === 'Pending' || (!isPaid && idx === 0);
+
+            return (
+              <div
+                key={inst.id}
+                className={`p-4 rounded-xl border flex flex-col justify-between transition-all space-y-3 ${
+                  isPaid
+                    ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800'
+                    : isDue
+                    ? 'bg-amber-500/10 border-amber-500/30 ring-1 ring-amber-500/30'
+                    : 'bg-surface border-outline-variant'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold text-secondary uppercase tracking-wider">
+                      Tranche #{inst.installmentNumber || idx + 1}
+                    </span>
+                    <span
+                      className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                        isPaid
+                          ? 'bg-emerald-600 text-white'
+                          : isDue
+                          ? 'bg-amber-600 text-white'
+                          : 'bg-surface-container-high text-secondary'
+                      }`}
+                    >
+                      {isPaid ? 'Cleared' : isDue ? 'Due Now' : 'Upcoming'}
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-xs text-on-surface line-clamp-1 mb-1">{inst.description}</h4>
+                  <div className="text-lg font-extrabold text-on-surface font-mono">
+                    {formatNaira(inst.amount)}
+                  </div>
+                  <p className="text-[11px] text-secondary mt-1">Due Date: <strong>{inst.dueDate}</strong></p>
+                </div>
+
+                <div className="pt-3 border-t border-outline-variant/60">
+                  {isPaid ? (
+                    <button
+                      type="button"
+                      onClick={() => setActiveReceipt({
+                        invoiceNumber: `REC-${inst.id}`,
+                        dueDate: inst.dueDate,
+                        description: inst.description,
+                        totalAmount: inst.amount,
+                        paidAmount: inst.amount,
+                        status: 'Paid',
+                      })}
+                      className="w-full py-2 px-3 rounded-lg bg-surface border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100/50 text-emerald-800 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">receipt_long</span>
+                      <span>View Tranche Receipt</span>
+                    </button>
+                  ) : isDue ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPayAmount(inst.amount);
+                        payTuitionWithPaystack({
+                          amountNaira: inst.amount,
+                          invoiceId: `inst-${inst.id}`,
+                        });
+                      }}
+                      className="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs active:scale-[0.98]"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">credit_card</span>
+                      <span>Pay Tranche ({formatNaira(inst.amount)})</span>
+                    </button>
+                  ) : (
+                    <div className="py-2 px-3 rounded-lg bg-surface-container text-center text-[11px] text-secondary font-medium">
+                      Unlocks after prior milestone
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

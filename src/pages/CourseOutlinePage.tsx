@@ -11,6 +11,7 @@ export const CourseOutlinePage: React.FC = () => {
     currentUser, 
     markTopicAsTaught, 
     approveTopicByProgramOfficer, 
+    returnTopicByProgramOfficer,
     openModal,
     showToast
   } = useCRM();
@@ -26,6 +27,8 @@ export const CourseOutlinePage: React.FC = () => {
   const [durationFilter, setDurationFilter] = useState<'All' | CourseDurationTrack>('All');
   const [teachingNotesLesson, setTeachingNotesLesson] = useState<LMSLesson | null>(null);
   const [mentorNotes, setMentorNotes] = useState('');
+  const [returningLesson, setReturningLesson] = useState<LMSLesson | null>(null);
+  const [poReturnReason, setPoReturnReason] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [expandedGuidelines, setExpandedGuidelines] = useState<Record<string, boolean>>({});
   const [activeVideoLesson, setActiveVideoLesson] = useState<LMSLesson | null>(null);
@@ -291,6 +294,19 @@ export const CourseOutlinePage: React.FC = () => {
     try {
       await approveTopicByProgramOfficer(lessonId, activeCourse?.title || activeCourseTitle);
       showToast('Accreditation Verified', 'Topic approved and synchronized with student classroom transcripts.', 'success');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleReturnTopicSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!returningLesson || !poReturnReason.trim()) return;
+    setIsProcessing(true);
+    try {
+      await returnTopicByProgramOfficer(returningLesson.id, poReturnReason.trim(), activeCourse?.title || activeCourseTitle);
+      setReturningLesson(null);
+      setPoReturnReason('');
     } finally {
       setIsProcessing(false);
     }
@@ -634,6 +650,7 @@ export const CourseOutlinePage: React.FC = () => {
                   const status = lesson?.approvalStatus || 'Not Started';
                   const isApproved = status === 'Approved & Published';
                   const isPendingApproval = status === 'Taught (Pending PO Approval)';
+                  const isNeedsRevision = status === 'Needs Revision (Returned by PO)';
                   const lessonType = (lesson?.type || 'lesson').toUpperCase();
 
                   return (
@@ -657,7 +674,7 @@ export const CourseOutlinePage: React.FC = () => {
 
                           {/* Code Lab Deliverable Badge */}
                           {lesson.submissionRequired && (
-                            <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-[10px] font-bold border border-purple-200">
+                            <span className="px-2 py-0.5 rounded bg-sky-50 text-sky-700 text-[10px] font-bold border border-sky-200">
                               💻 Code Lab Deliverable
                             </span>
                           )}
@@ -675,7 +692,13 @@ export const CourseOutlinePage: React.FC = () => {
                               Taught (Pending PO Sign-off)
                             </span>
                           )}
-                          {!isApproved && !isPendingApproval && (
+                          {isNeedsRevision && (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[13px]">assignment_return</span>
+                              Returned for Revision by PO
+                            </span>
+                          )}
+                          {!isApproved && !isPendingApproval && !isNeedsRevision && (
                             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-surface-container text-secondary">
                               Not Started
                             </span>
@@ -687,6 +710,16 @@ export const CourseOutlinePage: React.FC = () => {
                           <p className="text-xs text-primary/80 font-medium">
                             Task: {lesson.practicalLabTask}
                           </p>
+                        )}
+
+                        {/* PO Revision Feedback Banner */}
+                        {lesson.poReviewNotes && isNeedsRevision && (
+                          <div className="p-2.5 rounded-lg bg-red-50/80 border border-red-200 text-xs text-red-800 flex items-start gap-1.5">
+                            <span className="material-symbols-outlined text-[15px] text-red-600 shrink-0 mt-0.5">feedback</span>
+                            <span>
+                              <strong>Program Officer Revision Note:</strong> {lesson.poReviewNotes}
+                            </span>
+                          </div>
                         )}
 
                         {/* Completion Metadata / Teaching Logbook */}
@@ -711,7 +744,7 @@ export const CourseOutlinePage: React.FC = () => {
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-2 shrink-0 flex-wrap">
                         {/* Video Lecture Preview Trigger */}
                         {lesson.videoUrl && (
                           <button
@@ -733,21 +766,36 @@ export const CourseOutlinePage: React.FC = () => {
                             className="px-3.5 py-1.5 rounded-lg bg-primary text-on-primary font-bold text-xs hover:bg-primary/90 flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                           >
                             <span className="material-symbols-outlined text-[16px]">check</span>
-                            <span>Mark Taught</span>
+                            <span>{isNeedsRevision ? 'Mark Re-Taught' : 'Mark Taught'}</span>
                           </button>
                         )}
 
-                        {/* PO / Super Admin Action: Confirm & Publish */}
+                        {/* PO / Super Admin Action: Confirm & Publish OR Return for Revision */}
                         {isProgramOfficerOrSuperAdmin && isPendingApproval && (
-                          <button
-                            type="button"
-                            onClick={() => handleApprove(lesson.id)}
-                            disabled={isProcessing}
-                            className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all disabled:opacity-50 cursor-pointer"
-                          >
-                            <span className="material-symbols-outlined text-[16px]">verified</span>
-                            <span>Confirm &amp; Accredit</span>
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReturningLesson(lesson);
+                                setPoReturnReason('');
+                              }}
+                              disabled={isProcessing}
+                              className="px-3 py-1.5 rounded-lg bg-surface border border-red-200 hover:bg-red-50 text-red-700 font-bold text-xs flex items-center gap-1 shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                              title="Return topic to faculty mentor for revision"
+                            >
+                              <span className="material-symbols-outlined text-[15px]">assignment_return</span>
+                              <span>Return</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleApprove(lesson.id)}
+                              disabled={isProcessing}
+                              className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">verified</span>
+                              <span>Confirm &amp; Accredit</span>
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -810,6 +858,59 @@ export const CourseOutlinePage: React.FC = () => {
                   className="px-4 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 shadow-xs cursor-pointer disabled:opacity-50"
                 >
                   {isProcessing ? 'Submitting...' : 'Confirm Topic Taught'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Program Officer Return Topic for Revision Modal */}
+      {returningLesson && (
+        <div className="fixed inset-0 z-60 overflow-y-auto overscroll-contain bg-inverse-surface/70 backdrop-blur-xs p-4 flex flex-col justify-center items-center animate-in fade-in duration-150">
+          <div className="relative bg-surface-container-lowest rounded-2xl max-w-lg w-full border border-outline-variant p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-outline-variant pb-3">
+              <h3 className="font-bold text-sm text-on-surface flex items-center gap-2">
+                <span className="material-symbols-outlined text-red-600 text-[20px]">assignment_return</span>
+                <span>Return Syllabus Topic for Revision: {returningLesson.title}</span>
+              </h3>
+              <button
+                onClick={() => setReturningLesson(null)}
+                className="text-secondary hover:text-on-surface p-1 rounded hover:bg-surface-container cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleReturnTopicSubmit} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-secondary mb-1">
+                  Program Officer Revision Instructions *
+                </label>
+                <textarea
+                  value={poReturnReason}
+                  onChange={e => setPoReturnReason(e.target.value)}
+                  placeholder="Specify what needs additional coverage, practical lab demonstration, or competency verification before accrediting this lesson..."
+                  rows={4}
+                  required
+                  className="w-full p-3 bg-surface border border-outline-variant rounded-xl text-xs text-on-surface outline-none focus:border-primary"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setReturningLesson(null)}
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-secondary hover:text-on-surface cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isProcessing}
+                  className="px-4 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  {isProcessing ? 'Returning...' : 'Return to Faculty Mentor'}
                 </button>
               </div>
             </form>

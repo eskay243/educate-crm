@@ -8,6 +8,7 @@ export const StudentCoursesPage: React.FC = () => {
   const { 
     lmsModules, 
     courses,
+    mentors,
     currentStudentProfile, 
     completeLesson, 
     submitAssignment, 
@@ -72,6 +73,19 @@ export const StudentCoursesPage: React.FC = () => {
 
   const activeModule = modules.find(m => m.id === activeModuleId) || modules[0];
   const activeLesson: LMSLesson | undefined = activeModule?.lessons.find(l => l.id === activeLessonId) || activeModule?.lessons[0];
+
+  const facultyCourseMaterials = useMemo(() => {
+    const courseName = (activeModule?.courseTitle || student.program || '').toLowerCase();
+    return mentors.flatMap(m =>
+      (m.learningMaterials || [])
+        .filter(mat => {
+          if (mat.isPublicToLearners === false) return false;
+          const track = (mat.track || '').toLowerCase();
+          return !courseName || track === 'general' || track.includes(courseName) || courseName.includes(track);
+        })
+        .map(mat => ({ ...mat, mentorName: m.name }))
+    );
+  }, [mentors, activeModule?.courseTitle, student.program]);
 
   const isCompleted = student.completedLessonIds?.includes(activeLesson?.id || '');
 
@@ -285,7 +299,7 @@ export const StudentCoursesPage: React.FC = () => {
                     {activeLesson.approvedByProgramOfficer && (
                       <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200 flex items-center gap-1">
                         <span className="material-symbols-outlined text-[13px]">verified</span>
-                        <span>PO Approved</span>
+                        <span>Accredited by Program Officer</span>
                       </span>
                     )}
                     {activeLesson.completedByMentor && !activeLesson.approvedByProgramOfficer && (
@@ -386,7 +400,7 @@ export const StudentCoursesPage: React.FC = () => {
                   }`}
                 >
                   <span className="material-symbols-outlined text-sm">attachment</span>
-                  <span>Resources ({activeLesson.resources?.length || 0})</span>
+                  <span>Resources ({(activeLesson.resources?.length || 0) + facultyCourseMaterials.length})</span>
                 </button>
               </div>
 
@@ -479,55 +493,212 @@ export const StudentCoursesPage: React.FC = () => {
                     </button>
                   </form>
 
-                  {/* Submission History */}
+                  {/* Submission History & Mentor Graded Scorecard */}
                   {currentSubmissions.length > 0 && (
-                    <div className="pt-4 border-t border-outline-variant space-y-3">
-                      <h4 className="font-bold text-xs uppercase tracking-wider text-on-surface">Previous Submissions</h4>
-                      {currentSubmissions.map(sub => (
-                        <div key={sub.id} className="p-3.5 rounded-xl border border-outline-variant/80 bg-surface-container/40 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-xs text-on-surface">{sub.taskTitle}</span>
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                              sub.status === 'Passed' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-blue-500/10 text-blue-600'
-                            }`}>
-                              {sub.status} {sub.grade ? `(${sub.grade}%)` : ''}
-                            </span>
-                          </div>
-                          {sub.mentorFeedback && (
-                            <div className="p-2.5 rounded-lg bg-surface-container text-xs text-on-surface-variant border-l-2 border-primary">
-                              <span className="font-bold text-on-surface block mb-0.5">Feedback:</span>
-                              <p>{sub.mentorFeedback}</p>
+                    <div className="pt-4 border-t border-outline-variant space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-bold text-xs uppercase tracking-wider text-on-surface">Submission History &amp; Faculty Scorecard</h4>
+                        <span className="text-[11px] text-secondary">{currentSubmissions.length} attempt(s) recorded</span>
+                      </div>
+
+                      {currentSubmissions.map((sub, sIdx) => {
+                        const isNeedsRevision = sub.status === 'Needs Revision';
+                        const isPassed = sub.status === 'Passed' || sub.status === 'Exceptional';
+                        const isPending = sub.status === 'Pending';
+
+                        return (
+                          <div
+                            key={sub.id || sIdx}
+                            className={`p-4 rounded-xl border transition-all space-y-3 ${
+                              isNeedsRevision
+                                ? 'bg-amber-500/10 border-amber-500/30'
+                                : isPassed
+                                ? 'bg-emerald-500/10 border-emerald-500/30'
+                                : 'bg-surface-container/50 border-outline-variant/80'
+                            }`}
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="material-symbols-outlined text-[20px] text-primary">
+                                  {isPassed ? 'verified' : isNeedsRevision ? 'published_with_changes' : 'schedule'}
+                                </span>
+                                <div>
+                                  <span className="font-bold text-xs text-on-surface">{sub.taskTitle}</span>
+                                  <p className="text-[10px] text-secondary">
+                                    Submitted {new Date(sub.submittedAt).toLocaleDateString()} • Attempt #{currentSubmissions.length - sIdx}
+                                  </p>
+                                </div>
+                              </div>
+                              <span
+                                className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider self-start sm:self-auto ${
+                                  isPassed
+                                    ? 'bg-emerald-600 text-white'
+                                    : isNeedsRevision
+                                    ? 'bg-amber-600 text-white'
+                                    : 'bg-primary/20 text-primary'
+                                }`}
+                              >
+                                {sub.status} {sub.grade ? `• ${sub.grade}%` : ''}
+                              </span>
                             </div>
-                          )}
-                        </div>
-                      ))}
+
+                            {/* Code Links */}
+                            <div className="flex flex-wrap items-center gap-2 text-xs">
+                              {sub.githubUrl && (
+                                <a
+                                  href={sub.githubUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="h-7 px-2.5 rounded bg-surface border border-outline-variant hover:border-primary text-primary font-mono text-[11px] font-bold flex items-center gap-1 transition-colors"
+                                >
+                                  <span className="material-symbols-outlined text-[13px]">code</span>
+                                  <span>Repository</span>
+                                </a>
+                              )}
+                              {sub.liveUrl && (
+                                <a
+                                  href={sub.liveUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="h-7 px-2.5 rounded bg-surface border border-outline-variant hover:border-primary text-primary font-mono text-[11px] font-bold flex items-center gap-1 transition-colors"
+                                >
+                                  <span className="material-symbols-outlined text-[13px]">open_in_new</span>
+                                  <span>Live Demo</span>
+                                </a>
+                              )}
+                            </div>
+
+                            {/* Mentor Feedback & Rubric Breakdown */}
+                            {sub.mentorFeedback ? (
+                              <div className="p-3 rounded-lg bg-surface border border-outline-variant text-xs space-y-1.5">
+                                <div className="flex items-center justify-between text-[11px]">
+                                  <span className="font-bold text-on-surface flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-[14px] text-primary">rate_review</span>
+                                    <span>Faculty Critique ({sub.reviewedBy || 'Faculty Mentor'}):</span>
+                                  </span>
+                                  {sub.reviewedAt && (
+                                    <span className="text-secondary">{new Date(sub.reviewedAt).toLocaleDateString()}</span>
+                                  )}
+                                </div>
+                                <p className="text-secondary leading-relaxed italic">
+                                  "{sub.mentorFeedback}"
+                                </p>
+                              </div>
+                            ) : isPending ? (
+                              <p className="text-[11px] text-secondary italic">
+                                Deliverable queued in faculty grading inbox. Your assigned mentor will review and assign rubric scores shortly.
+                              </p>
+                            ) : null}
+
+                            {/* Resubmission Prompt if Needs Revision */}
+                            {isNeedsRevision && sIdx === 0 && (
+                              <div className="pt-2 flex items-center justify-between gap-3 border-t border-amber-500/20">
+                                <span className="text-[11px] font-medium text-amber-900 dark:text-amber-200">
+                                  Action Required: Address faculty critique and submit updated code.
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setGithubUrl(sub.githubUrl || '');
+                                    setLiveUrl(sub.liveUrl || '');
+                                    setNotes(`Addressing mentor feedback: `);
+                                  }}
+                                  className="h-7 px-3 rounded bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] flex items-center gap-1 transition-colors shrink-0 shadow-xs"
+                                >
+                                  <span className="material-symbols-outlined text-[13px]">restart_alt</span>
+                                  <span>Prepare Revision</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Tab 3: Resources */}
+              {/* Tab 3: Resources & Course Outlines */}
               {activeTab === 'resources' && (
-                <div className="space-y-3">
-                  {(!activeLesson.resources || activeLesson.resources.length === 0) ? (
-                    <p className="text-xs text-on-surface-variant">No external resource links attached to this lesson.</p>
-                  ) : (
-                    activeLesson.resources.map((res, rIdx) => (
-                      <a
-                        key={rIdx}
-                        href={res.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="p-3.5 rounded-xl border border-outline-variant/80 bg-surface-container/50 hover:bg-surface-container flex items-center justify-between text-xs font-bold text-primary transition-colors"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-base">link</span>
-                          <span>{res.title}</span>
-                        </div>
-                        <span className="material-symbols-outlined text-sm">open_in_new</span>
-                      </a>
-                    ))
-                  )}
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl bg-surface-container border border-outline-variant/80">
+                    <h4 className="font-bold text-sm text-on-surface mb-1">Official Course Curriculum &amp; Outlines</h4>
+                    <p className="text-xs text-secondary mb-3">
+                      Access official NBTE/NITDA syllabus outlines, slides, and learning material verified by faculty leadership.
+                    </p>
+                    <Link
+                      to="/mentors/course-outlines"
+                      className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-primary text-white font-bold text-xs hover:bg-primary/90 transition-colors shadow-xs"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">account_tree</span>
+                      <span>View Complete Syllabus Breakdown</span>
+                    </Link>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h5 className="text-xs font-bold uppercase tracking-wider text-secondary">Lesson Attachments</h5>
+                    {(!activeLesson.resources || activeLesson.resources.length === 0) ? (
+                      <p className="text-xs text-on-surface-variant">No external resource links attached to this specific lesson.</p>
+                    ) : (
+                      activeLesson.resources.map((res, rIdx) => (
+                        <a
+                          key={rIdx}
+                          href={res.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-3.5 rounded-xl border border-outline-variant/80 bg-surface-container/50 hover:bg-surface-container flex items-center justify-between text-xs font-bold text-primary transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-base">link</span>
+                            <span>{res.title}</span>
+                          </div>
+                          <span className="material-symbols-outlined text-sm">open_in_new</span>
+                        </a>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Synced Faculty & Program Officer Published Materials */}
+                  <div className="space-y-2 pt-3 border-t border-outline-variant/60">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-xs font-bold uppercase tracking-wider text-secondary">
+                        Faculty &amp; Program Officer Published Materials ({facultyCourseMaterials.length})
+                      </h5>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        Live Sync
+                      </span>
+                    </div>
+                    {facultyCourseMaterials.length === 0 ? (
+                      <p className="text-xs text-on-surface-variant">No track-wide faculty slides or repositories published yet.</p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {facultyCourseMaterials.map(mat => (
+                          <a
+                            key={mat.id}
+                            href={mat.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-3.5 rounded-xl border border-outline-variant/80 bg-surface hover:border-primary/50 flex flex-col justify-between gap-2 transition-all shadow-2xs"
+                          >
+                            <div>
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-primary/10 text-primary uppercase">
+                                  {mat.resourceType}
+                                </span>
+                                <span className="text-[10px] text-secondary">{mat.mentorName}</span>
+                              </div>
+                              <p className="text-xs font-bold text-on-surface mt-1.5">{mat.title}</p>
+                              <p className="text-[10px] text-secondary mt-0.5">{mat.track}</p>
+                            </div>
+                            <div className="flex items-center justify-between text-[11px] font-bold text-primary pt-1 border-t border-outline-variant/40">
+                              <span>Open Resource</span>
+                              <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 

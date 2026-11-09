@@ -167,7 +167,7 @@ export const Student360Dossier: React.FC<Student360DossierProps> = ({
 
   // Specific Action Permissions
   const canEditStudentStatus = isProgramOfficer;
-  const canEditBiodata = isProgramOfficer;
+  const canEditBiodata = isProgramOfficer || isStudentRole;
   const canReassignMentor = isProgramOfficer;
   const canRecordPayment = isProgramOfficer || isFinance;
   const canMarkAttendance = isMentor || isProgramOfficer;

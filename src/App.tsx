@@ -63,9 +63,12 @@ const HomeRoute: React.FC = () => {
   if (currentUser.role === 'mentor') {
     return <Navigate to="/mentor/dashboard" replace />;
   }
+  if (currentUser.role === 'program_officer') {
+    return <Navigate to="/courses" replace />;
+  }
   
-  // Super Admin, Admissions, Finance, and Program Officers land on the Operational Command Center
-  if (['super_admin', 'admissions', 'finance', 'program_officer'].includes(currentUser.role)) {
+  // Super Admin, Admissions, and Finance land on the Operational Command Center
+  if (['super_admin', 'admissions', 'finance'].includes(currentUser.role)) {
     return <OperationalDashboardPage />;
   }
 
@@ -205,7 +208,7 @@ export const App: React.FC = () => {
                 <Route
                   path="settings"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'mentor', 'finance', 'student']}>
                       <SettingsPage />
                     </ProtectedRoute>
                   }

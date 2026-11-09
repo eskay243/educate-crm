@@ -4,7 +4,7 @@ import { Student360Dossier } from '../../components/student/Student360Dossier';
 import { Student } from '../../types/crm';
 
 export const StudentProfilePage: React.FC = () => {
-  const { currentStudentProfile, currentUser, students } = useCRM();
+  const { currentStudentProfile, currentUser, students, openModal, openBiodataModal, setSelectedStudentId } = useCRM();
 
   // If viewing as a logged-in student, use their current profile; fallback to demo student if demoing
   const fallbackStudent: Student = students[0] || {
@@ -38,6 +38,30 @@ export const StudentProfilePage: React.FC = () => {
           <p className="text-xs text-secondary mt-0.5">
             View your complete academic journey, faculty mentorship history, verified attendance, and student documents.
           </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => openBiodataModal({ ...student, category: 'student' })}
+            className="h-9 px-3.5 rounded-xl border border-outline-variant bg-surface hover:bg-surface-container text-xs font-bold text-on-surface flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[16px] text-primary">edit_note</span>
+            <span>Update My KYC</span>
+          </button>
+          {(student.certificateIssued || (student.attendedLearningHours || 0) >= 40) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedStudentId(student.id);
+                openModal('view-certificate');
+              }}
+              className="h-9 px-4 rounded-xl bg-primary text-white hover:bg-primary/90 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">workspace_premium</span>
+              <span>Official Certificate</span>
+            </button>
+          )}
         </div>
       </div>
 

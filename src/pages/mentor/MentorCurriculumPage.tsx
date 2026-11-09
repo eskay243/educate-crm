@@ -1,12 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { useCRM } from '../../context/CRMContext';
-import { MentorWeeklyReport, MentorLearningMaterial } from '../../types/crm';
+import { MentorWeeklyReport, MentorLearningMaterial, LMSLesson } from '../../types/crm';
+import { getStudentEnrolledModules } from '../../utils/courseCurriculum';
 
 export const MentorCurriculumPage: React.FC = () => {
   const {
     currentUser,
     mentors,
     courses,
+    lmsModules,
+    markTopicAsTaught,
     updateMentor,
     showToast,
   } = useCRM();
@@ -54,6 +57,22 @@ export const MentorCurriculumPage: React.FC = () => {
   const activeCourse = useMemo(() => {
     return myCourses.find(c => c.id === selectedCourseId) || myCourses[0];
   }, [myCourses, selectedCourseId]);
+
+  const activeCourseModules = useMemo(() => {
+    if (!activeCourse) return [];
+    return getStudentEnrolledModules(activeCourse.title, lmsModules, courses);
+  }, [activeCourse, lmsModules, courses]);
+
+  // Modal state for marking a lesson topic as taught
+  const [selectedLessonToTeach, setSelectedLessonToTeach] = useState<LMSLesson | null>(null);
+  const [taughtSessionNotes, setTaughtSessionNotes] = useState('');
+
+  const handleConfirmTopicTaught = () => {
+    if (!selectedLessonToTeach) return;
+    markTopicAsTaught(selectedLessonToTeach.id, taughtSessionNotes.trim() || undefined);
+    setSelectedLessonToTeach(null);
+    setTaughtSessionNotes('');
+  };
 
   // Handlers
   const handleSaveWeeklyReport = () => {
@@ -277,30 +296,138 @@ export const MentorCurriculumPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Syllabus Modules */}
+                {/* Syllabus Modules & Interactive Topic Completion */}
                 <div>
-                  <h3 className="text-sm font-bold text-on-surface mb-3 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary text-[18px]">format_list_bulleted</span>
-                    <span>Curriculum Syllabus Modules</span>
-                  </h3>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                    <h3 className="text-sm font-bold text-on-surface flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary text-[18px]">format_list_bulleted</span>
+                      <span>Curriculum Syllabus Modules &amp; Topic Delivery</span>
+                    </h3>
+                    <span className="text-[11px] text-secondary font-medium">
+                      Mark topics taught to queue Program Officer approval &amp; student LMS sync
+                    </span>
+                  </div>
 
-                  <div className="space-y-2">
-                    {(activeCourse.syllabusModules || [
-                      'Module 1: Orientation & Technical Prerequisites',
-                      'Module 2: Core Concepts & Architectural Patterns',
-                      'Module 3: Hands-on Practical Projects & Labs',
-                      'Module 4: Capstone Project & Production Deployment'
-                    ]).map((mod, idx) => (
-                      <div
-                        key={idx}
-                        className="p-3 rounded-xl bg-surface-container-lowest border border-outline-variant flex items-center gap-3"
-                      >
-                        <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
-                          {idx + 1}
+                  <div className="space-y-4">
+                    {activeCourseModules.length > 0 ? (
+                      activeCourseModules.map((mod, idx) => (
+                        <div
+                          key={mod.id}
+                          className="rounded-xl bg-surface-container-lowest border border-outline-variant overflow-hidden"
+                        >
+                          <div className="p-3.5 bg-surface-container-low border-b border-outline-variant flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-7 h-7 rounded-lg bg-primary text-white flex items-center justify-center font-bold text-xs shrink-0">
+                                {mod.order || idx + 1}
+                              </div>
+                              <div>
+                                <p className="text-xs font-bold text-on-surface">{mod.title}</p>
+                                {mod.description && (
+                                  <p className="text-[11px] text-secondary mt-0.5">{mod.description}</p>
+                                )}
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-surface border border-outline-variant text-secondary shrink-0">
+                              {mod.lessons.length} Topics
+                            </span>
+                          </div>
+
+                          <div className="divide-y divide-outline-variant/60">
+                            {mod.lessons.map(lesson => {
+                              const isApproved = lesson.approvedByProgramOfficer || lesson.approvalStatus === 'Approved & Published';
+                              const isPendingPO = lesson.completedByMentor && !isApproved && lesson.approvalStatus !== 'Needs Revision (Returned by PO)';
+                              const isReturned = lesson.approvalStatus === 'Needs Revision (Returned by PO)';
+
+                              return (
+                                <div key={lesson.id} className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-surface transition-colors">
+                                  <div className="space-y-1 flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="text-xs font-bold text-on-surface">{lesson.title}</span>
+                                      <span className="text-[10px] px-2 py-0.5 rounded bg-surface-container text-secondary font-semibold capitalize">
+                                        {lesson.type} • {lesson.durationMinutes}m
+                                      </span>
+                                      {isApproved && (
+                                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold flex items-center gap-1">
+                                          <span className="material-symbols-outlined text-[12px]">verified</span>
+                                          <span>PO Approved &amp; Published</span>
+                                        </span>
+                                      )}
+                                      {isPendingPO && (
+                                        <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold flex items-center gap-1">
+                                          <span className="material-symbols-outlined text-[12px]">hourglass_top</span>
+                                          <span>Taught (Pending PO Approval)</span>
+                                        </span>
+                                      )}
+                                      {isReturned && (
+                                        <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold flex items-center gap-1">
+                                          <span className="material-symbols-outlined text-[12px]">assignment_return</span>
+                                          <span>Returned by PO for Revision</span>
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {lesson.completionNotes && (
+                                      <p className="text-[11px] text-secondary italic">
+                                        Your Delivery Log: "{lesson.completionNotes}"
+                                      </p>
+                                    )}
+
+                                    {lesson.poReviewNotes && (
+                                      <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-[11px] text-rose-900">
+                                        <span className="font-bold">PO Feedback:</span> "{lesson.poReviewNotes}"
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div className="shrink-0 flex items-center gap-2">
+                                    {!isApproved && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedLessonToTeach(lesson);
+                                          setTaughtSessionNotes(lesson.completionNotes || '');
+                                        }}
+                                        className={`h-8 px-3 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
+                                          isReturned
+                                            ? 'bg-amber-600 text-white hover:bg-amber-700'
+                                            : isPendingPO
+                                            ? 'bg-surface border border-outline-variant text-secondary hover:text-on-surface'
+                                            : 'bg-primary text-white hover:bg-primary/90'
+                                        }`}
+                                      >
+                                        <span className="material-symbols-outlined text-[15px]">
+                                          {isReturned ? 'replay' : isPendingPO ? 'edit_note' : 'check_circle'}
+                                        </span>
+                                        <span>
+                                          {isReturned ? 'Mark Re-Taught' : isPendingPO ? 'Update Log' : 'Mark Topic Taught'}
+                                        </span>
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                        <p className="text-xs font-semibold text-on-surface">{mod}</p>
-                      </div>
-                    ))}
+                      ))
+                    ) : (
+                      (activeCourse.syllabusModules || [
+                        'Module 1: Orientation & Technical Prerequisites',
+                        'Module 2: Core Concepts & Architectural Patterns',
+                        'Module 3: Hands-on Practical Projects & Labs',
+                        'Module 4: Capstone Project & Production Deployment'
+                      ]).map((mod, idx) => (
+                        <div
+                          key={idx}
+                          className="p-3 rounded-xl bg-surface-container-lowest border border-outline-variant flex items-center gap-3"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                            {idx + 1}
+                          </div>
+                          <p className="text-xs font-semibold text-on-surface">{mod}</p>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
@@ -379,12 +506,22 @@ export const MentorCurriculumPage: React.FC = () => {
             <div className="space-y-3">
               {(myMentor?.weeklyReports || []).map(rep => (
                 <div key={rep.id} className="p-5 rounded-2xl bg-surface border border-outline-variant shadow-xs">
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-2">
+                  <div className="flex justify-between items-start gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="px-2.5 py-1 rounded-lg bg-primary text-white font-bold text-xs">
                         Report
                       </span>
                       <h4 className="text-sm font-bold text-on-surface">{rep.keyHighlights || 'Weekly Instruction Report'}</h4>
+                      {rep.poReviewed ? (
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[12px]">verified</span>
+                          <span>Verified by PO ({rep.poReviewerName || 'Program Officer'})</span>
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">
+                          Pending PO Review
+                        </span>
+                      )}
                     </div>
                     <span className="text-xs text-secondary">{new Date(rep.submittedAt).toLocaleDateString()}</span>
                   </div>
@@ -399,6 +536,12 @@ export const MentorCurriculumPage: React.FC = () => {
                       <div>
                         <span className="font-semibold text-secondary">Challenges Encountered:</span>
                         <p className="text-amber-700 mt-0.5">{rep.challengesEncountered}</p>
+                      </div>
+                    )}
+
+                    {rep.poReviewNotes && (
+                      <div className="p-2.5 rounded-lg bg-emerald-50/70 border border-emerald-200 text-emerald-950">
+                        <span className="font-bold">Program Officer Sign-Off Note:</span> "{rep.poReviewNotes}"
                       </div>
                     )}
 
@@ -582,6 +725,54 @@ export const MentorCurriculumPage: React.FC = () => {
                 className="px-4 py-2 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary-dark transition-all shadow-xs"
               >
                 Publish Resource
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mark Topic Taught Modal */}
+      {selectedLessonToTeach && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-surface border border-outline-variant rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-outline-variant">
+              <div>
+                <h3 className="text-base font-bold text-on-surface">Log Topic Delivery for PO Sign-Off</h3>
+                <p className="text-xs text-secondary mt-0.5">{selectedLessonToTeach.title}</p>
+              </div>
+              <button onClick={() => setSelectedLessonToTeach(null)} className="text-secondary hover:text-on-surface">
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-on-surface mb-1">
+                Instructional Summary &amp; Practical Lab Notes
+              </label>
+              <textarea
+                rows={3}
+                value={taughtSessionNotes}
+                onChange={e => setTaughtSessionNotes(e.target.value)}
+                placeholder="Summarize key concepts delivered, code repositories demonstrated, or cohort comprehension notes for the Program Officer..."
+                className="w-full px-3 py-2 rounded-lg bg-surface-container-lowest border border-outline-variant text-xs text-on-surface resize-none focus:border-primary outline-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-outline-variant">
+              <button
+                type="button"
+                onClick={() => setSelectedLessonToTeach(null)}
+                className="px-4 py-2 rounded-lg bg-surface border border-outline-variant text-xs font-bold text-secondary hover:text-on-surface cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmTopicTaught}
+                className="px-4 py-2 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary/90 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">send</span>
+                <span>Submit to Program Officer</span>
               </button>
             </div>
           </div>

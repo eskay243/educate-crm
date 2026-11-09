@@ -18,6 +18,7 @@ export const StudentDashboardPage: React.FC = () => {
     openModal, 
     settings,
     timetables,
+    toggleStudentGoalStatus,
   } = useCRM();
 
   const student: Student = currentStudentProfile || {
@@ -86,6 +87,66 @@ export const StudentDashboardPage: React.FC = () => {
       invoiceId: pendingInvoice?.id || pendingInvoice?.invoiceNumber,
     });
   };
+
+  // Two-way mentor milestone goals
+  const effectiveGoals = useMemo(() => {
+    if (student.mentorGoals && student.mentorGoals.length > 0) {
+      return student.mentorGoals;
+    }
+    return [
+      {
+        id: 'goal-demo-1',
+        title: 'Master Express Controller Architecture & Middleware Security',
+        category: 'Technical' as const,
+        targetDate: new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
+        status: 'In Progress' as const,
+        mentorNotes: 'Review input sanitization and JWT auth headers.',
+      },
+      {
+        id: 'goal-demo-2',
+        title: 'Deploy Automated GitHub Actions CI/CD Pipeline',
+        category: 'Portfolio' as const,
+        targetDate: new Date(Date.now() + 10 * 86400000).toISOString().split('T')[0],
+        status: 'In Progress' as const,
+        mentorNotes: 'Incorporate linting and automated unit test assertions.',
+      },
+      {
+        id: 'goal-demo-3',
+        title: 'Complete 1-on-1 Capstone Architecture Review with Faculty Lead',
+        category: 'Career' as const,
+        targetDate: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+        status: 'Achieved' as const,
+        achievedAt: new Date().toISOString(),
+        mentorNotes: 'Approved ERD relational schema for PostgreSQL database.',
+      },
+    ];
+  }, [student.mentorGoals]);
+
+  const achievedGoalsCount = useMemo(() => {
+    return effectiveGoals.filter(g => g.status === 'Achieved').length;
+  }, [effectiveGoals]);
+
+  const handleToggleGoal = (goalId: string) => {
+    toggleStudentGoalStatus(student.id, goalId);
+  };
+
+  // Today and upcoming lecture
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const nextLiveLecture = useMemo(() => {
+    if (!cohortTimetable || cohortTimetable.length === 0) return null;
+    const todayMatch = cohortTimetable.find(t => t.date === todayStr);
+    return todayMatch || cohortTimetable[0];
+  }, [cohortTimetable, todayStr]);
+
+  // Academic welfare support status
+  const isWelfareSupportActive = useMemo(() => {
+    return (
+      student.isAtRisk ||
+      (student.attendanceRate !== undefined && student.attendanceRate < 75) ||
+      student.performanceTier === 'At Risk' ||
+      student.performanceTier === 'Needs Support'
+    );
+  }, [student]);
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
@@ -221,6 +282,96 @@ export const StudentDashboardPage: React.FC = () => {
           </div>
         );
       })()}
+
+      {/* Live Lecture & Class Launcher Hero */}
+      {nextLiveLecture && (
+        <div className="rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/10 via-surface to-surface-container-lowest p-5 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center shrink-0 shadow-xs">
+              <span className="material-symbols-outlined text-[26px]">video_camera_front</span>
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2 py-0.5 rounded-full bg-primary text-white text-[10px] font-extrabold uppercase tracking-wider">
+                  {nextLiveLecture.date === todayStr ? 'Class Today' : 'Upcoming Cohort Lecture'}
+                </span>
+                <span className="text-xs font-bold text-on-surface">
+                  {nextLiveLecture.dayOfWeek} • {nextLiveLecture.startTime} - {nextLiveLecture.endTime} WAT
+                </span>
+              </div>
+              <h3 className="font-bold text-base text-on-surface mt-1 line-clamp-1">
+                {nextLiveLecture.topic}
+              </h3>
+              <p className="text-xs text-secondary">
+                Course: <span className="font-semibold text-on-surface">{nextLiveLecture.courseTitle}</span> • Instructor: <span className="font-semibold text-on-surface">{nextLiveLecture.mentorName}</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0">
+            {nextLiveLecture.meetingLink ? (
+              <a
+                href={nextLiveLecture.meetingLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 md:flex-initial h-10 px-5 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+              >
+                <span className="material-symbols-outlined text-[18px]">videocam</span>
+                <span>Join Live Classroom</span>
+              </a>
+            ) : nextLiveLecture.venue ? (
+              <div className="px-3.5 py-2 rounded-xl bg-surface border border-outline-variant text-xs text-on-surface font-semibold flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-primary text-[18px]">location_on</span>
+                <span>Venue: {nextLiveLecture.venue}</span>
+              </div>
+            ) : null}
+            <Link
+              to="/student/courses"
+              className="h-10 px-4 rounded-xl border border-outline-variant bg-surface hover:bg-surface-container text-on-surface font-bold text-xs flex items-center justify-center transition-colors"
+            >
+              <span>Timetable</span>
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Academic Welfare & Learner Care Advisory */}
+      {isWelfareSupportActive && (
+        <div className="p-4 rounded-xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-blue-950 dark:text-blue-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <span className="material-symbols-outlined text-[22px]">health_and_safety</span>
+            </div>
+            <div>
+              <h4 className="font-bold text-sm text-blue-950 dark:text-blue-100 flex items-center gap-2">
+                <span>Faculty Academic Welfare &amp; 1-on-1 Support Active</span>
+                <span className="px-2 py-0.5 rounded-full bg-blue-200 dark:bg-blue-900/60 text-blue-900 dark:text-blue-200 text-[10px] font-bold">
+                  Learner Care
+                </span>
+              </h4>
+              <p className="text-secondary dark:text-secondary text-xs leading-relaxed">
+                Your assigned faculty mentor has prioritized dedicated 1-on-1 coaching to support your lab deliverables and sprint milestones.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              to="/student/mentor"
+              className="h-9 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs"
+            >
+              <span className="material-symbols-outlined text-[16px]">support_agent</span>
+              <span>Book Priority Coaching</span>
+            </Link>
+            <Link
+              to="/chat"
+              className="h-9 px-3 rounded-lg border border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-900 text-blue-900 dark:text-blue-200 font-bold text-xs flex items-center gap-1 hover:bg-blue-50 transition-colors"
+            >
+              <span className="material-symbols-outlined text-[16px]">chat</span>
+              <span>Message Mentor</span>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Graduation & Certificate Gatekeeping Banner */}
       {(() => {
@@ -360,10 +511,10 @@ export const StudentDashboardPage: React.FC = () => {
         </div>
 
         {/* Assigned Faculty Mentor */}
-        <div className="p-5 rounded-xl border border-outline-variant bg-surface-container-low shadow-xs hover:border-purple-500/40 transition-colors">
+        <div className="p-5 rounded-xl border border-outline-variant bg-surface-container-low shadow-xs hover:border-primary/40 transition-colors">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Faculty Mentor</span>
-            <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
               <span className="material-symbols-outlined text-lg">supervisor_account</span>
             </div>
           </div>
@@ -382,6 +533,88 @@ export const StudentDashboardPage: React.FC = () => {
             <span>Book 1-on-1 Coaching</span>
             <span className="material-symbols-outlined text-xs">arrow_forward</span>
           </Link>
+        </div>
+      </div>
+
+      {/* Two-Way Mentor Milestone Goals Tray */}
+      <div className="rounded-2xl border border-outline-variant bg-surface-container-low p-6 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-[24px]">flag</span>
+              <h3 className="font-bold text-on-surface text-lg">Mentor Milestone Goals &amp; Deliverables</h3>
+            </div>
+            <p className="text-xs text-secondary">
+              Academic milestones set in collaboration with your faculty mentor ({assignedMentor?.name || student.mentorName}). Check off completed items to sync your progress.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-bold text-secondary">
+              {achievedGoalsCount} of {effectiveGoals.length} Achieved
+            </span>
+            <div className="w-24 bg-surface-container-high rounded-full h-2 overflow-hidden">
+              <div
+                className="bg-emerald-600 h-2 rounded-full transition-all duration-500"
+                style={{ width: `${effectiveGoals.length > 0 ? (achievedGoalsCount / effectiveGoals.length) * 100 : 0}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {effectiveGoals.map((goal) => {
+            const isAchieved = goal.status === 'Achieved';
+            return (
+              <div
+                key={goal.id}
+                onClick={() => handleToggleGoal(goal.id)}
+                className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between select-none ${
+                  isAchieved
+                    ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800'
+                    : 'bg-surface border-outline-variant hover:border-primary/50 hover:shadow-xs'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                      goal.category === 'Technical' ? 'bg-primary/10 text-primary' :
+                      goal.category === 'Portfolio' ? 'bg-emerald-100 text-emerald-800' :
+                      goal.category === 'Career' ? 'bg-blue-100 text-blue-800' :
+                      'bg-slate-100 text-slate-800'
+                    }`}>
+                      {goal.category || 'Milestone'}
+                    </span>
+                    <button
+                      type="button"
+                      aria-label="Toggle Milestone Goal Status"
+                      className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+                        isAchieved
+                          ? 'bg-emerald-600 text-white'
+                          : 'border-2 border-outline-variant hover:border-primary text-transparent'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[14px] font-bold">check</span>
+                    </button>
+                  </div>
+                  <h4 className={`text-xs font-bold leading-snug mb-1 ${isAchieved ? 'line-through text-secondary' : 'text-on-surface'}`}>
+                    {goal.title}
+                  </h4>
+                  {goal.mentorNotes && (
+                    <p className="text-[11px] text-secondary line-clamp-2 italic">
+                      "{goal.mentorNotes}"
+                    </p>
+                  )}
+                </div>
+
+                <div className="pt-2.5 mt-3 border-t border-outline-variant/60 flex items-center justify-between text-[11px] text-secondary">
+                  <span>Target: {goal.targetDate || 'This Sprint'}</span>
+                  <span className={`font-semibold ${isAchieved ? 'text-emerald-700' : 'text-amber-700'}`}>
+                    {isAchieved ? 'Completed' : 'In Progress'}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -644,7 +877,7 @@ export const StudentDashboardPage: React.FC = () => {
                       <span className="font-bold text-sm text-on-surface">{sub.taskTitle}</span>
                       <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
                         sub.status === 'Passed' ? 'bg-emerald-500/10 text-emerald-600' :
-                        sub.status === 'Exceptional' ? 'bg-purple-500/10 text-purple-600' :
+                        sub.status === 'Exceptional' ? 'bg-primary/10 text-primary' :
                         sub.status === 'Needs Revision' ? 'bg-amber-500/10 text-amber-600' :
                         'bg-blue-500/10 text-blue-600'
                       }`}>
