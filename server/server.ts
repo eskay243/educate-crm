@@ -405,29 +405,38 @@ demoUsers.forEach(demoU => {
   }
 });
 
-// Ensure Hummuhani Lawal is seeded and active as an official approver in production db
-const hummuhani = db.staffUsers.find((u: any) => u.email?.toLowerCase() === 'humuhanilawal7@gmail.com');
-if (!hummuhani) {
-  db.staffUsers.push({
-    id: 'staff-hummuhani',
-    name: 'Hummuhani Lawal',
-    email: 'humuhanilawal7@gmail.com',
-    role: 'approver',
-    roleTitle: 'Official Approver & Admissions Lead',
-    department: 'Admissions & Approvals',
-    status: 'Active',
-    isActive: true,
-    isApprover: true,
-    canApproveExpenses: true,
-    avatarUrl: '',
-    joinedDate: '2026-09-01T08:00:00.000Z',
-    createdAt: '2026-09-01T08:00:00.000Z'
+// Purge legacy duplicate personal-email seed (humuhanilawal7@gmail.com) and ensure official hlawal@codelab.institute has Approver rights
+let staffCleaned = false;
+if (Array.isArray(db.staffUsers)) {
+  const beforeLen = db.staffUsers.length;
+  db.staffUsers = db.staffUsers.filter((u: any) => u.email?.toLowerCase() !== 'humuhanilawal7@gmail.com');
+  if (db.staffUsers.length !== beforeLen) staffCleaned = true;
+
+  const officialHummuhani = db.staffUsers.find((u: any) => u.email?.toLowerCase() === 'hlawal@codelab.institute');
+  if (officialHummuhani && !officialHummuhani.isApprover) {
+    officialHummuhani.isApprover = true;
+    staffCleaned = true;
+  }
+
+  // Normalize personal Gmail on Abiola's mentor/staff entry to official @codelab.institute email
+  db.staffUsers.forEach((u: any) => {
+    if (u.email?.toLowerCase() === 'eskay243@gmail.com') {
+      u.email = 'abiola@codelab.institute';
+      u.secondaryEmail = 'eskay243@gmail.com';
+      staffCleaned = true;
+    }
   });
-  saveDatabase(db);
-} else if (!hummuhani.isApprover || hummuhani.role !== 'approver') {
-  hummuhani.isApprover = true;
-  hummuhani.role = 'approver';
-  hummuhani.roleTitle = hummuhani.roleTitle || 'Official Approver & Admissions Lead';
+}
+if (Array.isArray(db.mentors)) {
+  db.mentors.forEach((m: any) => {
+    if (m.email?.toLowerCase() === 'eskay243@gmail.com') {
+      m.email = 'abiola@codelab.institute';
+      m.secondaryEmail = 'eskay243@gmail.com';
+      staffCleaned = true;
+    }
+  });
+}
+if (staffCleaned) {
   saveDatabase(db);
 }
 
@@ -579,16 +588,18 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
       );
       if (mentor) {
         user = {
+          ...mentor,
           id: mentor.id,
           name: mentor.name,
           email: mentor.email,
-          role: 'mentor',
+          role: (mentor.systemRole as any) || 'mentor',
           roleTitle: mentor.role || 'Faculty Mentor',
           mentorId: mentor.id,
           department: mentor.department,
           password: mentor.password,
           isActive: mentor.isActive !== false && mentor.status !== 'Deactivated',
           status: mentor.status || 'Active',
+          isBankVerified: Boolean(mentor.isBankVerified || mentor.isAccountVerified || mentor.bankVerified || (mentor.accountNumber && String(mentor.accountNumber).length === 10)),
         };
       }
     }
@@ -599,6 +610,7 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
       );
       if (student) {
         user = {
+          ...student,
           id: student.id,
           name: student.name,
           email: student.email,
@@ -978,19 +990,53 @@ const sendPushNotification = async (
 const getApproverEmails = (): string[] => {
   const emails = new Set<string>();
 
-  if (db.settings?.email) emails.add(db.settings.email.toLowerCase().trim());
+  if (db.settings?.email && db.settings.email.toLowerCase().endsWith('@codelab.institute')) {
+    emails.add(db.settings.email.toLowerCase().trim());
+  }
   emails.add('admin@codelab.institute');
 
   if (Array.isArray(db.staffUsers)) {
     db.staffUsers.forEach((user: any) => {
       if (user.isActive !== false && user.status !== 'Deactivated' && user.email) {
+        const em = user.email.toLowerCase().trim();
+        if (em === 'humuhanilawal7@gmail.com' || em === 'eskay243@gmail.com') return;
         if (
           user.role === 'super_admin' ||
           user.role === 'approver' ||
           user.role === 'finance' ||
           user.isApprover === true
         ) {
-          emails.add(user.email.toLowerCase().trim());
+          emails.add(em);
+        }
+      }
+    });
+  }
+
+  return Array.from(emails);
+};
+
+// Dedicated Support Ticket Admin & Assigned Officer Recipient Resolver
+// Prevents broadcasting general support tickets to OpEx Finance Approvers or personal Gmail accounts
+const getSupportTicketAdminEmails = (ticket?: any): string[] => {
+  const emails = new Set<string>();
+  emails.add('admin@codelab.institute');
+  emails.add('abiola@codelab.institute');
+
+  if (db.settings?.email && db.settings.email.toLowerCase().endsWith('@codelab.institute')) {
+    emails.add(db.settings.email.toLowerCase().trim());
+  }
+
+  if (ticket?.assignedToEmail) {
+    const assigned = ticket.assignedToEmail.toLowerCase().trim();
+    if (assigned && assigned !== 'humuhanilawal7@gmail.com' && assigned !== 'eskay243@gmail.com') {
+      emails.add(assigned);
+    }
+  } else if (ticket?.assignedToRole && ticket.assignedToRole !== 'super_admin' && Array.isArray(db.staffUsers)) {
+    db.staffUsers.forEach((user: any) => {
+      if (user.isActive !== false && user.status !== 'Deactivated' && user.role === ticket.assignedToRole && user.email) {
+        const em = user.email.toLowerCase().trim();
+        if (em.endsWith('@codelab.institute')) {
+          emails.add(em);
         }
       }
     });
@@ -2217,11 +2263,7 @@ const sendTicketRaisedEmails = async (ticket: any) => {
       </div>
     `;
 
-    const approverEmails = getApproverEmails();
-    const adminRecipients: string[] = Array.from(new Set([
-      ...approverEmails,
-      ...(ticket.assignedToEmail ? [ticket.assignedToEmail.toLowerCase().trim()] : [])
-    ]));
+    const adminRecipients: string[] = getSupportTicketAdminEmails(ticket);
 
     await transporter.sendMail({
       from,
@@ -2229,15 +2271,15 @@ const sendTicketRaisedEmails = async (ticket: any) => {
       subject: adminSubject,
       html: wrapEmailHtml(adminSubject, adminBody),
     });
-    console.log(`✅ [TICKET ADMIN & APPROVER ALERT SENT] To: ${adminRecipients.join(', ')}`);
+    console.log(`✅ [TICKET ADMIN ALERT SENT] To: ${adminRecipients.join(', ')}`);
 
-    // Concurrently trigger native Web Push to all Approvers, Super Admins, and Assigned Staff
+    // Concurrently trigger native Web Push to Super Admins and Assigned Staff
     sendPushNotification(
-      (sub) => sub.userRole === 'super_admin' || sub.userRole === 'approver' || sub.isApprover === true || (ticket.assignedToEmail && sub.userEmail?.toLowerCase() === ticket.assignedToEmail.toLowerCase()),
+      (sub) => sub.userRole === 'super_admin' || (ticket.assignedToRole && sub.userRole === ticket.assignedToRole) || (ticket.assignedToEmail && sub.userEmail?.toLowerCase() === ticket.assignedToEmail.toLowerCase()),
       {
         title: `🎫 Ticket #${ticket.ticketNumber} Raised`,
         body: `${ticket.title} — ${ticket.createdBy?.name || 'User'} (${String(ticket.priority).toUpperCase()}). Tap to view.`,
-        data: { url: '/tickets' },
+        data: { url: `/tickets?ticketId=${ticket.id}` },
         tag: `ticket-${ticket.id}`
       }
     ).catch(err => console.error('Push notification error for ticket raised:', err));
@@ -2855,10 +2897,33 @@ app.post('/api/mentors', (req: Request, res: Response) => {
 
 app.patch('/api/mentors/:id', (req: Request, res: Response) => {
   const { id } = req.params;
-  const index = db.mentors.findIndex(m => m.id === id);
+  const targetEmail = req.body.email ? String(req.body.email).toLowerCase().trim() : null;
+  let index = (db.mentors || []).findIndex(m => m.id === id);
+  if (index === -1 && targetEmail) {
+    index = (db.mentors || []).findIndex(m => m.email?.toLowerCase().trim() === targetEmail);
+  }
   if (index === -1) return res.status(404).json({ success: false, message: 'Mentor not found' });
 
   db.mentors[index] = { ...db.mentors[index], ...req.body };
+
+  // Synchronize matching staffUsers record if present (prevents drift between staffUsers and mentors)
+  const mentorEmail = db.mentors[index].email?.toLowerCase().trim();
+  const mentorId = db.mentors[index].id;
+  if (Array.isArray(db.staffUsers)) {
+    for (let i = 0; i < db.staffUsers.length; i++) {
+      const su = db.staffUsers[i];
+      if (su.id === mentorId || su.mentorId === mentorId || (mentorEmail && su.email?.toLowerCase().trim() === mentorEmail)) {
+        const { role: mentorRoleTitle, ...safeSyncFields } = req.body;
+        db.staffUsers[i] = {
+          ...su,
+          ...safeSyncFields,
+          role: req.body.systemRole || su.role,
+          roleTitle: mentorRoleTitle || su.roleTitle,
+        };
+      }
+    }
+  }
+
   saveDatabase(db);
   res.json({ success: true, data: db.mentors[index] });
 });
@@ -3041,6 +3106,29 @@ app.patch('/api/courses/:id', (req: Request, res: Response) => {
   db.courses[index] = { ...db.courses[index], ...req.body };
   saveDatabase(db);
   res.json({ success: true, data: db.courses[index] });
+});
+
+app.delete('/api/courses/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  if (!Array.isArray(db.courses)) db.courses = [];
+  const index = db.courses.findIndex(c => c.id === id);
+  if (index === -1) {
+    return res.status(404).json({ success: false, message: 'Course not found' });
+  }
+  const removed = db.courses[index];
+  db.courses.splice(index, 1);
+  if (Array.isArray(db.activityLogs)) {
+    db.activityLogs.unshift({
+      id: `act-${Date.now()}-del-course`,
+      timestamp: new Date().toISOString(),
+      title: `Course Deleted: ${removed.title || id}`,
+      description: `Course "${removed.title || id}" (${removed.code || id}) was permanently deleted by Super Admin.`,
+      type: 'system',
+      user: 'Super Admin',
+    });
+  }
+  saveDatabase(db);
+  res.json({ success: true, deletedId: id, data: removed });
 });
 
 app.get('/api/cohorts', (req: Request, res: Response) => {
@@ -3294,29 +3382,84 @@ app.patch('/api/staff/:id', (req: Request, res: Response) => {
   const { id } = req.params;
   const targetEmail = req.body.email ? req.body.email.toLowerCase().trim() : null;
 
-  // Find index by ID or matching email
-  let index = (db.staffUsers || []).findIndex((u: any) => u.id === id);
+  // Find index by ID or matching email in staffUsers
+  let index = (db.staffUsers || []).findIndex((u: any) => u.id === id || u.mentorId === id);
   if (index === -1 && targetEmail) {
     index = (db.staffUsers || []).findIndex((u: any) => u.email?.toLowerCase().trim() === targetEmail);
   }
-  if (index === -1) return res.status(404).json({ success: false, message: 'Staff not found' });
 
-  // Update record
-  db.staffUsers[index] = { ...db.staffUsers[index], ...req.body };
+  // Also check if this user exists in db.mentors (e.g. God'smiracle, Obas, etc.)
+  let mentorIdx = (db.mentors || []).findIndex((m: any) => m.id === id || (targetEmail && m.email?.toLowerCase().trim() === targetEmail));
 
-  // If there are duplicate records sharing ID or email, synchronize them too
-  const targetId = db.staffUsers[index].id;
-  const actualEmail = db.staffUsers[index].email?.toLowerCase().trim();
-  for (let i = 0; i < db.staffUsers.length; i++) {
-    if (i !== index) {
-      if (db.staffUsers[i].id === targetId || (actualEmail && db.staffUsers[i].email?.toLowerCase().trim() === actualEmail)) {
-        db.staffUsers[i] = { ...db.staffUsers[i], ...req.body };
+  if (index !== -1) {
+    db.staffUsers[index] = { ...db.staffUsers[index], ...req.body };
+
+    // If there are duplicate records sharing ID or email in staffUsers, synchronize them too
+    const targetId = db.staffUsers[index].id;
+    const actualEmail = db.staffUsers[index].email?.toLowerCase().trim();
+    for (let i = 0; i < db.staffUsers.length; i++) {
+      if (i !== index) {
+        if (db.staffUsers[i].id === targetId || (actualEmail && db.staffUsers[i].email?.toLowerCase().trim() === actualEmail)) {
+          db.staffUsers[i] = { ...db.staffUsers[i], ...req.body };
+        }
       }
+    }
+
+    // If mentorIdx wasn't matched by req.body.email, check by the staffUser's email or mentorId
+    if (mentorIdx === -1) {
+      const suMentorId = db.staffUsers[index].mentorId;
+      mentorIdx = (db.mentors || []).findIndex((m: any) =>
+        (suMentorId && m.id === suMentorId) ||
+        (actualEmail && m.email?.toLowerCase().trim() === actualEmail)
+      );
     }
   }
 
+  // Synchronize with db.mentors if this user is a mentor
+  if (mentorIdx !== -1) {
+    const { role: systemRole, roleTitle, ...restUpdates } = req.body;
+    db.mentors[mentorIdx] = {
+      ...db.mentors[mentorIdx],
+      ...restUpdates,
+      ...(systemRole ? { systemRole } : {}),
+      ...(roleTitle && systemRole !== 'mentor' ? { role: roleTitle } : {}),
+      ...(typeof req.body.isBankVerified === 'boolean' ? {
+        isBankVerified: req.body.isBankVerified,
+        isAccountVerified: req.body.isBankVerified,
+        bankVerified: req.body.isBankVerified,
+      } : {}),
+    };
+
+    // If this mentor was reassigned to a staff role (e.g. program_officer, coo, super_admin) and wasn't in staffUsers yet, add them
+    if (index === -1 && systemRole && systemRole !== 'mentor') {
+      const promotedStaff = {
+        ...db.mentors[mentorIdx],
+        ...req.body,
+        id: db.mentors[mentorIdx].id,
+        mentorId: db.mentors[mentorIdx].id,
+        role: systemRole,
+        roleTitle: roleTitle || systemRole,
+        isActive: db.mentors[mentorIdx].isActive !== false,
+        status: db.mentors[mentorIdx].status || 'Active',
+      };
+      db.staffUsers.unshift(promotedStaff);
+      index = 0;
+    }
+  }
+
+  // Also check db.students if neither staff nor mentor matched
+  if (index === -1 && mentorIdx === -1) {
+    const studentIdx = (db.students || []).findIndex((s: any) => s.id === id || (targetEmail && s.email?.toLowerCase().trim() === targetEmail));
+    if (studentIdx !== -1) {
+      db.students[studentIdx] = { ...db.students[studentIdx], ...req.body };
+      saveDatabase(db);
+      return res.json({ success: true, data: db.students[studentIdx] });
+    }
+    return res.status(404).json({ success: false, message: 'Staff or Mentor record not found' });
+  }
+
   saveDatabase(db);
-  res.json({ success: true, data: db.staffUsers[index] });
+  res.json({ success: true, data: index !== -1 ? db.staffUsers[index] : db.mentors[mentorIdx] });
 });
 
 app.patch('/api/kyc/review/:userId', (req: Request, res: Response) => {
@@ -4069,12 +4212,26 @@ app.get('/api/attendance', (req: Request, res: Response) => {
 
 app.post('/api/attendance/clock-in', (req: Request, res: Response) => {
   if (!db.attendance) db.attendance = [];
+  const canonicalId = req.body.id || `att-${Date.now()}`;
+  const existingIdx = db.attendance.findIndex((a: any) => a.id === canonicalId);
   const newRecord = {
     ...req.body,
-    id: `att-${Date.now()}`,
-    status: 'Clocked In',
+    id: canonicalId,
+    status: req.body.status || 'Clocked In',
+    isOnBreak: false,
+    breaks: Array.isArray(req.body.breaks) ? req.body.breaks : [],
+    totalBreakMinutes: Number(req.body.totalBreakMinutes || 0),
+    verificationStatus:
+      req.body.verificationStatus ||
+      (req.body.geoStatus === 'Location Mismatch' || req.body.geoStatus === 'GPS Unavailable'
+        ? 'Pending Verification'
+        : 'Verified'),
   };
-  db.attendance.unshift(newRecord);
+  if (existingIdx !== -1) {
+    db.attendance[existingIdx] = newRecord;
+  } else {
+    db.attendance.unshift(newRecord);
+  }
   saveDatabase(db);
   res.status(201).json({ success: true, data: newRecord });
 });
@@ -4082,14 +4239,162 @@ app.post('/api/attendance/clock-in', (req: Request, res: Response) => {
 app.post('/api/attendance/clock-out/:id', (req: Request, res: Response) => {
   if (!db.attendance) db.attendance = [];
   const { id } = req.params;
-  const index = db.attendance.findIndex(a => a.id === id);
-  if (index === -1) return res.status(404).json({ success: false, message: 'Attendance record not found' });
+  let index = db.attendance.findIndex((a: any) => a.id === id);
+
+  // Fallback for legacy records where client/server ID drifted by 1-5ms
+  if (index === -1 && req.body.userId) {
+    index = db.attendance.findIndex(
+      (a: any) =>
+        (a.userId === req.body.userId || a.staffId === req.body.userId) &&
+        !a.clockOutTime
+    );
+  }
+
+  if (index === -1) {
+    return res.status(404).json({ success: false, message: 'Attendance record not found' });
+  }
+
+  const current = db.attendance[index];
+  const nowTs = req.body.clockOutTimestamp || Date.now();
+
+  // Close any open break before clocking out
+  let breaks = Array.isArray(current.breaks) ? [...current.breaks] : [];
+  if (current.isOnBreak && breaks.length > 0) {
+    const lastIdx = breaks.length - 1;
+    if (!breaks[lastIdx].endTimestamp) {
+      const endTs = Math.min(nowTs, Date.now());
+      const durMin = Math.max(1, Math.round((endTs - breaks[lastIdx].startTimestamp) / 60000));
+      breaks[lastIdx] = {
+        ...breaks[lastIdx],
+        endTimestamp: endTs,
+        durationMinutes: durMin,
+      };
+    }
+  }
+  const computedBreakMinutes = breaks.reduce((sum: number, b: any) => sum + (Number(b.durationMinutes) || 0), 0);
+
+  db.attendance[index] = {
+    ...current,
+    ...req.body,
+    isOnBreak: false,
+    breaks: req.body.breaks || breaks,
+    totalBreakMinutes: req.body.totalBreakMinutes !== undefined ? req.body.totalBreakMinutes : computedBreakMinutes,
+    status: 'Clocked Out',
+  };
+  saveDatabase(db);
+  res.json({ success: true, data: db.attendance[index] });
+});
+
+app.patch('/api/attendance/:id/break', (req: Request, res: Response) => {
+  if (!db.attendance) db.attendance = [];
+  const { id } = req.params;
+  const { action, reason } = req.body;
+  const index = db.attendance.findIndex((a: any) => a.id === id);
+  if (index === -1) {
+    return res.status(404).json({ success: false, message: 'Attendance record not found' });
+  }
+
+  const current = db.attendance[index];
+  const breaks = Array.isArray(current.breaks) ? [...current.breaks] : [];
+  const nowTs = Date.now();
+
+  if (action === 'start') {
+    if (!current.isOnBreak) {
+      breaks.push({
+        id: `brk-${nowTs}`,
+        startTimestamp: nowTs,
+        reason: reason || 'Mid-shift break',
+      });
+    }
+    db.attendance[index] = {
+      ...current,
+      isOnBreak: true,
+      status: 'On Break',
+      breaks,
+    };
+  } else {
+    if (breaks.length > 0) {
+      const lastIdx = breaks.length - 1;
+      if (!breaks[lastIdx].endTimestamp) {
+        const durMin = Math.max(1, Math.round((nowTs - breaks[lastIdx].startTimestamp) / 60000));
+        breaks[lastIdx] = {
+          ...breaks[lastIdx],
+          endTimestamp: nowTs,
+          durationMinutes: durMin,
+        };
+      }
+    }
+    const totalBreakMinutes = breaks.reduce((sum: number, b: any) => sum + (Number(b.durationMinutes) || 0), 0);
+    db.attendance[index] = {
+      ...current,
+      isOnBreak: false,
+      status: 'Clocked In',
+      breaks,
+      totalBreakMinutes,
+    };
+  }
+
+  saveDatabase(db);
+  res.json({ success: true, data: db.attendance[index] });
+});
+
+app.post('/api/attendance/:id/resume', (req: Request, res: Response) => {
+  if (!db.attendance) db.attendance = [];
+  const { id } = req.params;
+  const index = db.attendance.findIndex((a: any) => a.id === id);
+  if (index === -1) {
+    return res.status(404).json({ success: false, message: 'Attendance record not found' });
+  }
+
+  const current = db.attendance[index];
+  const breaks = Array.isArray(current.breaks) ? [...current.breaks] : [];
+  const nowTs = Date.now();
+
+  // Record gap between earlier clockOutTimestamp and resume time as an away/break interval
+  if (current.clockOutTimestamp && nowTs > current.clockOutTimestamp) {
+    const gapMinutes = Math.max(1, Math.round((nowTs - current.clockOutTimestamp) / 60000));
+    breaks.push({
+      id: `brk-resume-${nowTs}`,
+      startTimestamp: current.clockOutTimestamp,
+      endTimestamp: nowTs,
+      durationMinutes: gapMinutes,
+      reason: 'Away between resumed same-day shift segments',
+    });
+  }
+
+  const totalBreakMinutes = breaks.reduce((sum: number, b: any) => sum + (Number(b.durationMinutes) || 0), 0);
+
+  const resumedRecord = {
+    ...current,
+    clockOutTime: undefined,
+    clockOutTimestamp: undefined,
+    totalHoursWorked: undefined,
+    isOnBreak: false,
+    breaks,
+    totalBreakMinutes,
+    resumeCount: (Number(current.resumeCount) || 0) + 1,
+    status: 'Clocked In',
+  };
+
+  db.attendance[index] = resumedRecord;
+  saveDatabase(db);
+  res.json({ success: true, data: resumedRecord });
+});
+
+app.patch('/api/attendance/:id/verify', (req: Request, res: Response) => {
+  if (!db.attendance) db.attendance = [];
+  const { id } = req.params;
+  const index = db.attendance.findIndex((a: any) => a.id === id);
+  if (index === -1) {
+    return res.status(404).json({ success: false, message: 'Attendance record not found' });
+  }
 
   db.attendance[index] = {
     ...db.attendance[index],
     ...req.body,
-    status: 'Clocked Out',
+    verifiedAt: req.body.verifiedAt || new Date().toISOString(),
   };
+
   saveDatabase(db);
   res.json({ success: true, data: db.attendance[index] });
 });
@@ -5769,15 +6074,19 @@ app.get('/api/tickets', (req: Request, res: Response) => {
 app.post('/api/tickets', async (req: Request, res: Response) => {
   if (!Array.isArray(db.tickets)) db.tickets = [];
   const ticketCount = db.tickets.length + 1;
+  const nowIso = new Date().toISOString();
   const newTicket = {
     ...req.body,
     id: req.body.id || `tkt-${Date.now()}`,
     ticketNumber: req.body.ticketNumber || `TKT-${1000 + ticketCount}`,
     assignedToRole: req.body.assignedToRole || 'super_admin',
     assignedToName: req.body.assignedToName || 'Super Admin / Operations',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: nowIso,
+    updatedAt: nowIso,
     status: req.body.status || 'open',
+    responseState: req.body.responseState || 'awaiting_staff_reply',
+    unreadByStaff: true,
+    unreadByCreator: false,
     comments: req.body.comments || [],
   };
 
@@ -5788,10 +6097,10 @@ app.post('/api/tickets', async (req: Request, res: Response) => {
     id: `notif-tkt-${Date.now()}`,
     title: `🎫 New Support Ticket: ${newTicket.ticketNumber}`,
     message: `${newTicket.createdBy?.name || 'User'} (${newTicket.createdBy?.roleTitle || 'Member'}) submitted ticket: "${newTicket.title}"`,
-    type: 'system',
-    timestamp: 'Just now',
+    type: 'ticket',
+    timestamp: nowIso,
     read: false,
-    link: '/tickets',
+    link: `/tickets?ticketId=${newTicket.id}`,
   });
 
   saveDatabase(db);
@@ -5817,10 +6126,35 @@ app.patch('/api/tickets/:id', async (req: Request, res: Response) => {
   const updatedTicket = {
     ...db.tickets[index],
     ...req.body,
-    updatedAt: new Date().toISOString(),
+    updatedAt: req.body.onlyMarkRead ? db.tickets[index].updatedAt : new Date().toISOString(),
   };
+  delete updatedTicket.onlyMarkRead;
+
+  if (req.body.status === 'resolved' || req.body.status === 'closed') {
+    updatedTicket.responseState = 'resolved';
+    updatedTicket.unreadByStaff = false;
+  } else if (req.body.status === 'in_progress' && previousTicket.status !== 'in_progress' && req.body.responseState === undefined) {
+    updatedTicket.responseState = 'awaiting_user_reply';
+    updatedTicket.unreadByStaff = false;
+  }
 
   db.tickets[index] = updatedTicket;
+
+  // Support status check request notification
+  if (req.body.statusRequestedAt && req.body.statusRequestedBy) {
+    if (!Array.isArray(db.notifications)) db.notifications = [];
+    db.notifications.unshift({
+      id: `notif-ticket-status-${Date.now()}`,
+      userId: updatedTicket.createdBy?.id || 'all',
+      title: 'Ticket Status Confirmation Requested',
+      message: `${req.body.statusRequestedBy.name} (${req.body.statusRequestedBy.role}) requested a status confirmation on Ticket #${updatedTicket.ticketNumber}: "${updatedTicket.title}". Please verify if your issue is resolved.`,
+      timestamp: new Date().toISOString(),
+      read: false,
+      type: 'ticket',
+      link: `/tickets?ticketId=${updatedTicket.id}`
+    });
+  }
+
   saveDatabase(db);
 
   // Detect status transitions and dispatch emails
@@ -5836,21 +6170,6 @@ app.patch('/api/tickets/:id', async (req: Request, res: Response) => {
     }
   }
 
-  // Support status check request notification
-  if (req.body.statusRequestedAt && req.body.statusRequestedBy) {
-    if (!Array.isArray(db.notifications)) db.notifications = [];
-    db.notifications.unshift({
-      id: `notif-ticket-status-${Date.now()}`,
-      userId: updatedTicket.createdBy?.id || 'all',
-      title: 'Ticket Status Confirmation Requested',
-      message: `${req.body.statusRequestedBy.name} (${req.body.statusRequestedBy.role}) requested a status confirmation on Ticket #${updatedTicket.ticketNumber}: "${updatedTicket.title}". Please verify if your issue is resolved.`,
-      timestamp: new Date().toISOString(),
-      read: false,
-      type: 'ticket',
-      link: '/tickets'
-    });
-  }
-
   res.json({ success: true, data: updatedTicket });
 });
 
@@ -5862,68 +6181,162 @@ app.post('/api/tickets/:id/comments', async (req: Request, res: Response) => {
     return res.status(404).json({ success: false, message: 'Ticket not found' });
   }
 
+  const nowIso = new Date().toISOString();
   const comment = {
     id: `comm-${Date.now()}`,
-    ticketId: id,
+    ticketId: db.tickets[index].id,
     authorName: req.body.authorName || 'Staff Member',
     authorEmail: req.body.authorEmail || 'staff@codelab.institute',
     authorRole: req.body.authorRole || 'Support',
     content: req.body.content || '',
     attachments: Array.isArray(req.body.attachments) ? req.body.attachments : [],
-    createdAt: new Date().toISOString(),
+    createdAt: nowIso,
   };
 
   if (!Array.isArray(db.tickets[index].comments)) {
     db.tickets[index].comments = [];
   }
   db.tickets[index].comments.push(comment);
-  db.tickets[index].updatedAt = new Date().toISOString();
+  db.tickets[index].updatedAt = nowIso;
+
+  const ticket = db.tickets[index];
+  const normAuthorEmail = (comment.authorEmail || '').trim().toLowerCase();
+  const normCreatorEmail = (ticket.createdBy?.email || '').trim().toLowerCase();
+  const normAuthorName = (comment.authorName || '').trim().toLowerCase();
+  const normCreatorName = (ticket.createdBy?.name || '').trim().toLowerCase();
+
+  const isFromCreator = Boolean(
+    (normAuthorEmail && normCreatorEmail && normAuthorEmail === normCreatorEmail) ||
+    (normAuthorName && normCreatorName && normAuthorName === normCreatorName && comment.authorRole !== 'super_admin')
+  );
+
+  ticket.lastReplyAt = nowIso;
+  ticket.lastReplyBy = {
+    id: req.body.authorId || (isFromCreator ? ticket.createdBy?.id : undefined),
+    name: comment.authorName,
+    email: comment.authorEmail,
+    role: comment.authorRole,
+    isCreator: isFromCreator,
+  };
+
+  if (!Array.isArray(db.notifications)) db.notifications = [];
+
+  if (isFromCreator) {
+    ticket.responseState = 'awaiting_staff_reply';
+    ticket.unreadByStaff = true;
+    ticket.unreadByCreator = false;
+    delete ticket.statusRequestedAt;
+
+    if (ticket.status === 'resolved' || ticket.status === 'closed') {
+      ticket.status = 'in_progress';
+      ticket.isArchived = false;
+    }
+
+    db.notifications.unshift({
+      id: `notif-tkt-user-reply-${Date.now()}`,
+      title: `🔴 User Replied: Ticket #${ticket.ticketNumber}`,
+      message: `${comment.authorName} responded on "${ticket.title}": "${(comment.content || 'Attached file(s)').slice(0, 100)}"`,
+      type: 'ticket',
+      timestamp: nowIso,
+      read: false,
+      link: `/tickets?ticketId=${ticket.id}`,
+    });
+  } else {
+    ticket.responseState = 'awaiting_user_reply';
+    ticket.unreadByStaff = false;
+    ticket.unreadByCreator = true;
+
+    if (ticket.status === 'open') {
+      ticket.status = 'in_progress';
+    }
+
+    db.notifications.unshift({
+      id: `notif-tkt-staff-reply-${Date.now()}`,
+      userId: ticket.createdBy?.id || 'all',
+      title: `💬 Support Replied: Ticket #${ticket.ticketNumber}`,
+      message: `${comment.authorName} replied to your ticket "${ticket.title}": "${(comment.content || 'Attached file(s)').slice(0, 100)}"`,
+      type: 'ticket',
+      timestamp: nowIso,
+      read: false,
+      link: `/tickets?ticketId=${ticket.id}`,
+    });
+  }
 
   saveDatabase(db);
 
-  // Dispatch comment notification email
+  // Dispatch comment notification email & Web Push
   try {
-    const ticket = db.tickets[index];
-    const isFromCreator = comment.authorEmail === ticket.createdBy?.email;
-    const recipient = isFromCreator
-      ? (ticket.assignedToEmail || db.settings?.smtp?.user || 'admin@codelab.institute')
+    const recipients = isFromCreator
+      ? getSupportTicketAdminEmails(ticket).join(', ')
       : ticket.createdBy?.email;
 
-    if (recipient) {
+    if (recipients) {
       const { transporter, from } = await getTransporter();
       const primaryColor = '#00236f';
-      const portalUrl = `${APP_BASE_URL}/tickets`;
-      const subject = `💬 [Reply on Ticket] #${ticket.ticketNumber} — ${ticket.title}`;
+      const portalUrl = `${APP_BASE_URL}/tickets?ticketId=${encodeURIComponent(ticket.id)}`;
+      const badgeLabel = isFromCreator ? '🔴 User Responded — Action Needed' : '💬 Support Response Logged';
+      const badgeBg = isFromCreator ? '#fef2f2' : '#eff6ff';
+      const badgeColor = isFromCreator ? '#dc2626' : '#1d4ed8';
+      const subject = isFromCreator
+        ? `🔴 [User Replied] Ticket #${ticket.ticketNumber} — ${ticket.title} (${comment.authorName})`
+        : `💬 [Support Reply] Ticket #${ticket.ticketNumber} — ${ticket.title}`;
       const bodyContent = `
         <div style="padding: 32px 24px; color: #1e293b; line-height: 1.6; font-family: 'Inter', sans-serif;">
+          <div style="margin-bottom: 14px;">
+            <span style="background-color: ${badgeBg}; color: ${badgeColor}; font-weight: 700; font-size: 11px; padding: 5px 12px; border-radius: 20px; text-transform: uppercase;">
+              ${badgeLabel}
+            </span>
+          </div>
           <h2 style="color: ${primaryColor}; margin: 0 0 6px 0; font-size: 18px; font-weight: 800;">
-            New Message on Ticket #${ticket.ticketNumber}
+            New Reply on Ticket #${ticket.ticketNumber}: ${ticket.title}
           </h2>
           <p style="margin: 0; color: #64748b; font-size: 13px;">
-            <strong>${comment.authorName}</strong> (${comment.authorRole}) posted an update:
+            <strong>${comment.authorName}</strong> (${comment.authorRole}) posted a response while ticket status is <strong>${String(ticket.status).toUpperCase().replace('_', ' ')}</strong>:
           </p>
-          <div style="background-color: #f8fafc; border-left: 4px solid ${primaryColor}; border-radius: 4px; padding: 16px; margin: 18px 0; font-size: 13px; color: #1e293b;">
-            ${comment.content}
+          <div style="background-color: #f8fafc; border-left: 4px solid ${primaryColor}; border-radius: 4px; padding: 16px; margin: 18px 0; font-size: 13px; color: #1e293b; white-space: pre-wrap;">
+            ${comment.content || '(Attachment uploaded)'}
           </div>
           <div style="text-align: center; margin: 24px 0;">
             <a href="${portalUrl}" style="background-color: ${primaryColor}; color: #ffffff; padding: 12px 26px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 13px; display: inline-block;">
-              View &amp; Reply →
+              Open Ticket &amp; Reply →
             </a>
           </div>
         </div>
       `;
       transporter.sendMail({
         from,
-        to: recipient,
+        to: recipients,
         subject,
         html: wrapEmailHtml(subject, bodyContent),
       }).catch(err => console.error('Error dispatching ticket comment email:', err));
+    }
+
+    if (isFromCreator) {
+      sendPushNotification(
+        (sub) => sub.userRole === 'super_admin' || (ticket.assignedToRole && sub.userRole === ticket.assignedToRole),
+        {
+          title: `🔴 User Replied: #${ticket.ticketNumber}`,
+          body: `${comment.authorName}: "${(comment.content || 'Sent an attachment').slice(0, 80)}"`,
+          data: { url: `/tickets?ticketId=${ticket.id}` },
+          tag: `ticket-reply-${ticket.id}`
+        }
+      ).catch(() => {});
+    } else if (ticket.createdBy?.email) {
+      sendPushNotification(
+        (sub) => sub.userEmail?.toLowerCase() === ticket.createdBy.email.toLowerCase(),
+        {
+          title: `💬 Support Replied: #${ticket.ticketNumber}`,
+          body: `${comment.authorName}: "${(comment.content || 'Sent an attachment').slice(0, 80)}"`,
+          data: { url: `/tickets?ticketId=${ticket.id}` },
+          tag: `ticket-reply-${ticket.id}`
+        }
+      ).catch(() => {});
     }
   } catch (err) {
     console.error('Error handling comment email dispatch:', err);
   }
 
-  res.status(201).json({ success: true, data: comment });
+  res.status(201).json({ success: true, data: comment, ticket });
 });
 
 // ----------------------------------------------------
@@ -5950,15 +6363,25 @@ app.post('/api/roles', (req: Request, res: Response) => {
 app.patch('/api/roles/:id', (req: Request, res: Response) => {
   const { id } = req.params;
   if (!Array.isArray(db.customRoles)) db.customRoles = [...defaultRoleDefinitions];
-  const index = db.customRoles.findIndex(r => r.id === id);
+  let index = db.customRoles.findIndex(r => r.id === id);
   if (index === -1) {
-    return res.status(404).json({ success: false, message: 'Role not found' });
+    // Upsert role if not yet in db.customRoles
+    const fallbackDef = defaultRoleDefinitions.find(r => r.id === id) || {
+      id,
+      name: req.body.name || id,
+      description: req.body.description || 'Custom institutional role',
+      color: req.body.color || '#3b82f6',
+      isSystem: false,
+      permissions: {},
+    };
+    db.customRoles.push({ ...fallbackDef, ...req.body, id });
+    index = db.customRoles.length - 1;
+  } else {
+    db.customRoles[index] = {
+      ...db.customRoles[index],
+      ...req.body,
+    };
   }
-
-  db.customRoles[index] = {
-    ...db.customRoles[index],
-    ...req.body,
-  };
 
   // If role name was updated, cascade to all staff members assigned to this role
   if (req.body.name && Array.isArray(db.staffUsers)) {
@@ -5971,6 +6394,21 @@ app.patch('/api/roles/:id', (req: Request, res: Response) => {
 
   saveDatabase(db);
   res.json({ success: true, data: db.customRoles[index] });
+});
+
+app.delete('/api/roles/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  if (!Array.isArray(db.customRoles)) db.customRoles = [...defaultRoleDefinitions];
+  const index = db.customRoles.findIndex(r => r.id === id);
+  if (index === -1) {
+    return res.status(404).json({ success: false, message: 'Role not found' });
+  }
+  if (db.customRoles[index].isSystem) {
+    return res.status(400).json({ success: false, message: 'Core system roles cannot be deleted.' });
+  }
+  const removed = db.customRoles.splice(index, 1)[0];
+  saveDatabase(db);
+  res.json({ success: true, deletedId: id, data: removed });
 });
 
 // ----------------------------------------------------

@@ -16,7 +16,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
     clearNotifications,
     unreadNotificationCount 
   } = useCRM();
-  const [filter, setFilter] = useState<'all' | 'admissions' | 'finance' | 'mentor'>('all');
+  const [filter, setFilter] = useState<'all' | 'ticket' | 'admissions' | 'finance' | 'mentor'>('all');
   const navigate = useNavigate();
 
   if (!isOpen) return null;
@@ -36,6 +36,8 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
 
   const getTypeIcon = (type: NotificationItem['type']) => {
     switch (type) {
+      case 'ticket':
+        return { icon: 'confirmation_number', bg: 'bg-red-100 text-red-700' };
       case 'admissions':
         return { icon: 'person_add', bg: 'bg-amber-100 text-amber-800' };
       case 'finance':
@@ -104,7 +106,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
             </div>
 
             <div className="flex gap-1.5 flex-wrap">
-              {(['all', 'admissions', 'finance', 'mentor'] as const).map((f) => (
+              {(['all', 'ticket', 'admissions', 'finance', 'mentor'] as const).map((f) => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
@@ -114,7 +116,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
                       : 'bg-surface-container text-secondary hover:text-on-surface'
                   }`}
                 >
-                  {f === 'mentor' ? 'Mentorship' : f}
+                  {f === 'mentor' ? 'Mentorship' : f === 'ticket' ? 'Support Tickets' : f}
                 </button>
               ))}
             </div>

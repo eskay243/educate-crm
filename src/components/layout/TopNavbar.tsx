@@ -17,9 +17,13 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
     logout, 
     unreadNotificationCount,
     activeAttendanceSession,
+    staleAttendanceSession,
+    todayCompletedSession,
+    toggleShiftBreak,
     settings,
     isSuperAdmin,
     isSimulatingRole,
+    originSuperAdmin,
     switchRole
   } = useCRM();
   const navigate = useNavigate();
@@ -31,9 +35,26 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
   React.useEffect(() => {
     if (!activeAttendanceSession) return;
     const updateElapsed = () => {
-      const ms = Math.max(0, Date.now() - activeAttendanceSession.clockInTimestamp);
-      const h = Math.floor(ms / (1000 * 60 * 60));
-      const m = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+      const nowMs = Date.now();
+      const grossMs = Math.max(0, nowMs - activeAttendanceSession.clockInTimestamp);
+      const breakMins = Number(activeAttendanceSession.totalBreakMinutes || 0);
+      const currentOpenBreakMins =
+        activeAttendanceSession.isOnBreak &&
+        activeAttendanceSession.breaks &&
+        activeAttendanceSession.breaks.length > 0
+          ? Math.max(
+              0,
+              Math.round(
+                (nowMs -
+                  activeAttendanceSession.breaks[activeAttendanceSession.breaks.length - 1]
+                    .startTimestamp) /
+                  60000
+              )
+            )
+          : 0;
+      const netMs = Math.max(0, grossMs - (breakMins + currentOpenBreakMins) * 60000);
+      const h = Math.floor(netMs / (1000 * 60 * 60));
+      const m = Math.floor((netMs % (1000 * 60 * 60)) / (1000 * 60));
       setElapsedText(`${h.toString().padStart(2, '0')}h ${m.toString().padStart(2, '0')}m`);
     };
     updateElapsed();
@@ -129,23 +150,81 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
           {/* Real-Time Live Clock-In Pill (Staff / Mentors only, not students) */}
           {currentUser && currentUser.role !== 'student' && (
             activeAttendanceSession ? (
-              <div 
-                onClick={() => openModal('clock-out')}
-                className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-sea-green-light border border-sea-green/30 text-sea-green text-xs font-semibold cursor-pointer hover:bg-sea-green-light/80 transition-all"
-                title="Click to Clock Out"
-              >
-                <span className="w-2 h-2 rounded-full bg-sea-green animate-pulse"></span>
-                <span className="capitalize">{activeAttendanceSession.workMode}</span>
-                <span className="font-data-tabular font-bold border-l border-sea-green/30 pl-1.5">{elapsedText}</span>
+              <div className="inline-flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => toggleShiftBreak(activeAttendanceSession.isOnBreak ? 'end' : 'start')}
+                  className={`h-8 px-2 rounded-l-full border text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                    activeAttendanceSession.isOnBreak
+                      ? 'bg-[#FEF3C7] border-[#D97706]/40 text-[#92400E] hover:bg-[#FDE68A]'
+                      : 'bg-surface-container-low border-outline-variant text-secondary hover:text-on-surface'
+                  }`}
+                  title={
+                    activeAttendanceSession.isOnBreak
+                      ? 'Resume Shift (End Break)'
+                      : 'Pause Shift for Break'
+                  }
+                >
+                  <span className="material-symbols-outlined text-[15px]">
+                    {activeAttendanceSession.isOnBreak ? 'play_arrow' : 'coffee'}
+                  </span>
+                  <span className="hidden lg:inline">
+                    {activeAttendanceSession.isOnBreak ? 'Resume' : 'Break'}
+                  </span>
+                </button>
+                <div
+                  onClick={() => openModal('clock-out')}
+                  className={`flex items-center gap-2 px-2.5 h-8 rounded-r-full border text-xs font-semibold cursor-pointer transition-all ${
+                    activeAttendanceSession.isOnBreak
+                      ? 'bg-[#FEF3C7] border-[#D97706]/40 text-[#92400E]'
+                      : 'bg-[#DCFCE7] border-[#16A34A]/30 text-[#166534] hover:bg-[#DCFCE7]/80'
+                  }`}
+                  title="Click to End Shift & Clock Out"
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      activeAttendanceSession.isOnBreak
+                        ? 'bg-[#D97706]'
+                        : 'bg-[#16A34A] animate-pulse'
+                    }`}
+                  />
+                  <span className="hidden sm:inline capitalize">
+                    {activeAttendanceSession.isOnBreak
+                      ? 'On Break'
+                      : activeAttendanceSession.workMode}
+                  </span>
+                  <span className="font-data-tabular font-bold border-l border-current/25 pl-1.5">
+                    {elapsedText}
+                  </span>
+                </div>
               </div>
+            ) : staleAttendanceSession ? (
+              <button
+                onClick={() => openModal('clock-in')}
+                className="h-8 px-2.5 sm:px-3 rounded-md bg-[#FEF3C7] text-[#92400E] hover:bg-[#FDE68A] transition-all text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-[#D97706]/40"
+                title={`Unclosed shift from ${staleAttendanceSession.date} — Click to reconcile & clock in`}
+              >
+                <span className="material-symbols-outlined text-[16px] text-[#D97706]">
+                  history_toggle_off
+                </span>
+                <span className="hidden sm:inline">Reconcile Shift</span>
+              </button>
             ) : (
               <button
                 onClick={() => openModal('clock-in')}
                 className="h-8 px-2.5 sm:px-3 rounded-md bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-primary/20"
-                title="Clock In for Shift"
+                title={
+                  todayCompletedSession
+                    ? 'Resume Today Shift or Clock In Again'
+                    : 'Clock In for Shift'
+                }
               >
-                <span className="material-symbols-outlined text-[16px]">timer</span>
-                <span className="hidden sm:inline">Clock In</span>
+                <span className="material-symbols-outlined text-[16px]">
+                  {todayCompletedSession ? 'replay' : 'timer'}
+                </span>
+                <span className="hidden sm:inline">
+                  {todayCompletedSession ? 'Resume / Clock In' : 'Clock In'}
+                </span>
               </button>
             )
           )}
@@ -204,13 +283,97 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
             </div>
 
             {isProfileOpen && (
-              <div className="absolute right-0 mt-2 w-72 bg-surface-container-lowest border border-outline-variant rounded-xl shadow-2xl p-4 z-50 animate-in fade-in space-y-3">
-                <div className="border-b border-outline-variant pb-2">
-                  <p className="font-bold text-sm text-on-surface">{currentUser?.name}</p>
-                  <p className="text-xs text-secondary">{currentUser?.roleTitle}</p>
-                  <span className="inline-block mt-1 px-2 py-0.5 rounded bg-primary-container/30 text-primary text-[10px] font-bold capitalize">
-                    Role: {currentUser?.role.replace('_', ' ')}
-                  </span>
+              <div className="absolute right-0 mt-2 w-80 bg-surface-container-lowest border border-outline-variant rounded-xl shadow-2xl p-4 z-50 animate-in fade-in space-y-3">
+                <div className="border-b border-outline-variant pb-2.5 flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-bold text-sm text-on-surface truncate">{currentUser?.name}</p>
+                    <p className="text-xs text-secondary truncate">{currentUser?.roleTitle}</p>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                      <span className="inline-block px-2 py-0.5 rounded bg-primary-container/30 text-primary text-[10px] font-bold capitalize">
+                        Role: {currentUser?.role.replace('_', ' ')}
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+                          currentUser?.kycStatus === 'Verified'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[11px]">
+                          {currentUser?.kycStatus === 'Verified' ? 'verified' : 'pending_actions'}
+                        </span>
+                        <span>
+                          {currentUser?.kycStatus === 'Verified'
+                            ? 'KYC Verified'
+                            : `KYC: ${currentUser?.kycStatus || 'Pending'}`}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Primary Profile & 3-Tier KYC Quick Access */}
+                <div className="space-y-1.5">
+                  <button
+                    type="button"
+                    data-testid="topnavbar-my-profile-btn"
+                    onClick={() => {
+                      navigate('/settings?section=profile');
+                      setIsProfileOpen(false);
+                    }}
+                    className="w-full p-2.5 rounded-xl bg-primary/10 hover:bg-primary/15 border border-primary/25 text-left transition-all flex items-center justify-between gap-2 cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center shrink-0 shadow-xs">
+                        <span className="material-symbols-outlined text-[18px]">account_circle</span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold text-xs text-primary group-hover:underline truncate">
+                          My Profile &amp; 3-Tier KYC
+                        </p>
+                        <p className="text-[10px] text-secondary truncate">
+                          Biodata, Govt ID, NUBAN Bank &amp; Guarantor
+                        </p>
+                      </div>
+                    </div>
+                    <span className="material-symbols-outlined text-[16px] text-primary shrink-0">
+                      arrow_forward
+                    </span>
+                  </button>
+
+                  {(currentUser?.role === 'mentor' || Boolean(currentUser?.mentorId)) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigate('/mentor/profile');
+                        setIsProfileOpen(false);
+                      }}
+                      className="w-full px-3 py-2 rounded-lg bg-surface hover:bg-surface-container border border-outline-variant/60 text-on-surface font-semibold text-xs transition-colors flex items-center justify-between gap-2 cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[16px] text-primary">badge</span>
+                        <span>My 360° Faculty Dossier</span>
+                      </span>
+                      <span className="material-symbols-outlined text-[14px] text-secondary">open_in_new</span>
+                    </button>
+                  )}
+
+                  {currentUser?.role === 'student' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigate('/student/profile');
+                        setIsProfileOpen(false);
+                      }}
+                      className="w-full px-3 py-2 rounded-lg bg-surface hover:bg-surface-container border border-outline-variant/60 text-on-surface font-semibold text-xs transition-colors flex items-center justify-between gap-2 cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[16px] text-primary">school</span>
+                        <span>My 360° Scholar Dossier</span>
+                      </span>
+                      <span className="material-symbols-outlined text-[14px] text-secondary">open_in_new</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Persona Switcher Menu — Strictly Super Admin Only */}
@@ -231,8 +394,11 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
                       <button
                         onClick={() => { switchRole('super_admin'); setIsProfileOpen(false); navigate('/'); }}
                         className={`p-1.5 rounded text-left transition-colors flex items-center justify-between ${currentUser?.role === 'super_admin' ? 'bg-primary text-white font-bold' : 'bg-surface hover:bg-surface-container text-on-surface'}`}
+                        title={originSuperAdmin ? `Return to ${originSuperAdmin.name}` : 'Super Admin'}
                       >
-                        <span>Super Admin</span>
+                        <span className="truncate">
+                          {originSuperAdmin ? `Super Admin (${originSuperAdmin.name.split(' ')[0]})` : 'Super Admin'}
+                        </span>
                         {currentUser?.role === 'super_admin' && <span className="material-symbols-outlined text-[13px]">check</span>}
                       </button>
                       <button

@@ -35,9 +35,72 @@ export const FloatingChatWidget: React.FC = () => {
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [taggedUserIds, setTaggedUserIds] = useState<string[]>([]);
 
-  // Preview notification for incoming messages
+  // Preview notification & sound state for incoming messages
   const [latestIncomingToast, setLatestIncomingToast] = useState<{ sender: string; text: string } | null>(null);
+  const [isSoundMuted, setIsSoundMuted] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem('nexus_chat_sound_muted') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const prevUnreadCountRef = useRef<number>(unreadChatCount);
+  const lastPlayedMessageIdRef = useRef<string | null>(null);
+
+  // Synthesize a pleasant two-tone Web Audio API harmonic chime for incoming chat messages
+  const playChatNotificationSound = () => {
+    if (isSoundMuted) return;
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+
+      // First tone: C6 (523.25 Hz / 1046.5 Hz)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(880, now); // A5
+      osc1.frequency.exponentialRampToValueAtTime(1174.66, now + 0.12); // D6
+      gain1.gain.setValueAtTime(0.001, now);
+      gain1.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.29);
+
+      // Second harmonic chime: F#6 / A6
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(1318.51, now + 0.11); // E6
+      osc2.frequency.exponentialRampToValueAtTime(1760, now + 0.26); // A6
+      gain2.gain.setValueAtTime(0.001, now + 0.11);
+      gain2.gain.exponentialRampToValueAtTime(0.16, now + 0.14);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + 0.11);
+      osc2.stop(now + 0.46);
+
+      setTimeout(() => {
+        ctx.close().catch(() => {});
+      }, 600);
+    } catch {
+      // Ignore AudioContext autoplay restrictions until user interacts
+    }
+  };
+
+  const toggleSoundMute = () => {
+    setIsSoundMuted(prev => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem('nexus_chat_sound_muted', String(next));
+      } catch {}
+      return next;
+    });
+  };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -135,30 +198,46 @@ export const FloatingChatWidget: React.FC = () => {
     }
   }, [messages, isChatPopoutOpen]);
 
-  // Watch for unread increment when popout is closed to trigger discrete popup notification
+  // Watch for unread increment to trigger notification sound and discrete popup notification
   useEffect(() => {
     if (!currentUser) return;
-    if (unreadChatCount > prevUnreadCountRef.current && !isChatPopoutOpen) {
-      // Fetch latest conversation message to display popup toast
-      fetch(`/api/chat/conversations?userId=${encodeURIComponent(currentUser.id)}&role=${encodeURIComponent(currentUser.role)}&email=${encodeURIComponent(currentUser.email)}`)
-        .then(r => r.json())
-        .then(data => {
-          if (data.success && Array.isArray(data.data)) {
-            const hasLast = data.data.find((c: ChatConversation) => c.lastMessage);
-            if (hasLast?.lastMessage) {
-              setLatestIncomingToast({
-                sender: hasLast.lastMessage.senderName,
-                text: hasLast.lastMessage.content || 'Sent an attachment'
-              });
-              // Auto hide toast after 6 seconds
-              setTimeout(() => setLatestIncomingToast(null), 6000);
+    if (unreadChatCount > prevUnreadCountRef.current) {
+      playChatNotificationSound();
+      if (!isChatPopoutOpen) {
+        // Fetch latest conversation message to display popup toast
+        fetch(`/api/chat/conversations?userId=${encodeURIComponent(currentUser.id)}&role=${encodeURIComponent(currentUser.role)}&email=${encodeURIComponent(currentUser.email)}`)
+          .then(r => r.json())
+          .then(data => {
+            if (data.success && Array.isArray(data.data)) {
+              const hasLast = data.data.find((c: ChatConversation) => c.lastMessage);
+              if (hasLast?.lastMessage) {
+                setLatestIncomingToast({
+                  sender: hasLast.lastMessage.senderName,
+                  text: hasLast.lastMessage.content || 'Sent an attachment'
+                });
+                // Auto hide toast after 6 seconds
+                setTimeout(() => setLatestIncomingToast(null), 6000);
+              }
             }
-          }
-        })
-        .catch(() => {});
+          })
+          .catch(() => {});
+      }
     }
     prevUnreadCountRef.current = unreadChatCount;
-  }, [unreadChatCount, isChatPopoutOpen, currentUser]);
+  }, [unreadChatCount, isChatPopoutOpen, currentUser, isSoundMuted]);
+
+  // Also play notification sound if a new message from another user arrives in the active open conversation
+  useEffect(() => {
+    if (!currentUser || messages.length === 0) return;
+    const latestMsg = messages[messages.length - 1];
+    if (!latestMsg) return;
+    if (lastPlayedMessageIdRef.current && lastPlayedMessageIdRef.current !== latestMsg.id) {
+      if (latestMsg.senderId !== currentUser.id && latestMsg.senderEmail?.toLowerCase() !== currentUser.email?.toLowerCase()) {
+        playChatNotificationSound();
+      }
+    }
+    lastPlayedMessageIdRef.current = latestMsg.id;
+  }, [messages, currentUser, isSoundMuted]);
 
   // Input typing with mention detector
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -496,6 +575,16 @@ export const FloatingChatWidget: React.FC = () => {
 
             {/* Header Right Actions */}
             <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={toggleSoundMute}
+                className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/15 text-white/90 hover:text-white transition-colors cursor-pointer"
+                title={isSoundMuted ? 'Unmute Chat Notification Sound' : 'Mute Chat Notification Sound'}
+              >
+                <span className="material-symbols-outlined text-[17px]">
+                  {isSoundMuted ? 'volume_off' : 'volume_up'}
+                </span>
+              </button>
               <button 
                 type="button"
                 onClick={() => setIsNewDmOpen(true)}
@@ -867,32 +956,56 @@ export const FloatingChatWidget: React.FC = () => {
         </div>
       )}
 
-      {/* 3. Omnipresent Floating Chat Launcher Bubble */}
+      {/* 3. Omnipresent Floating Chat Launcher Bubble with Multi-Layer Unread Animation */}
       {!isChatPopoutOpen && (
-        <button
-          type="button"
-          data-testid="floating-chat-bubble"
-          onClick={() => setIsChatPopoutOpen(true)}
-          className="pointer-events-auto relative flex items-center justify-center w-13 h-13 rounded-full bg-primary text-white shadow-xl hover:scale-105 active:scale-95 transition-all duration-150 cursor-pointer group"
-          title="Open Team Chat"
-        >
-          <span 
-            className="material-symbols-outlined text-[26px]"
-            style={{ fontVariationSettings: "'FILL' 1" }}
-          >
-            chat
-          </span>
-
-          {/* Dynamic Unread Badge */}
+        <div className="pointer-events-auto flex items-center gap-2.5">
           {unreadChatCount > 0 && (
-            <span 
-              data-testid="floating-chat-badge"
-              className="absolute -top-1 -right-1 bg-red-600 text-white text-[11px] font-extrabold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-md font-data-tabular animate-bounce"
+            <button
+              type="button"
+              onClick={() => setIsChatPopoutOpen(true)}
+              className="px-3 py-1.5 rounded-full bg-rose-600 text-white text-xs font-extrabold shadow-lg border border-white/30 flex items-center gap-1.5 animate-bounce cursor-pointer"
             >
-              {unreadChatCount > 99 ? '99+' : unreadChatCount}
-            </span>
+              <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+              <span>{unreadChatCount} Unread {unreadChatCount === 1 ? 'Message' : 'Messages'}</span>
+            </button>
           )}
-        </button>
+          <button
+            type="button"
+            data-testid="floating-chat-bubble"
+            onClick={() => setIsChatPopoutOpen(true)}
+            className={`relative flex items-center justify-center w-13 h-13 rounded-full text-white shadow-xl hover:scale-105 active:scale-95 transition-all duration-150 cursor-pointer group ${
+              unreadChatCount > 0
+                ? 'bg-gradient-to-tr from-primary via-blue-600 to-rose-500 ring-4 ring-rose-400/50 animate-bounce'
+                : 'bg-primary'
+            }`}
+            title={unreadChatCount > 0 ? `${unreadChatCount} Unread Chat Message(s) — Click to Open` : 'Open Team Chat'}
+          >
+            {/* Expanding Sonar Rings when unread messages exist */}
+            {unreadChatCount > 0 && (
+              <>
+                <span className="absolute inset-0 rounded-full bg-rose-500/60 animate-ping pointer-events-none" />
+                <span className="absolute -inset-1.5 rounded-full border-2 border-primary/50 animate-pulse pointer-events-none" />
+              </>
+            )}
+
+            <span 
+              className={`material-symbols-outlined text-[26px] relative z-10 ${unreadChatCount > 0 ? 'animate-pulse' : ''}`}
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
+              {unreadChatCount > 0 ? 'mark_chat_unread' : 'chat'}
+            </span>
+
+            {/* Dynamic Unread Badge */}
+            {unreadChatCount > 0 && (
+              <span 
+                data-testid="floating-chat-badge"
+                className="absolute -top-1.5 -right-1.5 z-20 bg-red-600 text-white text-[11px] font-extrabold min-w-5 h-5 px-1 rounded-full flex items-center justify-center border-2 border-white shadow-md font-data-tabular"
+              >
+                {unreadChatCount > 99 ? '99+' : unreadChatCount}
+              </span>
+            )}
+          </button>
+        </div>
       )}
     </aside>
   );

@@ -208,7 +208,7 @@ export const App: React.FC = () => {
                 <Route
                   path="settings"
                   element={
-                    <ProtectedRoute allowedRoles={['super_admin', 'admissions', 'mentor', 'finance', 'student']}>
+                    <ProtectedRoute>
                       <SettingsPage />
                     </ProtectedRoute>
                   }

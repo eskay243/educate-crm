@@ -217,6 +217,13 @@ class ApiService {
     });
   }
 
+  async deleteCourse(id: string): Promise<boolean> {
+    const res = await this.request<{ success: boolean; deletedId?: string }>(`/courses/${id}`, {
+      method: 'DELETE',
+    });
+    return Boolean(res?.success || res?.deletedId || res);
+  }
+
   async getCohorts(): Promise<Cohort[] | null> {
     return this.request<Cohort[]>('/cohorts');
   }
@@ -401,17 +408,51 @@ class ApiService {
     return this.request<AttendanceRecord[]>('/attendance');
   }
 
-  async clockIn(data: Omit<AttendanceRecord, 'id'>): Promise<AttendanceRecord | null> {
+  async clockIn(data: AttendanceRecord | Omit<AttendanceRecord, 'id'>): Promise<AttendanceRecord | null> {
     return this.request<AttendanceRecord>('/attendance/clock-in', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  async clockOut(id: string, data: { clockOutTime: string; clockOutTimestamp: number; totalHoursWorked: number; workSummary: string }): Promise<AttendanceRecord | null> {
+  async clockOut(
+    id: string,
+    data: Partial<AttendanceRecord> & {
+      clockOutTime: string;
+      clockOutTimestamp: number;
+      totalHoursWorked: number;
+      workSummary: string;
+    }
+  ): Promise<AttendanceRecord | null> {
     return this.request<AttendanceRecord>(`/attendance/clock-out/${id}`, {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  }
+
+  async toggleAttendanceBreak(
+    id: string,
+    payload: { action: 'start' | 'end'; reason?: string }
+  ): Promise<AttendanceRecord | null> {
+    return this.request<AttendanceRecord>(`/attendance/${id}/break`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async resumeAttendanceShift(id: string): Promise<AttendanceRecord | null> {
+    return this.request<AttendanceRecord>(`/attendance/${id}/resume`, {
+      method: 'POST',
+    });
+  }
+
+  async verifyAttendanceRecord(
+    id: string,
+    payload: Partial<AttendanceRecord>
+  ): Promise<AttendanceRecord | null> {
+    return this.request<AttendanceRecord>(`/attendance/${id}/verify`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
     });
   }
 
@@ -597,6 +638,13 @@ class ApiService {
       method: 'PATCH',
       body: JSON.stringify(updates),
     });
+  }
+
+  async deleteRole(id: string): Promise<boolean> {
+    const res = await this.request<{ success: boolean; deletedId?: string }>(`/roles/${id}`, {
+      method: 'DELETE',
+    });
+    return Boolean(res?.success || res?.deletedId);
   }
 
   // Expense & Budget Wallet

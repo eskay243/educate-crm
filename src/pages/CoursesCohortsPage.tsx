@@ -31,7 +31,9 @@ export const CoursesCohortsPage: React.FC = () => {
     openModal,
     globalSearch,
     setSelectedCourseForEditId,
+    deleteCourse,
     currentUser,
+    isSuperAdmin,
     hasFeaturePermission,
   } = useCRM();
 
@@ -52,6 +54,9 @@ export const CoursesCohortsPage: React.FC = () => {
   const [activeIQAStageModal, setActiveIQAStageModal] = useState<{ courseId: string; courseTitle: string; stage: 1 | 2 | 3 } | null>(null);
   const [iqaNotes, setIqaNotes] = useState<string>('');
   const [issuingCertStudentId, setIssuingCertStudentId] = useState<string | null>(null);
+  const [courseToDelete, setCourseToDelete] = useState<{ id: string; title: string; code: string; enrolledCount: number } | null>(null);
+
+  const canDeleteCourse = isSuperAdmin || currentUser?.role === 'super_admin' || hasFeaturePermission('canDeleteCourses' as any);
 
   const effectiveSearch = globalSearch || searchQuery;
 
@@ -693,6 +698,24 @@ export const CoursesCohortsPage: React.FC = () => {
                           >
                             <span className="material-symbols-outlined text-[14px]">edit</span>
                             <span>Edit Track</span>
+                          </button>
+                        )}
+                        {canDeleteCourse && (
+                          <button
+                            onClick={() => {
+                              const enrolled = students.filter(s => s.program === course.title).length || course.enrolledCount || 0;
+                              setCourseToDelete({
+                                id: course.id,
+                                title: course.title,
+                                code: course.code,
+                                enrolledCount: enrolled,
+                              });
+                            }}
+                            className="px-2.5 py-1 rounded border border-rose-200 bg-rose-50/70 hover:bg-rose-600 hover:border-rose-600 text-rose-600 hover:text-white font-label-md text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                            title="Delete Course Track (Super Admin)"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">delete</span>
+                            <span>Delete</span>
                           </button>
                         )}
                       </div>
@@ -2020,6 +2043,57 @@ export const CoursesCohortsPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Super Admin Course Deletion Confirmation Modal */}
+      {courseToDelete && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-surface border border-outline-variant rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-outline-variant pb-3">
+              <h3 className="font-bold text-sm text-rose-600 flex items-center gap-2">
+                <span className="material-symbols-outlined text-[20px]">warning</span>
+                <span>Confirm Permanent Course Deletion</span>
+              </h3>
+              <button onClick={() => setCourseToDelete(null)} className="text-secondary hover:text-on-surface cursor-pointer">
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+            <div className="space-y-3">
+              <p className="text-xs text-on-surface leading-relaxed">
+                Are you sure you want to permanently delete <strong>{courseToDelete.title}</strong> (<span className="font-mono text-primary">#{courseToDelete.code}</span>) from the Academic Programs catalog?
+              </p>
+              {courseToDelete.enrolledCount > 0 && (
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-start gap-2">
+                  <span className="material-symbols-outlined text-[16px] shrink-0 mt-0.5">info</span>
+                  <span>
+                    <strong>{courseToDelete.enrolledCount} enrolled student(s)</strong> are currently associated with this program track. Their historical records will remain preserved.
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t border-outline-variant">
+              <button
+                type="button"
+                onClick={() => setCourseToDelete(null)}
+                className="px-3.5 py-1.5 rounded-lg border border-outline-variant text-xs font-bold text-secondary hover:text-on-surface cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const idToRemove = courseToDelete.id;
+                  setCourseToDelete(null);
+                  await deleteCourse(idToRemove);
+                }}
+                className="px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
+              >
+                <span className="material-symbols-outlined text-[15px]">delete_forever</span>
+                <span>Delete Course Permanently</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

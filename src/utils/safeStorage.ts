@@ -20,15 +20,47 @@ export const safeLocalStorage = {
   },
 
   setItem(key: string, value: string): void {
+    memoryStorageLocal[key] = value;
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
         window.localStorage.setItem(key, value);
         return;
       }
     } catch {
-      // Safari SecurityError / QuotaExceeded fallback
+      // QuotaExceededError or Safari SecurityError fallback:
+      // Strip oversized inline base64 data URLs (> 100KB) so all text/KYC fields always persist across page reloads
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          const compactValue = value.length > 100_000
+            ? value.replace(/"data:[^"]{100000,}"/g, '""')
+            : value;
+          try {
+            window.localStorage.setItem(key, compactValue);
+            return;
+          } catch {
+            // Evict non-auth bulky cache keys and retry so auth/user state is never lost
+            const keysToKeep = new Set([
+              key,
+              'nexus_clean_prod_auth_v1',
+              'nexus_origin_super_admin_user',
+              'nexus_auth',
+            ]);
+            const allKeys: string[] = [];
+            for (let i = 0; i < window.localStorage.length; i++) {
+              const k = window.localStorage.key(i);
+              if (k && !keysToKeep.has(k)) allKeys.push(k);
+            }
+            allKeys.forEach(k => {
+              try { window.localStorage.removeItem(k); } catch {}
+            });
+            window.localStorage.setItem(key, compactValue);
+            return;
+          }
+        }
+      } catch {
+        // Fallback to in-memory storage if localStorage is completely disabled
+      }
     }
-    memoryStorageLocal[key] = value;
   },
 
   removeItem(key: string): void {

@@ -99,11 +99,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     },
     { to: '/attendance', label: 'Staff Attendance', icon: 'schedule', allowedRoles: ['super_admin', 'admissions', 'finance', 'program_officer'], module: 'attendance' },
     { to: '/expenses', label: 'Expenses & Budget', icon: 'payments', allowedRoles: ['super_admin', 'admissions', 'finance'], module: 'expenses' },
+
+    // Universal Top-Level Profile & 3-Tier KYC Access for all roles
+    { to: '/settings?section=profile', label: 'My Profile & KYC', icon: 'account_circle' },
+
     { 
       to: '/settings', 
       label: 'Settings', 
       icon: 'settings', 
-      allowedRoles: ['super_admin', 'admissions', 'mentor', 'finance', 'student'],
+      allowedRoles: ['super_admin', 'admissions', 'mentor', 'finance', 'student', 'program_officer'],
       subItems: settingsSubItems,
     },
 
@@ -128,6 +132,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     { to: '/tickets', label: 'Support & Tickets', icon: 'confirmation_number', module: 'tickets' },
   ];
 
+  const unreadUserRepliedTicketsCount = tickets.filter(t => {
+    if (t.status === 'resolved') return false;
+    if (t.unreadByStaff || t.responseState === 'awaiting_staff_reply') return true;
+    const comments = t.comments || [];
+    if (t.status === 'in_progress' && comments.length > 0) {
+      const lastComment = comments[comments.length - 1];
+      return lastComment.authorName === t.createdBy?.name;
+    }
+    return false;
+  }).length;
+
   const visibleNavItems = allNavItems.filter(item => {
     if (!currentUser) return false;
     
@@ -136,8 +151,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
       return false;
     }
 
-    // Settings is universal to all authenticated roles except program_officer (per QA Checklist TC-1.2.2)
-    if (item.to === '/settings') return !isProgramOfficer;
+    // Universal Profile & KYC link and Settings are accessible to all authenticated users
+    if (item.to === '/settings?section=profile' || item.to === '/settings') return true;
 
     // Support & Tickets is universal to all authenticated roles (when module is enabled or for super admin)
     if (item.to === '/tickets') return true;
@@ -391,34 +406,55 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
             );
           }
 
+          const isProfileShortcut = item.to === '/settings?section=profile';
+          const isProfileShortcutActive =
+            isProfileShortcut &&
+            location.pathname === '/settings' &&
+            (new URLSearchParams(location.search).get('section') || (isSuperAdmin ? 'general' : 'profile')) === 'profile';
+
           return (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.exact}
               onClick={onCloseMobile}
-              className={({ isActive }) =>
-                `flex items-center gap-stack-sm px-3 py-2 rounded-md font-medium text-xs transition-all duration-150 ease-in-out ${
-                  isActive
+              className={({ isActive }) => {
+                const active = isProfileShortcut ? isProfileShortcutActive : isActive;
+                return `flex items-center gap-stack-sm px-3 py-2 rounded-md font-medium text-xs transition-all duration-150 ease-in-out ${
+                  active
                     ? 'text-primary font-bold bg-[#EEF4FF]'
                     : isItemDisabled
                     ? 'text-[#475569]/60 hover:bg-surface-dim transition-colors'
                     : 'text-[#475569] hover:text-crisp-black hover:bg-surface-dim transition-colors'
-                }`
-              }
+                }`;
+              }}
             >
-              {({ isActive }) => (
+              {({ isActive }) => {
+                const active = isProfileShortcut ? isProfileShortcutActive : isActive;
+                return (
                 <>
                   <span 
                     className="material-symbols-outlined" 
                     style={{ 
                       fontSize: '20px',
-                      fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" 
+                      fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0" 
                     }}
                   >
                     {item.icon}
                   </span>
                   <span className="truncate">{item.label}</span>
+                  {isProfileShortcut && currentUser && (
+                    <span
+                      className={`ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                        currentUser.kycStatus === 'Verified'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-amber-100 text-amber-700'
+                      }`}
+                      title={`KYC Status: ${currentUser.kycStatus || 'Pending'}`}
+                    >
+                      {currentUser.kycStatus === 'Verified' ? '✓ KYC' : 'KYC'}
+                    </span>
+                  )}
                   {item.to === '/chat' && unreadChatCount > 0 && (
                     <span 
                       data-testid="sidebar-unread-chat-badge"
@@ -436,10 +472,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
                       {pendingPOTopicsCount}
                     </span>
                   )}
-                  {item.to === '/tickets' && tickets.filter(t => t.status === 'open').length > 0 && (
-                    <span className="ml-auto text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-primary/15 text-primary font-data-tabular">
-                      {tickets.filter(t => t.status === 'open').length}
-                    </span>
+                  {item.to === '/tickets' && (unreadUserRepliedTicketsCount > 0 || tickets.filter(t => t.status === 'open').length > 0) && (
+                    <div className="ml-auto flex items-center gap-1">
+                      {unreadUserRepliedTicketsCount > 0 && (
+                        <span
+                          data-testid="sidebar-ticket-reply-badge"
+                          className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-600 text-white font-data-tabular shadow-sm animate-pulse"
+                          title={`${unreadUserRepliedTicketsCount} ticket${unreadUserRepliedTicketsCount > 1 ? 's' : ''} with new user reply awaiting response`}
+                        >
+                          {unreadUserRepliedTicketsCount}
+                        </span>
+                      )}
+                      {tickets.filter(t => t.status === 'open').length > 0 && (
+                        <span
+                          className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-primary/15 text-primary font-data-tabular"
+                          title={`${tickets.filter(t => t.status === 'open').length} open ticket${tickets.filter(t => t.status === 'open').length > 1 ? 's' : ''}`}
+                        >
+                          {tickets.filter(t => t.status === 'open').length}
+                        </span>
+                      )}
+                    </div>
                   )}
                   {isItemDisabled && (
                     <span 
@@ -450,7 +502,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
                     </span>
                   )}
                 </>
-              )}
+              );}}
             </NavLink>
           );
         })}
@@ -458,23 +510,32 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
 
       {/* Footer User Info & Controls */}
       <div className="mt-auto px-stack-md pt-stack-sm border-t border-outline-variant space-y-2">
-        {/* Logged in User Card */}
+        {/* Logged in User Card — Clickable to open My Profile & 3-Tier KYC */}
         {currentUser && (
-          <div className="p-2 rounded-lg bg-surface border border-outline-variant flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-bold text-[10px] shrink-0">
+          <div className="p-2 rounded-lg bg-surface hover:bg-surface-container-low border border-outline-variant flex items-center justify-between gap-2 transition-colors">
+            <Link
+              to="/settings?section=profile"
+              onClick={onCloseMobile}
+              data-testid="sidebar-user-profile-card"
+              title="Click to open My Profile & 3-Tier KYC"
+              className="flex items-center gap-2 min-w-0 flex-1 group"
+            >
+              <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-bold text-[10px] shrink-0 group-hover:ring-2 group-hover:ring-primary/30 transition-all">
                 {currentUser.name.slice(0, 2).toUpperCase()}
               </div>
               <div className="min-w-0">
-                <p className="font-bold text-xs text-on-surface truncate leading-tight">{currentUser.name}</p>
-                <p className="text-[10px] text-primary font-semibold truncate capitalize">
-                  {currentUser.role.replace('_', ' ')}
+                <p className="font-bold text-xs text-on-surface group-hover:text-primary truncate leading-tight transition-colors">
+                  {currentUser.name}
+                </p>
+                <p className="text-[10px] text-primary font-semibold truncate capitalize flex items-center gap-1">
+                  <span>{currentUser.role.replace('_', ' ')}</span>
+                  <span className="text-[9px] text-secondary font-normal">• Profile &amp; KYC →</span>
                 </p>
               </div>
-            </div>
+            </Link>
             <button
               onClick={handleLogout}
-              className="text-secondary hover:text-error p-1 rounded hover:bg-surface-container"
+              className="text-secondary hover:text-error p-1 rounded hover:bg-surface-container shrink-0"
               title="Sign Out"
             >
               <span className="material-symbols-outlined text-[18px]">logout</span>

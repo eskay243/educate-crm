@@ -48,6 +48,7 @@ export const SettingsPage: React.FC = () => {
     customRoles,
     createCustomRole,
     updateRolePermissions,
+    deleteCustomRole,
     toggleRoleModule,
     toggleUserActiveStatus,
     setSelectedUserForPasswordReset,
@@ -339,47 +340,83 @@ export const SettingsPage: React.FC = () => {
     return missing;
   }, [profileAddress, profileCity, profileStateOfResidence, profileProofOfAddressUrl, profileProofOfAddressName, profileNextOfKinName, profileNextOfKinPhone, profileAccountNumber, isProfileBankVerified]);
 
-  // Synchronize profile states if currentUser changes
+  // Resolve authoritative user record by merging currentUser with live mentors/staffUsers/students record
+  const authoritativeUser = useMemo(() => {
+    if (!currentUser) return null;
+    const normEmail = currentUser.email?.toLowerCase().trim();
+    const matchedStaff = staffUsers.find(u =>
+      u.id === currentUser.id ||
+      (normEmail && u.email?.toLowerCase().trim() === normEmail)
+    );
+    const matchedMentor = mentors.find(m =>
+      m.id === currentUser.id ||
+      (currentUser.mentorId && m.id === currentUser.mentorId) ||
+      (normEmail && m.email?.toLowerCase().trim() === normEmail)
+    );
+    const matchedStudent = students.find(s =>
+      s.id === currentUser.id ||
+      (currentUser.studentId && s.id === currentUser.studentId) ||
+      (normEmail && s.email?.toLowerCase().trim() === normEmail)
+    );
+
+    const merged: any = {
+      ...(matchedStudent || {}),
+      ...(matchedMentor || {}),
+      ...(matchedStaff || {}),
+      ...currentUser,
+    };
+
+    // Ensure non-empty fields from mentor/staff/student are preserved if currentUser had empty/undefined fields
+    const fallbackSource: any = { ...(matchedStudent || {}), ...(matchedMentor || {}), ...(matchedStaff || {}) };
+    for (const key of Object.keys(fallbackSource)) {
+      if ((merged[key] === undefined || merged[key] === '') && fallbackSource[key] !== undefined && fallbackSource[key] !== '') {
+        merged[key] = fallbackSource[key];
+      }
+    }
+    return merged;
+  }, [currentUser, staffUsers, mentors, students]);
+
+  // Synchronize profile states whenever authoritativeUser updates
   useEffect(() => {
-    if (currentUser) {
-      if (currentUser.avatarUrl) setProfileAvatarUrl(currentUser.avatarUrl);
-      if (currentUser.name) setProfileName(currentUser.name);
-      if (currentUser.phone) setProfilePhone(currentUser.phone);
-      if (currentUser.bio) setProfileBio(currentUser.bio);
-      if (currentUser.dateOfBirth) setProfileDob(currentUser.dateOfBirth);
-      if (currentUser.gender) setProfileGender(currentUser.gender);
-      if (currentUser.nationality) setProfileNationality(currentUser.nationality);
-      if (currentUser.stateOfOrigin) setProfileStateOfOrigin(currentUser.stateOfOrigin);
-      if (currentUser.lga) setProfileLga(currentUser.lga);
-      if (currentUser.residentialAddress) setProfileAddress(currentUser.residentialAddress);
-      if (currentUser.city) setProfileCity(currentUser.city);
-      if (currentUser.stateOfResidence) setProfileStateOfResidence(currentUser.stateOfResidence);
-      if (currentUser.proofOfAddressUrl) setProfileProofOfAddressUrl(currentUser.proofOfAddressUrl);
-      if (currentUser.proofOfAddressName) setProfileProofOfAddressName(currentUser.proofOfAddressName);
-      if (currentUser.idType) setProfileIdType(currentUser.idType);
-      if (currentUser.idNumber) setProfileIdNumber(currentUser.idNumber);
-      if (currentUser.idDocumentUrl) setProfileIdDocUrl(currentUser.idDocumentUrl);
-      if (currentUser.idDocumentName) setProfileIdDocName(currentUser.idDocumentName);
-      if (typeof currentUser.isIdVerified === 'boolean') setIsProfileIdVerified(currentUser.isIdVerified);
-      if (currentUser.nextOfKinName) setProfileNextOfKinName(currentUser.nextOfKinName);
-      if (currentUser.nextOfKinRelationship) setProfileNextOfKinRel(currentUser.nextOfKinRelationship);
-      if (currentUser.nextOfKinPhone) setProfileNextOfKinPhone(currentUser.nextOfKinPhone);
-      if (currentUser.nextOfKinAddress) setProfileNextOfKinAddress(currentUser.nextOfKinAddress);
-      if (currentUser.bankName) setProfileBankName(currentUser.bankName);
-      if (currentUser.bankCode) setProfileBankCode(currentUser.bankCode);
-      if (currentUser.accountNumber) {
-        setProfileAccountNumber(currentUser.accountNumber);
-        if (currentUser.accountNumber.length === 10) {
+    if (authoritativeUser) {
+      if (authoritativeUser.avatarUrl) setProfileAvatarUrl(authoritativeUser.avatarUrl);
+      if (authoritativeUser.name) setProfileName(authoritativeUser.name);
+      if (authoritativeUser.phone) setProfilePhone(authoritativeUser.phone);
+      if (authoritativeUser.bio) setProfileBio(authoritativeUser.bio);
+      if (authoritativeUser.dateOfBirth) setProfileDob(authoritativeUser.dateOfBirth);
+      if (authoritativeUser.gender) setProfileGender(authoritativeUser.gender);
+      if (authoritativeUser.nationality) setProfileNationality(authoritativeUser.nationality);
+      if (authoritativeUser.stateOfOrigin) setProfileStateOfOrigin(authoritativeUser.stateOfOrigin);
+      if (authoritativeUser.lga) setProfileLga(authoritativeUser.lga);
+      if (authoritativeUser.residentialAddress) setProfileAddress(authoritativeUser.residentialAddress);
+      if (authoritativeUser.city) setProfileCity(authoritativeUser.city);
+      if (authoritativeUser.stateOfResidence) setProfileStateOfResidence(authoritativeUser.stateOfResidence);
+      if (authoritativeUser.proofOfAddressUrl) setProfileProofOfAddressUrl(authoritativeUser.proofOfAddressUrl);
+      if (authoritativeUser.proofOfAddressName) setProfileProofOfAddressName(authoritativeUser.proofOfAddressName);
+      if (authoritativeUser.idType) setProfileIdType(authoritativeUser.idType);
+      if (authoritativeUser.idNumber) setProfileIdNumber(authoritativeUser.idNumber);
+      if (authoritativeUser.idDocumentUrl) setProfileIdDocUrl(authoritativeUser.idDocumentUrl);
+      if (authoritativeUser.idDocumentName) setProfileIdDocName(authoritativeUser.idDocumentName);
+      if (typeof authoritativeUser.isIdVerified === 'boolean') setIsProfileIdVerified(authoritativeUser.isIdVerified);
+      if (authoritativeUser.nextOfKinName) setProfileNextOfKinName(authoritativeUser.nextOfKinName);
+      if (authoritativeUser.nextOfKinRelationship) setProfileNextOfKinRel(authoritativeUser.nextOfKinRelationship);
+      if (authoritativeUser.nextOfKinPhone) setProfileNextOfKinPhone(authoritativeUser.nextOfKinPhone);
+      if (authoritativeUser.nextOfKinAddress) setProfileNextOfKinAddress(authoritativeUser.nextOfKinAddress);
+      if (authoritativeUser.bankName) setProfileBankName(authoritativeUser.bankName);
+      if (authoritativeUser.bankCode) setProfileBankCode(authoritativeUser.bankCode);
+      if (authoritativeUser.accountNumber) {
+        setProfileAccountNumber(authoritativeUser.accountNumber);
+        if (String(authoritativeUser.accountNumber).length === 10) {
           setIsProfileBankVerified(true);
         }
       }
-      if (currentUser.accountName) setProfileAccountName(currentUser.accountName);
-      if (currentUser.bvn) setProfileBvn(currentUser.bvn);
-      if (typeof currentUser.isBankVerified === 'boolean') {
-        setIsProfileBankVerified(currentUser.isBankVerified);
+      if (authoritativeUser.accountName) setProfileAccountName(authoritativeUser.accountName);
+      if (authoritativeUser.bvn) setProfileBvn(authoritativeUser.bvn);
+      if (typeof authoritativeUser.isBankVerified === 'boolean' || authoritativeUser.isAccountVerified || authoritativeUser.bankVerified) {
+        setIsProfileBankVerified(Boolean(authoritativeUser.isBankVerified || authoritativeUser.isAccountVerified || authoritativeUser.bankVerified));
       }
     }
-  }, [currentUser]);
+  }, [authoritativeUser]);
 
   const [userDirectoryFilter, setUserDirectoryFilter] = useState<'all' | 'staff' | 'mentor' | 'student' | 'kyc_pending'>('all');
   const [userDirectorySearch, setUserDirectorySearch] = useState('');
@@ -1411,47 +1448,80 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 3 * 1024 * 1024) {
-      showToast('Image Too Large', 'Please select a photo under 3MB.', 'error');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
-      if (dataUrl) {
-        setProfileAvatarUrl(dataUrl);
-        showToast('Photo Selected', 'Official passport photo loaded. Click Save KYC to persist.', 'info');
-      }
-    };
-    reader.readAsDataURL(file);
+  // Client-side image compressor so 3MB+ passport/ID photos become ~60KB and never overflow localStorage quota
+  const compressImageOrReadFile = (file: File, maxDim = 800, quality = 0.82): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const rawDataUrl = (event.target?.result as string) || '';
+        if (!file.type.startsWith('image/') || !rawDataUrl) {
+          resolve(rawDataUrl);
+          return;
+        }
+        const img = new Image();
+        img.onload = () => {
+          try {
+            let { width, height } = img;
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, width, height);
+              const compressed = canvas.toDataURL('image/jpeg', quality);
+              resolve(compressed.length < rawDataUrl.length ? compressed : rawDataUrl);
+              return;
+            }
+          } catch {}
+          resolve(rawDataUrl);
+        };
+        img.onerror = () => resolve(rawDataUrl);
+        img.src = rawDataUrl;
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
-  const handleIdDocUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      showToast('Image Too Large', 'Please select a photo under 10MB.', 'error');
+      return;
+    }
+    const dataUrl = await compressImageOrReadFile(file, 600, 0.82);
+    if (dataUrl) {
+      setProfileAvatarUrl(dataUrl);
+      showToast('Photo Selected', 'Official passport photo optimized and loaded.', 'info');
+    }
+  };
+
+  const handleIdDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setProfileIdDocName(file.name);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setProfileIdDocUrl(event.target?.result as string);
-      setIsProfileIdVerified(true);
-      showToast('ID Document Attached', `${file.name} uploaded for verification.`, 'success');
-    };
-    reader.readAsDataURL(file);
+    const dataUrl = await compressImageOrReadFile(file, 1000, 0.82);
+    setProfileIdDocUrl(dataUrl);
+    setIsProfileIdVerified(true);
+    showToast('ID Document Attached', `${file.name} uploaded for verification.`, 'success');
   };
 
-  const handleProofAddressUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProofAddressUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setProfileProofOfAddressName(file.name);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setProfileProofOfAddressUrl(event.target?.result as string);
-      showToast('Proof of Address Attached', `${file.name} uploaded.`, 'success');
-    };
-    reader.readAsDataURL(file);
+    const dataUrl = await compressImageOrReadFile(file, 1000, 0.82);
+    setProfileProofOfAddressUrl(dataUrl);
+    showToast('Proof of Address Attached', `${file.name} uploaded.`, 'success');
   };
 
   const handleVerifyId = () => {
@@ -1468,8 +1538,8 @@ export const SettingsPage: React.FC = () => {
     }, 700);
   };
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveProfile = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e && 'preventDefault' in e) e.preventDefault();
     setIsSavingProfile(true);
     try {
       let bankVerified = isProfileBankVerified;
@@ -2258,14 +2328,15 @@ export const SettingsPage: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     if (!isTier1Complete) {
                       showToast('Tier 1 Incomplete', `Please upload your passport photo and fill all required fields: ${tier1MissingFields.join(', ')}`, 'warning');
                       return;
                     }
+                    await handleSaveProfile();
                     setActiveKycStep(2);
                   }}
-                  disabled={!isTier1Complete}
+                  disabled={!isTier1Complete || isSavingProfile}
                   className="w-full sm:w-auto px-6 h-10 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                 >
                   <span>Proceed to Tier 2: Government ID</span>
@@ -2481,14 +2552,15 @@ export const SettingsPage: React.FC = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         if (!isTier2Complete) {
                           showToast('Tier 2 Incomplete', `Please validate your ID and attach proof document: ${tier2MissingFields.join(', ')}`, 'warning');
                           return;
                         }
+                        await handleSaveProfile();
                         setActiveKycStep(3);
                       }}
-                      disabled={!isTier2Complete}
+                      disabled={!isTier2Complete || isSavingProfile}
                       className="w-full sm:w-auto px-6 h-10 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                     >
                       <span>Proceed to Tier 3: Residence &amp; NUBAN</span>
@@ -4815,7 +4887,7 @@ export const SettingsPage: React.FC = () => {
                             </div>
                           </td>
                           <td className="p-3">
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <span className={`px-2 py-0.5 rounded text-[10px] font-bold capitalize ${
                                 u.category === 'staff'
                                   ? 'bg-blue-50 text-blue-700 border border-blue-200'
@@ -4825,7 +4897,32 @@ export const SettingsPage: React.FC = () => {
                               }`}>
                                 {u.category}
                               </span>
-                              <span className="text-secondary text-[11px] font-medium">{u.roleTitle}</span>
+                              {isSuperAdmin && (u.category === 'staff' || u.category === 'mentor') ? (
+                                <select
+                                  value={u.role}
+                                  onChange={(e) => updateUserRole(u.id, e.target.value as UserRole)}
+                                  className="px-2 py-0.5 rounded bg-surface border border-outline-variant text-[11px] font-semibold text-on-surface outline-none focus:border-primary cursor-pointer"
+                                  title="Assign or change institutional role"
+                                >
+                                  <optgroup label="Core System Roles">
+                                    <option value="super_admin">Super Admin</option>
+                                    <option value="approver">Institutional Approver</option>
+                                    <option value="program_officer">Program Officer</option>
+                                    <option value="admissions">Admissions Officer</option>
+                                    <option value="mentor">Faculty Mentor</option>
+                                    <option value="finance">Finance Officer</option>
+                                  </optgroup>
+                                  {customRoles.filter(r => !['super_admin', 'admissions', 'mentor', 'finance', 'student', 'approver', 'program_officer'].includes(r.id)).length > 0 && (
+                                    <optgroup label="Custom Roles">
+                                      {customRoles.filter(r => !['super_admin', 'admissions', 'mentor', 'finance', 'student', 'approver', 'program_officer'].includes(r.id)).map(cr => (
+                                        <option key={cr.id} value={cr.id}>{cr.name}</option>
+                                      ))}
+                                    </optgroup>
+                                  )}
+                                </select>
+                              ) : (
+                                <span className="text-secondary text-[11px] font-medium">{u.roleTitle}</span>
+                              )}
                             </div>
                           </td>
                           <td className="p-3 text-secondary font-data-tabular">{u.email}</td>
@@ -4990,13 +5087,31 @@ export const SettingsPage: React.FC = () => {
 
             {/* Roles Matrix */}
             <div className="space-y-4">
-              {customRoles.map((role) => (
+              {customRoles.map((role) => {
+                const assignedUsersForRole = [
+                  ...staffUsers.filter(u => u.role === role.id).map(u => ({ id: u.id, name: u.name, email: u.email, badge: 'Staff' })),
+                  ...(role.id === 'mentor'
+                    ? mentors
+                        .filter(m => !staffUsers.some(u => u.id === m.id || u.email?.toLowerCase() === m.email?.toLowerCase()))
+                        .map(m => ({ id: m.id, name: m.name, email: m.email, badge: 'Mentor' }))
+                    : []),
+                ];
+
+                const assignablePool = [
+                  ...staffUsers.filter(u => u.role !== role.id).map(u => ({ id: u.id, name: u.name, currentRole: u.roleTitle || u.role })),
+                  ...mentors
+                    .filter(m => !staffUsers.some(u => u.id === m.id || u.email?.toLowerCase() === m.email?.toLowerCase()))
+                    .filter(m => (role.id === 'mentor' ? false : ((m as any).systemRole || 'mentor') !== role.id))
+                    .map(m => ({ id: m.id, name: m.name, currentRole: 'Faculty Mentor' })),
+                ];
+
+                return (
                 <div 
                   key={role.id}
                   className="p-4 rounded-xl bg-surface border border-outline-variant/80 space-y-3"
                 >
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2.5 flex-wrap">
                       <span className="font-bold text-sm text-on-surface">{role.name}</span>
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                         role.isSystem ? 'bg-secondary-container text-secondary' : 'bg-primary/15 text-primary'
@@ -5004,22 +5119,86 @@ export const SettingsPage: React.FC = () => {
                         {role.isSystem ? 'System Built-in' : 'Custom Defined'}
                       </span>
                       <span className="font-mono text-[10px] text-secondary">({role.id})</span>
+                      <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">
+                        {assignedUsersForRole.length} {assignedUsersForRole.length === 1 ? 'Member' : 'Members'}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-xs text-secondary italic">{role.description}</p>
                       {!role.isSystem && (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenRenameRole(role)}
-                          className="h-7 px-2.5 rounded bg-surface hover:bg-surface-container border border-outline-variant font-semibold text-[11px] text-on-surface transition-colors flex items-center gap-1 cursor-pointer shrink-0"
-                          title="Rename this role and cascade updates to assigned staff"
-                        >
-                          <span className="material-symbols-outlined text-[13px]">edit</span>
-                          <span>Rename Role</span>
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenRenameRole(role)}
+                            className="h-7 px-2.5 rounded bg-surface hover:bg-surface-container border border-outline-variant font-semibold text-[11px] text-on-surface transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+                            title="Rename this role and cascade updates to assigned staff"
+                          >
+                            <span className="material-symbols-outlined text-[13px]">edit</span>
+                            <span>Rename Role</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (window.confirm(`Delete custom role "${role.name}"? Assigned users will be safely reassigned to Program Officer.`)) {
+                                await deleteCustomRole(role.id);
+                              }
+                            }}
+                            className="h-7 px-2.5 rounded bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-200 font-semibold text-[11px] transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+                            title="Delete Custom Role"
+                          >
+                            <span className="material-symbols-outlined text-[13px]">delete</span>
+                            <span>Delete Role</span>
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
+
+                  {/* Assigned Personnel & Quick Role Assignment Bar */}
+                  {role.id !== 'student' && (
+                    <div className="p-3 rounded-lg bg-surface-container-low border border-outline-variant/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                      <div className="space-y-1 flex-1 min-w-0">
+                        <span className="text-[10px] font-bold text-secondary uppercase tracking-wider block">
+                          Assigned Personnel ({assignedUsersForRole.length}):
+                        </span>
+                        {assignedUsersForRole.length === 0 ? (
+                          <span className="text-xs text-secondary italic">No staff or faculty currently assigned to this role.</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {assignedUsersForRole.map(member => (
+                              <span
+                                key={member.id}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-surface border border-outline-variant text-[11px] font-semibold text-on-surface"
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                <span>{member.name}</span>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="shrink-0 flex items-center gap-1.5">
+                        <select
+                          defaultValue=""
+                          onChange={(e) => {
+                            const selectedUserId = e.target.value;
+                            if (!selectedUserId) return;
+                            updateUserRole(selectedUserId, role.id as UserRole);
+                            e.target.value = '';
+                          }}
+                          className="h-8 px-2.5 rounded-lg bg-surface border border-primary/40 hover:border-primary text-xs font-semibold text-primary outline-none cursor-pointer"
+                        >
+                          <option value="" disabled>+ Assign User to {role.name}...</option>
+                          {assignablePool.map(person => (
+                            <option key={person.id} value={person.id}>
+                              {person.name} ({person.currentRole})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Modules Bar & Interactive Toggles */}
                   <div className="space-y-1.5 pt-1">
@@ -5087,6 +5266,7 @@ export const SettingsPage: React.FC = () => {
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 text-xs">
                       {[
                         { key: 'canAddCourses' as const, label: 'Add / Edit Courses', icon: 'menu_book' },
+                        { key: 'canDeleteCourses' as any, label: 'Delete Courses & Tracks', icon: 'delete_forever' },
                         { key: 'canAddCohorts' as const, label: 'Launch Cohorts', icon: 'rocket_launch' },
                         { key: 'canAddLeads' as const, label: 'Intake Leads', icon: 'leaderboard' },
                         { key: 'canEnrollStudents' as const, label: 'Enroll Students', icon: 'school' },
@@ -5103,7 +5283,7 @@ export const SettingsPage: React.FC = () => {
                         { key: 'canDisburseApprovedFunds' as const, label: 'Disburse Approved Funds', icon: 'payments' },
                         { key: 'canViewStandupReports' as const, label: 'View Standup Management Reports', icon: 'monitoring' },
                       ].map(({ key, label, icon }) => {
-                        const isGranted = role.id === 'super_admin' || Boolean(role.permissions?.[key]);
+                        const isGranted = role.id === 'super_admin' || Boolean((role.permissions as any)?.[key]);
                         const isImmutable = role.id === 'super_admin';
 
                         return (
@@ -5113,7 +5293,7 @@ export const SettingsPage: React.FC = () => {
                             disabled={isImmutable}
                             onClick={() => {
                               if (isImmutable) return;
-                              const currentPerms = role.permissions || {
+                              const currentPerms: any = role.permissions || {
                                 canAddCourses: false, canAddCohorts: false, canAddLeads: false, canEnrollStudents: false,
                                 canLogExpenses: false, canApproveExpenses: false, canIssueCertificates: false, canViewBilling: false,
                                 canManageSettings: false, canManageAttendance: false, canSubmitReports: false,
@@ -5146,7 +5326,8 @@ export const SettingsPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

@@ -36,6 +36,7 @@ export interface CustomRoleDefinition {
 export type TicketCategory = 'bug' | 'feature_request' | 'academic' | 'billing' | 'welfare' | 'observation' | 'general';
 export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+export type TicketResponseState = 'awaiting_staff_reply' | 'awaiting_user_reply' | 'resolved';
 
 export interface TicketAttachment {
   name: string;
@@ -63,6 +64,17 @@ export interface SupportTicket {
   category: TicketCategory;
   priority: TicketPriority;
   status: TicketStatus;
+  responseState?: TicketResponseState;
+  unreadByStaff?: boolean;
+  unreadByCreator?: boolean;
+  lastReplyAt?: string;
+  lastReplyBy?: {
+    id?: string;
+    name: string;
+    email: string;
+    role: string;
+    isCreator: boolean;
+  };
   attachments?: TicketAttachment[];
   createdBy: {
     id: string;
@@ -660,12 +672,31 @@ export interface MentorAvailabilitySlot {
 // Employee Hybrid Attendance & Hours Tracking
 // ----------------------------------------------------
 export type WorkMode = 'On-Site / Hub' | 'Remote' | 'Hybrid';
-export type PunctualityStatus = 'On-Time' | 'Late' | 'Overtime' | 'Standard';
+export type PunctualityStatus = 'On-Time' | 'Grace Period' | 'Late' | 'Overtime' | 'Flexible / Faculty' | 'Standard';
 export type GeoVerificationStatus = 
   | 'Verified On-Site' 
   | 'Remote Verified' 
   | 'Location Mismatch' 
   | 'GPS Unavailable';
+
+export type AttendanceVerificationStatus = 'Verified' | 'Pending Verification' | 'Flagged' | 'Admin Override';
+
+export interface ShiftBreakEntry {
+  id: string;
+  startTimestamp: number;
+  endTimestamp?: number;
+  durationMinutes?: number;
+  reason?: string;
+}
+
+export interface ShiftDeliverableItem {
+  id: string;
+  moduleId: string;
+  description: string;
+  completed: boolean;
+  source: 'standup' | 'crm_auto' | 'manual';
+  timestamp?: string;
+}
 
 export interface AttendanceRecord {
   id: string;
@@ -686,17 +717,34 @@ export interface AttendanceRecord {
   totalHoursWorked?: number; // e.g. 8.3
   workMode: WorkMode;
   locationName: string; // e.g. "Yaba Tech Hub", "Remote - Lekki"
+  campusId?: string;
+  campusName?: string;
   latitude?: number;
   longitude?: number;
+  gpsAccuracyMeters?: number;
   distanceFromOfficeMeters?: number;
   geoStatus: GeoVerificationStatus;
+  geoExceptionReason?: string;
+  verificationStatus?: AttendanceVerificationStatus;
+  verifiedBy?: string;
+  verifiedAt?: string;
+  verificationNotes?: string;
   punctuality: PunctualityStatus;
   punctualityStatus?: PunctualityStatus;
   shiftFocus: string; // Office chores, tasks, and daily objectives
   dailyTasksFocus?: string;
   workSummary?: string; // End of day completed deliverables
-  status: 'Clocked In' | 'Clocked Out' | 'On-Duty' | 'Completed';
-  verifiedBy?: string;
+  isOnBreak?: boolean;
+  breaks?: ShiftBreakEntry[];
+  totalBreakMinutes?: number;
+  overtimeHours?: number;
+  isRetroactiveClockOut?: boolean;
+  retroactiveNote?: string;
+  resumeCount?: number;
+  linkedStandupId?: string;
+  deliverablesChecklist?: ShiftDeliverableItem[];
+  crmActivitiesCount?: number;
+  status: 'Clocked In' | 'On Break' | 'Clocked Out' | 'On-Duty' | 'Completed';
 }
 
 export type ExpenseCategory = 
@@ -1104,9 +1152,10 @@ export interface ActivityLogItem {
 
 export interface NotificationItem {
   id: string;
+  userId?: string;
   title: string;
   message: string;
-  type: 'admissions' | 'finance' | 'mentor' | 'system';
+  type: 'admissions' | 'finance' | 'mentor' | 'system' | 'ticket' | 'message';
   timestamp: string;
   read: boolean;
   link?: string;

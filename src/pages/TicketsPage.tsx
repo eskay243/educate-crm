@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
-import { TicketCategory, TicketPriority, TicketStatus, TicketAttachment } from '../types/crm';
+import { TicketCategory, TicketPriority, TicketStatus, TicketAttachment, SupportTicket } from '../types/crm';
 import { CrispStatusBadge } from '../components/common/CrispStatusBadge';
 
 const formatTicketDateTime = (isoDate?: string) => {
@@ -58,15 +59,36 @@ export const TicketsPage: React.FC = () => {
     assignTicket,
     addTicketComment, 
     markTicketDone,
+    markTicketRead,
     requestTicketStatus,
     toggleTicketArchive,
     currentUser, 
     customRoles,
     showToast 
   } = useCRM();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const isSuperAdmin = currentUser?.role === 'super_admin';
-  const isStaff = isSuperAdmin || currentUser?.role === 'admissions' || currentUser?.role === 'finance' || currentUser?.role === 'it_support';
+  const isStaff = isSuperAdmin || currentUser?.role === 'admissions' || currentUser?.role === 'finance' || currentUser?.role === 'it_support' || currentUser?.role === 'program_officer';
+
+  // Helper to determine if the ticket creator was the last person to reply on an active ticket
+  const didUserReplyLast = (t: SupportTicket): boolean => {
+    const isDone = t.isArchived === true || t.status === 'resolved' || t.status === 'closed';
+    if (isDone) return false;
+    if (t.unreadByStaff === true && (t.comments?.length || 0) > 0) return true;
+    if (t.responseState === 'awaiting_staff_reply' && (t.comments?.length || 0) > 0) return true;
+    if (t.comments && t.comments.length > 0) {
+      const lastComment = t.comments[t.comments.length - 1];
+      const creatorEmail = (t.createdBy?.email || '').trim().toLowerCase();
+      const authorEmail = (lastComment.authorEmail || '').trim().toLowerCase();
+      const creatorName = (t.createdBy?.name || '').trim().toLowerCase();
+      const authorName = (lastComment.authorName || '').trim().toLowerCase();
+      if ((creatorEmail && authorEmail === creatorEmail) || (creatorName && authorName === creatorName && lastComment.authorRole?.toLowerCase() !== 'super_admin')) {
+        return true;
+      }
+    }
+    return false;
+  };
 
   // Base Access Isolation:
   // Super Admin can see all system tickets.
@@ -98,6 +120,24 @@ export const TicketsPage: React.FC = () => {
   // Modal / Drawer States
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+
+  // Deep-link support from NotificationDrawer (/tickets?ticketId=...)
+  useEffect(() => {
+    const ticketIdParam = searchParams.get('ticketId');
+    if (ticketIdParam) {
+      setSelectedTicketId(ticketIdParam);
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('ticketId');
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
+  // Automatically clear unread indicator when viewing a ticket drawer
+  useEffect(() => {
+    if (selectedTicketId) {
+      markTicketRead(selectedTicketId);
+    }
+  }, [selectedTicketId]);
 
   // New Ticket Form State
   const [newTitle, setNewTitle] = useState('');
@@ -149,6 +189,8 @@ export const TicketsPage: React.FC = () => {
       let matchesTab = true;
       if (activeTab === 'all') {
         matchesTab = true;
+      } else if (activeTab === 'needs_reply') {
+        matchesTab = didUserReplyLast(t) || Boolean(t.unreadByStaff);
       } else if (activeTab === 'my_tickets') {
         matchesTab = t.createdBy.email === currentUser?.email || t.createdBy.id === currentUser?.id;
       } else if (activeTab === 'assigned_admin') {
@@ -169,6 +211,10 @@ export const TicketsPage: React.FC = () => {
     return authorizedTickets.filter(t => t.isArchived === true || t.status === 'resolved' || t.status === 'closed').length;
   }, [authorizedTickets]);
 
+  const userRepliedCount = useMemo(() => {
+    return authorizedTickets.filter(t => didUserReplyLast(t)).length;
+  }, [authorizedTickets]);
+
   const totalPages = Math.max(1, Math.ceil(filteredTickets.length / pageSize));
   const paginatedTickets = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -180,7 +226,8 @@ export const TicketsPage: React.FC = () => {
     const open = authorizedTickets.filter(t => t.status === 'open').length;
     const inProgress = authorizedTickets.filter(t => t.status === 'in_progress').length;
     const resolved = authorizedTickets.filter(t => t.status === 'resolved' || t.status === 'closed').length;
-    return { total, open, inProgress, resolved };
+    const userReplied = authorizedTickets.filter(t => didUserReplyLast(t)).length;
+    return { total, open, inProgress, resolved, userReplied };
   }, [authorizedTickets]);
 
   const activeTicket = useMemo(() => {
@@ -291,7 +338,7 @@ export const TicketsPage: React.FC = () => {
       </div>
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-stack-md">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-stack-md">
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md shadow-xs flex items-center justify-between">
           <div>
             <span className="text-xs text-secondary font-semibold">Total Tickets</span>
@@ -328,6 +375,32 @@ export const TicketsPage: React.FC = () => {
           </div>
           <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
             <span className="material-symbols-outlined text-[22px]">published_with_changes</span>
+          </div>
+        </div>
+
+        <div
+          onClick={() => { setViewMode('active'); setActiveTab(activeTab === 'needs_reply' ? 'all' : 'needs_reply'); setCurrentPage(1); }}
+          className={`rounded-xl p-stack-md shadow-xs flex items-center justify-between cursor-pointer transition-all border ${
+            stats.userReplied > 0
+              ? 'bg-rose-50/70 border-rose-300 hover:border-rose-500 ring-1 ring-rose-500/20'
+              : 'bg-surface-container-lowest border-outline-variant hover:border-primary/40'
+          }`}
+          title="Click to filter tickets where a user has replied and needs your attention"
+        >
+          <div>
+            <span className="text-xs text-rose-700 font-bold flex items-center gap-1">
+              {stats.userReplied > 0 && <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping" />}
+              <span>User Replied</span>
+            </span>
+            <div className="text-headline-md font-bold text-rose-600 font-data-tabular mt-0.5">
+              {stats.userReplied}
+            </div>
+            <span className="text-[11px] text-rose-700 font-semibold">
+              {stats.userReplied > 0 ? 'Needs staff response' : 'All replies read'}
+            </span>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-rose-500/15 text-rose-600 flex items-center justify-center">
+            <span className="material-symbols-outlined text-[22px]">mark_chat_unread</span>
           </div>
         </div>
 
@@ -395,7 +468,7 @@ export const TicketsPage: React.FC = () => {
       <div className="space-y-stack-sm">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-surface-container-lowest p-3 rounded-xl border border-outline-variant">
           {/* Tabs */}
-          <div className="inline-flex flex-wrap rounded-lg border border-outline-variant bg-surface p-0.5">
+          <div className="inline-flex flex-wrap rounded-lg border border-outline-variant bg-surface p-0.5 gap-0.5">
             {isSuperAdmin ? (
               <>
                 <button
@@ -407,6 +480,19 @@ export const TicketsPage: React.FC = () => {
                   }`}
                 >
                   All Institutional Tickets ({authorizedTickets.length})
+                </button>
+                <button
+                  onClick={() => { setViewMode('active'); setActiveTab('needs_reply'); setCurrentPage(1); }}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    activeTab === 'needs_reply'
+                      ? 'bg-rose-600 text-white shadow-xs'
+                      : userRepliedCount > 0
+                      ? 'bg-rose-50 text-rose-700 hover:bg-rose-100'
+                      : 'text-secondary hover:text-on-surface'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[15px]">mark_chat_unread</span>
+                  <span>User Responded / Needs Reply ({userRepliedCount})</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('assigned_admin')}
@@ -442,16 +528,31 @@ export const TicketsPage: React.FC = () => {
                   My Submitted Tickets ({authorizedTickets.filter(t => t.createdBy.email === currentUser?.email || t.createdBy.id === currentUser?.id).length})
                 </button>
                 {authorizedTickets.some(t => t.assignedToRole === currentUser?.role || t.assignedTo === currentUser?.id) && (
-                  <button
-                    onClick={() => setActiveTab('assigned_role')}
-                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                      activeTab === 'assigned_role'
-                        ? 'bg-primary text-on-primary shadow-xs'
-                        : 'text-secondary hover:text-on-surface'
-                    }`}
-                  >
-                    Assigned to My Role ({authorizedTickets.filter(t => t.assignedToRole === currentUser?.role || t.assignedTo === currentUser?.id).length})
-                  </button>
+                  <>
+                    <button
+                      onClick={() => setActiveTab('assigned_role')}
+                      className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                        activeTab === 'assigned_role'
+                          ? 'bg-primary text-on-primary shadow-xs'
+                          : 'text-secondary hover:text-on-surface'
+                      }`}
+                    >
+                      Assigned to My Role ({authorizedTickets.filter(t => t.assignedToRole === currentUser?.role || t.assignedTo === currentUser?.id).length})
+                    </button>
+                    <button
+                      onClick={() => { setViewMode('active'); setActiveTab('needs_reply'); setCurrentPage(1); }}
+                      className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        activeTab === 'needs_reply'
+                          ? 'bg-rose-600 text-white shadow-xs'
+                          : userRepliedCount > 0
+                          ? 'bg-rose-50 text-rose-700 hover:bg-rose-100'
+                          : 'text-secondary hover:text-on-surface'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[15px]">mark_chat_unread</span>
+                      <span>User Replied ({userRepliedCount})</span>
+                    </button>
+                  </>
                 )}
               </>
             )}
@@ -555,15 +656,36 @@ export const TicketsPage: React.FC = () => {
               {paginatedTickets.map((ticket) => {
                 const isCreator = ticket.createdBy.email === currentUser?.email || ticket.createdBy.id === currentUser?.id;
                 const isTicketDone = ticket.isArchived === true || ticket.status === 'resolved' || ticket.status === 'closed';
+                const userReplied = didUserReplyLast(ticket);
+                const hasUnreadForStaff = !isTicketDone && !isCreator && (ticket.unreadByStaff === true || userReplied);
+                const hasUnreadForCreator = !isTicketDone && isCreator && ticket.unreadByCreator === true;
+                const lastComment = ticket.comments && ticket.comments.length > 0 ? ticket.comments[ticket.comments.length - 1] : null;
 
                 return (
-                  <tr key={ticket.id} className="hover:bg-surface-container-low/50 transition-colors">
+                  <tr
+                    key={ticket.id}
+                    className={`transition-colors ${
+                      hasUnreadForStaff
+                        ? 'bg-rose-50/35 hover:bg-rose-50/60 border-l-4 border-l-rose-600'
+                        : hasUnreadForCreator
+                        ? 'bg-blue-50/35 hover:bg-blue-50/60 border-l-4 border-l-blue-600'
+                        : 'hover:bg-surface-container-low/50'
+                    }`}
+                  >
                     <td className="p-3 pl-4 font-mono font-bold text-primary whitespace-nowrap">
-                      {ticket.ticketNumber}
+                      <div className="flex items-center gap-1.5">
+                        {(hasUnreadForStaff || hasUnreadForCreator) && (
+                          <span
+                            className={`w-2 h-2 rounded-full shrink-0 animate-pulse ${hasUnreadForStaff ? 'bg-rose-600' : 'bg-blue-600'}`}
+                            title={hasUnreadForStaff ? 'User replied — awaiting support response' : 'New reply from Support'}
+                          />
+                        )}
+                        <span>{ticket.ticketNumber}</span>
+                      </div>
                     </td>
 
                     <td className="p-3 max-w-sm">
-                      <div className="font-bold text-on-surface hover:text-primary transition-colors cursor-pointer flex items-center gap-1.5" onClick={() => setSelectedTicketId(ticket.id)}>
+                      <div className="font-bold text-on-surface hover:text-primary transition-colors cursor-pointer flex items-center gap-1.5 flex-wrap" onClick={() => setSelectedTicketId(ticket.id)}>
                         <span>{ticket.title}</span>
                         {ticket.attachments && ticket.attachments.length > 0 && (
                           <span title={`${ticket.attachments.length} attachment(s)`} className="inline-flex items-center text-primary text-[11px] font-semibold">
@@ -571,10 +693,40 @@ export const TicketsPage: React.FC = () => {
                             <span>{ticket.attachments.length}</span>
                           </span>
                         )}
+                        {userReplied && !isTicketDone && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-bold shadow-2xs animate-pulse">
+                            <span className="material-symbols-outlined text-[12px]">mark_chat_unread</span>
+                            <span>User Replied</span>
+                          </span>
+                        )}
+                        {hasUnreadForCreator && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-bold shadow-2xs animate-pulse">
+                            <span className="material-symbols-outlined text-[12px]">forum</span>
+                            <span>Support Replied</span>
+                          </span>
+                        )}
                       </div>
                       <p className="text-secondary text-[11px] line-clamp-1 mt-0.5">
                         {ticket.description}
                       </p>
+
+                      {lastComment && !isTicketDone && (
+                        <div
+                          onClick={() => setSelectedTicketId(ticket.id)}
+                          className={`mt-1.5 p-1.5 px-2 rounded-md border text-[11px] cursor-pointer flex items-center gap-1.5 ${
+                            userReplied
+                              ? 'bg-rose-50/90 border-rose-200 text-rose-950'
+                              : 'bg-surface border-outline-variant/60 text-secondary'
+                          }`}
+                        >
+                          <span className={`material-symbols-outlined text-[14px] shrink-0 ${userReplied ? 'text-rose-600' : 'text-primary'}`}>
+                            {userReplied ? 'reply' : 'support_agent'}
+                          </span>
+                          <span className="truncate">
+                            <strong className="font-bold">{lastComment.authorName}:</strong> "{lastComment.content || 'Sent attachment'}"
+                          </span>
+                        </div>
+                      )}
 
                       {ticket.statusRequestedAt && !isTicketDone && (
                         <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-900 text-[10px] font-semibold">
@@ -597,7 +749,20 @@ export const TicketsPage: React.FC = () => {
                     </td>
 
                     <td className="p-3 whitespace-nowrap">
-                      <CrispStatusBadge status={ticket.status} />
+                      <div className="flex flex-col items-start gap-1">
+                        <CrispStatusBadge status={ticket.status} />
+                        {!isTicketDone && userReplied && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-rose-100 text-rose-800 border border-rose-300 text-[9px] font-extrabold uppercase tracking-wider">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-ping" />
+                            <span>Needs Reply</span>
+                          </span>
+                        )}
+                        {!isTicketDone && !userReplied && ticket.status === 'in_progress' && (ticket.comments?.length || 0) > 0 && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200 text-[9px] font-bold uppercase tracking-wider">
+                            <span>Awaiting User</span>
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     <td className="p-3 whitespace-nowrap">
@@ -613,16 +778,24 @@ export const TicketsPage: React.FC = () => {
                     </td>
 
                     <td className="p-3 text-secondary text-[11px] whitespace-nowrap font-mono">
-                      {formatTicketDateTime(ticket.updatedAt || ticket.createdAt)}
+                      {formatTicketDateTime(ticket.lastReplyAt || ticket.updatedAt || ticket.createdAt)}
                     </td>
 
                     <td className="p-3 pr-4 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1.5 flex-wrap">
                         <button
                           onClick={() => setSelectedTicketId(ticket.id)}
-                          className="px-2.5 py-1 rounded bg-secondary-container text-primary font-bold text-xs hover:bg-secondary-container/80 transition-colors flex items-center gap-1 cursor-pointer shadow-xs"
+                          className={`px-2.5 py-1 rounded font-bold text-xs transition-colors flex items-center gap-1 cursor-pointer shadow-xs ${
+                            hasUnreadForStaff
+                              ? 'bg-rose-600 text-white hover:bg-rose-700'
+                              : hasUnreadForCreator
+                              ? 'bg-blue-600 text-white hover:bg-blue-700'
+                              : 'bg-secondary-container text-primary hover:bg-secondary-container/80'
+                          }`}
                         >
-                          <span className="material-symbols-outlined text-[15px]">chat</span>
+                          <span className="material-symbols-outlined text-[15px]">
+                            {hasUnreadForStaff || hasUnreadForCreator ? 'mark_chat_unread' : 'chat'}
+                          </span>
                           <span>Reply ({ticket.comments?.length || 0})</span>
                         </button>
 

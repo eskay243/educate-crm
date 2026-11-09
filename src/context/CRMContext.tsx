@@ -21,6 +21,9 @@ import {
   UserRole,
   AuthUser,
   AttendanceRecord,
+  AttendanceVerificationStatus,
+  ShiftBreakEntry,
+  ShiftDeliverableItem,
   WorkMode,
   GeoVerificationStatus,
   PunctualityStatus,
@@ -71,7 +74,8 @@ import {
   defaultRoleDefinitions,
   initialTickets,
   initialTimetables,
-  initialPayoutRequests
+  initialPayoutRequests,
+  initialCampuses
 } from '../data/mockData';
 import { apiService } from '../services/api';
 import { emailService } from '../services/emailService';
@@ -136,6 +140,8 @@ interface CRMContextType {
   sessions: MentorshipSession[];
   attendanceRecords: AttendanceRecord[];
   activeAttendanceSession: AttendanceRecord | null;
+  staleAttendanceSession: AttendanceRecord | null;
+  todayCompletedSession: AttendanceRecord | null;
   settings: OrganizationSettings;
   activityLogs: ActivityLogItem[];
   notifications: NotificationItem[];
@@ -235,6 +241,7 @@ interface CRMContextType {
   toggleRoleModule: (roleId: string, moduleName: string) => Promise<void>;
   isSuperAdmin: boolean;
   isSimulatingRole: boolean;
+  originSuperAdmin: AuthUser | null;
   switchRole: (role: UserRole, targetMentorId?: string) => void;
   addStaffUser: (user: Omit<AuthUser, 'id'>) => void;
   updateUserRole: (userId: string, role: UserRole, mentorId?: string) => void;
@@ -354,6 +361,7 @@ interface CRMContextType {
 
   addCourse: (course: Omit<CourseProgram, 'id' | 'enrolledCount' | 'rating'>) => void;
   updateCourse: (id: string, updatedData: Partial<CourseProgram>) => void;
+  deleteCourse: (id: string) => Promise<void>;
   addCourseCategory: (category: string) => void;
   addCohort: (cohort: Omit<Cohort, 'id' | 'enrolledCount'>) => void;
   bookSession: (session: Omit<MentorshipSession, 'id' | 'sessionCode'>) => void;
@@ -362,8 +370,30 @@ interface CRMContextType {
   logActivity: (activity: Omit<ActivityLogItem, 'id' | 'timestamp'>) => void;
 
   // Attendance & Time Tracking
-  clockIn: (options: { workMode: WorkMode; locationName?: string; dailyTasksFocus?: string; lat?: number; lng?: number }) => Promise<{ success: boolean; message: string; record?: AttendanceRecord }>;
-  clockOut: (options: { endOfDaySummary?: string }) => Promise<{ success: boolean; message: string; record?: AttendanceRecord }>;
+  clockIn: (options: {
+    workMode: WorkMode;
+    locationName?: string;
+    campusId?: string;
+    campusName?: string;
+    dailyTasksFocus?: string;
+    standupTasks?: DailyStandupTask[];
+    lat?: number;
+    lng?: number;
+    gpsAccuracyMeters?: number;
+    geoExceptionReason?: string;
+  }) => Promise<{ success: boolean; message: string; record?: AttendanceRecord }>;
+  clockOut: (options: {
+    endOfDaySummary?: string;
+    deliverablesChecklist?: ShiftDeliverableItem[];
+    completedStandupTasks?: DailyStandupTask[];
+    crmActivitiesCount?: number;
+    targetRecordId?: string;
+    retroactiveClockOutTime?: string;
+    retroactiveNote?: string;
+  }) => Promise<{ success: boolean; message: string; record?: AttendanceRecord }>;
+  toggleShiftBreak: (action: 'start' | 'end', reason?: string) => Promise<boolean>;
+  resumeTodayShift: (recordId?: string) => Promise<boolean>;
+  verifyAttendanceShift: (recordId: string, updates: Partial<AttendanceRecord>) => Promise<boolean>;
 
   // Backups, Restore & Production Flush
   exportDatabaseBackup: () => void;
@@ -383,11 +413,13 @@ interface CRMContextType {
   markTicketDone: (ticketId: string, resolutionNotes?: string) => Promise<void>;
   requestTicketStatus: (ticketId: string, note?: string) => Promise<void>;
   toggleTicketArchive: (ticketId: string, isArchived: boolean) => Promise<void>;
+  markTicketRead: (ticketId: string) => Promise<void>;
 
   // Custom Roles & Permission Architecture
   customRoles: CustomRoleDefinition[];
   createCustomRole: (roleData: Omit<CustomRoleDefinition, 'id'> | CustomRoleDefinition) => Promise<void>;
   updateRolePermissions: (roleId: string, updates: Partial<CustomRoleDefinition>) => Promise<void>;
+  deleteCustomRole: (roleId: string) => Promise<boolean>;
   hasFeaturePermission: (permission: keyof RoleCapabilities) => boolean;
 
   // Reset to seed data
@@ -426,6 +458,7 @@ const CRMContext = createContext<CRMContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
   AUTH: 'nexus_clean_prod_auth_v1',
+  ORIGIN_SUPER_ADMIN: 'nexus_origin_super_admin_user',
   STAFF: 'nexus_clean_prod_staff_v1',
   LEADS: 'nexus_clean_prod_leads_v1',
   STUDENTS: 'nexus_clean_prod_students_v1',
@@ -817,6 +850,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setStaffUsers(uniqueStaff);
 
           // Dynamically synchronize active currentUser session with fresh role, isApprover, and permissions
+          // Supports Staff, Faculty Mentors (e.g. God'smiracle, Obas), and Enrolled Students
           setCurrentUser(prevUser => {
             if (!prevUser) return null;
             const normEmail = prevUser.email?.toLowerCase().trim();
@@ -828,32 +862,82 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 (normEmail.includes('humu') && u.email?.toLowerCase().includes('humu'))
               ))
             );
-            if (match) {
-              const updated = { 
+            const mentorMatch = (data.mentors || []).find((m: any) =>
+              m.id === prevUser.id ||
+              (prevUser.mentorId && m.id === prevUser.mentorId) ||
+              (normEmail && (
+                m.email?.toLowerCase().trim() === normEmail ||
+                m.secondaryEmail?.toLowerCase().trim() === normEmail
+              ))
+            );
+            const studentMatch = (data.students || []).find((s: any) =>
+              s.id === prevUser.id ||
+              (prevUser.studentId && s.id === prevUser.studentId) ||
+              (normEmail && (
+                s.email?.toLowerCase().trim() === normEmail ||
+                s.secondaryEmail?.toLowerCase().trim() === normEmail
+              ))
+            );
+
+            const sourceRecord: any = match || mentorMatch || studentMatch;
+            if (sourceRecord) {
+              // Merge mentorMatch fields if user exists in both or in mentors
+              const mergedSource: any = {
+                ...(studentMatch || {}),
+                ...(mentorMatch || {}),
+                ...(match || {}),
+              };
+              const resolvedRole = match?.role || (mentorMatch as any)?.systemRole || prevUser.role;
+              const resolvedRoleTitle = match?.roleTitle || (resolvedRole === 'mentor' ? (mentorMatch?.role || prevUser.roleTitle || 'Faculty Mentor') : prevUser.roleTitle);
+              const resolvedAccountNumber = mergedSource.accountNumber || prevUser.accountNumber;
+              const resolvedBankVerified = Boolean(
+                mergedSource.isBankVerified ??
+                mergedSource.isAccountVerified ??
+                mergedSource.bankVerified ??
+                prevUser.isBankVerified ??
+                (resolvedAccountNumber && String(resolvedAccountNumber).length === 10)
+              );
+
+              const updated: AuthUser = { 
                 ...prevUser, 
-                ...match,
-                residentialAddress: match.residentialAddress || prevUser.residentialAddress,
-                city: match.city || prevUser.city,
-                stateOfResidence: match.stateOfResidence || prevUser.stateOfResidence,
-                proofOfAddressUrl: match.proofOfAddressUrl || prevUser.proofOfAddressUrl,
-                proofOfAddressName: match.proofOfAddressName || prevUser.proofOfAddressName,
-                idType: match.idType || prevUser.idType,
-                idNumber: match.idNumber || prevUser.idNumber,
-                idDocumentUrl: match.idDocumentUrl || prevUser.idDocumentUrl,
-                isIdVerified: match.isIdVerified ?? prevUser.isIdVerified,
-                nextOfKinName: match.nextOfKinName || prevUser.nextOfKinName,
-                nextOfKinRelationship: match.nextOfKinRelationship || prevUser.nextOfKinRelationship,
-                nextOfKinPhone: match.nextOfKinPhone || prevUser.nextOfKinPhone,
-                nextOfKinAddress: match.nextOfKinAddress || prevUser.nextOfKinAddress,
-                bankName: match.bankName || prevUser.bankName,
-                bankCode: match.bankCode || prevUser.bankCode,
-                accountNumber: match.accountNumber || prevUser.accountNumber,
-                accountName: match.accountName || prevUser.accountName,
-                isBankVerified: (match.isBankVerified ?? prevUser.isBankVerified) || Boolean((match.accountNumber || prevUser.accountNumber)?.length === 10),
-                kycTier: match.kycTier || prevUser.kycTier || ((match.accountNumber || prevUser.accountNumber) ? 'Tier 3' : 'Tier 1'),
-                kycStatus: match.kycStatus || prevUser.kycStatus || 'Verified',
-                password: prevUser.password || match.password,
-                isApprover: match.isApprover ?? prevUser.isApprover
+                ...mergedSource,
+                id: prevUser.id,
+                role: resolvedRole,
+                roleTitle: resolvedRoleTitle,
+                mentorId: prevUser.mentorId || mentorMatch?.id,
+                studentId: prevUser.studentId || studentMatch?.id,
+                avatarUrl: mergedSource.avatarUrl || prevUser.avatarUrl,
+                phone: mergedSource.phone || prevUser.phone,
+                bio: mergedSource.bio || prevUser.bio,
+                dateOfBirth: mergedSource.dateOfBirth || prevUser.dateOfBirth,
+                gender: mergedSource.gender || prevUser.gender,
+                nationality: mergedSource.nationality || prevUser.nationality,
+                stateOfOrigin: mergedSource.stateOfOrigin || prevUser.stateOfOrigin,
+                lga: mergedSource.lga || prevUser.lga,
+                residentialAddress: mergedSource.residentialAddress || prevUser.residentialAddress,
+                city: mergedSource.city || prevUser.city,
+                stateOfResidence: mergedSource.stateOfResidence || prevUser.stateOfResidence,
+                proofOfAddressUrl: mergedSource.proofOfAddressUrl || prevUser.proofOfAddressUrl,
+                proofOfAddressName: mergedSource.proofOfAddressName || prevUser.proofOfAddressName,
+                idType: mergedSource.idType || prevUser.idType,
+                idNumber: mergedSource.idNumber || prevUser.idNumber,
+                idDocumentUrl: mergedSource.idDocumentUrl || prevUser.idDocumentUrl,
+                idDocumentName: mergedSource.idDocumentName || prevUser.idDocumentName,
+                isIdVerified: mergedSource.isIdVerified ?? prevUser.isIdVerified,
+                nextOfKinName: mergedSource.nextOfKinName || prevUser.nextOfKinName,
+                nextOfKinRelationship: mergedSource.nextOfKinRelationship || prevUser.nextOfKinRelationship,
+                nextOfKinPhone: mergedSource.nextOfKinPhone || prevUser.nextOfKinPhone,
+                nextOfKinAddress: mergedSource.nextOfKinAddress || prevUser.nextOfKinAddress,
+                bankName: mergedSource.bankName || prevUser.bankName,
+                bankCode: mergedSource.bankCode || prevUser.bankCode,
+                accountNumber: resolvedAccountNumber,
+                accountName: mergedSource.accountName || prevUser.accountName,
+                bvn: mergedSource.bvn || prevUser.bvn,
+                isBankVerified: resolvedBankVerified,
+                kycTier: mergedSource.kycTier || prevUser.kycTier || (resolvedAccountNumber ? 3 : (mergedSource.idNumber || prevUser.idNumber ? 2 : 1)),
+                kycStatus: mergedSource.kycStatus || prevUser.kycStatus || (match ? 'Verified' : 'Incomplete'),
+                password: prevUser.password || mergedSource.password,
+                isApprover: mergedSource.isApprover ?? prevUser.isApprover
               };
               safeLocalStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(updated));
               return updated;
@@ -974,15 +1058,41 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return null;
   }, [currentUser, students]);
 
-  // Current active clock-in session for currentUser
+  // Current active clock-in session for currentUser (Today only)
   const activeAttendanceSession = useMemo(() => {
     if (!currentUser) return null;
-    return attendanceRecords.find(r => 
-      ((r.staffId || r.userId) === currentUser.id || 
-       (r.staffEmail || r.userEmail)?.toLowerCase() === currentUser.email?.toLowerCase()) && 
-      !r.clockOutTime
-    ) || null;
+    const todayStr = new Date().toISOString().split('T')[0];
+    return attendanceRecords.find(r => {
+      const isUser =
+        (r.staffId || r.userId) === currentUser.id ||
+        (r.staffEmail || r.userEmail)?.toLowerCase() === currentUser.email?.toLowerCase();
+      return isUser && !r.clockOutTime && r.date === todayStr;
+    }) || null;
   }, [attendanceRecords, currentUser]);
+
+  // Any unclosed shift from a previous day requiring retroactive clock-out reconciliation
+  const staleAttendanceSession = useMemo(() => {
+    if (!currentUser) return null;
+    const todayStr = new Date().toISOString().split('T')[0];
+    return attendanceRecords.find(r => {
+      const isUser =
+        (r.staffId || r.userId) === currentUser.id ||
+        (r.staffEmail || r.userEmail)?.toLowerCase() === currentUser.email?.toLowerCase();
+      return isUser && !r.clockOutTime && r.date < todayStr;
+    }) || null;
+  }, [attendanceRecords, currentUser]);
+
+  // Completed shift earlier today (enables same-day shift resumption)
+  const todayCompletedSession = useMemo(() => {
+    if (!currentUser || activeAttendanceSession) return null;
+    const todayStr = new Date().toISOString().split('T')[0];
+    return attendanceRecords.find(r => {
+      const isUser =
+        (r.staffId || r.userId) === currentUser.id ||
+        (r.staffEmail || r.userEmail)?.toLowerCase() === currentUser.email?.toLowerCase();
+      return isUser && !!r.clockOutTime && r.date === todayStr;
+    }) || null;
+  }, [attendanceRecords, currentUser, activeAttendanceSession]);
 
   // Notifications & Toasts
   const addNotification = (notif: Omit<NotificationItem, 'id' | 'timestamp' | 'read'>) => {
@@ -1028,11 +1138,31 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return notifications.filter(n => !n.read).length;
   }, [notifications]);
 
-  // Super Admin session tracking for role switching
+  // Super Admin session tracking for role switching & identity lock (e.g. Abiola stays locked to Abiola)
   const [isSuperAdminSession, setIsSuperAdminSession] = useState<boolean>(() => {
     return safeSessionStorage.getItem('nexus_super_admin_session') === 'true' ||
            safeLocalStorage.getItem('nexus_super_admin_session_persistent') === 'true';
   });
+
+  const [originSuperAdmin, setOriginSuperAdmin] = useState<AuthUser | null>(() => {
+    const savedOrigin = safeLocalStorage.getItem(STORAGE_KEYS.ORIGIN_SUPER_ADMIN);
+    if (savedOrigin) {
+      try {
+        return JSON.parse(savedOrigin);
+      } catch {}
+    }
+    if (currentUser?.role === 'super_admin') {
+      return currentUser;
+    }
+    return null;
+  });
+
+  useEffect(() => {
+    if (currentUser && currentUser.role === 'super_admin') {
+      setOriginSuperAdmin(currentUser);
+      safeLocalStorage.setItem(STORAGE_KEYS.ORIGIN_SUPER_ADMIN, JSON.stringify(currentUser));
+    }
+  }, [currentUser]);
 
   const isSuperAdmin = currentUser ? (currentUser.role === 'super_admin' || isSuperAdminSession) : false;
   const isSimulatingRole = isSuperAdmin && currentUser?.role !== 'super_admin';
@@ -1061,10 +1191,16 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
           if (authUser.role === 'super_admin') {
             safeSessionStorage.setItem('nexus_super_admin_session', 'true');
+            safeLocalStorage.setItem('nexus_super_admin_session_persistent', 'true');
             setIsSuperAdminSession(true);
+            setOriginSuperAdmin(authUser);
+            safeLocalStorage.setItem(STORAGE_KEYS.ORIGIN_SUPER_ADMIN, JSON.stringify(authUser));
           } else {
             safeSessionStorage.removeItem('nexus_super_admin_session');
+            safeLocalStorage.removeItem('nexus_super_admin_session_persistent');
             setIsSuperAdminSession(false);
+            setOriginSuperAdmin(null);
+            safeLocalStorage.removeItem(STORAGE_KEYS.ORIGIN_SUPER_ADMIN);
           }
 
           setCurrentUser(authUser);
@@ -1091,7 +1227,9 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (cleanEmail) {
       // Check Super Admin aliases
       if (isSuperAdminAlias) {
-        matched = staffUsers.find(u => u.role === 'super_admin') || demoUsers.find(u => u.role === 'super_admin');
+        matched = staffUsers.find(u => u.id === 'user-admin' || u.name?.toLowerCase().includes('abiola')) ||
+                  staffUsers.find(u => u.role === 'super_admin') ||
+                  demoUsers.find(u => u.role === 'super_admin');
       }
 
       // 1. Check staffUsers by email (including secondaryEmail and aliases)
@@ -1111,16 +1249,18 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         );
         if (mentor) {
           matched = {
+            ...(mentor as any),
             id: mentor.id,
             name: mentor.name,
             email: mentor.email,
-            role: 'mentor',
+            role: ((mentor as any).systemRole as UserRole) || 'mentor',
             roleTitle: mentor.role || 'Faculty Mentor',
             mentorId: mentor.id,
             department: mentor.department,
             password: mentor.password,
             isActive: mentor.isActive !== false && mentor.status !== 'Deactivated',
             status: mentor.status === 'Deactivated' ? 'Deactivated' : 'Active',
+            isBankVerified: Boolean((mentor as any).isBankVerified || mentor.isAccountVerified || mentor.bankVerified || (mentor.accountNumber && String(mentor.accountNumber).length === 10)),
           };
         }
       }
@@ -1133,6 +1273,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         );
         if (student) {
           matched = {
+            ...(student as any),
             id: student.id,
             name: student.name,
             email: student.email,
@@ -1185,10 +1326,16 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Set or clear super admin session flag based on authenticated account
     if (matched.role === 'super_admin') {
       safeSessionStorage.setItem('nexus_super_admin_session', 'true');
+      safeLocalStorage.setItem('nexus_super_admin_session_persistent', 'true');
       setIsSuperAdminSession(true);
+      setOriginSuperAdmin(matched);
+      safeLocalStorage.setItem(STORAGE_KEYS.ORIGIN_SUPER_ADMIN, JSON.stringify(matched));
     } else {
       safeSessionStorage.removeItem('nexus_super_admin_session');
+      safeLocalStorage.removeItem('nexus_super_admin_session_persistent');
       setIsSuperAdminSession(false);
+      setOriginSuperAdmin(null);
+      safeLocalStorage.removeItem(STORAGE_KEYS.ORIGIN_SUPER_ADMIN);
     }
 
     setCurrentUser(matched);
@@ -1210,22 +1357,47 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
+    // Lock the originating Super Admin account before switching into simulation
+    let lockedSuperAdmin = originSuperAdmin;
+    if (currentUser?.role === 'super_admin') {
+      lockedSuperAdmin = currentUser;
+      setOriginSuperAdmin(currentUser);
+      safeLocalStorage.setItem(STORAGE_KEYS.ORIGIN_SUPER_ADMIN, JSON.stringify(currentUser));
+    } else if (!lockedSuperAdmin) {
+      const savedOriginStr = safeLocalStorage.getItem(STORAGE_KEYS.ORIGIN_SUPER_ADMIN);
+      if (savedOriginStr) {
+        try { lockedSuperAdmin = JSON.parse(savedOriginStr); } catch {}
+      }
+    }
+
     // Ensure session remembers that Super Admin originated this session
     safeSessionStorage.setItem('nexus_super_admin_session', 'true');
     safeLocalStorage.setItem('nexus_super_admin_session_persistent', 'true');
     setIsSuperAdminSession(true);
 
     if (newRole === 'super_admin') {
-      // Revert back to original Super Admin account
-      const superAdminUser = staffUsers.find(u => u.role === 'super_admin') || demoUsers[0];
+      // Revert back exclusively to the exact originating Super Admin account (e.g., Abiola Adefowope)
+      const matchedFromStaff = lockedSuperAdmin
+        ? staffUsers.find(u =>
+            u.id === lockedSuperAdmin!.id ||
+            (lockedSuperAdmin!.email && u.email?.toLowerCase().trim() === lockedSuperAdmin!.email.toLowerCase().trim())
+          )
+        : undefined;
+
+      const superAdminUser =
+        matchedFromStaff ||
+        lockedSuperAdmin ||
+        staffUsers.find(u => u.id === 'user-admin' || u.name?.toLowerCase().includes('abiola')) ||
+        staffUsers.find(u => u.role === 'super_admin') ||
+        demoUsers[0];
+
       setCurrentUser(superAdminUser);
-      safeSessionStorage.removeItem('nexus_super_admin_session');
-      safeLocalStorage.removeItem('nexus_super_admin_session_persistent');
-      setIsSuperAdminSession(false);
-      showToast('Super Admin Restored', 'Returned to Managing Director & Super Admin controls.', 'success');
+      setOriginSuperAdmin(superAdminUser);
+      safeLocalStorage.setItem(STORAGE_KEYS.ORIGIN_SUPER_ADMIN, JSON.stringify(superAdminUser));
+      showToast('Super Admin Restored', `Returned to ${superAdminUser.name} (${superAdminUser.roleTitle}).`, 'success');
       logActivity({
         title: 'Role Reverted to Super Admin',
-        description: 'Super Admin exited role simulation mode.',
+        description: `${superAdminUser.name} exited role simulation mode.`,
         type: 'system',
         user: superAdminUser.name,
       });
@@ -1238,6 +1410,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const mentor = (targetMentorId ? mentors.find(m => m.id === targetMentorId) : null) || mentors[0];
       if (mentor) {
         targetUser = {
+          ...(mentor as any),
           id: mentor.id,
           name: mentor.name,
           email: mentor.email,
@@ -1251,6 +1424,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const student = students[0];
       if (student) {
         targetUser = {
+          ...(student as any),
           id: student.id,
           name: student.name,
           email: student.email,
@@ -1279,14 +1453,16 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       title: 'Role Simulated by Super Admin',
       description: `Super Admin switched active view to ${targetUser.roleTitle}.`,
       type: 'system',
-      user: 'Super Admin (Simulation)',
+      user: lockedSuperAdmin?.name || 'Super Admin (Simulation)',
     });
   };
 
   const logout = () => {
     setCurrentUser(null);
+    setOriginSuperAdmin(null);
     safeSessionStorage.removeItem('nexus_super_admin_session');
     safeLocalStorage.removeItem('nexus_super_admin_session_persistent');
+    safeLocalStorage.removeItem(STORAGE_KEYS.ORIGIN_SUPER_ADMIN);
     setIsSuperAdminSession(false);
     safeLocalStorage.removeItem(STORAGE_KEYS.AUTH);
     safeLocalStorage.setItem('nexus_logged_out', 'true');
@@ -1539,6 +1715,8 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const targetRole = customRoles.find(r => r.id === roleId);
     if (targetRole) {
       await apiService.updateRole(roleId, { ...targetRole, ...updates });
+    } else {
+      await apiService.updateRole(roleId, updates);
     }
     showToast('Permissions Updated', `Permissions for role updated successfully.`, 'info');
     logActivity({
@@ -1549,16 +1727,51 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const deleteCustomRole = async (roleId: string): Promise<boolean> => {
+    const targetRole = customRoles.find(r => r.id === roleId);
+    if (!targetRole) return false;
+    if (targetRole.isSystem) {
+      showToast('System Role Protected', 'Core institutional roles cannot be deleted.', 'error');
+      return false;
+    }
+
+    setCustomRoles(prev => prev.filter(r => r.id !== roleId));
+    // Reassign any staff members holding the deleted custom role to program_officer
+    setStaffUsers(prev => prev.map(u => {
+      if (u.role === roleId) {
+        const fallbackRole: UserRole = 'program_officer';
+        const fallbackTitle = resolveRoleTitle(fallbackRole, customRoles);
+        apiService.updateStaff(u.id, { role: fallbackRole, roleTitle: fallbackTitle });
+        return { ...u, role: fallbackRole, roleTitle: fallbackTitle };
+      }
+      return u;
+    }));
+
+    await apiService.deleteRole(roleId);
+    showToast('Role Deleted', `Custom role "${targetRole.name}" has been removed.`, 'info');
+    logActivity({
+      title: 'Custom Role Deleted',
+      description: `Custom role "${targetRole.name}" (${roleId}) deleted by Super Admin.`,
+      type: 'system',
+      user: currentUser?.name || 'Super Admin',
+    });
+    return true;
+  };
+
   // Support Tickets & Helpdesk Actions
   const createTicket = async (ticketData: Omit<SupportTicket, 'id' | 'ticketNumber' | 'createdAt' | 'updatedAt' | 'comments'>) => {
     const ticketCount = tickets.length + 1;
+    const nowIso = new Date().toISOString();
     const newTicket: SupportTicket = {
       ...ticketData,
       id: `tkt-${Date.now()}`,
       ticketNumber: `TKT-${1000 + ticketCount}`,
       assignedToRole: ticketData.assignedToRole || 'super_admin',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      responseState: 'awaiting_staff_reply',
+      unreadByStaff: true,
+      unreadByCreator: false,
+      createdAt: nowIso,
+      updatedAt: nowIso,
       comments: [],
     };
 
@@ -1568,8 +1781,8 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addNotification({
       title: `🎫 Ticket #${newTicket.ticketNumber} Logged`,
       message: `${newTicket.createdBy.name} (${newTicket.createdBy.roleTitle}): "${newTicket.title}"`,
-      type: 'system',
-      link: '/tickets',
+      type: 'ticket',
+      link: `/tickets?ticketId=${newTicket.id}`,
     });
     logActivity({
       title: 'Support Ticket Logged',
@@ -1580,11 +1793,19 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateTicketStatus = async (ticketId: string, status: TicketStatus, resolutionNotes?: string) => {
+    const nextResponseState = (status === 'resolved' || status === 'closed')
+      ? 'resolved'
+      : status === 'in_progress'
+      ? 'awaiting_user_reply'
+      : 'awaiting_staff_reply';
+
     setTickets(prev => prev.map(t => {
       if (t.id === ticketId || t.ticketNumber === ticketId) {
         return {
           ...t,
           status,
+          responseState: nextResponseState,
+          unreadByStaff: (status === 'resolved' || status === 'closed' || status === 'in_progress') ? false : t.unreadByStaff,
           resolutionNotes: resolutionNotes || t.resolutionNotes,
           updatedAt: new Date().toISOString(),
         };
@@ -1592,7 +1813,12 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return t;
     }));
 
-    await apiService.updateTicket(ticketId, { status, resolutionNotes });
+    await apiService.updateTicket(ticketId, {
+      status,
+      responseState: nextResponseState,
+      unreadByStaff: (status === 'resolved' || status === 'closed' || status === 'in_progress') ? false : undefined,
+      resolutionNotes
+    });
     showToast('Ticket Updated', `Ticket status set to ${status.toUpperCase().replace('_', ' ')}.`, 'info');
   };
 
@@ -1616,6 +1842,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addTicketComment = async (ticketId: string, content: string, attachments?: TicketAttachment[]) => {
     if (!currentUser || (!content.trim() && (!attachments || attachments.length === 0))) return;
+    const nowIso = new Date().toISOString();
     const commentData: TicketComment = {
       id: `comm-${Date.now()}`,
       ticketId,
@@ -1624,22 +1851,110 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       authorRole: currentUser.roleTitle,
       content,
       attachments: attachments && attachments.length > 0 ? attachments : undefined,
-      createdAt: new Date().toISOString(),
+      createdAt: nowIso,
     };
+
+    const targetTicket = tickets.find(t => t.id === ticketId || t.ticketNumber === ticketId);
+    const isFromCreator = Boolean(
+      targetTicket && (
+        targetTicket.createdBy.email?.toLowerCase() === currentUser.email?.toLowerCase() ||
+        targetTicket.createdBy.id === currentUser.id
+      )
+    );
 
     setTickets(prev => prev.map(t => {
       if (t.id === ticketId || t.ticketNumber === ticketId) {
+        const nextStatus: TicketStatus = isFromCreator
+          ? ((t.status === 'resolved' || t.status === 'closed') ? 'in_progress' : t.status)
+          : (t.status === 'open' ? 'in_progress' : t.status);
+
         return {
           ...t,
+          status: nextStatus,
+          isArchived: isFromCreator && (t.status === 'resolved' || t.status === 'closed') ? false : t.isArchived,
+          responseState: isFromCreator ? 'awaiting_staff_reply' : 'awaiting_user_reply',
+          unreadByStaff: isFromCreator ? true : false,
+          unreadByCreator: isFromCreator ? false : true,
+          lastReplyAt: nowIso,
+          lastReplyBy: {
+            id: currentUser.id,
+            name: currentUser.name,
+            email: currentUser.email,
+            role: currentUser.roleTitle,
+            isCreator: isFromCreator,
+          },
+          statusRequestedAt: isFromCreator ? undefined : t.statusRequestedAt,
           comments: [...t.comments, commentData],
-          updatedAt: new Date().toISOString(),
+          updatedAt: nowIso,
         };
       }
       return t;
     }));
 
     await apiService.addTicketComment(ticketId, commentData);
-    showToast('Comment Posted', 'Your reply has been added to the ticket.', 'success');
+
+    if (targetTicket) {
+      if (isFromCreator) {
+        addNotification({
+          title: `🔴 User Replied: Ticket #${targetTicket.ticketNumber}`,
+          message: `${currentUser.name} responded on "${targetTicket.title}": "${(content || 'Attached file(s)').slice(0, 90)}"`,
+          type: 'ticket',
+          link: `/tickets?ticketId=${targetTicket.id}`,
+        });
+      } else {
+        addNotification({
+          userId: targetTicket.createdBy.id,
+          title: `💬 Support Replied: Ticket #${targetTicket.ticketNumber}`,
+          message: `${currentUser.name} replied to "${targetTicket.title}": "${(content || 'Attached file(s)').slice(0, 90)}"`,
+          type: 'ticket',
+          link: `/tickets?ticketId=${targetTicket.id}`,
+        });
+      }
+    }
+
+    showToast(
+      isFromCreator ? 'Response Sent to Support' : 'Support Reply Posted',
+      isFromCreator
+        ? 'Support has been notified of your response.'
+        : 'Ticket creator has been notified of your reply.',
+      'success'
+    );
+  };
+
+  const markTicketRead = async (ticketId: string) => {
+    if (!currentUser) return;
+    const targetTicket = tickets.find(t => t.id === ticketId || t.ticketNumber === ticketId);
+    if (!targetTicket) return;
+
+    const isCreator = targetTicket.createdBy.email?.toLowerCase() === currentUser.email?.toLowerCase() || targetTicket.createdBy.id === currentUser.id;
+    const isStaffViewer = currentUser.role === 'super_admin' || (!isCreator && currentUser.role !== 'student');
+
+    const updates: Partial<SupportTicket> & { onlyMarkRead?: boolean } = { onlyMarkRead: true };
+    let needsUpdate = false;
+
+    if (isStaffViewer && targetTicket.unreadByStaff) {
+      updates.unreadByStaff = false;
+      needsUpdate = true;
+    }
+    if (isCreator && targetTicket.unreadByCreator) {
+      updates.unreadByCreator = false;
+      needsUpdate = true;
+    }
+
+    if (!needsUpdate) return;
+
+    setTickets(prev => prev.map(t => {
+      if (t.id === ticketId || t.ticketNumber === ticketId) {
+        return {
+          ...t,
+          unreadByStaff: updates.unreadByStaff !== undefined ? updates.unreadByStaff : t.unreadByStaff,
+          unreadByCreator: updates.unreadByCreator !== undefined ? updates.unreadByCreator : t.unreadByCreator,
+        };
+      }
+      return t;
+    }));
+
+    await apiService.updateTicket(ticketId, updates);
   };
 
   const markTicketDone = async (ticketId: string, resolutionNotes?: string) => {
@@ -1651,6 +1966,8 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return {
           ...t,
           status: 'resolved' as TicketStatus,
+          responseState: 'resolved',
+          unreadByStaff: false,
           isArchived: true,
           resolvedAt,
           resolvedBy,
@@ -1663,6 +1980,8 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     await apiService.updateTicket(ticketId, {
       status: 'resolved',
+      responseState: 'resolved',
+      unreadByStaff: false,
       isArchived: true,
       resolvedAt,
       resolvedBy,
@@ -1756,33 +2075,69 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateUserRole = (userId: string, role: UserRole, mentorId?: string) => {
     const newTitle = resolveRoleTitle(role, customRoles);
+    const existingStaff = staffUsers.find(u => u.id === userId || u.mentorId === userId);
+    const existingMentor = mentors.find(m => m.id === userId || (existingStaff?.email && m.email?.toLowerCase() === existingStaff.email.toLowerCase()));
 
-    setStaffUsers(prev => prev.map(u => {
-      if (u.id === userId) {
-        return {
-          ...u,
-          role,
-          roleTitle: newTitle,
-          mentorId: role === 'mentor' ? (mentorId || u.mentorId || 'men-1') : undefined,
-        };
-      }
-      return u;
-    }));
+    if (existingStaff) {
+      setStaffUsers(prev => prev.map(u => {
+        if (u.id === existingStaff.id || u.id === userId) {
+          return {
+            ...u,
+            role,
+            roleTitle: newTitle,
+            mentorId: role === 'mentor' ? (mentorId || u.mentorId || existingMentor?.id || 'men-1') : u.mentorId,
+          };
+        }
+        return u;
+      }));
+    } else if (existingMentor) {
+      // Mentor promoted/assigned a role: ensure they are also added to staffUsers so they appear in staff directory & permissions
+      const promotedStaff: AuthUser = {
+        ...(existingMentor as any),
+        id: existingMentor.id,
+        name: existingMentor.name,
+        email: existingMentor.email,
+        role,
+        roleTitle: newTitle,
+        mentorId: existingMentor.id,
+        department: existingMentor.department || 'Academic Faculty',
+        isActive: existingMentor.isActive !== false && existingMentor.status !== 'Deactivated',
+        status: existingMentor.status === 'Deactivated' ? 'Deactivated' : 'Active',
+      };
+      setStaffUsers(prev => [promotedStaff, ...prev]);
+    }
+
+    if (existingMentor) {
+      setMentors(prev => prev.map(m => {
+        if (m.id === existingMentor.id) {
+          return {
+            ...m,
+            systemRole: role,
+          } as any;
+        }
+        return m;
+      }));
+    }
 
     if (currentUser?.id === userId) {
       setCurrentUser(prev => prev ? {
         ...prev,
         role,
         roleTitle: newTitle,
-        mentorId: role === 'mentor' ? (mentorId || prev.mentorId || 'men-1') : undefined,
+        mentorId: role === 'mentor' ? (mentorId || prev.mentorId || existingMentor?.id || 'men-1') : prev.mentorId,
       } : null);
     }
 
-    apiService.updateStaff(userId, { role, roleTitle: newTitle, mentorId });
-    showToast('Role Updated', `Staff permissions updated to ${newTitle}.`, 'info');
+    apiService.updateStaff(userId, {
+      role,
+      roleTitle: newTitle,
+      mentorId: role === 'mentor' ? (mentorId || existingStaff?.mentorId || existingMentor?.id) : existingStaff?.mentorId,
+      email: existingStaff?.email || existingMentor?.email,
+    });
+    showToast('Role Assigned', `${existingStaff?.name || existingMentor?.name || 'User'} assigned to ${newTitle}.`, 'success');
     logActivity({
-      title: 'Staff Role Reassigned',
-      description: `Staff member role updated to ${newTitle}.`,
+      title: 'User Role Assigned',
+      description: `${existingStaff?.name || existingMentor?.name || userId} role updated to ${newTitle}.`,
       type: 'system',
       user: currentUser?.name || 'Super Admin',
     });
@@ -3355,6 +3710,29 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const deleteCourse = async (id: string) => {
+    const targetCourse = courses.find(c => c.id === id);
+    setCourses(prev => {
+      const updated = prev.filter(c => c.id !== id);
+      safeLocalStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(updated));
+      return updated;
+    });
+
+    try {
+      await apiService.deleteCourse(id);
+    } catch (err) {
+      console.warn('[CRM] Backend deleteCourse error:', err);
+    }
+
+    showToast('Course Deleted', `"${targetCourse?.title || id}" has been permanently removed from the catalog.`, 'info');
+    logActivity({
+      title: 'Course Deleted',
+      description: `Course "${targetCourse?.title || id}" (${targetCourse?.code || id}) was deleted by ${currentUser?.name || 'Super Admin'}.`,
+      type: 'system',
+      user: currentUser?.name || 'Super Admin',
+    });
+  };
+
   const addCourseCategory = (category: string) => {
     const trimmed = category.trim();
     if (!trimmed) return;
@@ -3473,49 +3851,132 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const clockIn = async (options: {
     workMode: WorkMode;
     locationName?: string;
+    campusId?: string;
+    campusName?: string;
     dailyTasksFocus?: string;
+    standupTasks?: DailyStandupTask[];
     lat?: number;
     lng?: number;
+    gpsAccuracyMeters?: number;
+    geoExceptionReason?: string;
   }): Promise<{ success: boolean; message: string; record?: AttendanceRecord }> => {
     if (!currentUser) {
       showToast('Clock-In Failed', 'No active user session detected.', 'error');
       return { success: false, message: 'No active user session.' };
     }
 
+    if (staleAttendanceSession) {
+      showToast(
+        'Reconciliation Required',
+        `Please complete retroactive clock-out for your ${staleAttendanceSession.date} shift first.`,
+        'warning'
+      );
+      return { success: false, message: 'Unclosed prior-day shift requires retroactive clock-out.' };
+    }
+
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
     const dateStr = now.toISOString().split('T')[0];
 
-    // Geo-verification calculation
+    // Multi-campus Geo-verification calculation
     let geoStatus: GeoVerificationStatus = 'GPS Unavailable';
     let distanceMeters: number | undefined;
 
-    const office = settings.officeLocation || {
+    const activeCampuses =
+      settings.campusLocationsList && settings.campusLocationsList.length > 0
+        ? settings.campusLocationsList.filter(c => c.isActive)
+        : initialCampuses.filter(c => c.isActive);
+
+    const fallbackOffice = settings.officeLocation || {
       name: 'Lagos Headquarters Hub (Yaba, Lagos)',
       latitude: 6.5181,
       longitude: 3.3768,
       radiusMeters: 400,
     };
 
+    let matchedCampus = activeCampuses.find(c => c.id === options.campusId) || activeCampuses[0];
+
     if (options.workMode === 'Remote') {
       geoStatus = 'Remote Verified';
     } else if (options.lat !== undefined && options.lng !== undefined) {
-      distanceMeters = calculateDistanceMeters(options.lat, options.lng, office.latitude, office.longitude);
-      if (distanceMeters <= office.radiusMeters) {
-        geoStatus = 'Verified On-Site';
+      if (options.campusId && matchedCampus) {
+        distanceMeters = calculateDistanceMeters(
+          options.lat,
+          options.lng,
+          matchedCampus.latitude,
+          matchedCampus.longitude
+        );
+        geoStatus = distanceMeters <= matchedCampus.radiusMeters ? 'Verified On-Site' : 'Location Mismatch';
+      } else if (activeCampuses.length > 0) {
+        const distances = activeCampuses
+          .map(c => ({
+            campus: c,
+            dist: calculateDistanceMeters(options.lat!, options.lng!, c.latitude, c.longitude),
+          }))
+          .sort((a, b) => a.dist - b.dist);
+        const inside = distances.find(d => d.dist <= d.campus.radiusMeters);
+        const chosen = inside || distances[0];
+        matchedCampus = chosen.campus;
+        distanceMeters = chosen.dist;
+        geoStatus = inside ? 'Verified On-Site' : 'Location Mismatch';
       } else {
-        geoStatus = 'Location Mismatch';
+        distanceMeters = calculateDistanceMeters(
+          options.lat,
+          options.lng,
+          fallbackOffice.latitude,
+          fallbackOffice.longitude
+        );
+        geoStatus = distanceMeters <= fallbackOffice.radiusMeters ? 'Verified On-Site' : 'Location Mismatch';
       }
     } else {
       geoStatus = 'GPS Unavailable';
     }
 
-    // Punctuality check against work hours policy
+    // Punctuality check: Flexible / Scheduled for Mentors vs WorkHoursPolicy for Internal Staff
     const [expHour, expMin] = (settings.workHoursPolicy?.expectedClockInTime || '09:00').split(':').map(Number);
     const grace = settings.workHoursPolicy?.gracePeriodMinutes ?? 15;
-    const expectedMinutes = expHour * 60 + expMin + grace;
+    const strictMinutes = expHour * 60 + expMin;
+    const graceLimitMinutes = strictMinutes + grace;
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    const punctualityStatus: PunctualityStatus = currentMinutes <= expectedMinutes ? 'On-Time' : 'Late';
+
+    let punctualityStatus: PunctualityStatus = 'On-Time';
+    if (currentUser.role === 'mentor') {
+      punctualityStatus = currentMinutes <= graceLimitMinutes ? 'On-Time' : 'Flexible / Faculty';
+    } else {
+      if (currentMinutes <= strictMinutes) {
+        punctualityStatus = 'On-Time';
+      } else if (currentMinutes <= graceLimitMinutes) {
+        punctualityStatus = 'Grace Period';
+      } else {
+        punctualityStatus = 'Late';
+      }
+    }
+
+    const verificationStatus: AttendanceVerificationStatus =
+      options.workMode === 'On-Site / Hub' &&
+      (geoStatus === 'Location Mismatch' || geoStatus === 'GPS Unavailable')
+        ? 'Pending Verification'
+        : 'Verified';
+
+    const resolvedCampusName =
+      options.workMode === 'On-Site / Hub'
+        ? options.campusName || matchedCampus?.name || fallbackOffice.name
+        : 'Remote Workstation';
+
+    const cleanStandupTasks = (options.standupTasks || []).filter(t => t.description.trim().length > 0);
+    const synthesizedFocus =
+      options.dailyTasksFocus?.trim() ||
+      (cleanStandupTasks.length > 0
+        ? cleanStandupTasks.map(t => t.description.trim()).join('; ')
+        : 'General office operations and scheduled daily chores.');
+
+    const initialDeliverables: ShiftDeliverableItem[] = cleanStandupTasks.map(t => ({
+      id: t.id,
+      moduleId: t.moduleId || 'leads',
+      description: t.description.trim(),
+      completed: t.status === 'completed',
+      source: 'standup',
+    }));
 
     const newRecord: AttendanceRecord = {
       id: `att-${Date.now()}`,
@@ -3524,7 +3985,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       userEmail: currentUser.email,
       userRole: currentUser.role,
       roleTitle: currentUser.roleTitle || currentUser.role,
-      department: currentUser.department || 'Operations',
+      department: currentUser.department || (currentUser.role === 'mentor' ? 'Academic Faculty' : 'Operations'),
       staffId: currentUser.id,
       staffName: currentUser.name,
       staffEmail: currentUser.email,
@@ -3532,25 +3993,89 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clockInTime: timeStr,
       clockInTimestamp: now.getTime(),
       workMode: options.workMode,
-      locationName: options.locationName || (options.workMode === 'On-Site / Hub' ? office.name : 'Remote Workstation'),
+      locationName: options.locationName || resolvedCampusName,
+      campusId: options.workMode === 'On-Site / Hub' ? options.campusId || matchedCampus?.id : undefined,
+      campusName: options.workMode === 'On-Site / Hub' ? resolvedCampusName : undefined,
       latitude: options.lat,
       longitude: options.lng,
+      gpsAccuracyMeters: options.gpsAccuracyMeters,
       distanceFromOfficeMeters: distanceMeters !== undefined ? Math.round(distanceMeters) : undefined,
       geoStatus,
+      geoExceptionReason: options.geoExceptionReason?.trim() || undefined,
+      verificationStatus,
       punctuality: punctualityStatus,
       punctualityStatus,
-      shiftFocus: options.dailyTasksFocus || 'General office operations and scheduled daily chores.',
-      dailyTasksFocus: options.dailyTasksFocus || 'General office operations and scheduled daily chores.',
+      shiftFocus: synthesizedFocus,
+      dailyTasksFocus: synthesizedFocus,
+      isOnBreak: false,
+      breaks: [],
+      totalBreakMinutes: 0,
+      deliverablesChecklist: initialDeliverables,
       status: 'Clocked In',
     };
 
     setAttendanceRecords(prev => [newRecord, ...prev]);
-    apiService.clockIn(newRecord);
+    try {
+      const saved = await apiService.clockIn(newRecord);
+      if (saved && saved.id && saved.id !== newRecord.id) {
+        setAttendanceRecords(prev => prev.map(r => (r.id === newRecord.id ? { ...newRecord, id: saved.id } : r)));
+      }
+    } catch (e) {
+      console.warn('[Attendance] Offline fallback for clockIn:', e);
+    }
+
+    // Two-Way Sync with AI Daily Standup
+    const standupCommitments: DailyStandupTask[] =
+      cleanStandupTasks.length > 0
+        ? cleanStandupTasks
+        : synthesizedFocus
+            .split(';')
+            .map(s => s.trim())
+            .filter(Boolean)
+            .map((desc, idx) => ({
+              id: `t-${Date.now()}-${idx + 1}`,
+              description: desc,
+              moduleId: currentUser.assignedModules?.[0] || (currentUser.role === 'mentor' ? 'lms' : 'leads'),
+              status: 'in_progress' as const,
+            }));
+
+    if (standupCommitments.length > 0) {
+      const existingYesterday = todayStandup?.tasksYesterday || [];
+      const existingBlockers = todayStandup?.blockers || [];
+      const taggedModules = Array.from(
+        new Set([
+          ...(todayStandup?.taggedModuleIds || []),
+          ...standupCommitments.map(t => t.moduleId),
+        ])
+      );
+      fetch('/api/scrum/standup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          userName: currentUser.name,
+          userRole: currentUser.role,
+          userEmail: currentUser.email,
+          tasksYesterday: existingYesterday,
+          tasksToday: standupCommitments,
+          blockers: existingBlockers,
+          taggedModuleIds: taggedModules,
+        }),
+      })
+        .then(r => r.json())
+        .then(resData => {
+          if (resData?.success && resData.data) {
+            setTodayStandup(resData.data);
+            setDailyStandups(prev => [resData.data, ...prev.filter(s => s.id !== resData.data.id)]);
+          }
+        })
+        .catch(err => console.warn('[Standup Sync] Could not auto-sync clock-in tasks:', err));
+    }
 
     showToast(
-      'Clocked In Successfully',
+      'Clocked In & Standup Synced',
       `${currentUser.name} is now On-Duty (${options.workMode} • ${punctualityStatus}).`,
-      geoStatus === 'Location Mismatch' ? 'warning' : 'success'
+      verificationStatus === 'Pending Verification' ? 'warning' : 'success'
     );
 
     addNotification({
@@ -3562,7 +4087,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     logActivity({
       title: 'Staff Member Clocked In',
-      description: `${currentUser.name} clocked in for ${options.workMode} duty. Focus: ${(newRecord.dailyTasksFocus || '').slice(0, 70)}`,
+      description: `${currentUser.name} clocked in for ${options.workMode} duty (${resolvedCampusName}). Focus: ${synthesizedFocus.slice(0, 75)}`,
       type: 'system',
       user: currentUser.name,
     });
@@ -3572,60 +4097,294 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const clockOut = async (options: {
     endOfDaySummary?: string;
+    deliverablesChecklist?: ShiftDeliverableItem[];
+    completedStandupTasks?: DailyStandupTask[];
+    crmActivitiesCount?: number;
+    targetRecordId?: string;
+    retroactiveClockOutTime?: string;
+    retroactiveNote?: string;
   }): Promise<{ success: boolean; message: string; record?: AttendanceRecord }> => {
     if (!currentUser) {
       showToast('Clock-Out Failed', 'No active user session.', 'error');
       return { success: false, message: 'No active user session.' };
     }
 
-    if (!activeAttendanceSession) {
+    const targetSession = options.targetRecordId
+      ? attendanceRecords.find(r => r.id === options.targetRecordId) || staleAttendanceSession || activeAttendanceSession
+      : activeAttendanceSession || staleAttendanceSession;
+
+    if (!targetSession) {
       showToast('Clock-Out Error', 'No active shift found to clock out of.', 'error');
       return { success: false, message: 'No active shift found.' };
     }
 
+    const isRetroactive = Boolean(options.retroactiveClockOutTime || targetSession.date < new Date().toISOString().split('T')[0]);
     const now = new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-    const durationMs = Math.max(0, now.getTime() - activeAttendanceSession.clockInTimestamp);
-    const totalHoursWorked = Number(Math.max(0.01, durationMs / (1000 * 60 * 60)).toFixed(2));
+
+    let outTimestamp = now.getTime();
+    let timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    if (options.retroactiveClockOutTime) {
+      // Parse HH:mm on the targetSession.date
+      const [hh, mm] = options.retroactiveClockOutTime.split(':').map(Number);
+      const retroDate = new Date(`${targetSession.date}T00:00:00`);
+      if (!isNaN(hh) && !isNaN(mm)) {
+        retroDate.setHours(hh, mm, 0, 0);
+        outTimestamp = Math.max(targetSession.clockInTimestamp + 60000, retroDate.getTime());
+        timeStr = retroDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+      }
+    }
+
+    // Close any open break
+    const breaks: ShiftBreakEntry[] = Array.isArray(targetSession.breaks) ? [...targetSession.breaks] : [];
+    if (targetSession.isOnBreak && breaks.length > 0) {
+      const lastIdx = breaks.length - 1;
+      if (!breaks[lastIdx].endTimestamp) {
+        const endTs = Math.max(breaks[lastIdx].startTimestamp + 60000, outTimestamp);
+        const durMin = Math.max(1, Math.round((endTs - breaks[lastIdx].startTimestamp) / 60000));
+        breaks[lastIdx] = {
+          ...breaks[lastIdx],
+          endTimestamp: endTs,
+          durationMinutes: durMin,
+        };
+      }
+    }
+    const totalBreakMinutes = breaks.reduce((sum, b) => sum + (Number(b.durationMinutes) || 0), 0);
+
+    const grossDurationMs = Math.max(0, outTimestamp - targetSession.clockInTimestamp);
+    const netDurationMs = Math.max(60000, grossDurationMs - totalBreakMinutes * 60000);
+    const totalHoursWorked = Number(Math.max(0.02, netDurationMs / (1000 * 60 * 60)).toFixed(2));
+
+    // Calculate overtime vs expected shift length (default 8h)
+    const [inH, inM] = (settings.workHoursPolicy?.expectedClockInTime || '09:00').split(':').map(Number);
+    const [outH, outM] = (settings.workHoursPolicy?.expectedClockOutTime || '17:00').split(':').map(Number);
+    const scheduledShiftHours = Math.max(1, ((outH * 60 + outM) - (inH * 60 + inM)) / 60);
+    const overtimeHours = totalHoursWorked > scheduledShiftHours
+      ? Number((totalHoursWorked - scheduledShiftHours).toFixed(2))
+      : 0;
 
     const updatedRecord: AttendanceRecord = {
-      ...activeAttendanceSession,
+      ...targetSession,
       clockOutTime: timeStr,
-      clockOutTimestamp: now.getTime(),
+      clockOutTimestamp: outTimestamp,
       totalHoursWorked,
+      overtimeHours,
+      isOnBreak: false,
+      breaks,
+      totalBreakMinutes,
+      isRetroactiveClockOut: isRetroactive || targetSession.isRetroactiveClockOut,
+      retroactiveNote: options.retroactiveNote || targetSession.retroactiveNote,
+      verificationStatus: isRetroactive ? 'Pending Verification' : targetSession.verificationStatus || 'Verified',
+      deliverablesChecklist: options.deliverablesChecklist || targetSession.deliverablesChecklist,
+      crmActivitiesCount: options.crmActivitiesCount ?? targetSession.crmActivitiesCount,
       workSummary: options.endOfDaySummary || 'Completed daily deliverables and office chores.',
       status: 'Clocked Out',
     };
 
-    setAttendanceRecords(prev => prev.map(r => r.id === activeAttendanceSession.id ? updatedRecord : r));
-    apiService.clockOut(activeAttendanceSession.id, {
+    setAttendanceRecords(prev => prev.map(r => (r.id === targetSession.id ? updatedRecord : r)));
+    apiService.clockOut(targetSession.id, {
+      userId: currentUser.id,
       clockOutTime: timeStr,
-      clockOutTimestamp: now.getTime(),
+      clockOutTimestamp: outTimestamp,
       totalHoursWorked,
+      overtimeHours,
+      isOnBreak: false,
+      breaks,
+      totalBreakMinutes,
+      isRetroactiveClockOut: updatedRecord.isRetroactiveClockOut,
+      retroactiveNote: updatedRecord.retroactiveNote,
+      verificationStatus: updatedRecord.verificationStatus,
+      deliverablesChecklist: updatedRecord.deliverablesChecklist,
+      crmActivitiesCount: updatedRecord.crmActivitiesCount,
       workSummary: updatedRecord.workSummary || '',
     });
 
+    // Sync checked-off standup tasks back to DailyStandupReport if closing today's shift
+    if (!isRetroactive && options.completedStandupTasks && options.completedStandupTasks.length > 0) {
+      fetch('/api/scrum/standup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          userName: currentUser.name,
+          userRole: currentUser.role,
+          userEmail: currentUser.email,
+          tasksYesterday: todayStandup?.tasksYesterday || [],
+          tasksToday: options.completedStandupTasks,
+          blockers: todayStandup?.blockers || [],
+          taggedModuleIds: todayStandup?.taggedModuleIds || [],
+        }),
+      })
+        .then(r => r.json())
+        .then(resData => {
+          if (resData?.success && resData.data) {
+            setTodayStandup(resData.data);
+            setDailyStandups(prev => [resData.data, ...prev.filter(s => s.id !== resData.data.id)]);
+          }
+        })
+        .catch(err => console.warn('[Standup Sync] EOD standup sync error:', err));
+    }
+
     showToast(
-      'Clocked Out Successfully',
-      `Shift closed with ${totalHoursWorked} hrs logged. Deliverables recorded.`,
+      isRetroactive ? 'Retroactive Shift Reconciled' : 'Clocked Out Successfully',
+      isRetroactive
+        ? `Closed ${targetSession.date} shift (${totalHoursWorked}h net). You can now clock in for today.`
+        : `Shift closed with ${totalHoursWorked}h net logged${totalBreakMinutes > 0 ? ` (${totalBreakMinutes}m break deducted)` : ''}.`,
       'success'
     );
 
     addNotification({
-      title: 'Staff Clock-Out Logged',
-      message: `${currentUser.name} completed duty (${totalHoursWorked}h logged).`,
+      title: isRetroactive ? 'Retroactive Clock-Out Logged' : 'Staff Clock-Out Logged',
+      message: `${currentUser.name} closed shift for ${targetSession.date} (${totalHoursWorked}h net).`,
       type: 'system',
       link: '/attendance',
     });
 
     logActivity({
-      title: 'Staff Member Clocked Out',
-      description: `${currentUser.name} completed duty (${totalHoursWorked}h). EOD Output: ${(updatedRecord.workSummary || '').slice(0, 70)}`,
+      title: isRetroactive ? 'Staff Retroactive Clock-Out' : 'Staff Member Clocked Out',
+      description: `${currentUser.name} completed duty (${totalHoursWorked}h net). EOD Output: ${(updatedRecord.workSummary || '').slice(0, 75)}`,
       type: 'system',
       user: currentUser.name,
     });
 
     return { success: true, message: 'Clocked out successfully', record: updatedRecord };
+  };
+
+  const toggleShiftBreak = async (action: 'start' | 'end', reason?: string): Promise<boolean> => {
+    if (!currentUser || !activeAttendanceSession) {
+      showToast('Break Action Failed', 'No active shift found.', 'error');
+      return false;
+    }
+
+    const nowTs = Date.now();
+    const breaks: ShiftBreakEntry[] = Array.isArray(activeAttendanceSession.breaks)
+      ? [...activeAttendanceSession.breaks]
+      : [];
+
+    if (action === 'start') {
+      if (!activeAttendanceSession.isOnBreak) {
+        breaks.push({
+          id: `brk-${nowTs}`,
+          startTimestamp: nowTs,
+          reason: reason || 'Mid-shift break',
+        });
+      }
+      const updated: AttendanceRecord = {
+        ...activeAttendanceSession,
+        isOnBreak: true,
+        status: 'On Break',
+        breaks,
+      };
+      setAttendanceRecords(prev => prev.map(r => (r.id === activeAttendanceSession.id ? updated : r)));
+      await apiService.toggleAttendanceBreak(activeAttendanceSession.id, { action: 'start', reason });
+      showToast('Shift Paused (On Break)', 'Break timer started. Break minutes will be deducted from net hours.', 'info');
+      return true;
+    } else {
+      if (breaks.length > 0) {
+        const lastIdx = breaks.length - 1;
+        if (!breaks[lastIdx].endTimestamp) {
+          const durMin = Math.max(1, Math.round((nowTs - breaks[lastIdx].startTimestamp) / 60000));
+          breaks[lastIdx] = {
+            ...breaks[lastIdx],
+            endTimestamp: nowTs,
+            durationMinutes: durMin,
+          };
+        }
+      }
+      const totalBreakMinutes = breaks.reduce((sum, b) => sum + (Number(b.durationMinutes) || 0), 0);
+      const updated: AttendanceRecord = {
+        ...activeAttendanceSession,
+        isOnBreak: false,
+        status: 'Clocked In',
+        breaks,
+        totalBreakMinutes,
+      };
+      setAttendanceRecords(prev => prev.map(r => (r.id === activeAttendanceSession.id ? updated : r)));
+      await apiService.toggleAttendanceBreak(activeAttendanceSession.id, { action: 'end' });
+      showToast('Shift Resumed', `Welcome back! Total break time: ${totalBreakMinutes}m.`, 'success');
+      return true;
+    }
+  };
+
+  const resumeTodayShift = async (recordId?: string): Promise<boolean> => {
+    const target = recordId
+      ? attendanceRecords.find(r => r.id === recordId)
+      : todayCompletedSession;
+
+    if (!currentUser || !target) {
+      showToast('Resume Failed', 'No completed shift from today found to resume.', 'error');
+      return false;
+    }
+
+    const nowTs = Date.now();
+    const breaks: ShiftBreakEntry[] = Array.isArray(target.breaks) ? [...target.breaks] : [];
+    if (target.clockOutTimestamp && nowTs > target.clockOutTimestamp) {
+      const gapMin = Math.max(1, Math.round((nowTs - target.clockOutTimestamp) / 60000));
+      breaks.push({
+        id: `brk-resume-${nowTs}`,
+        startTimestamp: target.clockOutTimestamp,
+        endTimestamp: nowTs,
+        durationMinutes: gapMin,
+        reason: 'Away interval between resumed shift segments',
+      });
+    }
+    const totalBreakMinutes = breaks.reduce((sum, b) => sum + (Number(b.durationMinutes) || 0), 0);
+
+    const resumed: AttendanceRecord = {
+      ...target,
+      clockOutTime: undefined,
+      clockOutTimestamp: undefined,
+      totalHoursWorked: undefined,
+      isOnBreak: false,
+      breaks,
+      totalBreakMinutes,
+      resumeCount: (Number(target.resumeCount) || 0) + 1,
+      status: 'Clocked In',
+    };
+
+    setAttendanceRecords(prev => prev.map(r => (r.id === target.id ? resumed : r)));
+    await apiService.resumeAttendanceShift(target.id);
+    showToast('Shift Resumed', 'Your today shift is now active again.', 'success');
+    logActivity({
+      title: 'Staff Shift Resumed',
+      description: `${currentUser.name} resumed their ${target.date} shift.`,
+      type: 'system',
+      user: currentUser.name,
+    });
+    return true;
+  };
+
+  const verifyAttendanceShift = async (
+    recordId: string,
+    updates: Partial<AttendanceRecord>
+  ): Promise<boolean> => {
+    if (!currentUser) return false;
+    const target = attendanceRecords.find(r => r.id === recordId);
+    if (!target) return false;
+
+    const payload: Partial<AttendanceRecord> = {
+      ...updates,
+      verifiedBy: currentUser.name,
+      verifiedAt: new Date().toISOString(),
+    };
+
+    setAttendanceRecords(prev =>
+      prev.map(r => (r.id === recordId ? { ...r, ...payload } : r))
+    );
+    await apiService.verifyAttendanceRecord(recordId, payload);
+
+    showToast(
+      'Attendance Audit Updated',
+      `Shift for ${target.staffName || target.userName} marked as ${updates.verificationStatus || updates.status || 'Updated'}.`,
+      'success'
+    );
+    logActivity({
+      title: 'Attendance Record Audited',
+      description: `${currentUser.name} updated attendance audit for ${target.staffName || target.userName} (${target.date}) → ${updates.verificationStatus || updates.status}.`,
+      type: 'system',
+      user: currentUser.name,
+    });
+    return true;
   };
 
   const generateInvoice = (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber'>) => {
@@ -5788,6 +6547,8 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         sessions,
         attendanceRecords,
         activeAttendanceSession,
+        staleAttendanceSession,
+        todayCompletedSession,
         settings,
         activityLogs,
         activeModal,
@@ -5863,11 +6624,15 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         rejectExpense,
         addCourse,
         updateCourse,
+        deleteCourse,
         addCourseCategory,
         addCohort,
         bookSession,
         clockIn,
         clockOut,
+        toggleShiftBreak,
+        resumeTodayShift,
+        verifyAttendanceShift,
         generateInvoice,
         updateSettings,
         logActivity,
@@ -5877,6 +6642,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         sendStaffWelcomeEmail,
         isSuperAdmin,
         isSimulatingRole,
+        originSuperAdmin,
         switchRole,
         isModuleEnabled,
         tickets,
@@ -5887,9 +6653,11 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         markTicketDone,
         requestTicketStatus,
         toggleTicketArchive,
+        markTicketRead,
         customRoles,
         createCustomRole,
         updateRolePermissions,
+        deleteCustomRole,
         hasFeaturePermission,
         resetAllData,
         wallet,

@@ -42,7 +42,7 @@ export const mentorAbiola: Mentor = {
   id: 'men-abiola-adefowope',
   mentorCode: 'MN-5001',
   name: 'Abiola Adefowope',
-  email: 'eskay243@gmail.com',
+  email: 'abiola@codelab.institute',
   phone: '+234 803 000 2430',
   password: 'password123',
   avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
@@ -85,7 +85,7 @@ export const mentorAbiola: Mentor = {
 export const staffUserAbiola: AuthUser = {
   id: 'user-mentor-abiola',
   name: 'Abiola Adefowope',
-  email: 'eskay243@gmail.com',
+  email: 'abiola@codelab.institute',
   phone: '+234 803 000 2430',
   role: 'mentor',
   roleTitle: 'Lead Faculty Mentor & Financial Trading Director',
