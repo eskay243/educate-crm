@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { usePWA } from '../../context/PWAContext';
+import { safeLocalStorage } from '../../utils/safeStorage';
 
 export const PWAInstallPrompt: React.FC = () => {
   const {
@@ -15,7 +16,7 @@ export const PWAInstallPrompt: React.FC = () => {
   const [showBrowserGuide, setShowBrowserGuide] = useState(false);
 
   useEffect(() => {
-    const dismissedUntil = localStorage.getItem('nexus_pwa_dismissed_until');
+    const dismissedUntil = safeLocalStorage.getItem('nexus_pwa_dismissed_until');
     if (dismissedUntil && Number(dismissedUntil) > Date.now()) {
       setIsDismissed(true);
     }
@@ -24,7 +25,7 @@ export const PWAInstallPrompt: React.FC = () => {
   const handleDismiss = () => {
     setIsDismissed(true);
     // Dismiss for 3 days
-    localStorage.setItem(
+    safeLocalStorage.setItem(
       'nexus_pwa_dismissed_until',
       String(Date.now() + 3 * 24 * 60 * 60 * 1000)
     );

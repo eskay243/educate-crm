@@ -54,7 +54,10 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
           </div>
           <button
             type="button"
-            onClick={() => switchRole('super_admin')}
+            onClick={() => {
+              switchRole('super_admin');
+              navigate('/');
+            }}
             className="px-2.5 py-0.5 rounded bg-surface text-on-surface hover:bg-surface-container font-bold text-[11px] transition-all flex items-center gap-1 cursor-pointer shadow-xs"
           >
             <span className="material-symbols-outlined text-[13px] text-primary">admin_panel_settings</span>
@@ -226,42 +229,42 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
                     </div>
                     <div className="grid grid-cols-2 gap-1.5 text-[11px]">
                       <button
-                        onClick={() => { switchRole('super_admin'); setIsProfileOpen(false); }}
+                        onClick={() => { switchRole('super_admin'); setIsProfileOpen(false); navigate('/'); }}
                         className={`p-1.5 rounded text-left transition-colors flex items-center justify-between ${currentUser?.role === 'super_admin' ? 'bg-primary text-white font-bold' : 'bg-surface hover:bg-surface-container text-on-surface'}`}
                       >
                         <span>Super Admin</span>
                         {currentUser?.role === 'super_admin' && <span className="material-symbols-outlined text-[13px]">check</span>}
                       </button>
                       <button
-                        onClick={() => { switchRole('program_officer'); setIsProfileOpen(false); }}
+                        onClick={() => { switchRole('program_officer'); setIsProfileOpen(false); navigate('/'); }}
                         className={`p-1.5 rounded text-left transition-colors flex items-center justify-between ${currentUser?.role === 'program_officer' ? 'bg-primary text-white font-bold' : 'bg-surface hover:bg-surface-container text-on-surface'}`}
                       >
                         <span>Program Officer</span>
                         {currentUser?.role === 'program_officer' && <span className="material-symbols-outlined text-[13px]">check</span>}
                       </button>
                       <button
-                        onClick={() => { switchRole('admissions'); setIsProfileOpen(false); }}
+                        onClick={() => { switchRole('admissions'); setIsProfileOpen(false); navigate('/leads'); }}
                         className={`p-1.5 rounded text-left transition-colors flex items-center justify-between ${currentUser?.role === 'admissions' ? 'bg-primary text-white font-bold' : 'bg-surface hover:bg-surface-container text-on-surface'}`}
                       >
                         <span>Admissions</span>
                         {currentUser?.role === 'admissions' && <span className="material-symbols-outlined text-[13px]">check</span>}
                       </button>
                       <button
-                        onClick={() => { switchRole('mentor'); setIsProfileOpen(false); }}
+                        onClick={() => { switchRole('mentor'); setIsProfileOpen(false); navigate('/mentor/dashboard'); }}
                         className={`p-1.5 rounded text-left transition-colors flex items-center justify-between ${currentUser?.role === 'mentor' ? 'bg-primary text-white font-bold' : 'bg-surface hover:bg-surface-container text-on-surface'}`}
                       >
                         <span>Faculty Mentor</span>
                         {currentUser?.role === 'mentor' && <span className="material-symbols-outlined text-[13px]">check</span>}
                       </button>
                       <button
-                        onClick={() => { switchRole('finance'); setIsProfileOpen(false); }}
+                        onClick={() => { switchRole('finance'); setIsProfileOpen(false); navigate('/expenses'); }}
                         className={`p-1.5 rounded text-left transition-colors flex items-center justify-between ${currentUser?.role === 'finance' ? 'bg-primary text-white font-bold' : 'bg-surface hover:bg-surface-container text-on-surface'}`}
                       >
                         <span>Finance</span>
                         {currentUser?.role === 'finance' && <span className="material-symbols-outlined text-[13px]">check</span>}
                       </button>
                       <button
-                        onClick={() => { switchRole('student'); setIsProfileOpen(false); }}
+                        onClick={() => { switchRole('student'); setIsProfileOpen(false); navigate('/student/dashboard'); }}
                         className={`p-1.5 rounded text-left transition-colors flex items-center justify-between col-span-2 ${currentUser?.role === 'student' ? 'bg-primary text-white font-bold' : 'bg-surface hover:bg-surface-container text-on-surface'}`}
                       >
                         <span>🎓 Student Scholar Portal</span>

@@ -177,7 +177,7 @@ export const Student360Dossier: React.FC<Student360DossierProps> = ({
   const canRateMentorAndCourse = isStudentRole || isProgramOfficer;
 
   // Formatted KYC Tier (handles 'Tier 3' or '3' without duplicate 'Tier Tier 3')
-  const cleanKycTier = String(student.kycTier || 3).replace(/^Tier\s*/i, '');
+  const cleanKycTier = String(student.kycTier || 3).replace(/^(Tier\s*)+/i, '');
 
   // Tabs configuration
   const tabList = [
@@ -361,7 +361,7 @@ export const Student360Dossier: React.FC<Student360DossierProps> = ({
                 />
               ) : (
                 <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-primary/10 border-2 border-primary/20 text-primary font-bold text-2xl flex items-center justify-center">
-                  {student.name.charAt(0)}
+                  {(student.name || 'S').charAt(0)}
                 </div>
               )}
               {student.isAtRisk && (
@@ -779,7 +779,7 @@ export const Student360Dossier: React.FC<Student360DossierProps> = ({
                 </div>
 
                 <span className={`px-3 py-1 rounded-full text-xs font-bold border shadow-xs flex items-center gap-1.5 ${
-                  student.status === 'Active' 
+                  (student.status || 'Active') === 'Active' 
                     ? 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30' 
                     : student.status === 'Completed'
                     ? 'bg-blue-500/10 text-blue-700 border-blue-500/30'
@@ -788,7 +788,7 @@ export const Student360Dossier: React.FC<Student360DossierProps> = ({
                     : 'bg-rose-500/10 text-rose-700 border-rose-500/30'
                 }`}>
                   <span className="w-2 h-2 rounded-full bg-current animate-pulse" />
-                  <span>Current Status: {student.status}</span>
+                  <span>Current Status: {student.status || 'Active'}</span>
                 </span>
               </div>
 

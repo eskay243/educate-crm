@@ -34,6 +34,7 @@ import { CourseOutlineModal } from '../modals/CourseOutlineModal';
 import { RequestPayoutModal } from '../modals/RequestPayoutModal';
 import { BulkUploadCoursesModal } from '../modals/BulkUploadCoursesModal';
 import { StudentProfileModal } from '../modals/StudentProfileModal';
+import { MentorProfileModal } from '../modals/MentorProfileModal';
 import { LogFollowUpModal } from '../modals/LogFollowUpModal';
 import { RecordInstallmentPaymentModal } from '../modals/RecordInstallmentPaymentModal';
 import { CreateSubgroupModal } from '../modals/CreateSubgroupModal';
@@ -152,6 +153,10 @@ export const AppLayout: React.FC = () => {
       />
       <StudentProfileModal
         isOpen={activeModal === 'student-profile'}
+        onClose={closeModal}
+      />
+      <MentorProfileModal
+        isOpen={activeModal === 'mentor-profile' || activeModal === 'view-mentor-profile'}
         onClose={closeModal}
       />
       <EditStaffModal

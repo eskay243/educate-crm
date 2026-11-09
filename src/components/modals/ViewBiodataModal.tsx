@@ -17,6 +17,7 @@ export const ViewBiodataModal: React.FC<ViewBiodataModalProps> = ({ isOpen, onCl
     setSelectedMentorForEditId,
     setSelectedStaffForEditId,
     reviewUserKYC,
+    currentUser,
   } = useCRM();
 
   const [activeTab, setActiveTab] = useState<'demographics' | 'identity' | 'address' | 'bank'>('demographics');
@@ -51,6 +52,19 @@ export const ViewBiodataModal: React.FC<ViewBiodataModalProps> = ({ isOpen, onCl
     if (category === 'mentor') return hasFeaturePermission('canModifyMentorBiodata');
     return false; // Staff can only be modified by Super Admin
   }, [isSuperAdmin, category, hasFeaturePermission]);
+
+  const isReviewingSelf = useMemo(() => {
+    if (!currentUser || !target) return false;
+    const targetEmail = target.email?.toLowerCase().trim();
+    const currentEmail = currentUser.email?.toLowerCase().trim();
+    const currentSecondary = (currentUser as any).secondaryEmail?.toLowerCase().trim();
+    return Boolean(
+      (target.id && currentUser.id === target.id) ||
+      (targetEmail && (targetEmail === currentEmail || targetEmail === currentSecondary))
+    );
+  }, [currentUser, target]);
+
+  const canReviewThisKYC = isSuperAdmin && !isReviewingSelf;
 
   if (!isOpen || !target) return null;
 
@@ -207,8 +221,19 @@ export const ViewBiodataModal: React.FC<ViewBiodataModalProps> = ({ isOpen, onCl
             </button>
           </div>
 
-          {/* Institutional Compliance Officer Review Panel (Super Admin) */}
-          {isSuperAdmin && (
+          {/* Self-Review Compliance Guard */}
+          {isReviewingSelf && (
+            <div className="mt-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 flex items-center gap-2.5">
+              <span className="material-symbols-outlined text-[20px] text-amber-600 shrink-0">verified_user</span>
+              <div>
+                <strong className="font-bold block">Institutional Compliance Separation</strong>
+                <span>You cannot verify or approve your own KYC record. Clearance must be conducted independently by the Compliance Officer or Program Registry.</span>
+              </div>
+            </div>
+          )}
+
+          {/* Institutional Compliance Officer Review Panel (Super Admin reviewing other users) */}
+          {canReviewThisKYC && (
             <div className="mt-4 p-3 rounded-xl bg-surface-container-low border border-outline-variant flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-[20px]">verified_user</span>

@@ -28,6 +28,7 @@ import {
   ChatConversation,
   ChatMessage
 } from '../types/chat';
+import { safeLocalStorage } from '../utils/safeStorage';
 
 const API_BASE_URL = '/api';
 
@@ -36,9 +37,7 @@ class ApiService {
     try {
       const authHeaders: Record<string, string> = {};
       try {
-        const authUserStr = typeof localStorage !== 'undefined' 
-          ? (localStorage.getItem('nexus_clean_prod_auth_v1') || localStorage.getItem('nexus_auth')) 
-          : null;
+        const authUserStr = safeLocalStorage.getItem('nexus_clean_prod_auth_v1') || safeLocalStorage.getItem('nexus_auth');
         if (authUserStr) {
           const authUser = JSON.parse(authUserStr);
           if (authUser?.role) authHeaders['x-user-role'] = authUser.role;

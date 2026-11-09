@@ -40,19 +40,35 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // 2. Check if currently running in standalone display mode (installed)
     const checkStandalone = () => {
-      const isStandaloneMode =
-        window.matchMedia('(display-mode: standalone)').matches ||
-        (navigator as unknown as { standalone?: boolean }).standalone === true ||
-        document.referrer.includes('android-app://');
-      setIsStandalone(Boolean(isStandaloneMode));
+      try {
+        const isStandaloneMode =
+          (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+          (typeof navigator !== 'undefined' && (navigator as unknown as { standalone?: boolean }).standalone === true) ||
+          (typeof document !== 'undefined' && document.referrer && document.referrer.includes('android-app://'));
+        setIsStandalone(Boolean(isStandaloneMode));
+      } catch {
+        setIsStandalone(false);
+      }
     };
     checkStandalone();
 
-    const mediaQuery = window.matchMedia('(display-mode: standalone)');
-    const handleMediaChange = (e: MediaQueryListEvent) => {
-      setIsStandalone(e.matches);
+    let mediaQuery: MediaQueryList | null = null;
+    const handleMediaChange = (e: MediaQueryListEvent | MediaQueryList) => {
+      setIsStandalone(Boolean(e.matches));
     };
-    mediaQuery.addEventListener('change', handleMediaChange);
+
+    try {
+      if (typeof window !== 'undefined' && window.matchMedia) {
+        mediaQuery = window.matchMedia('(display-mode: standalone)');
+        if (typeof mediaQuery.addEventListener === 'function') {
+          mediaQuery.addEventListener('change', handleMediaChange);
+        } else if (typeof (mediaQuery as any).addListener === 'function') {
+          (mediaQuery as any).addListener(handleMediaChange);
+        }
+      }
+    } catch (e) {
+      console.warn('[PWA] mediaQuery listener error:', e);
+    }
 
     // 3. Listen for Chromium beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -88,7 +104,17 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     return () => {
-      mediaQuery.removeEventListener('change', handleMediaChange);
+      if (mediaQuery) {
+        try {
+          if (typeof mediaQuery.removeEventListener === 'function') {
+            mediaQuery.removeEventListener('change', handleMediaChange);
+          } else if (typeof (mediaQuery as any).removeListener === 'function') {
+            (mediaQuery as any).removeListener(handleMediaChange);
+          }
+        } catch {
+          // ignore Safari cleanup error
+        }
+      }
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
       window.removeEventListener('online', handleOnline);

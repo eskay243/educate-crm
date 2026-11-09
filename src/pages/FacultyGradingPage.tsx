@@ -21,27 +21,33 @@ export const FacultyGradingPage: React.FC = () => {
       {/* Breadcrumb & Quick Actions */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="flex items-center gap-2 text-xs text-secondary">
-          <Link to="/" className="hover:text-primary transition-colors">Dashboard</Link>
+          <Link to={isMentor ? "/mentor/dashboard" : "/"} className="hover:text-primary transition-colors">
+            {isMentor ? "Faculty Hub" : "Dashboard"}
+          </Link>
           <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-          <Link to="/mentors" className="hover:text-primary transition-colors">Mentors &amp; Sessions</Link>
-          <span className="material-symbols-outlined text-[14px]">chevron_right</span>
+          {!isMentor && (
+            <>
+              <Link to="/mentors" className="hover:text-primary transition-colors">Mentors &amp; Sessions</Link>
+              <span className="material-symbols-outlined text-[14px]">chevron_right</span>
+            </>
+          )}
           <span className="font-bold text-on-surface">Grading Inbox</span>
         </div>
 
         <div className="flex items-center gap-2">
           <Link
-            to="/mentors"
+            to={isMentor ? "/mentor/dashboard" : "/mentors"}
             className="h-8 px-3 rounded bg-surface border border-outline-variant hover:border-primary text-secondary hover:text-on-surface text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
           >
             <span className="material-symbols-outlined text-[16px]">groups</span>
-            <span>Faculty Overview</span>
+            <span>{isMentor ? "Faculty Hub" : "Faculty Overview"}</span>
           </Link>
           <Link
-            to="/mentors/office-hours"
+            to={isMentor ? "/mentor/schedule" : "/mentors/office-hours"}
             className="h-8 px-3 rounded bg-surface border border-outline-variant hover:border-primary text-secondary hover:text-on-surface text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
           >
             <span className="material-symbols-outlined text-[16px]">schedule</span>
-            <span>Office Hours &amp; Slots</span>
+            <span>Schedule &amp; Slots</span>
           </Link>
         </div>
       </div>

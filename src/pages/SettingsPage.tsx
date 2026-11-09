@@ -299,17 +299,11 @@ export const SettingsPage: React.FC = () => {
 
   const isTier3Complete = useMemo(() => {
     return Boolean(
-      isTier2Complete &&
       profileAddress.trim() &&
-      profileCity.trim() &&
-      profileStateOfResidence &&
-      (profileProofOfAddressUrl || profileProofOfAddressName) &&
-      profileNextOfKinName.trim() &&
-      profileNextOfKinPhone.trim() &&
       profileAccountNumber.trim().length === 10 &&
       isProfileBankVerified
     );
-  }, [isTier2Complete, profileAddress, profileCity, profileStateOfResidence, profileProofOfAddressUrl, profileProofOfAddressName, profileNextOfKinName, profileNextOfKinPhone, profileAccountNumber, isProfileBankVerified]);
+  }, [profileAddress, profileAccountNumber, isProfileBankVerified]);
 
   const tier1MissingFields = useMemo(() => {
     const missing: string[] = [];
@@ -348,32 +342,37 @@ export const SettingsPage: React.FC = () => {
   // Synchronize profile states if currentUser changes
   useEffect(() => {
     if (currentUser) {
-      setProfileAvatarUrl(currentUser.avatarUrl || '');
-      setProfileName(currentUser.name || '');
-      setProfilePhone(currentUser.phone || '');
-      setProfileBio(currentUser.bio || '');
-      setProfileDob(currentUser.dateOfBirth || '');
-      setProfileGender(currentUser.gender || 'Male');
-      setProfileNationality(currentUser.nationality || 'Nigerian');
-      setProfileStateOfOrigin(currentUser.stateOfOrigin || 'Lagos');
-      setProfileLga(currentUser.lga || '');
-      setProfileAddress(currentUser.residentialAddress || '');
-      setProfileCity(currentUser.city || 'Lagos');
-      setProfileStateOfResidence(currentUser.stateOfResidence || 'Lagos');
-      setProfileProofOfAddressUrl(currentUser.proofOfAddressUrl || '');
-      setProfileProofOfAddressName(currentUser.proofOfAddressName || '');
-      setProfileIdType(currentUser.idType || 'NIN');
-      setProfileIdNumber(currentUser.idNumber || '');
-      setProfileIdDocUrl(currentUser.idDocumentUrl || '');
-      setProfileIdDocName(currentUser.idDocumentName || '');
-      setIsProfileIdVerified(Boolean(currentUser.isIdVerified));
-      setProfileNextOfKinName(currentUser.nextOfKinName || '');
-      setProfileNextOfKinRel(currentUser.nextOfKinRelationship || 'Next of Kin');
-      setProfileNextOfKinPhone(currentUser.nextOfKinPhone || '');
-      setProfileNextOfKinAddress(currentUser.nextOfKinAddress || '');
+      if (currentUser.avatarUrl) setProfileAvatarUrl(currentUser.avatarUrl);
+      if (currentUser.name) setProfileName(currentUser.name);
+      if (currentUser.phone) setProfilePhone(currentUser.phone);
+      if (currentUser.bio) setProfileBio(currentUser.bio);
+      if (currentUser.dateOfBirth) setProfileDob(currentUser.dateOfBirth);
+      if (currentUser.gender) setProfileGender(currentUser.gender);
+      if (currentUser.nationality) setProfileNationality(currentUser.nationality);
+      if (currentUser.stateOfOrigin) setProfileStateOfOrigin(currentUser.stateOfOrigin);
+      if (currentUser.lga) setProfileLga(currentUser.lga);
+      if (currentUser.residentialAddress) setProfileAddress(currentUser.residentialAddress);
+      if (currentUser.city) setProfileCity(currentUser.city);
+      if (currentUser.stateOfResidence) setProfileStateOfResidence(currentUser.stateOfResidence);
+      if (currentUser.proofOfAddressUrl) setProfileProofOfAddressUrl(currentUser.proofOfAddressUrl);
+      if (currentUser.proofOfAddressName) setProfileProofOfAddressName(currentUser.proofOfAddressName);
+      if (currentUser.idType) setProfileIdType(currentUser.idType);
+      if (currentUser.idNumber) setProfileIdNumber(currentUser.idNumber);
+      if (currentUser.idDocumentUrl) setProfileIdDocUrl(currentUser.idDocumentUrl);
+      if (currentUser.idDocumentName) setProfileIdDocName(currentUser.idDocumentName);
+      if (typeof currentUser.isIdVerified === 'boolean') setIsProfileIdVerified(currentUser.isIdVerified);
+      if (currentUser.nextOfKinName) setProfileNextOfKinName(currentUser.nextOfKinName);
+      if (currentUser.nextOfKinRelationship) setProfileNextOfKinRel(currentUser.nextOfKinRelationship);
+      if (currentUser.nextOfKinPhone) setProfileNextOfKinPhone(currentUser.nextOfKinPhone);
+      if (currentUser.nextOfKinAddress) setProfileNextOfKinAddress(currentUser.nextOfKinAddress);
       if (currentUser.bankName) setProfileBankName(currentUser.bankName);
       if (currentUser.bankCode) setProfileBankCode(currentUser.bankCode);
-      if (currentUser.accountNumber) setProfileAccountNumber(currentUser.accountNumber);
+      if (currentUser.accountNumber) {
+        setProfileAccountNumber(currentUser.accountNumber);
+        if (currentUser.accountNumber.length === 10) {
+          setIsProfileBankVerified(true);
+        }
+      }
       if (currentUser.accountName) setProfileAccountName(currentUser.accountName);
       if (currentUser.bvn) setProfileBvn(currentUser.bvn);
       if (typeof currentUser.isBankVerified === 'boolean') {
@@ -1510,13 +1509,9 @@ export const SettingsPage: React.FC = () => {
       }
 
       const tier3Evaluated = Boolean(
-        isTier2Complete &&
         profileAddress.trim() &&
         profileCity.trim() &&
         profileStateOfResidence &&
-        (profileProofOfAddressUrl || profileProofOfAddressName) &&
-        profileNextOfKinName.trim() &&
-        profileNextOfKinPhone.trim() &&
         profileAccountNumber.trim().length === 10 &&
         bankVerified
       );
@@ -1551,8 +1546,8 @@ export const SettingsPage: React.FC = () => {
         accountName: resolvedAccountName,
         bvn: profileBvn,
         isBankVerified: bankVerified,
-        kycTier: tier3Evaluated ? 'Tier 3' : isTier2Complete ? 'Tier 2' : 'Tier 1',
-        kycStatus: tier3Evaluated ? 'Verified' : 'Pending Review',
+        kycTier: tier3Evaluated ? 'Tier 3' : (isTier2Complete || profileIdNumber.trim()) ? 'Tier 2' : 'Tier 1',
+        kycStatus: (tier3Evaluated || bankVerified) ? 'Verified' : 'Pending Review',
         kycSubmittedAt: new Date().toISOString(),
       });
       if (success) {

@@ -241,6 +241,153 @@ export const initialMentors: Mentor[] = [
     nextOfKinAddress: 'Block 4, Flat 12, Admiralty Way, Lekki Phase 1, Lagos',
     kycTier: 3,
     kycStatus: 'Verified',
+    position: 'Lead Engineering Faculty & Senior Mentor',
+    reportsTo: 'Chief Operating Officer (COO)',
+    annualLeaveAllowance: 20,
+    annualLeaveUsed: 4,
+    sickLeaveAllowance: 10,
+    sickLeaveUsed: 1,
+    weeklyReports: [
+      {
+        id: 'rep-chidi-1',
+        mentorId: 'user-mentor-demo',
+        weekEnding: '2026-10-31',
+        learnersCoveredCount: 8,
+        sessionsHeldCount: 3,
+        topicsCovered: ['PostgreSQL Relational Schemas', 'Indexing & Triggers', 'Node.js Express Integration'],
+        keyHighlights: 'All 8 scholars successfully built authenticated REST endpoints with JWT validation. Chukwudi demonstrated high grasp of foreign key constraints.',
+        challengesEncountered: 'Two students needed extra help debugging CORS headers.',
+        actionItemsNextWeek: 'Introduce automated Jest integration test suites and prepare for Capstone Sprint 1.',
+        submittedAt: '2026-10-31T17:00:00.000Z',
+      }
+    ],
+    curriculumContributions: [
+      {
+        id: 'curr-1',
+        mentorId: 'user-mentor-demo',
+        title: 'Advanced SQL Query Optimization & Partitioning Lab',
+        type: 'practical_exercise',
+        track: 'Full-Stack Software Engineering',
+        moduleName: 'Database Design & Distributed Systems',
+        description: 'Hands-on indexing benchmark simulating 1,000,000 records in PostgreSQL with EXPLAIN ANALYZE metrics.',
+        status: 'Approved',
+        submittedAt: '2026-10-12T11:00:00.000Z',
+      }
+    ],
+    learningMaterials: [
+      {
+        id: 'mat-chidi-1',
+        mentorId: 'user-mentor-demo',
+        title: 'Production Backend API Boilerplate (Express + TypeScript + Prisma)',
+        track: 'Full-Stack Software Engineering',
+        resourceType: 'github_repo',
+        url: 'https://github.com/codelab-institute/fullstack-starter-2026',
+        description: 'Starter repo with JWT authentication, Postgres schema migrations, and structured Docker Compose.',
+        uploadedAt: '2026-10-15T10:00:00.000Z',
+        isPublicToLearners: true,
+      },
+      {
+        id: 'mat-chidi-2',
+        mentorId: 'user-mentor-demo',
+        title: 'Microservices & Event-Driven Architecture System Design (Notion Doc)',
+        track: 'Full-Stack Software Engineering',
+        resourceType: 'link',
+        url: 'https://notion.so/codelab/distributed-systems-design',
+        description: 'Comprehensive guide covering RabbitMQ, Redis pub/sub, and eventual consistency patterns.',
+        uploadedAt: '2026-10-22T14:30:00.000Z',
+        isPublicToLearners: true,
+      }
+    ],
+    performanceReviews: [
+      {
+        id: 'rev-chidi-1',
+        mentorId: 'user-mentor-demo',
+        reviewPeriod: 'October 2026',
+        score: 96,
+        attendanceDeliveryRate: 98,
+        learnerSatisfactionScore: 4.9,
+        leadershipNotes: 'Exceptional delivery on the backend module. Scholars reported high clarity during live coding sessions. Commended for proactive weekend office hours.',
+        reviewerName: 'Managing Director / COO',
+        reviewerRole: 'COO',
+        commendations: ['High student completion rate on Project 2', 'Punctual class check-ins'],
+        reviewedAt: '2026-10-31T15:00:00.000Z',
+      }
+    ],
+    reimbursementRequests: [
+      {
+        id: 'reimb-chidi-1',
+        mentorId: 'user-mentor-demo',
+        amount: 25000,
+        type: 'data_stipend',
+        description: 'MTN 5G Broadband data top-up for 4K live streaming lectures',
+        status: 'Disbursed',
+        requestedAt: '2026-10-15T09:00:00.000Z',
+        approvedBy: 'Financial Controller',
+        disbursedAt: '2026-10-16T12:00:00.000Z',
+        voucherNumber: 'VCH-7104',
+      }
+    ],
+    leaveRecords: [
+      {
+        id: 'leave-chidi-1',
+        mentorId: 'user-mentor-demo',
+        leaveType: 'Annual',
+        startDate: '2026-08-10',
+        endDate: '2026-08-14',
+        daysCount: 4,
+        reason: 'Annual family recess and tech curriculum research',
+        status: 'Approved',
+        approvedBy: 'Academic Director / COO',
+        appliedAt: '2026-08-01T09:00:00.000Z',
+      }
+    ],
+    companyProperty: [
+      {
+        id: 'prop-chidi-1',
+        mentorId: 'user-mentor-demo',
+        itemType: 'Laptop / MacBook',
+        itemDescription: 'Apple MacBook Pro 16" (M3 Pro, 36GB RAM, 512GB SSD Space Black)',
+        serialNumber: 'C02G90XXMD6M',
+        assetTag: 'CDL-ASSET-2026-042',
+        issuedDate: '2026-01-16',
+        conditionOnIssue: 'Brand New',
+        status: 'In Possession',
+      },
+      {
+        id: 'prop-chidi-2',
+        mentorId: 'user-mentor-demo',
+        itemType: 'Monitor',
+        itemDescription: 'Dell UltraSharp 27" 4K USB-C Hub Monitor (U2723QE)',
+        serialNumber: 'CN-0K791X-74261',
+        assetTag: 'CDL-ASSET-2026-089',
+        issuedDate: '2026-01-16',
+        conditionOnIssue: 'Brand New',
+        status: 'In Possession',
+      },
+      {
+        id: 'prop-chidi-3',
+        mentorId: 'user-mentor-demo',
+        itemType: 'Lab Access Key / Badge',
+        itemDescription: 'Yaba Tech Hub RFID Master Keycard & Server Room Token',
+        assetTag: 'CDL-KEY-YAB-07',
+        issuedDate: '2026-01-16',
+        conditionOnIssue: 'Good',
+        status: 'In Possession',
+      }
+    ],
+    exitRecord: {
+      noticePeriodDays: 30,
+      status: 'Active Staff',
+      ticketReference: 'TKT-1038',
+      handoverChecklist: [
+        { id: 'chk-1', label: 'Return issued MacBook Pro M3 and charger to IT Administrator', completed: true, verifiedBy: 'IT Operations Lead', verifiedAt: '2026-10-30T10:00:00.000Z' },
+        { id: 'chk-2', label: 'Return Dell UltraSharp 4K Monitor and cables to Campus Hub', completed: true, verifiedBy: 'Hub Facility Manager', verifiedAt: '2026-10-30T10:30:00.000Z' },
+        { id: 'chk-3', label: 'Surrender RFID Campus Keycard & Lab Access Token', completed: true, verifiedBy: 'Security & Facilities', verifiedAt: '2026-10-30T11:00:00.000Z' },
+        { id: 'chk-4', label: 'Transition assigned student cohorts to designated interim faculty lead', completed: true, verifiedBy: 'Academic Program Officer', verifiedAt: '2026-10-30T14:00:00.000Z' },
+        { id: 'chk-5', label: 'Submit all outstanding project evaluations and gradebook sign-offs', completed: true, verifiedBy: 'Registrar & Academic Board', verifiedAt: '2026-10-30T16:00:00.000Z' },
+        { id: 'chk-6', label: 'Reconcile final 37% commission payout and OpEx reimbursement claims', completed: true, verifiedBy: 'Bursar & Finance Desk', verifiedAt: '2026-10-30T17:00:00.000Z' },
+      ]
+    },
     officeHours: [
       {
         id: 'slot-1',

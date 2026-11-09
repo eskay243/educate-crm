@@ -464,6 +464,124 @@ export interface Student extends NigerianBiodataKYC {
 export type MentorStatus = 'Active' | 'Available' | 'On Leave' | 'Deactivated';
 export type PayoutStatus = 'Completed' | 'Processing' | 'Pending';
 
+// ----------------------------------------------------
+// Mentor 360° Profile & Academic Dossier Types
+// ----------------------------------------------------
+
+export interface MentorWeeklyReport {
+  id: string;
+  mentorId: string;
+  weekEnding: string; // YYYY-MM-DD
+  learnersCoveredCount: number;
+  sessionsHeldCount: number;
+  topicsCovered: string[];
+  keyHighlights: string;
+  challengesEncountered?: string;
+  actionItemsNextWeek: string;
+  submittedAt: string;
+}
+
+export interface MentorCurriculumItem {
+  id: string;
+  mentorId: string;
+  title: string;
+  type: 'assessment' | 'practical_exercise' | 'curriculum_suggestion' | 'update_proposal';
+  track: string;
+  moduleName: string;
+  description: string;
+  status: 'Draft' | 'Submitted' | 'Approved' | 'Implemented';
+  submittedAt: string;
+  reviewNotes?: string;
+}
+
+export interface MentorLearningMaterial {
+  id: string;
+  mentorId: string;
+  title: string;
+  track: string;
+  moduleName?: string;
+  resourceType: 'link' | 'pdf' | 'slides' | 'github_repo' | 'video';
+  url: string;
+  description?: string;
+  uploadedAt: string;
+  isPublicToLearners: boolean;
+}
+
+export interface MentorPerformanceReview {
+  id: string;
+  mentorId: string;
+  reviewPeriod: string; // e.g. "October 2026"
+  score: number; // 0 - 100
+  attendanceDeliveryRate: number; // e.g. 96%
+  learnerSatisfactionScore: number; // e.g. 4.8 / 5
+  leadershipNotes?: string; // Notes from COO, Program Manager, or Program Officer
+  reviewerName: string;
+  reviewerRole: string; // 'COO' | 'Program Manager' | 'Program Officer'
+  supportNeededFromManagement?: string;
+  commendations?: string[];
+  warnings?: string[];
+  reviewedAt: string;
+}
+
+export interface MentorReimbursementRequest {
+  id: string;
+  mentorId: string;
+  amount: number;
+  type: 'commission_adjustment' | 'data_stipend' | 'hardware' | 'workshop_expense';
+  description: string;
+  receiptUrl?: string;
+  receiptName?: string;
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Disbursed';
+  requestedAt: string;
+  approvedBy?: string;
+  disbursedAt?: string;
+  voucherNumber?: string;
+}
+
+export interface MentorLeaveRecord {
+  id: string;
+  mentorId: string;
+  leaveType: 'Annual' | 'Sick' | 'Compassionate' | 'Casual';
+  startDate: string;
+  endDate: string;
+  daysCount: number;
+  reason: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  approvedBy?: string;
+  appliedAt: string;
+}
+
+export interface CompanyPropertyItem {
+  id: string;
+  mentorId: string;
+  itemType: 'Laptop / MacBook' | 'Monitor' | 'Microphone / Camera' | 'Test Phone' | 'Lab Access Key / Badge' | 'Curriculum Material';
+  itemDescription: string;
+  serialNumber?: string;
+  assetTag: string;
+  issuedDate: string;
+  conditionOnIssue: 'Brand New' | 'Good' | 'Fair';
+  status: 'In Possession' | 'Returned' | 'Under Inspection';
+  returnedDate?: string;
+  returnCondition?: 'Good' | 'Damaged' | 'Missing Accessories';
+  handoverOfficer?: string;
+}
+
+export interface MentorExitRecord {
+  noticePeriodDays: number; // Default: 30 days
+  noticeSubmittedDate?: string;
+  effectiveExitDate?: string;
+  status: 'Active Staff' | 'Under Notice' | 'Handover In Progress' | 'Exited';
+  exitReason?: string;
+  handoverChecklist: {
+    id: string;
+    label: string;
+    completed: boolean;
+    verifiedBy?: string;
+    verifiedAt?: string;
+  }[];
+  ticketReference?: string; // e.g. "TKT-1038"
+}
+
 export interface Mentor extends NigerianBiodataKYC {
   id: string;
   mentorCode: string;
@@ -473,6 +591,8 @@ export interface Mentor extends NigerianBiodataKYC {
   password?: string;
   avatarUrl?: string;
   role: string;
+  position?: string; // Official faculty designation
+  reportsTo?: string; // Direct supervisor / line manager (e.g. "COO", "Chief Academic Officer")
   department: string;
   expertise: string[];
   courses?: string[];
@@ -505,6 +625,19 @@ export interface Mentor extends NigerianBiodataKYC {
   accountVerificationSource?: string;
   accountVerifiedAt?: string;
   officeHours?: MentorAvailabilitySlot[];
+  // 360° Dossier Collections
+  weeklyReports?: MentorWeeklyReport[];
+  curriculumContributions?: MentorCurriculumItem[];
+  learningMaterials?: MentorLearningMaterial[];
+  performanceReviews?: MentorPerformanceReview[];
+  reimbursementRequests?: MentorReimbursementRequest[];
+  leaveRecords?: MentorLeaveRecord[];
+  companyProperty?: CompanyPropertyItem[];
+  exitRecord?: MentorExitRecord;
+  annualLeaveAllowance?: number;
+  annualLeaveUsed?: number;
+  sickLeaveAllowance?: number;
+  sickLeaveUsed?: number;
 }
 
 export interface MentorAvailabilitySlot {
@@ -1043,6 +1176,8 @@ export type ModalType =
   | 'forward-message'
   | 'daily-standup'
   | 'student-profile'
+  | 'mentor-profile'
+  | 'view-mentor-profile'
   | null;
 
 export interface DailyStandupTask {

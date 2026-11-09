@@ -62,6 +62,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   ];
 
   const mentorsSubItems: NavSubItem[] = [
+    { to: '/mentor/dashboard', label: 'Faculty Dashboard (Preview)', icon: 'space_dashboard', section: 'faculty-dashboard' },
     { to: '/mentors', label: 'Faculty Overview', icon: 'groups', section: 'roster' },
     { to: '/mentors/office-hours', label: 'Office Hours & Slots', icon: 'schedule', section: 'office-hours' },
     { to: '/mentors/grading', label: 'Grading Inbox', icon: 'fact_check', section: 'grading' },
@@ -84,11 +85,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
       to: '/mentors', 
       label: 'Mentors & Sessions', 
       icon: 'groups', 
-      allowedRoles: ['super_admin', 'mentor', 'program_officer'], 
+      allowedRoles: ['super_admin', 'program_officer'], 
       module: 'mentors',
       subItems: mentorsSubItems,
     },
-    { to: '/attendance', label: 'Staff Attendance', icon: 'schedule', allowedRoles: ['super_admin', 'admissions', 'mentor', 'finance', 'program_officer'], module: 'attendance' },
+    { to: '/attendance', label: 'Staff Attendance', icon: 'schedule', allowedRoles: ['super_admin', 'admissions', 'finance', 'program_officer'], module: 'attendance' },
     { to: '/expenses', label: 'Expenses & Budget', icon: 'payments', allowedRoles: ['super_admin', 'admissions', 'finance'], module: 'expenses' },
     { 
       to: '/settings', 
@@ -97,6 +98,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
       allowedRoles: ['super_admin', 'admissions', 'mentor', 'finance', 'program_officer', 'student'],
       subItems: settingsSubItems,
     },
+
+    // Dedicated Faculty / Mentor Portal Links
+    { to: '/mentor/dashboard', label: 'Faculty Dashboard', icon: 'dashboard', exact: true, allowedRoles: ['mentor'] },
+    { to: '/mentor/students', label: 'My Students & Care', icon: 'school', allowedRoles: ['mentor'] },
+    { to: '/mentor/schedule', label: 'Schedule & Slots', icon: 'calendar_month', allowedRoles: ['mentor'] },
+    { to: '/mentor/grading', label: 'Grading Inbox', icon: 'fact_check', allowedRoles: ['mentor'] },
+    { to: '/mentor/curriculum', label: 'Curriculum & Syllabi', icon: 'local_library', allowedRoles: ['mentor'] },
+    { to: '/mentor/payouts', label: '37% Rev-Share & Payouts', icon: 'payments', allowedRoles: ['mentor'] },
+    { to: '/mentor/profile', label: 'Faculty 360° Dossier', icon: 'badge', allowedRoles: ['mentor'] },
 
     // Student Portal Links
     { to: '/student/dashboard', label: 'Student Dashboard', icon: 'dashboard', exact: true, allowedRoles: ['student'] },
@@ -128,10 +138,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     let roleAllowed = false;
     if (isStudent) {
       roleAllowed = !!item.allowedRoles?.includes('student');
+    } else if (isMentor) {
+      roleAllowed = !!item.allowedRoles?.includes('mentor');
     } else if (isSuperAdmin) {
-      roleAllowed = !item.allowedRoles?.includes('student') || item.allowedRoles?.includes('super_admin');
+      roleAllowed = (!item.allowedRoles?.includes('student') && !item.allowedRoles?.includes('mentor')) || item.allowedRoles?.includes('super_admin');
     } else {
-      if (item.to === '/' && !isStudent) {
+      if (item.to === '/' && !isStudent && !isMentor) {
         roleAllowed = true;
       } else {
         const allowedByRole = item.allowedRoles ? hasPermission(item.allowedRoles, item.module) : true;
@@ -294,7 +306,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
                         const currentSection = new URLSearchParams(location.search).get('section') || (isSuperAdmin ? 'general' : 'profile');
                         isSubActive = location.pathname.startsWith('/settings') && currentSection === sub.section;
                       } else if (item.to === '/mentors') {
-                        if (sub.to === '/mentors/office-hours') {
+                        if (sub.to === '/mentor/dashboard') {
+                          isSubActive = location.pathname.startsWith('/mentor');
+                        } else if (sub.to === '/mentors/office-hours') {
                           isSubActive = location.pathname === '/mentors/office-hours';
                         } else if (sub.to === '/mentors/grading') {
                           isSubActive = location.pathname === '/mentors/grading';

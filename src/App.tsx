@@ -30,6 +30,15 @@ const StudentCoursesPage = lazy(() => import('./pages/student/StudentCoursesPage
 const StudentMentorPage = lazy(() => import('./pages/student/StudentMentorPage').then(m => ({ default: m.StudentMentorPage })));
 const StudentBillingPage = lazy(() => import('./pages/student/StudentBillingPage').then(m => ({ default: m.StudentBillingPage })));
 const StudentProfilePage = lazy(() => import('./pages/student/StudentProfilePage').then(m => ({ default: m.StudentProfilePage })));
+
+// Dedicated Mentor / Faculty Portal Pages
+const MentorDashboardPage = lazy(() => import('./pages/mentor/MentorDashboardPage').then(m => ({ default: m.MentorDashboardPage })));
+const MentorStudentsPage = lazy(() => import('./pages/mentor/MentorStudentsPage').then(m => ({ default: m.MentorStudentsPage })));
+const MentorSchedulePage = lazy(() => import('./pages/mentor/MentorSchedulePage').then(m => ({ default: m.MentorSchedulePage })));
+const MentorCurriculumPage = lazy(() => import('./pages/mentor/MentorCurriculumPage').then(m => ({ default: m.MentorCurriculumPage })));
+const MentorPayoutsPage = lazy(() => import('./pages/mentor/MentorPayoutsPage').then(m => ({ default: m.MentorPayoutsPage })));
+const MentorProfilePage = lazy(() => import('./pages/mentor/MentorProfilePage').then(m => ({ default: m.MentorProfilePage })));
+
 const TicketsPage = lazy(() => import('./pages/TicketsPage').then(m => ({ default: m.TicketsPage })));
 const ChatPage = lazy(() => import('./pages/ChatPage').then(m => ({ default: m.ChatPage })));
 const OperationalDashboardPage = lazy(() => import('./pages/OperationalDashboardPage').then(m => ({ default: m.OperationalDashboardPage })));
@@ -52,7 +61,7 @@ const HomeRoute: React.FC = () => {
     return <Navigate to="/student/dashboard" replace />;
   }
   if (currentUser.role === 'mentor') {
-    return <Navigate to="/mentors" replace />;
+    return <Navigate to="/mentor/dashboard" replace />;
   }
   
   // Super Admin, Admissions, Finance, and Program Officers land on the Operational Command Center
@@ -240,6 +249,64 @@ export const App: React.FC = () => {
                   element={
                     <ProtectedRoute allowedRoles={['student', 'super_admin']}>
                       <StudentProfilePage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Dedicated Faculty / Mentor Portal Routes */}
+                <Route
+                  path="mentor/dashboard"
+                  element={
+                    <ProtectedRoute allowedRoles={['mentor', 'super_admin']}>
+                      <MentorDashboardPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="mentor/students"
+                  element={
+                    <ProtectedRoute allowedRoles={['mentor', 'super_admin']}>
+                      <MentorStudentsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="mentor/schedule"
+                  element={
+                    <ProtectedRoute allowedRoles={['mentor', 'super_admin']}>
+                      <MentorSchedulePage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="mentor/grading"
+                  element={
+                    <ProtectedRoute allowedRoles={['mentor', 'super_admin']}>
+                      <FacultyGradingPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="mentor/curriculum"
+                  element={
+                    <ProtectedRoute allowedRoles={['mentor', 'super_admin']}>
+                      <MentorCurriculumPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="mentor/payouts"
+                  element={
+                    <ProtectedRoute allowedRoles={['mentor', 'super_admin']}>
+                      <MentorPayoutsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="mentor/profile"
+                  element={
+                    <ProtectedRoute allowedRoles={['mentor', 'super_admin']}>
+                      <MentorProfilePage />
                     </ProtectedRoute>
                   }
                 />

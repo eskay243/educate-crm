@@ -3292,19 +3292,29 @@ app.post('/api/staff', (req: Request, res: Response) => {
 
 app.patch('/api/staff/:id', (req: Request, res: Response) => {
   const { id } = req.params;
-  const index = db.staffUsers.findIndex(u => u.id === id);
+  const targetEmail = req.body.email ? req.body.email.toLowerCase().trim() : null;
+
+  // Find index by ID or matching email
+  let index = (db.staffUsers || []).findIndex((u: any) => u.id === id);
+  if (index === -1 && targetEmail) {
+    index = (db.staffUsers || []).findIndex((u: any) => u.email?.toLowerCase().trim() === targetEmail);
+  }
   if (index === -1) return res.status(404).json({ success: false, message: 'Staff not found' });
 
-  // If email is changing, verify no other user has it
-  if (req.body.email) {
-    const cleanEmail = req.body.email.toLowerCase().trim();
-    const emailConflict = db.staffUsers.some(u => u.id !== id && u.email?.toLowerCase().trim() === cleanEmail);
-    if (emailConflict) {
-      return res.status(409).json({ success: false, message: 'Another staff user already has this email address.' });
+  // Update record
+  db.staffUsers[index] = { ...db.staffUsers[index], ...req.body };
+
+  // If there are duplicate records sharing ID or email, synchronize them too
+  const targetId = db.staffUsers[index].id;
+  const actualEmail = db.staffUsers[index].email?.toLowerCase().trim();
+  for (let i = 0; i < db.staffUsers.length; i++) {
+    if (i !== index) {
+      if (db.staffUsers[i].id === targetId || (actualEmail && db.staffUsers[i].email?.toLowerCase().trim() === actualEmail)) {
+        db.staffUsers[i] = { ...db.staffUsers[i], ...req.body };
+      }
     }
   }
 
-  db.staffUsers[index] = { ...db.staffUsers[index], ...req.body };
   saveDatabase(db);
   res.json({ success: true, data: db.staffUsers[index] });
 });

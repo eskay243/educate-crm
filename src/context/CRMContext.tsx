@@ -78,6 +78,7 @@ import { emailService } from '../services/emailService';
 import { calculateDistanceMeters } from '../utils/geo';
 import { launchPaystackPayment } from '../services/paystackService';
 import { APP_BASE_URL } from '../utils/url';
+import { safeLocalStorage, safeSessionStorage } from '../utils/safeStorage';
 
 
 export const formatNaira = (amount: number, fractionDigits = 0): string => {
@@ -149,6 +150,9 @@ interface CRMContextType {
   selectedStudentForAssignmentId: string | null;
   selectedCourseForEditId: string | null;
   selectedMentorForEditId: string | null;
+  selectedMentorForProfileId: string | null;
+  setSelectedMentorForProfileId: (id: string | null) => void;
+  openMentorProfileModal: (mentorOrId: Mentor | string) => void;
   selectedBiodataUser: { category: 'staff' | 'mentor' | 'student'; id: string; data: any } | null;
   setSelectedBiodataUser: (user: { category: 'staff' | 'mentor' | 'student'; id: string; data: any } | null) => void;
   openBiodataModal: (categoryOrTarget: 'staff' | 'mentor' | 'student' | any, id?: string, data?: any) => void;
@@ -194,10 +198,25 @@ interface CRMContextType {
   reconcileWalletWithPaystack: () => Promise<void>;
   isSyncingWallet: boolean;
   
-  // Mentor Payout Requests
+  // Mentor Payout Requests & Rev-Share Calculation
   payoutRequests: MentorPayoutRequest[];
   requestMentorPayout: (amount: number, notes?: string) => Promise<{ success: boolean; message: string }>;
   reviewMentorPayout: (requestId: string, status: 'Approved' | 'Rejected', reason?: string) => Promise<boolean>;
+  calculateMentorTuitionCommission: (mentorId: string) => {
+    totalTuitionPool: number;
+    totalCommission: number;
+    courseBreakdown: Array<{
+      courseId: string;
+      courseCode: string;
+      courseTitle: string;
+      role: string;
+      sharePercentage: number;
+      enrolledStudentsCount: number;
+      totalTuitionPaid: number;
+      courseFacultyPool: number;
+      mentorCommission: number;
+    }>;
+  };
   
   // Attendance, Reports & Graduation Gatekeeping
   markSessionAttendance: (sessionId: string, status: 'Attended' | 'Absent', hoursCredited?: number) => Promise<void>;
@@ -216,7 +235,7 @@ interface CRMContextType {
   toggleRoleModule: (roleId: string, moduleName: string) => Promise<void>;
   isSuperAdmin: boolean;
   isSimulatingRole: boolean;
-  switchRole: (role: UserRole) => void;
+  switchRole: (role: UserRole, targetMentorId?: string) => void;
   addStaffUser: (user: Omit<AuthUser, 'id'>) => void;
   updateUserRole: (userId: string, role: UserRole, mentorId?: string) => void;
   toggleUserApproverStatus: (userId: string, isApprover?: boolean) => void;
@@ -445,9 +464,9 @@ export const defaultWalletState: ExpenseAndBudgetWallet = {
 
 export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
-    const isExplicitlyLoggedOut = localStorage.getItem('nexus_logged_out') === 'true';
+    const isExplicitlyLoggedOut = safeLocalStorage.getItem('nexus_logged_out') === 'true';
     if (isExplicitlyLoggedOut) return null;
-    const saved = localStorage.getItem(STORAGE_KEYS.AUTH);
+    const saved = safeLocalStorage.getItem(STORAGE_KEYS.AUTH);
     if (!saved) return null;
     try {
       return JSON.parse(saved);
@@ -458,7 +477,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [staffUsers, setStaffUsers] = useState<AuthUser[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.STAFF);
+    const saved = safeLocalStorage.getItem(STORAGE_KEYS.STAFF);
     let parsed: AuthUser[] = demoUsers;
     if (saved) {
       try {
@@ -480,17 +499,17 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [leads, setLeads] = useState<Lead[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.LEADS);
+    const saved = safeLocalStorage.getItem(STORAGE_KEYS.LEADS);
     return saved ? JSON.parse(saved) : initialLeads;
   });
 
   const [students, setStudents] = useState<Student[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.STUDENTS);
+    const saved = safeLocalStorage.getItem(STORAGE_KEYS.STUDENTS);
     return saved ? JSON.parse(saved) : initialStudents;
   });
 
   const [mentors, setMentors] = useState<Mentor[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.MENTORS);
+    const saved = safeLocalStorage.getItem(STORAGE_KEYS.MENTORS);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -505,12 +524,12 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [expenses, setExpenses] = useState<Expense[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.EXPENSES);
+    const saved = safeLocalStorage.getItem(STORAGE_KEYS.EXPENSES);
     return saved ? JSON.parse(saved) : initialExpenses;
   });
 
   const [courses, setCourses] = useState<CourseProgram[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.COURSES);
+    const saved = safeLocalStorage.getItem(STORAGE_KEYS.COURSES);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -525,27 +544,27 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [cohorts, setCohorts] = useState<Cohort[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.COHORTS);
+    const saved = safeLocalStorage.getItem(STORAGE_KEYS.COHORTS);
     return saved ? JSON.parse(saved) : initialCohorts;
   });
 
   const [invoices, setInvoices] = useState<Invoice[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.INVOICES);
+    const saved = safeLocalStorage.getItem(STORAGE_KEYS.INVOICES);
     return saved ? JSON.parse(saved) : initialInvoices;
   });
 
   const [sessions, setSessions] = useState<MentorshipSession[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.SESSIONS);
+    const saved = safeLocalStorage.getItem(STORAGE_KEYS.SESSIONS);
     return saved ? JSON.parse(saved) : initialSessions;
   });
 
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.ATTENDANCE);
+    const saved = safeLocalStorage.getItem(STORAGE_KEYS.ATTENDANCE);
     return saved ? JSON.parse(saved) : initialAttendance;
   });
 
   const [settings, setSettings] = useState<OrganizationSettings>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+    const saved = safeLocalStorage.getItem(STORAGE_KEYS.SETTINGS);
     if (!saved) return initialSettings;
     try {
       const parsed = JSON.parse(saved);
@@ -575,17 +594,17 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [activityLogs, setActivityLogs] = useState<ActivityLogItem[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.LOGS);
+    const saved = safeLocalStorage.getItem(STORAGE_KEYS.LOGS);
     return saved ? JSON.parse(saved) : initialActivityLogs;
   });
 
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
+    const saved = safeLocalStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
     return saved ? JSON.parse(saved) : initialNotifications;
   });
 
   const [lmsModules, setLmsModules] = useState<LMSModule[]>(() => {
-    const saved = localStorage.getItem('nexus_clean_prod_lms_modules_v2');
+    const saved = safeLocalStorage.getItem('nexus_clean_prod_lms_modules_v2');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -600,22 +619,22 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [assignments, setAssignments] = useState<StudentAssignmentSubmission[]>(() => {
-    const saved = localStorage.getItem('nexus_clean_prod_assignments_v1');
+    const saved = safeLocalStorage.getItem('nexus_clean_prod_assignments_v1');
     return saved ? JSON.parse(saved) : initialAssignments;
   });
 
   const [studentPerformanceReports, setStudentPerformanceReports] = useState<StudentPerformanceReport[]>(() => {
-    const saved = localStorage.getItem('nexus_clean_prod_student_reports_v1');
+    const saved = safeLocalStorage.getItem('nexus_clean_prod_student_reports_v1');
     return saved ? JSON.parse(saved) : initialStudentPerformanceReports;
   });
 
   const [tickets, setTickets] = useState<SupportTicket[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.TICKETS);
+    const saved = safeLocalStorage.getItem(STORAGE_KEYS.TICKETS);
     return saved ? JSON.parse(saved) : initialTickets;
   });
 
   const [customRoles, setCustomRoles] = useState<CustomRoleDefinition[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.ROLES);
+    const saved = safeLocalStorage.getItem(STORAGE_KEYS.ROLES);
     if (!saved) return defaultRoleDefinitions;
     try {
       const parsed: CustomRoleDefinition[] = JSON.parse(saved);
@@ -642,7 +661,14 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedStudentForAssignmentId, setSelectedStudentForAssignmentId] = useState<string | null>(null);
   const [selectedCourseForEditId, setSelectedCourseForEditId] = useState<string | null>(null);
   const [selectedMentorForEditId, setSelectedMentorForEditId] = useState<string | null>(null);
+  const [selectedMentorForProfileId, setSelectedMentorForProfileId] = useState<string | null>(null);
   const [selectedStaffForEditId, setSelectedStaffForEditId] = useState<string | null>(null);
+
+  const openMentorProfileModal = (mentorOrId: Mentor | string) => {
+    const id = typeof mentorOrId === 'string' ? mentorOrId : mentorOrId.id;
+    setSelectedMentorForProfileId(id);
+    openModal('mentor-profile');
+  };
   const [selectedLeadForFollowUp, setSelectedLeadForFollowUp] = useState<Lead | null>(null);
 
   const openFollowUpModal = (lead: Lead) => {
@@ -664,7 +690,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Timetables and Academic Administration state
   const [timetables, setTimetables] = useState<TimetableSlot[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.TIMETABLES);
+    const saved = safeLocalStorage.getItem(STORAGE_KEYS.TIMETABLES);
     return saved ? JSON.parse(saved) : initialTimetables;
   });
   const [selectedUserForPasswordReset, setSelectedUserForPasswordReset] = useState<{ id: string; name: string; email: string; role: string; category?: string } | null>(null);
@@ -672,13 +698,13 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Operational Expense & Budget Wallet state
   const [wallet, setWallet] = useState<ExpenseAndBudgetWallet>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.WALLET);
+    const saved = safeLocalStorage.getItem(STORAGE_KEYS.WALLET);
     return saved ? JSON.parse(saved) : defaultWalletState;
   });
   const [selectedExpenseForDisburse, setSelectedExpenseForDisburse] = useState<Expense | null>(null);
   const [selectedMentorForDisburse, setSelectedMentorForDisburse] = useState<Mentor | null>(null);
   const [payoutRequests, setPayoutRequests] = useState<MentorPayoutRequest[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.PAYOUT_REQUESTS);
+    const saved = safeLocalStorage.getItem(STORAGE_KEYS.PAYOUT_REQUESTS);
     return saved ? JSON.parse(saved) : initialPayoutRequests;
   });
 
@@ -698,21 +724,21 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // AI Daily Standup & Weekly Scrum state
   const [dailyStandups, setDailyStandups] = useState<DailyStandupReport[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.STANDUPS);
+    const saved = safeLocalStorage.getItem(STORAGE_KEYS.STANDUPS);
     return saved ? JSON.parse(saved) : [];
   });
   const [weeklyScrumReports, setWeeklyScrumReports] = useState<WeeklyScrumPerformance[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.SCRUM_REPORTS);
+    const saved = safeLocalStorage.getItem(STORAGE_KEYS.SCRUM_REPORTS);
     return saved ? JSON.parse(saved) : [];
   });
   const [todayStandup, setTodayStandup] = useState<DailyStandupReport | null>(null);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.STANDUPS, JSON.stringify(dailyStandups));
+    safeLocalStorage.setItem(STORAGE_KEYS.STANDUPS, JSON.stringify(dailyStandups));
   }, [dailyStandups]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SCRUM_REPORTS, JSON.stringify(weeklyScrumReports));
+    safeLocalStorage.setItem(STORAGE_KEYS.SCRUM_REPORTS, JSON.stringify(weeklyScrumReports));
   }, [weeklyScrumReports]);
 
   // Team Chat Live Unread Counter & Floating Dock State
@@ -758,7 +784,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (data.courses && Array.isArray(data.courses) && data.courses.length > 0) {
           setCourses(data.courses);
         } else {
-          const localSaved = localStorage.getItem(STORAGE_KEYS.COURSES);
+          const localSaved = safeLocalStorage.getItem(STORAGE_KEYS.COURSES);
           if (localSaved) {
             try {
               const parsed = JSON.parse(localSaved);
@@ -801,11 +827,31 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (match) {
               const updated = { 
                 ...prevUser, 
-                ...match, 
+                ...match,
+                residentialAddress: match.residentialAddress || prevUser.residentialAddress,
+                city: match.city || prevUser.city,
+                stateOfResidence: match.stateOfResidence || prevUser.stateOfResidence,
+                proofOfAddressUrl: match.proofOfAddressUrl || prevUser.proofOfAddressUrl,
+                proofOfAddressName: match.proofOfAddressName || prevUser.proofOfAddressName,
+                idType: match.idType || prevUser.idType,
+                idNumber: match.idNumber || prevUser.idNumber,
+                idDocumentUrl: match.idDocumentUrl || prevUser.idDocumentUrl,
+                isIdVerified: match.isIdVerified ?? prevUser.isIdVerified,
+                nextOfKinName: match.nextOfKinName || prevUser.nextOfKinName,
+                nextOfKinRelationship: match.nextOfKinRelationship || prevUser.nextOfKinRelationship,
+                nextOfKinPhone: match.nextOfKinPhone || prevUser.nextOfKinPhone,
+                nextOfKinAddress: match.nextOfKinAddress || prevUser.nextOfKinAddress,
+                bankName: match.bankName || prevUser.bankName,
+                bankCode: match.bankCode || prevUser.bankCode,
+                accountNumber: match.accountNumber || prevUser.accountNumber,
+                accountName: match.accountName || prevUser.accountName,
+                isBankVerified: (match.isBankVerified ?? prevUser.isBankVerified) || Boolean((match.accountNumber || prevUser.accountNumber)?.length === 10),
+                kycTier: match.kycTier || prevUser.kycTier || ((match.accountNumber || prevUser.accountNumber) ? 'Tier 3' : 'Tier 1'),
+                kycStatus: match.kycStatus || prevUser.kycStatus || 'Verified',
                 password: prevUser.password || match.password,
                 isApprover: match.isApprover ?? prevUser.isApprover
               };
-              localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(updated));
+              safeLocalStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(updated));
               return updated;
             }
             return prevUser;
@@ -847,39 +893,39 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.WALLET, JSON.stringify(wallet));
+    safeLocalStorage.setItem(STORAGE_KEYS.WALLET, JSON.stringify(wallet));
   }, [wallet]);
 
 
   // Persist state to localStorage as fallback
   useEffect(() => { 
     if (currentUser) {
-      localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(currentUser)); 
+      safeLocalStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(currentUser)); 
     } else {
-      localStorage.removeItem(STORAGE_KEYS.AUTH);
+      safeLocalStorage.removeItem(STORAGE_KEYS.AUTH);
     }
   }, [currentUser]);
 
-  useEffect(() => { localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(staffUsers)); }, [staffUsers]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads)); }, [leads]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students)); }, [students]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEYS.MENTORS, JSON.stringify(mentors)); }, [mentors]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses)); }, [expenses]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(courses)); }, [courses]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEYS.COHORTS, JSON.stringify(cohorts)); }, [cohorts]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEYS.INVOICES, JSON.stringify(invoices)); }, [invoices]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(sessions)); }, [sessions]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(attendanceRecords)); }, [attendanceRecords]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings)); }, [settings]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(activityLogs)); }, [activityLogs]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications)); }, [notifications]);
-  useEffect(() => { localStorage.setItem('nexus_clean_prod_lms_modules_v2', JSON.stringify(lmsModules)); }, [lmsModules]);
-  useEffect(() => { localStorage.setItem('nexus_clean_prod_assignments_v1', JSON.stringify(assignments)); }, [assignments]);
-  useEffect(() => { localStorage.setItem('nexus_clean_prod_student_reports_v1', JSON.stringify(studentPerformanceReports)); }, [studentPerformanceReports]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(tickets)); }, [tickets]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEYS.ROLES, JSON.stringify(customRoles)); }, [customRoles]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEYS.TIMETABLES, JSON.stringify(timetables)); }, [timetables]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEYS.PAYOUT_REQUESTS, JSON.stringify(payoutRequests)); }, [payoutRequests]);
+  useEffect(() => { safeLocalStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(staffUsers)); }, [staffUsers]);
+  useEffect(() => { safeLocalStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads)); }, [leads]);
+  useEffect(() => { safeLocalStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students)); }, [students]);
+  useEffect(() => { safeLocalStorage.setItem(STORAGE_KEYS.MENTORS, JSON.stringify(mentors)); }, [mentors]);
+  useEffect(() => { safeLocalStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses)); }, [expenses]);
+  useEffect(() => { safeLocalStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(courses)); }, [courses]);
+  useEffect(() => { safeLocalStorage.setItem(STORAGE_KEYS.COHORTS, JSON.stringify(cohorts)); }, [cohorts]);
+  useEffect(() => { safeLocalStorage.setItem(STORAGE_KEYS.INVOICES, JSON.stringify(invoices)); }, [invoices]);
+  useEffect(() => { safeLocalStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(sessions)); }, [sessions]);
+  useEffect(() => { safeLocalStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(attendanceRecords)); }, [attendanceRecords]);
+  useEffect(() => { safeLocalStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings)); }, [settings]);
+  useEffect(() => { safeLocalStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(activityLogs)); }, [activityLogs]);
+  useEffect(() => { safeLocalStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications)); }, [notifications]);
+  useEffect(() => { safeLocalStorage.setItem('nexus_clean_prod_lms_modules_v2', JSON.stringify(lmsModules)); }, [lmsModules]);
+  useEffect(() => { safeLocalStorage.setItem('nexus_clean_prod_assignments_v1', JSON.stringify(assignments)); }, [assignments]);
+  useEffect(() => { safeLocalStorage.setItem('nexus_clean_prod_student_reports_v1', JSON.stringify(studentPerformanceReports)); }, [studentPerformanceReports]);
+  useEffect(() => { safeLocalStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(tickets)); }, [tickets]);
+  useEffect(() => { safeLocalStorage.setItem(STORAGE_KEYS.ROLES, JSON.stringify(customRoles)); }, [customRoles]);
+  useEffect(() => { safeLocalStorage.setItem(STORAGE_KEYS.TIMETABLES, JSON.stringify(timetables)); }, [timetables]);
+  useEffect(() => { safeLocalStorage.setItem(STORAGE_KEYS.PAYOUT_REQUESTS, JSON.stringify(payoutRequests)); }, [payoutRequests]);
 
   // Current active student profile when logged in as a student
   const currentStudentProfile = useMemo(() => {
@@ -980,7 +1026,8 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Super Admin session tracking for role switching
   const [isSuperAdminSession, setIsSuperAdminSession] = useState<boolean>(() => {
-    return sessionStorage.getItem('nexus_super_admin_session') === 'true';
+    return safeSessionStorage.getItem('nexus_super_admin_session') === 'true' ||
+           safeLocalStorage.getItem('nexus_super_admin_session_persistent') === 'true';
   });
 
   const isSuperAdmin = currentUser ? (currentUser.role === 'super_admin' || isSuperAdminSession) : false;
@@ -1006,13 +1053,13 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         if (backendRes && backendRes.success && backendRes.user) {
           const authUser: AuthUser = backendRes.user;
-          localStorage.removeItem('nexus_logged_out');
+          safeLocalStorage.removeItem('nexus_logged_out');
 
           if (authUser.role === 'super_admin') {
-            sessionStorage.setItem('nexus_super_admin_session', 'true');
+            safeSessionStorage.setItem('nexus_super_admin_session', 'true');
             setIsSuperAdminSession(true);
           } else {
-            sessionStorage.removeItem('nexus_super_admin_session');
+            safeSessionStorage.removeItem('nexus_super_admin_session');
             setIsSuperAdminSession(false);
           }
 
@@ -1129,14 +1176,14 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     // Clear explicit logout flag
-    localStorage.removeItem('nexus_logged_out');
+    safeLocalStorage.removeItem('nexus_logged_out');
 
     // Set or clear super admin session flag based on authenticated account
     if (matched.role === 'super_admin') {
-      sessionStorage.setItem('nexus_super_admin_session', 'true');
+      safeSessionStorage.setItem('nexus_super_admin_session', 'true');
       setIsSuperAdminSession(true);
     } else {
-      sessionStorage.removeItem('nexus_super_admin_session');
+      safeSessionStorage.removeItem('nexus_super_admin_session');
       setIsSuperAdminSession(false);
     }
 
@@ -1152,7 +1199,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { success: true, user: matched };
   };
 
-  const switchRole = (newRole: UserRole) => {
+  const switchRole = (newRole: UserRole, targetMentorId?: string) => {
     // Strictly only allow role switching if user is a Super Admin
     if (!isSuperAdmin) {
       showToast('Permission Denied', 'Role switching is restricted exclusively to the Super Admin.', 'error');
@@ -1160,13 +1207,17 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     // Ensure session remembers that Super Admin originated this session
-    sessionStorage.setItem('nexus_super_admin_session', 'true');
+    safeSessionStorage.setItem('nexus_super_admin_session', 'true');
+    safeLocalStorage.setItem('nexus_super_admin_session_persistent', 'true');
     setIsSuperAdminSession(true);
 
     if (newRole === 'super_admin') {
       // Revert back to original Super Admin account
       const superAdminUser = staffUsers.find(u => u.role === 'super_admin') || demoUsers[0];
       setCurrentUser(superAdminUser);
+      safeSessionStorage.removeItem('nexus_super_admin_session');
+      safeLocalStorage.removeItem('nexus_super_admin_session_persistent');
+      setIsSuperAdminSession(false);
       showToast('Super Admin Restored', 'Returned to Managing Director & Super Admin controls.', 'success');
       logActivity({
         title: 'Role Reverted to Super Admin',
@@ -1180,14 +1231,14 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Find persona for target role
     let targetUser: AuthUser | undefined;
     if (newRole === 'mentor') {
-      const mentor = mentors[0];
+      const mentor = (targetMentorId ? mentors.find(m => m.id === targetMentorId) : null) || mentors[0];
       if (mentor) {
         targetUser = {
           id: mentor.id,
           name: mentor.name,
           email: mentor.email,
           role: 'mentor',
-          roleTitle: 'Faculty Mentor (Simulated)',
+          roleTitle: `Faculty Mentor (${mentor.name})`,
           mentorId: mentor.id,
           department: mentor.department,
         };
@@ -1230,10 +1281,11 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const logout = () => {
     setCurrentUser(null);
-    sessionStorage.removeItem('nexus_super_admin_session');
+    safeSessionStorage.removeItem('nexus_super_admin_session');
+    safeLocalStorage.removeItem('nexus_super_admin_session_persistent');
     setIsSuperAdminSession(false);
-    localStorage.removeItem(STORAGE_KEYS.AUTH);
-    localStorage.setItem('nexus_logged_out', 'true');
+    safeLocalStorage.removeItem(STORAGE_KEYS.AUTH);
+    safeLocalStorage.setItem('nexus_logged_out', 'true');
     showToast('Signed Out', 'You have been signed out of the portal.', 'info');
     logActivity({
       title: 'User Signed Out',
@@ -1312,7 +1364,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setCurrentUser(updatedUser);
-    localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(updatedUser));
+    safeLocalStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(updatedUser));
 
     // 1. Update in staffUsers if present
     setStaffUsers(prev => prev.map(u => 
@@ -1360,7 +1412,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const targetId = mentorIdToSync || currentUser.id;
         await apiService.updateMentor(targetId, data as any);
       } else {
-        await apiService.updateStaff(currentUser.id, data);
+        await apiService.updateStaff(currentUser.id, { ...data, email: currentUser.email });
       }
     } catch (err) {
       console.warn('Backend sync for profile update deferred:', err);
@@ -2056,7 +2108,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (currentUser?.id === id) {
         const updatedCurrent = { ...currentUser, ...resolvedUpdates };
         setCurrentUser(updatedCurrent);
-        localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(updatedCurrent));
+        safeLocalStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(updatedCurrent));
       }
       showToast('Staff Updated', 'Staff profile details updated successfully.', 'success');
       logActivity({
@@ -2133,7 +2185,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           kycRejectionReason: status === 'Incomplete' ? notes : undefined,
         };
         setCurrentUser(updatedCurrent);
-        localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(updatedCurrent));
+        safeLocalStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(updatedCurrent));
       }
 
       setSelectedBiodataUser(prev => {
@@ -2189,7 +2241,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (currentUser?.role === roleId) {
         const updatedUser = { ...currentUser, roleTitle: newName.trim() };
         setCurrentUser(updatedUser);
-        localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(updatedUser));
+        safeLocalStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(updatedUser));
       }
 
       showToast('Role Renamed', `Role title updated to "${newName.trim()}".`, 'success');
@@ -3223,7 +3275,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setCourses(prev => {
       const updated = [newCourse, ...prev.filter(c => c.code !== newCourse.code)];
-      localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(updated));
+      safeLocalStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(updated));
       return updated;
     });
 
@@ -3708,7 +3760,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const resetAllData = () => {
-    localStorage.clear();
+    safeLocalStorage.clear();
     setLeads(initialLeads);
     setStudents(initialStudents);
     setMentors(initialMentors);
@@ -4388,6 +4440,72 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const calculateMentorTuitionCommission = (mentorId: string) => {
+    const targetMentor = mentors.find(m => m.id === mentorId);
+    if (!targetMentor) {
+      return { totalTuitionPool: 0, totalCommission: 0, courseBreakdown: [] };
+    }
+
+    let totalPool = 0;
+    let totalComm = 0;
+    const breakdown: Array<{
+      courseId: string;
+      courseCode: string;
+      courseTitle: string;
+      role: string;
+      sharePercentage: number;
+      enrolledStudentsCount: number;
+      totalTuitionPaid: number;
+      courseFacultyPool: number;
+      mentorCommission: number;
+    }> = [];
+
+    courses.forEach(course => {
+      const assigned = course.assignedMentors?.find(
+        am => am.mentorId === targetMentor.id || am.mentorName?.toLowerCase() === targetMentor.name?.toLowerCase()
+      );
+      const isLead = course.leadInstructor?.toLowerCase() === targetMentor.name?.toLowerCase();
+
+      if (assigned || isLead) {
+        const sharePercentage = assigned ? assigned.sharePercentage : 100;
+        const role = assigned?.role || (isLead ? 'Lead Mentor' : 'Co-Mentor');
+
+        const enrolled = students.filter(
+          s => s.courses?.some(ec => ec.id === course.id || ec.code === course.code || ec.name?.toLowerCase() === course.title?.toLowerCase()) || s.program?.toLowerCase() === course.title?.toLowerCase()
+        );
+
+        const totalTuitionPaid = enrolled.reduce((sum, s) => {
+          const paid = s.paidAmount ?? (s.totalFees - (s.outstandingBalance || 0));
+          return sum + (paid > 0 ? paid : 0);
+        }, 0);
+
+        const courseFacultyPool = totalTuitionPaid * 0.37;
+        const mentorCommission = Math.round(courseFacultyPool * (sharePercentage / 100));
+
+        totalPool += totalTuitionPaid;
+        totalComm += mentorCommission;
+
+        breakdown.push({
+          courseId: course.id,
+          courseCode: course.code,
+          courseTitle: course.title,
+          role,
+          sharePercentage,
+          enrolledStudentsCount: enrolled.length,
+          totalTuitionPaid,
+          courseFacultyPool,
+          mentorCommission,
+        });
+      }
+    });
+
+    return {
+      totalTuitionPool: totalPool,
+      totalCommission: totalComm,
+      courseBreakdown: breakdown,
+    };
+  };
+
   const requestMentorPayout = async (amount: number, notes?: string): Promise<{ success: boolean; message: string }> => {
     const myMentorProfile = mentors.find(
       m => m.id === currentUser?.mentorId || m.name === currentUser?.name || m.email === currentUser?.email
@@ -4405,15 +4523,18 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     }
 
-    const reqAmount = Number(amount) || myMentorProfile.pendingPayout || 0;
+    const calcResult = calculateMentorTuitionCommission(myMentorProfile.id);
+    const effectiveAvailable = Math.max(calcResult.totalCommission, myMentorProfile.pendingPayout || 0);
+
+    const reqAmount = Number(amount) || effectiveAvailable || 0;
     if (reqAmount <= 0) {
       return { success: false, message: 'Requested payout amount must be greater than ₦0.' };
     }
 
-    if (reqAmount > (myMentorProfile.pendingPayout || 0)) {
+    if (reqAmount > effectiveAvailable) {
       return { 
         success: false, 
-        message: `Requested amount (${formatNaira(reqAmount)}) exceeds your pending balance of ${formatNaira(myMentorProfile.pendingPayout || 0)}.` 
+        message: `Requested amount (${formatNaira(reqAmount)}) exceeds your available balance of ${formatNaira(effectiveAvailable)}.` 
       };
     }
 
@@ -5387,7 +5508,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (currentUser && (currentUser.email.toLowerCase() === targetEmail || (currentUser as any).secondaryEmail?.toLowerCase() === targetEmail)) {
       const updatedUser = { ...currentUser, password: cleanPassword, mustResetPassword: false };
       setCurrentUser(updatedUser as any);
-      localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(updatedUser));
+      safeLocalStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(updatedUser));
     }
 
     // 2. Update staffUsers
@@ -5518,6 +5639,9 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         selectedStudentForAssignmentId,
         selectedCourseForEditId,
         selectedMentorForEditId,
+        selectedMentorForProfileId,
+        setSelectedMentorForProfileId,
+        openMentorProfileModal,
         selectedStaffForEditId,
         setSelectedStaffForEditId,
         reviewUserKYC,
@@ -5640,6 +5764,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         payoutRequests,
         requestMentorPayout,
         reviewMentorPayout,
+        calculateMentorTuitionCommission,
         selectedPayoutRequestForEdit,
         setSelectedPayoutRequestForEdit,
         openEditPayoutRequestModal,

@@ -34,7 +34,8 @@ export const MentorManagementPage: React.FC = () => {
     deleteMentorUser,
     toggleUserActiveStatus,
     hasFeaturePermission,
-    openBiodataModal,
+    openMentorProfileModal,
+    switchRole,
   } = useCRM();
 
   const navigate = useNavigate();
@@ -56,7 +57,6 @@ export const MentorManagementPage: React.FC = () => {
   const isSuperAdmin = currentUser?.role === 'super_admin';
   const isFinance = currentUser?.role === 'finance';
   const canModifyMentor = isSuperAdmin || hasFeaturePermission('canModifyMentorBiodata');
-  const canViewBiodata = isSuperAdmin || hasFeaturePermission('canViewBiodata');
 
   // Find current mentor profile if logged in as mentor
   const myMentorProfile = isMentor
@@ -335,6 +335,16 @@ export const MentorManagementPage: React.FC = () => {
             <span className="material-symbols-outlined text-[18px]">emergency_home</span>
             <span>🚨 Flag At-Risk</span>
           </button>
+          {isMentor && myMentorProfile && (
+            <button
+              onClick={() => openMentorProfileModal(myMentorProfile)}
+              className="btn-secondary h-10 px-3.5 text-xs font-bold"
+              title="View my complete Faculty 360° Academic Dossier"
+            >
+              <span className="material-symbols-outlined text-primary text-[18px]">assignment_ind</span>
+              <span>My 360° Profile</span>
+            </button>
+          )}
           {isMentor && (
             <button
               onClick={() => openModal('request-payout')}
@@ -346,13 +356,23 @@ export const MentorManagementPage: React.FC = () => {
             </button>
           )}
           {isSuperAdmin && (
-            <button
-              onClick={() => openModal('recruit-mentor')}
-              className="btn-primary h-10 px-3.5 text-xs"
-            >
-              <span className="material-symbols-outlined text-[18px]">person_add</span>
-              <span>Recruit Faculty Mentor</span>
-            </button>
+            <>
+              <Link
+                to="/mentor/dashboard"
+                className="btn-secondary h-10 px-3.5 text-xs flex items-center gap-1.5"
+                title="Open the dedicated Faculty Mentor Portal as Super Admin"
+              >
+                <span className="material-symbols-outlined text-[18px] text-primary">space_dashboard</span>
+                <span>Preview Faculty Portal</span>
+              </Link>
+              <button
+                onClick={() => openModal('recruit-mentor')}
+                className="btn-primary h-10 px-3.5 text-xs"
+              >
+                <span className="material-symbols-outlined text-[18px]">person_add</span>
+                <span>Recruit Faculty Mentor</span>
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -745,17 +765,30 @@ export const MentorManagementPage: React.FC = () => {
 
                           <td className="px-stack-md py-3 text-right">
                             <div className="flex items-center justify-end gap-1.5">
-                              {canViewBiodata && (
+                              {isSuperAdmin && (
                                 <button
                                   type="button"
-                                  onClick={() => openBiodataModal({ ...mentor, category: 'mentor' })}
-                                  className="px-2.5 py-1 rounded bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary font-sans text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
-                                  title="View 3-Tier Nigerian KYC Biodata Dossier"
+                                  onClick={() => {
+                                    switchRole('mentor', mentor.id);
+                                    navigate('/mentor/dashboard');
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg border border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-sans text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                                  title={`Preview Faculty Portal as ${mentor.name}`}
                                 >
-                                  <span className="material-symbols-outlined text-[14px]">contact_page</span>
-                                  <span>View Biodata</span>
+                                  <span className="material-symbols-outlined text-[14px]">space_dashboard</span>
+                                  <span>View Dashboard</span>
                                 </button>
                               )}
+
+                              <button
+                                type="button"
+                                onClick={() => openMentorProfileModal(mentor)}
+                                className="px-3 py-1 rounded-lg bg-primary text-on-primary hover:bg-primary/90 font-sans text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                                title="Open Complete Mentor 360° Academic Dossier & 3-Tier KYC"
+                              >
+                                <span className="material-symbols-outlined text-[15px]">assignment_ind</span>
+                                <span>360° Profile</span>
+                              </button>
 
                               {canModifyMentor && (
                                 <button 
@@ -763,8 +796,8 @@ export const MentorManagementPage: React.FC = () => {
                                     setSelectedMentorForEditId(mentor.id);
                                     openModal('edit-mentor');
                                   }}
-                                  className="px-2.5 py-1 rounded border border-outline-variant hover:border-primary text-secondary hover:text-primary font-sans text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
-                                  title="Edit Faculty Mentor Profile"
+                                  className="px-2.5 py-1 rounded-lg border border-outline-variant hover:border-primary text-secondary hover:text-primary font-sans text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                                  title="Quick Edit Basic Contact Info"
                                 >
                                   <span className="material-symbols-outlined text-[14px]">edit</span>
                                   <span>Edit</span>
