@@ -45,8 +45,9 @@ export const LeadManagementPage: React.FC = () => {
       const matchesSource = selectedSource === 'All' || lead.source.toLowerCase() === selectedSource.toLowerCase();
       const matchesSearch = 
         lead.name.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
-        lead.email.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
-        lead.company?.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
+        (lead.email || '').toLowerCase().includes(effectiveSearch.toLowerCase()) ||
+        (lead.phone || '').includes(effectiveSearch) ||
+        (lead.company || '').toLowerCase().includes(effectiveSearch.toLowerCase()) ||
         lead.programInterest.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
         lead.source.toLowerCase().includes(effectiveSearch.toLowerCase());
       return matchesTab && matchesSearch && matchesSource;
@@ -471,7 +472,14 @@ export const LeadManagementPage: React.FC = () => {
                         </div>
                         <div>
                           <div className="font-semibold text-on-surface">{lead.name}</div>
-                          <div className="text-body-sm text-secondary">{lead.email}</div>
+                          <div className="text-body-sm text-secondary">
+                            {lead.email || (
+                              <span className="inline-flex items-center gap-1 text-[11px] text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                                <span className="material-symbols-outlined text-[12px]">call</span>
+                                <span>{lead.phone || 'Phone Only'}</span>
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </td>

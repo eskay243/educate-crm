@@ -103,8 +103,12 @@ export const FloatingChatWidget: React.FC = () => {
   };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatScrollContainerRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef<boolean>(true);
+  const prevMessagesCountRef = useRef<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [showNewMessagesPill, setShowNewMessagesPill] = useState(false);
 
   // 1. Fetch conversations
   const fetchConversations = async () => {
@@ -191,12 +195,66 @@ export const FloatingChatWidget: React.FC = () => {
     return () => clearInterval(timer);
   }, [isChatPopoutOpen, activeConvId]);
 
-  // Scroll to bottom on new messages
-  useEffect(() => {
-    if (isChatPopoutOpen) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // Handle scroll events to detect if user is browsing past messages
+  const handleChatScroll = () => {
+    const el = chatScrollContainerRef.current;
+    if (!el) return;
+    const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const isAtBottom = distanceToBottom < 70;
+    isNearBottomRef.current = isAtBottom;
+    if (isAtBottom) {
+      setShowNewMessagesPill(false);
     }
-  }, [messages, isChatPopoutOpen]);
+  };
+
+  // Scroll to bottom helper
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    isNearBottomRef.current = true;
+    setShowNewMessagesPill(false);
+    messagesEndRef.current?.scrollIntoView({ behavior });
+  };
+
+  // Reset scroll and new messages pill on channel switch
+  useEffect(() => {
+    isNearBottomRef.current = true;
+    setShowNewMessagesPill(false);
+    prevMessagesCountRef.current = 0;
+    if (isChatPopoutOpen) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      }, 50);
+    }
+  }, [activeConvId, isChatPopoutOpen]);
+
+  // Smart scroll effect on new messages
+  useEffect(() => {
+    if (!isChatPopoutOpen) return;
+    const prevCount = prevMessagesCountRef.current;
+    const newCount = messages.length;
+    prevMessagesCountRef.current = newCount;
+
+    if (newCount === 0) return;
+
+    const lastMessage = messages[messages.length - 1];
+    const isSelf = currentUser && lastMessage?.senderId === currentUser.id;
+
+    // 1. If active user just dispatched a message, scroll immediately to bottom
+    if (isSelf) {
+      scrollToBottom('smooth');
+      return;
+    }
+
+    // 2. If user is near bottom, scroll smoothly
+    if (isNearBottomRef.current) {
+      scrollToBottom('smooth');
+      return;
+    }
+
+    // 3. If user is scrolled up reading previous history, DO NOT scroll; show indicator pill
+    if (newCount > prevCount && prevCount > 0) {
+      setShowNewMessagesPill(true);
+    }
+  }, [messages, isChatPopoutOpen, currentUser]);
 
   // Watch for unread increment to trigger notification sound and discrete popup notification
   useEffect(() => {
@@ -720,7 +778,11 @@ export const FloatingChatWidget: React.FC = () => {
           ) : (
             <>
               {/* Messages Stream */}
-              <div className="flex-1 overflow-y-auto overscroll-contain p-3 space-y-3 bg-[#F8FAFC]">
+              <div 
+                ref={chatScrollContainerRef}
+                onScroll={handleChatScroll}
+                className="flex-1 overflow-y-auto overscroll-contain p-3 space-y-3 bg-[#F8FAFC] relative"
+              >
             {messages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-4 text-secondary">
                 <span className="material-symbols-outlined text-3xl mb-1 text-secondary/40">chat_bubble_outline</span>
@@ -863,6 +925,20 @@ export const FloatingChatWidget: React.FC = () => {
               })
             )}
             <div ref={messagesEndRef} />
+
+            {/* Floating "New Messages Below" indicator pill when user is scrolled up */}
+            {showNewMessagesPill && (
+              <div className="sticky bottom-2 left-0 right-0 flex justify-center z-30 pointer-events-none animate-in fade-in slide-in-from-bottom-2 duration-150">
+                <button
+                  type="button"
+                  onClick={() => scrollToBottom('smooth')}
+                  className="pointer-events-auto shadow-md bg-primary text-white text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1 hover:bg-primary/90 transition-all cursor-pointer animate-bounce"
+                >
+                  <span className="material-symbols-outlined text-[14px]">arrow_downward</span>
+                  <span>New messages below</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Mention Autocomplete Overlay */}

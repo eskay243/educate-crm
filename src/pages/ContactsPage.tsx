@@ -89,7 +89,7 @@ export const ContactsPage: React.FC = () => {
         const matches = 
           l.name.toLowerCase().includes(q) ||
           l.phone.toLowerCase().includes(q) ||
-          l.email.toLowerCase().includes(q) ||
+          (l.email || '').toLowerCase().includes(q) ||
           l.company.toLowerCase().includes(q) ||
           l.programInterest.toLowerCase().includes(q) ||
           (l.notes && l.notes.toLowerCase().includes(q));

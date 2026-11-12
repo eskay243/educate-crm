@@ -363,7 +363,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, on
         rows.push([
           l.name,
           l.phone || '',
-          l.email,
+          l.email || '',
           l.programInterest,
           l.status,
           String(l.dealValue || 850000),

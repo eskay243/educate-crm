@@ -440,6 +440,56 @@ if (staffCleaned) {
   saveDatabase(db);
 }
 
+// Unify duplicate scholar profile for Ndifreke Precious (preciousndifreke62@gmail.com)
+if (Array.isArray(db.students)) {
+  const ndifrekeRecords = db.students.filter(
+    (s: any) => s.email?.toLowerCase().trim() === 'preciousndifreke62@gmail.com'
+  );
+  if (ndifrekeRecords.length > 1) {
+    const primary = ndifrekeRecords.find((s: any) => s.studentCode === 'STU-6451') || ndifrekeRecords[0];
+    const secondary = ndifrekeRecords.find((s: any) => s.id !== primary.id);
+    if (secondary) {
+      primary.name = 'Ndifreke Precious';
+      if (!Array.isArray(primary.courses)) primary.courses = [];
+      if (Array.isArray(secondary.courses)) {
+        secondary.courses.forEach((c: any) => {
+          if (!primary.courses.some((pc: any) => pc.name === c.name || pc.code === c.code)) {
+            primary.courses.push({
+              ...c,
+              cohort: secondary.cohort || 'Cohort 2026-Q4',
+              instructor: secondary.mentorName || c.instructor || 'Dr. Arthur Pendelton',
+              status: 'Dropped',
+              fee: Number(secondary.totalFees || c.fee || 850000),
+              paidAmount: 0,
+              outstandingBalance: Number(secondary.totalFees || 850000),
+              tuitionStatus: 'Overdue'
+            });
+          }
+        });
+      }
+      if (Array.isArray(secondary.installments)) {
+        if (!Array.isArray(primary.installments)) primary.installments = [];
+        secondary.installments.forEach((inst: any) => {
+          if (!primary.installments.some((pi: any) => pi.id === inst.id)) {
+            primary.installments.push(inst);
+          }
+        });
+      }
+      if (Array.isArray(db.invoices)) {
+        db.invoices.forEach((inv: any) => {
+          if (inv.studentId === secondary.id) {
+            inv.studentId = primary.id;
+            inv.studentName = primary.name;
+          }
+        });
+      }
+      db.students = db.students.filter((s: any) => s.id !== secondary.id);
+      saveDatabase(db);
+      console.log('✓ Unified duplicate scholar profile for Ndifreke Precious (STU-6451)');
+    }
+  }
+}
+
 // Seed demo student in students table if students is empty
 if (!db.students || db.students.length === 0) {
   const demoStudentUser = demoUsers.find(u => u.role === 'student');
@@ -765,6 +815,12 @@ const sanitizeSettings = (settings: any) => {
   if (copy.smtpPassword) {
     copy.smtpPassword = '••••••••••••';
   }
+  if (copy.sipcore?.password) {
+    copy.sipcore = {
+      ...copy.sipcore,
+      password: '••••••••••••',
+    };
+  }
   const effectiveKey = getEffectivePaystackSecretKey() || copy.paystackSecretKey;
   if (effectiveKey) {
     copy.paystackSecretKey = effectiveKey.length > 8 ? `${effectiveKey.slice(0, 7)}••••••••${effectiveKey.slice(-4)}` : '••••••••';
@@ -880,7 +936,7 @@ app.post('/api/production/flush-demo-data', (req: Request, res: Response) => {
       description: 'Super Admin purged mock records. System initialized for live operations.',
       type: 'system',
       user: 'Super Admin',
-      timestamp: 'Just now',
+      timestamp: new Date().toISOString(),
     }
   ];
 
@@ -2560,11 +2616,14 @@ app.post('/api/leads/:id/convert', (req: Request, res: Response) => {
   const outstanding = Math.max(0, feeAmount - initialPaid);
   const effectiveStatus = outstanding === 0 && feeAmount > 0 ? 'Paid' : initialPaid > 0 ? 'Partial' : 'Pending';
 
+  const cleanEmailSlug = (lead.name || 'scholar').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const effectiveEmail = lead.email?.trim() || `${cleanEmailSlug}${Math.floor(100 + Math.random() * 900)}@student.codelab.institute`;
+
   const newStudent = {
     id: `stu-${Date.now()}`,
     studentCode: `STU-${Math.floor(1000 + Math.random() * 9000)}`,
     name: lead.name,
-    email: lead.email,
+    email: effectiveEmail,
     phone: lead.phone,
     password: defaultPassword,
     mustResetPassword: true,
@@ -2665,6 +2724,74 @@ app.post('/api/students', (req: Request, res: Response) => {
   const paidAmount = Number(req.body.paidAmount !== undefined ? req.body.paidAmount : (req.body.tuitionStatus === 'Paid' ? totalFees : 0));
   const outstanding = req.body.outstandingBalance !== undefined ? Number(req.body.outstandingBalance) : Math.max(0, totalFees - paidAmount);
   const effectiveStatus = outstanding === 0 && totalFees > 0 ? 'Paid' : paidAmount > 0 ? 'Partial' : 'Pending';
+
+  // Multi-Program check: if a student with this email already exists, attach the program to their unified profile
+  const cleanEmail = req.body.email ? req.body.email.trim().toLowerCase() : '';
+  const existingIdx = cleanEmail && Array.isArray(db.students)
+    ? db.students.findIndex((s: any) => s.email?.trim().toLowerCase() === cleanEmail)
+    : -1;
+
+  if (existingIdx !== -1) {
+    const existing = db.students[existingIdx];
+    const matchedCourse = (db.courses || []).find((c: any) => 
+      c.title?.toLowerCase() === req.body.program?.toLowerCase() || 
+      (c as any).name?.toLowerCase() === req.body.program?.toLowerCase()
+    );
+
+    const newCourse = {
+      id: `c-${Date.now()}`,
+      code: matchedCourse?.code || 'TECH-101',
+      name: req.body.program || 'Technology Program',
+      semester: `Term ${new Date().getFullYear()}`,
+      instructor: req.body.mentorName || 'Faculty Mentor Assigned',
+      fee: totalFees,
+      billedDate: req.body.enrolledDate || new Date().toISOString().split('T')[0],
+      cohort: req.body.cohort || existing.cohort,
+      mentorName: req.body.mentorName || existing.mentorName,
+      status: 'Active',
+      totalFees,
+      paidAmount,
+      outstandingBalance: outstanding,
+      tuitionStatus: effectiveStatus,
+    };
+
+    if (!Array.isArray(existing.courses)) existing.courses = [];
+    existing.courses.push(newCourse);
+
+    if (Array.isArray(req.body.installments)) {
+      if (!Array.isArray(existing.installments)) existing.installments = [];
+      existing.installments.push(...req.body.installments);
+    }
+
+    existing.totalFees = (Number(existing.totalFees) || 0) + totalFees;
+    existing.paidAmount = (Number(existing.paidAmount) || 0) + paidAmount;
+    existing.outstandingBalance = (Number(existing.outstandingBalance) || 0) + outstanding;
+    existing.tuitionStatus = existing.outstandingBalance === 0 ? 'Paid' : (existing.paidAmount > 0 ? 'Partial' : 'Pending');
+
+    const newInvoice = {
+      id: `inv-${Date.now()}`,
+      invoiceNumber: `INV-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`,
+      studentId: existing.id,
+      studentName: existing.name,
+      studentEmail: existing.email,
+      programName: req.body.program,
+      program: req.body.program,
+      issueDate: new Date().toISOString().split('T')[0],
+      dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+      totalAmount: totalFees,
+      paidAmount,
+      amount: totalFees,
+      status: effectiveStatus,
+      items: [{ id: 'item-1', description: `${req.body.program} Comprehensive Academic Tuition`, amount: totalFees }],
+      paymentReference: req.body.paymentReference || `NIBSS-TRX-${existing.studentCode}-${Date.now().toString().slice(-4)}`,
+      nibssBankName: db.settings?.defaultNIBSSBank?.bankName || 'Access Bank Nigeria PLC',
+    };
+    if (!Array.isArray(db.invoices)) db.invoices = [];
+    db.invoices.unshift(newInvoice);
+
+    saveDatabase(db);
+    return res.status(200).json({ success: true, data: existing, invoice: newInvoice, addedToExisting: true });
+  }
 
   const newStudent = {
     ...req.body,
@@ -4145,6 +4272,372 @@ app.post('/api/timetables/:id/attendance', (req: Request, res: Response) => {
   });
 });
 
+// ----------------------------------------------------
+// Video URL Embed Helper (Approach 3)
+// ----------------------------------------------------
+function formatVideoEmbedUrl(rawUrl: string): { embedUrl: string; platform: 'youtube' | 'google_drive' | 'vimeo' | 'loom' | 'sipcore' | 'custom' } {
+  if (!rawUrl) return { embedUrl: '', platform: 'custom' };
+  const trimmed = rawUrl.trim();
+
+  // 1. YouTube
+  const ytMatch = trimmed.match(/(?:youtube\.com\/(?:watch\?.*v=|embed\/|v\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i);
+  if (ytMatch && ytMatch[1]) {
+    return {
+      embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}`,
+      platform: 'youtube',
+    };
+  }
+
+  // 2. Google Drive
+  const gdriveMatch = trimmed.match(/drive\.google\.com\/(?:file\/d\/([a-zA-Z0-9_-]+)|open\?id=([a-zA-Z0-9_-]+))/i);
+  const gdriveId = gdriveMatch ? (gdriveMatch[1] || gdriveMatch[2]) : null;
+  if (gdriveId) {
+    return {
+      embedUrl: `https://drive.google.com/file/d/${gdriveId}/preview`,
+      platform: 'google_drive',
+    };
+  }
+
+  // 3. Loom
+  const loomMatch = trimmed.match(/loom\.com\/(?:share|embed)\/([a-zA-Z0-9_-]+)/i);
+  if (loomMatch && loomMatch[1]) {
+    return {
+      embedUrl: `https://www.loom.com/embed/${loomMatch[1]}`,
+      platform: 'loom',
+    };
+  }
+
+  // 4. Vimeo
+  const vimeoMatch = trimmed.match(/vimeo\.com\/(?:video\/)?([0-9]+)/i);
+  if (vimeoMatch && vimeoMatch[1]) {
+    return {
+      embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}`,
+      platform: 'vimeo',
+    };
+  }
+
+  // 5. SIPCore
+  if (trimmed.includes('sipcore.org') || trimmed.includes('softworks-us.org')) {
+    return {
+      embedUrl: trimmed,
+      platform: 'sipcore',
+    };
+  }
+
+  return {
+    embedUrl: trimmed,
+    platform: 'custom',
+  };
+}
+
+// ----------------------------------------------------
+// SIPCore Public Meetings & Recording Integration
+// ----------------------------------------------------
+let sipcoreTokenCache: { token: string; expiresAt: number; companyId: number } | null = null;
+
+async function getSipcoreAuth(): Promise<{ token: string; companyId: number }> {
+  const sipSettings = db.settings?.sipcore || {};
+  const apiBaseUrl = (sipSettings.apiBaseUrl || process.env.SIPCORE_API_BASE_URL || 'https://softworks-us.org').replace(/\/+$/, '');
+  const email = sipSettings.email || process.env.SIPCORE_EMAIL;
+  const password = sipSettings.password || process.env.SIPCORE_PASSWORD;
+
+  if (!email || !password) {
+    throw new Error('SIPCore credentials not configured. Please enter your SIPCore email and password in Settings.');
+  }
+
+  const now = Date.now();
+  if (sipcoreTokenCache && sipcoreTokenCache.expiresAt > now + 60000) {
+    return { token: sipcoreTokenCache.token, companyId: sipcoreTokenCache.companyId };
+  }
+
+  const loginRes = await fetch(`${apiBaseUrl}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+
+  const loginData: any = await loginRes.json();
+  if (!loginRes.ok || !loginData.accessToken) {
+    throw new Error(loginData.message || 'SIPCore authentication failed. Please verify your credentials.');
+  }
+
+  const companyId = Number(loginData.companyId || sipSettings.companyId || 100);
+  const detectedExtension = loginData.extension ? String(loginData.extension) : undefined;
+  sipcoreTokenCache = {
+    token: loginData.accessToken,
+    companyId,
+    expiresAt: now + 50 * 60 * 1000,
+  };
+
+  if (companyId || detectedExtension) {
+    if (!db.settings.sipcore) db.settings.sipcore = { ...sipSettings };
+    if (companyId) db.settings.sipcore.companyId = companyId;
+    if (detectedExtension && (!db.settings.sipcore.defaultCreatorExtension || db.settings.sipcore.defaultCreatorExtension === '4102')) {
+      db.settings.sipcore.defaultCreatorExtension = detectedExtension;
+    }
+    saveDatabase(db);
+  }
+
+  return { token: loginData.accessToken, companyId };
+}
+
+app.post('/api/sipcore/test-connection', async (req: Request, res: Response) => {
+  try {
+    const sipSettings = db.settings?.sipcore || {};
+    const apiBaseUrl = (req.body?.apiBaseUrl || sipSettings.apiBaseUrl || 'https://softworks-us.org').replace(/\/+$/, '');
+    const email = req.body?.email || sipSettings.email;
+    let password = req.body?.password;
+
+    if (!password || password.includes('••••')) {
+      password = sipSettings.password;
+    }
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Please provide both SIPCore account email and password.' });
+    }
+
+    const loginRes = await fetch(`${apiBaseUrl}/api/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const loginData: any = await loginRes.json();
+    if (!loginRes.ok || !loginData.accessToken) {
+      return res.status(loginRes.status || 401).json({
+        success: false,
+        message: loginData.message || 'Authentication failed. Please verify credentials.',
+      });
+    }
+
+    const companyId = Number(loginData.companyId || 100);
+    const detectedExtension = loginData.extension ? String(loginData.extension) : undefined;
+    sipcoreTokenCache = {
+      token: loginData.accessToken,
+      companyId,
+      expiresAt: Date.now() + 50 * 60 * 1000,
+    };
+
+    if (!db.settings.sipcore) {
+      db.settings.sipcore = {
+        enabled: true,
+        apiBaseUrl,
+        webMeetBaseUrl: 'https://meet.sipcore.org',
+        email,
+        password,
+        companyId,
+        defaultCreatorExtension: detectedExtension || req.body?.defaultCreatorExtension || '7512',
+        enableAiNotetakerDefault: true,
+        isRecordedDefault: false,
+        allowGuestJoinDefault: true,
+        requireGuestApprovalDefault: false,
+        autoDeleteAfterEndDefault: true,
+      };
+    } else {
+      db.settings.sipcore.companyId = companyId;
+      if (detectedExtension) {
+        db.settings.sipcore.defaultCreatorExtension = detectedExtension;
+      }
+      if (password && !password.includes('••••')) db.settings.sipcore.password = password;
+    }
+    saveDatabase(db);
+
+    res.json({
+      success: true,
+      message: `Successfully authenticated as ${loginData.fullName || loginData.companyName || email} (Company ID: ${companyId}, Extension: ${detectedExtension || 'Default'})!`,
+      companyId,
+      extension: detectedExtension,
+      companyName: loginData.companyName,
+      user: {
+        email,
+        fullName: loginData.fullName,
+        companyName: loginData.companyName,
+        extension: detectedExtension,
+      },
+    });
+  } catch (err: any) {
+    console.error('SIPCore test connection error:', err);
+    res.status(500).json({ success: false, message: err.message || 'Connection test failed' });
+  }
+});
+
+app.post('/api/sipcore/meetings/create', async (req: Request, res: Response) => {
+  try {
+    const sipSettings = db.settings?.sipcore || {};
+    const apiBaseUrl = (sipSettings.apiBaseUrl || 'https://softworks-us.org').replace(/\/+$/, '');
+    const { token, companyId } = await getSipcoreAuth();
+
+    const {
+      title = 'Classroom Lecture',
+      description = '',
+      createdByExtension,
+      participantExtensions = [],
+      externalParticipants = [],
+      isInstant = true,
+      startDateTime,
+      endDateTime,
+      isRecorded = false,
+      enableAiNotetaker = true,
+      allowGuestJoin = true,
+      requireGuestApproval = false,
+      autoDeleteAfterEnd = true,
+      maxMembers = 0,
+    } = req.body;
+
+    const extensionToUse = createdByExtension || sipSettings.defaultCreatorExtension || '4102';
+
+    const payload: any = {
+      title,
+      description,
+      createdByExtension: String(extensionToUse),
+      participantExtensions,
+      externalParticipants,
+      isInstant: Boolean(isInstant),
+      isRecorded: Boolean(isRecorded),
+      enableAiNotetaker: Boolean(enableAiNotetaker),
+      allowGuestJoin: true,
+      requireGuestApproval: Boolean(requireGuestApproval),
+      autoDeleteAfterEnd: Boolean(autoDeleteAfterEnd),
+      maxMembers: Number(maxMembers) || 0,
+    };
+
+    if (!isInstant && startDateTime && endDateTime) {
+      payload.startDateTime = startDateTime;
+      payload.endDateTime = endDateTime;
+    }
+
+    const response = await fetch(`${apiBaseUrl}/api/companies/${companyId}/meetings/create`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data: any = await response.json();
+    if (!response.ok || !data.success) {
+      let friendlyMessage = data.message || 'Failed to create SIPCore meeting';
+      const isMediaBridgeTimeout = friendlyMessage.includes('4.206.202.181') || 
+                                   friendlyMessage.includes('connected host has failed to respond') || 
+                                   friendlyMessage.includes('connection attempt failed');
+
+      if (isMediaBridgeTimeout) {
+        friendlyMessage = 'SIPCore Media Bridge (4.206.202.181) is currently unreachable on Softworks cloud. The SIPCore team has been alerted. Please try again shortly or use Google Meet as fallback.';
+      }
+
+      return res.status(response.status || 400).json({
+        success: false,
+        message: friendlyMessage,
+        rawMessage: data.message,
+        isMediaBridgeTimeout,
+        error: data,
+      });
+    }
+
+    const meetingData = {
+      ...data,
+      joinUrl: data.joinUrl || `https://meet.sipcore.org/${data.publicMeetingCode}`,
+    };
+
+    res.json({
+      success: true,
+      data: meetingData,
+    });
+  } catch (err: any) {
+    console.error('SIPCore meeting creation error:', err);
+    res.status(500).json({ success: false, message: err.message || 'Failed to create meeting' });
+  }
+});
+
+app.get('/api/sipcore/meetings/:meetingId', async (req: Request, res: Response) => {
+  try {
+    const { meetingId } = req.params;
+    const sipSettings = db.settings?.sipcore || {};
+    const apiBaseUrl = (sipSettings.apiBaseUrl || 'https://softworks-us.org').replace(/\/+$/, '');
+    const { token, companyId } = await getSipcoreAuth();
+    const extension = (req.query.extension as string) || sipSettings.defaultCreatorExtension || '4102';
+
+    const response = await fetch(`${apiBaseUrl}/api/companies/${companyId}/meetings/${meetingId}?extension=${extension}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+
+    const data = await response.json();
+    res.json({ success: response.ok, data });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message || 'Failed to fetch meeting info' });
+  }
+});
+
+// ----------------------------------------------------
+// Approach 3: Video Recording Replay & LMS Sync Endpoints
+// ----------------------------------------------------
+app.patch('/api/timetables/:id/recording', (req: Request, res: Response) => {
+  if (!db.timetables) db.timetables = initialTimetables;
+  const { id } = req.params;
+  const slotIndex = db.timetables.findIndex((s: any) => s.id === id);
+  if (slotIndex === -1) return res.status(404).json({ success: false, message: 'Timetable slot not found' });
+
+  const slot = db.timetables[slotIndex];
+  const { recordingUrl, recordingNotes, aiTranscriptSummary, syncToLmsLesson, lessonId } = req.body;
+
+  const formatted = formatVideoEmbedUrl(recordingUrl || '');
+  slot.recordingUrl = formatted.embedUrl || recordingUrl;
+  slot.recordingPlatform = formatted.platform;
+  if (recordingNotes !== undefined) slot.recordingNotes = recordingNotes;
+  if (aiTranscriptSummary !== undefined) slot.aiTranscriptSummary = aiTranscriptSummary;
+
+  let syncedLesson: any = null;
+  if (syncToLmsLesson && db.lmsModules) {
+    for (const mod of db.lmsModules) {
+      const targetLesson = mod.lessons.find((l: any) => 
+        (lessonId && l.id === lessonId) || 
+        (!lessonId && (l.title === slot.topic || slot.topic.includes(l.title) || l.title.includes(slot.topic)))
+      );
+      if (targetLesson) {
+        targetLesson.videoUrl = formatted.embedUrl;
+        targetLesson.recordingSlotId = slot.id;
+        targetLesson.recordingDate = slot.date;
+        targetLesson.recordingPlatform = formatted.platform;
+        if (aiTranscriptSummary?.overview || slot.recordingNotes) {
+          targetLesson.aiSummaryMarkdown = aiTranscriptSummary?.overview || slot.recordingNotes;
+        }
+        slot.syncedToLmsLessonId = targetLesson.id;
+        syncedLesson = targetLesson;
+        break;
+      }
+    }
+  }
+
+  db.timetables[slotIndex] = slot;
+  saveDatabase(db);
+
+  res.json({
+    success: true,
+    message: syncedLesson 
+      ? `Recording saved and auto-synced to syllabus lesson "${syncedLesson.title}"!`
+      : 'Recording successfully attached to timetable lecture.',
+    data: {
+      slot,
+      syncedLesson,
+    },
+  });
+});
+
+app.patch('/api/sessions/:id/recording', (req: Request, res: Response) => {
+  if (!db.sessions) db.sessions = [];
+  const { id } = req.params;
+  const session = db.sessions.find(s => s.id === id);
+  if (!session) return res.status(404).json({ success: false, message: 'Mentorship session not found' });
+
+  const { recordingUrl } = req.body;
+  const formatted = formatVideoEmbedUrl(recordingUrl || '');
+  session.recordingUrl = formatted.embedUrl || recordingUrl;
+  saveDatabase(db);
+
+  res.json({ success: true, message: 'Recording attached to 1-on-1 session', data: session });
+});
+
 app.get('/api/settings', (req: Request, res: Response) => {
   res.json({ success: true, data: sanitizeSettings(db.settings) });
 });
@@ -4169,9 +4662,44 @@ app.put('/api/settings', (req: Request, res: Response) => {
       pass: (!incoming.smtp.pass || incoming.smtp.pass.includes('••••')) ? db.settings.smtp?.pass : incoming.smtp.pass,
     };
   }
+  if (incoming.sipcore) {
+    incoming.sipcore = {
+      ...incoming.sipcore,
+      password: (!incoming.sipcore.password || incoming.sipcore.password.includes('••••')) ? db.settings.sipcore?.password : incoming.sipcore.password,
+    };
+  }
 
   db.settings = { ...db.settings, ...incoming };
   saveDatabase(db);
+  res.json({ success: true, data: sanitizeSettings(db.settings) });
+});
+
+app.put('/api/settings/campuses', (req: Request, res: Response) => {
+  const callerRole = (req.headers['x-user-role'] as string) || req.body?.callerRole;
+  if (callerRole && callerRole !== 'super_admin') {
+    return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin can modify campus hubs.' });
+  }
+
+  const { campusLocationsList } = req.body;
+  if (!Array.isArray(campusLocationsList)) {
+    return res.status(400).json({ success: false, message: 'campusLocationsList must be an array.' });
+  }
+
+  const primaryActiveCampus = campusLocationsList.find((c: any) => c.isActive) || campusLocationsList[0];
+
+  db.settings = {
+    ...db.settings,
+    campusLocationsList,
+    officeLocation: primaryActiveCampus ? {
+      name: primaryActiveCampus.name,
+      latitude: Number(primaryActiveCampus.latitude),
+      longitude: Number(primaryActiveCampus.longitude),
+      radiusMeters: Number(primaryActiveCampus.radiusMeters),
+    } : db.settings.officeLocation,
+  };
+
+  saveDatabase(db);
+  console.log(`✓ Updated ${campusLocationsList.length} campus locations (Primary: ${primaryActiveCampus?.name || 'None'})`);
   res.json({ success: true, data: sanitizeSettings(db.settings) });
 });
 

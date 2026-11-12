@@ -11,6 +11,7 @@ export const MentorSchedulePage: React.FC = () => {
     markSessionAttendance,
     openModal,
     setSelectedMentorForBookingId,
+    setSelectedSlotForRecording,
     showToast,
   } = useCRM();
 
@@ -54,6 +55,8 @@ export const MentorSchedulePage: React.FC = () => {
       duration: c.durationHours,
       venue: c.venue,
       meetingLink: c.meetingLink,
+      recordingUrl: c.recordingUrl,
+      recordingPlatform: c.recordingPlatform,
       status: c.status,
       attendanceMarked: c.attendanceMarked,
       rawItem: c,
@@ -314,8 +317,34 @@ export const MentorSchedulePage: React.FC = () => {
                         className="h-9 px-3.5 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-dark transition-all flex items-center gap-1.5 shadow-xs"
                       >
                         <span className="material-symbols-outlined text-[16px]">videocam</span>
-                        <span>Join Link</span>
+                        <span>{item.meetingLink.includes('sipcore.org') ? 'SIPCore Room' : 'Join Link'}</span>
                       </a>
+                    )}
+
+                    {item.type === 'cohort_class' && (item as any).recordingUrl && (
+                      <a
+                        href={(item as any).recordingUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="h-9 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">smart_display</span>
+                        <span>Watch Replay</span>
+                      </a>
+                    )}
+
+                    {item.type === 'cohort_class' && (
+                      <button
+                        onClick={() => {
+                          setSelectedSlotForRecording(item.rawItem as any);
+                          openModal('attach-recording');
+                        }}
+                        className="h-9 px-3 rounded-xl bg-surface border border-outline-variant hover:bg-surface-container text-xs font-semibold text-secondary hover:text-on-surface transition-colors flex items-center gap-1 cursor-pointer"
+                        title="Attach YouTube, Google Drive, or Loom recording for students"
+                      >
+                        <span className="material-symbols-outlined text-[16px] text-emerald-600">video_camera_front</span>
+                        <span>{(item as any).recordingUrl ? 'Edit Replay' : 'Attach Replay'}</span>
+                      </button>
                     )}
 
                     {item.type === '1on1_session' && (

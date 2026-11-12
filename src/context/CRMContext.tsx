@@ -3,6 +3,7 @@ import {
   Lead, 
   LeadFollowUpActivity, 
   Student, 
+  EnrolledCourse,
   Mentor, 
   Expense, 
   CourseProgram, 
@@ -30,6 +31,7 @@ import {
   LMSModule,
   StudentAssignmentSubmission,
   EnabledModules,
+  CampusLocation,
   StudentPerformanceReport,
   SupportTicket,
   TicketAttachment,
@@ -367,6 +369,7 @@ interface CRMContextType {
   bookSession: (session: Omit<MentorshipSession, 'id' | 'sessionCode'>) => void;
   generateInvoice: (invoice: Omit<Invoice, 'id' | 'invoiceNumber'>) => void;
   updateSettings: (newSettings: Partial<OrganizationSettings>) => void;
+  saveCampusLocations: (campuses: CampusLocation[]) => Promise<boolean>;
   logActivity: (activity: Omit<ActivityLogItem, 'id' | 'timestamp'>) => void;
 
   // Attendance & Time Tracking
@@ -433,6 +436,29 @@ interface CRMContextType {
   markClassAttendance: (slotId: string, attendanceRecords: { studentId: string; studentName: string; studentCode?: string; status: 'Attended' | 'Absent' }[], notes?: string) => Promise<void>;
   selectedSlotForAttendance: TimetableSlot | null;
   setSelectedSlotForAttendance: (slot: TimetableSlot | null) => void;
+  selectedSlotForRecording: TimetableSlot | null;
+  setSelectedSlotForRecording: (slot: TimetableSlot | null) => void;
+  attachTimetableRecording: (payload: {
+    slotId: string;
+    recordingUrl: string;
+    recordingNotes?: string;
+    aiTranscriptSummary?: any;
+    syncToLmsLesson?: boolean;
+    lessonId?: string;
+  }) => Promise<void>;
+  createSipcoreMeeting: (meetingParams: {
+    title: string;
+    description?: string;
+    createdByExtension?: string;
+    participantExtensions?: string[];
+    externalParticipants?: { name: string; email: string }[];
+    isInstant?: boolean;
+    startDateTime?: string;
+    endDateTime?: string;
+    isRecorded?: boolean;
+    enableAiNotetaker?: boolean;
+    allowGuestJoin?: boolean;
+  }) => Promise<any>;
 
   // Course Outline Teaching & Program Officer Approval Gateway
   markTopicAsTaught: (lessonId: string, notes?: string) => Promise<void>;
@@ -732,6 +758,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
   const [selectedUserForPasswordReset, setSelectedUserForPasswordReset] = useState<{ id: string; name: string; email: string; role: string; category?: string } | null>(null);
   const [selectedSlotForAttendance, setSelectedSlotForAttendance] = useState<TimetableSlot | null>(null);
+  const [selectedSlotForRecording, setSelectedSlotForRecording] = useState<TimetableSlot | null>(null);
 
   // Operational Expense & Budget Wallet state
   const [wallet, setWallet] = useState<ExpenseAndBudgetWallet>(() => {
@@ -2808,6 +2835,9 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const curriculumUrl = matchedCourse?.curriculumDriveUrl || settings.defaultCurriculumUrl;
     const handbookUrl = settings.studentHandbookUrl;
 
+    const cleanEmailSlug = (lead.name || 'scholar').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const effectiveEmail = lead.email?.trim() || `${cleanEmailSlug}${Math.floor(100 + Math.random() * 900)}@student.codelab.institute`;
+
     const newStudent: Student = {
       id: `stu-${Date.now()}`,
       studentCode,
@@ -2817,7 +2847,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       curriculumDriveUrl: curriculumUrl,
       handbookDriveUrl: handbookUrl,
       name: lead.name,
-      email: lead.email,
+      email: effectiveEmail,
       phone: lead.phone,
       program: effectiveProgram,
       mentorName: effectiveMentorName,
@@ -2925,6 +2955,72 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const matchedCourse = courses.find(c => c.title?.toLowerCase() === studentData.program?.toLowerCase() || (c as any).name?.toLowerCase() === studentData.program?.toLowerCase());
     const curriculumUrl = studentData.curriculumDriveUrl || matchedCourse?.curriculumDriveUrl || settings.defaultCurriculumUrl;
     const handbookUrl = studentData.handbookDriveUrl || settings.studentHandbookUrl;
+
+    const cleanEmail = studentData.email ? studentData.email.trim().toLowerCase() : '';
+    const existingStudent = cleanEmail ? students.find(s => s.email?.trim().toLowerCase() === cleanEmail) : null;
+
+    // Multi-Program support: if scholar is already enrolled in another cohort/course, append new course to existing profile
+    if (existingStudent) {
+      const feeAmount = studentData.totalFees || studentData.tuitionAmount || 850000;
+      const paidAmount = feeAmount - (studentData.outstandingBalance ?? 0);
+      const invoiceStatus: 'Paid' | 'Partial' | 'Overdue' = (studentData.outstandingBalance ?? 0) === 0 ? 'Paid' : (paidAmount > 0 ? 'Partial' : 'Overdue');
+
+      const newCourseEntry: EnrolledCourse = {
+        id: `c-${Date.now()}`,
+        code: matchedCourse?.code || 'TECH-101',
+        name: studentData.program,
+        semester: `Term ${new Date().getFullYear()}`,
+        instructor: studentData.mentorName || 'Faculty Mentor Assigned',
+        fee: feeAmount,
+        billedDate: new Date().toISOString().split('T')[0],
+        cohort: studentData.cohort || existingStudent.cohort,
+        mentorName: studentData.mentorName,
+        status: 'Active',
+        totalFees: feeAmount,
+        paidAmount: paidAmount,
+        outstandingBalance: studentData.outstandingBalance || 0,
+        tuitionStatus: invoiceStatus,
+      };
+
+      const updatedCourses = [...(existingStudent.courses || []), newCourseEntry];
+      const updatedInstallments = [...(existingStudent.installments || []), ...(studentData.installments || [])];
+      const updatedTotalFees = (Number(existingStudent.totalFees) || 0) + feeAmount;
+      const updatedOutstanding = (Number(existingStudent.outstandingBalance) || 0) + (studentData.outstandingBalance ?? 0);
+      const updatedPaid = updatedTotalFees - updatedOutstanding;
+
+      const updatedStudent: Student = {
+        ...existingStudent,
+        courses: updatedCourses,
+        installments: updatedInstallments,
+        totalFees: updatedTotalFees,
+        outstandingBalance: updatedOutstanding,
+        paidAmount: updatedPaid,
+        tuitionStatus: updatedOutstanding === 0 ? 'Paid' : (updatedPaid > 0 ? 'Partial' : 'Overdue'),
+      };
+
+      setStudents(prev => prev.map(s => s.id === existingStudent.id ? updatedStudent : s));
+
+      const newInv: Invoice = {
+        id: `inv-${Date.now()}`,
+        invoiceNumber: `INV-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`,
+        studentId: existingStudent.id,
+        studentName: existingStudent.name,
+        studentEmail: existingStudent.email,
+        programName: studentData.program,
+        issueDate: new Date().toISOString().split('T')[0],
+        dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+        totalAmount: feeAmount,
+        paidAmount: paidAmount,
+        status: invoiceStatus,
+        items: [{ id: `item-1`, description: `${studentData.program} Tuition Enrollment`, amount: feeAmount }],
+        paymentReference: paidAmount > 0 ? `NIBSS-TRX-${Math.floor(1000000 + Math.random() * 9000000)}` : undefined,
+        nibssBankName: settings.defaultNIBSSBank?.bankName || 'Access Bank Nigeria PLC',
+      };
+      setInvoices(prev => [newInv, ...prev]);
+
+      apiService.createStudent(studentData as any);
+      return updatedStudent;
+    }
 
     const newStudent: Student = {
       ...studentData,
@@ -4408,6 +4504,46 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       type: 'system',
       user: 'Operations',
     });
+  };
+
+  const saveCampusLocations = async (campuses: CampusLocation[]): Promise<boolean> => {
+    const primaryActiveCampus = campuses.find(c => c.isActive) || campuses[0];
+    const updatedOffice = primaryActiveCampus ? {
+      name: primaryActiveCampus.name,
+      latitude: Number(primaryActiveCampus.latitude),
+      longitude: Number(primaryActiveCampus.longitude),
+      radiusMeters: Number(primaryActiveCampus.radiusMeters),
+    } : settings.officeLocation;
+
+    setSettings(prev => ({
+      ...prev,
+      campusLocationsList: campuses,
+      officeLocation: updatedOffice,
+    }));
+
+    try {
+      const result = await apiService.updateCampusLocations(campuses);
+      if (result) {
+        setSettings(prev => ({ ...prev, ...result }));
+      }
+      showToast('Campus Hubs Saved', `${campuses.length} physical hubs & geofence perimeters persisted.`, 'success');
+      logActivity({
+        title: 'Multi-Campus Hubs Updated',
+        description: `Configured ${campuses.length} regional campus facilities (Primary: ${primaryActiveCampus?.name || 'None'}).`,
+        type: 'system',
+        user: currentUser?.name || 'Operations',
+      });
+      return true;
+    } catch (err) {
+      console.error('Error persisting campus locations:', err);
+      // Fallback to general settings update
+      apiService.updateSettings({
+        campusLocationsList: campuses,
+        officeLocation: updatedOffice,
+      });
+      showToast('Campus Hubs Saved', `${campuses.length} physical hubs saved locally.`, 'success');
+      return true;
+    }
   };
 
   const isModuleEnabled = (moduleKey: keyof EnabledModules): boolean => {
@@ -6020,6 +6156,94 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const attachTimetableRecording = async (payload: {
+    slotId: string;
+    recordingUrl: string;
+    recordingNotes?: string;
+    aiTranscriptSummary?: any;
+    syncToLmsLesson?: boolean;
+    lessonId?: string;
+  }) => {
+    const { slotId, recordingUrl, recordingNotes, aiTranscriptSummary, syncToLmsLesson, lessonId } = payload;
+    const targetSlot = timetables.find(s => s.id === slotId);
+
+    setTimetables(prev => prev.map(s => {
+      if (s.id !== slotId) return s;
+      return {
+        ...s,
+        recordingUrl,
+        recordingNotes: recordingNotes !== undefined ? recordingNotes : s.recordingNotes,
+        aiTranscriptSummary: aiTranscriptSummary !== undefined ? aiTranscriptSummary : s.aiTranscriptSummary,
+      };
+    }));
+
+    if (syncToLmsLesson) {
+      setLmsModules(prev => prev.map(mod => ({
+        ...mod,
+        lessons: mod.lessons.map(l => {
+          const match = (lessonId && l.id === lessonId) || (!lessonId && targetSlot && (l.title === targetSlot.topic || targetSlot.topic.includes(l.title) || l.title.includes(targetSlot.topic)));
+          if (match) {
+            return {
+              ...l,
+              videoUrl: recordingUrl,
+              recordingSlotId: slotId,
+              recordingDate: targetSlot?.date,
+              aiSummaryMarkdown: aiTranscriptSummary?.overview || recordingNotes || l.aiSummaryMarkdown,
+            };
+          }
+          return l;
+        }),
+      })));
+    }
+
+    if (isBackendConnected) {
+      try {
+        const res = await apiService.attachTimetableRecording(slotId, {
+          recordingUrl,
+          recordingNotes,
+          aiTranscriptSummary,
+          syncToLmsLesson,
+          lessonId,
+        });
+        if (res && res.data?.slot) {
+          setTimetables(prev => prev.map(s => s.id === slotId ? res.data.slot : s));
+        }
+      } catch (e) {
+        console.warn('Backend attach recording error:', e);
+      }
+    }
+
+    showToast('Recording Attached', 'Class lecture replay link successfully updated!', 'success');
+  };
+
+  const createSipcoreMeeting = async (meetingParams: {
+    title: string;
+    description?: string;
+    createdByExtension?: string;
+    participantExtensions?: string[];
+    externalParticipants?: { name: string; email: string }[];
+    isInstant?: boolean;
+    startDateTime?: string;
+    endDateTime?: string;
+    isRecorded?: boolean;
+    enableAiNotetaker?: boolean;
+    allowGuestJoin?: boolean;
+  }) => {
+    try {
+      const res: any = await apiService.createSipcoreMeeting(meetingParams);
+      // apiService unwraps json.data if present; resolve either shape gracefully
+      const meetingObj = (res && res.data) ? res.data : res;
+      if (meetingObj && (meetingObj.joinUrl || meetingObj.publicMeetingCode || (meetingObj.success && meetingObj.meetingId))) {
+        return meetingObj;
+      }
+      throw new Error(res?.message || meetingObj?.message || 'Could not provision SIPCore meeting');
+    } catch (err: any) {
+      console.error('SIPCore meeting creation failed:', err);
+      showToast('SIPCore Error', err.message || 'Failed to create SIPCore room', 'error');
+      return null;
+    }
+  };
+
   // ----------------------------------------------------
   // Course Outline Teaching & Program Officer Approval Gateway
   // ----------------------------------------------------
@@ -6635,6 +6859,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         verifyAttendanceShift,
         generateInvoice,
         updateSettings,
+        saveCampusLocations,
         logActivity,
         exportDatabaseBackup,
         restoreDatabaseBackup,
@@ -6681,6 +6906,10 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         markClassAttendance,
         selectedSlotForAttendance,
         setSelectedSlotForAttendance,
+        selectedSlotForRecording,
+        setSelectedSlotForRecording,
+        attachTimetableRecording,
+        createSipcoreMeeting,
         markTopicAsTaught,
         approveTopicByProgramOfficer,
         returnTopicByProgramOfficer,

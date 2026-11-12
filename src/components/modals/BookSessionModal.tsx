@@ -7,7 +7,7 @@ export interface BookSessionModalProps {
 }
 
 export const BookSessionModal: React.FC<BookSessionModalProps> = ({ isOpen, onClose }) => {
-  const { activeMentors, students, bookSession, selectedMentorForBookingId, currentUser, openModal } = useCRM();
+  const { activeMentors, students, bookSession, selectedMentorForBookingId, currentUser, openModal, createSipcoreMeeting } = useCRM();
 
   const isMentor = currentUser?.role === 'mentor';
   const defaultMentorId = isMentor 
@@ -21,15 +21,35 @@ export const BookSessionModal: React.FC<BookSessionModalProps> = ({ isOpen, onCl
   const [durationHours, setDurationHours] = useState<number>(1.5);
   const [topic, setTopic] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
+  const [createSipcoreRoom, setCreateSipcoreRoom] = useState<boolean>(true);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   if (!isOpen) return null;
 
   const currentMentor = activeMentors.find(m => m.id === (mentorId || defaultMentorId)) || activeMentors[0];
   const currentStudent = students.find(s => s.id === (studentId || students[0]?.id)) || students[0];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentMentor || !currentStudent || !topic) return;
+
+    setIsSubmitting(true);
+    let meetingDetails: any = null;
+
+    if (createSipcoreRoom) {
+      try {
+        meetingDetails = await createSipcoreMeeting({
+          title: `1-on-1: ${topic.trim()}`,
+          description: `Mentor: ${currentMentor.name} | Student: ${currentStudent.name}`,
+          isInstant: true,
+          externalParticipants: currentStudent.email ? [{ name: currentStudent.name, email: currentStudent.email }] : undefined,
+          enableAiNotetaker: true,
+          allowGuestJoin: true,
+        });
+      } catch (err) {
+        console.warn('SIPCore meeting creation bypassed:', err);
+      }
+    }
 
     bookSession({
       mentorId: currentMentor.id,
@@ -43,8 +63,15 @@ export const BookSessionModal: React.FC<BookSessionModalProps> = ({ isOpen, onCl
       notes,
       status: 'Completed',
       compensationAmount: 0,
+      meetingLink: meetingDetails?.joinUrl || undefined,
+      sipcoreMeetingId: meetingDetails?.meetingId || undefined,
+      publicMeetingCode: meetingDetails?.publicMeetingCode || undefined,
+      moderatorPin: meetingDetails?.moderatorPin || undefined,
+      participantPin: meetingDetails?.participantPin || undefined,
+      enableAiNotetaker: Boolean(meetingDetails),
     });
 
+    setIsSubmitting(false);
     onClose();
   };
 
@@ -248,6 +275,25 @@ export const BookSessionModal: React.FC<BookSessionModalProps> = ({ isOpen, onCl
                   className="w-full p-2.5 bg-surface border border-outline-variant rounded font-body-md text-sm text-on-surface focus:border-primary outline-none"
                 />
               </div>
+
+              {/* SIPCore 1-on-1 Room Generator Toggle */}
+              <div className="p-3 rounded-lg bg-surface-container-low border border-outline-variant flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-primary text-[18px]">videocam</span>
+                    <span className="text-xs font-bold text-on-surface">Generate SIPCore Virtual Coaching Room</span>
+                  </div>
+                  <p className="text-[11px] text-secondary">
+                    Auto-provisions a private browser video room with AI Note Taker and invites {currentStudent.name}.
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={createSipcoreRoom}
+                  onChange={e => setCreateSipcoreRoom(e.target.checked)}
+                  className="w-4 h-4 text-primary rounded border-outline-variant cursor-pointer"
+                />
+              </div>
             </div>
 
             {/* Footer Submit Buttons */}
@@ -261,10 +307,20 @@ export const BookSessionModal: React.FC<BookSessionModalProps> = ({ isOpen, onCl
               </button>
               <button
                 type="submit"
-                className="px-6 h-10 rounded bg-primary text-on-primary font-label-md text-xs font-bold hover:bg-primary-container transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
+                disabled={isSubmitting}
+                className="px-6 h-10 rounded bg-primary text-on-primary font-label-md text-xs font-bold hover:bg-primary-container transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
-                <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                <span>Record Coaching Session</span>
+                {isSubmitting ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    <span>Provisioning Room &amp; Recording...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                    <span>Record Coaching Session</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

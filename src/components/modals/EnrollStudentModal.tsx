@@ -8,7 +8,7 @@ export interface EnrollStudentModalProps {
 }
 
 export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose }) => {
-  const { enrollStudent, activeMentors, courses, cohorts, settings } = useCRM();
+  const { enrollStudent, activeMentors, courses, cohorts, settings, students } = useCRM();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -94,6 +94,17 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
       }
     }
   }, [selectedCourseId, courses, settings]);
+
+  const matchingExistingStudent = students.find(s => 
+    email.trim() && s.email && s.email.trim().toLowerCase() === email.trim().toLowerCase()
+  );
+
+  useEffect(() => {
+    if (matchingExistingStudent) {
+      if (!name.trim()) setName(matchingExistingStudent.name);
+      if (!phone.trim() && matchingExistingStudent.phone) setPhone(matchingExistingStudent.phone);
+    }
+  }, [matchingExistingStudent]);
 
   if (!isOpen) return null;
 
@@ -351,9 +362,34 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, 
             <div className="lg:col-span-8 space-y-stack-md">
               {/* Student Information Card */}
               <div className="bg-surface rounded-lg border border-outline-variant p-stack-md space-y-4">
-                <h3 className="font-headline-md text-headline-md font-bold text-on-surface flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">person</span> Student Information
-                </h3>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <h3 className="font-headline-md text-headline-md font-bold text-on-surface flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary">person</span> Student Information
+                  </h3>
+                  {matchingExistingStudent && (
+                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">verified</span>
+                      Existing Scholar Profile Matched
+                    </span>
+                  )}
+                </div>
+
+                {matchingExistingStudent && (
+                  <div className="p-3.5 rounded-lg bg-primary/10 border border-primary/30 text-xs text-on-surface flex items-start gap-3 animate-in fade-in">
+                    <span className="material-symbols-outlined text-primary text-[22px] shrink-0">school</span>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-primary">🎓 Existing Scholar Recognized:</span>
+                        <span className="font-semibold text-on-surface">{matchingExistingStudent.name}</span>
+                        <span className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-surface-container border border-outline-variant font-bold text-primary">{matchingExistingStudent.studentCode}</span>
+                      </div>
+                      <p className="text-secondary leading-relaxed">
+                        Currently enrolled in <strong>{matchingExistingStudent.program}</strong> ({matchingExistingStudent.cohort || 'Active'}). 
+                        Submitting this form will safely enroll them in this additional program, attach a separate course invoice/ledger, and prevent creating duplicate student IDs.
+                      </p>
+                    </div>
+                  </div>
+                )}
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">

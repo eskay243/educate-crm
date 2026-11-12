@@ -46,8 +46,12 @@ export const ChatPage: React.FC = () => {
   const [taggedUserIds, setTaggedUserIds] = useState<string[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatScrollContainerRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef<boolean>(true);
+  const prevMessagesCountRef = useRef<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [showNewMessagesPill, setShowNewMessagesPill] = useState(false);
 
   // Dismiss context menu on global click
   useEffect(() => {
@@ -119,6 +123,25 @@ export const ChatPage: React.FC = () => {
     }
   }, [activeConvId]);
 
+  // Handle scroll events to detect if user is browsing history
+  const handleChatScroll = () => {
+    const el = chatScrollContainerRef.current;
+    if (!el) return;
+    const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const isAtBottom = distanceToBottom < 80;
+    isNearBottomRef.current = isAtBottom;
+    if (isAtBottom) {
+      setShowNewMessagesPill(false);
+    }
+  };
+
+  // Scroll to bottom helper
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    isNearBottomRef.current = true;
+    setShowNewMessagesPill(false);
+    messagesEndRef.current?.scrollIntoView({ behavior });
+  };
+
   // 3. Polling interval for real-time responsiveness (every 4 seconds)
   useEffect(() => {
     const timer = setInterval(() => {
@@ -130,10 +153,45 @@ export const ChatPage: React.FC = () => {
     return () => clearInterval(timer);
   }, [activeConvId]);
 
-  // Scroll to bottom on new messages
+  // Reset scroll and new messages pill on channel/conversation switch
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    isNearBottomRef.current = true;
+    setShowNewMessagesPill(false);
+    prevMessagesCountRef.current = 0;
+    // Delay slightly to allow DOM render of active channel messages
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+    }, 50);
+  }, [activeConvId]);
+
+  // Smart scroll effect on message changes
+  useEffect(() => {
+    const prevCount = prevMessagesCountRef.current;
+    const newCount = messages.length;
+    prevMessagesCountRef.current = newCount;
+
+    if (newCount === 0) return;
+
+    const lastMessage = messages[messages.length - 1];
+    const isSelf = currentUser && lastMessage?.senderId === currentUser.id;
+
+    // 1. If active user just dispatched a message, always auto-scroll to bottom
+    if (isSelf) {
+      scrollToBottom('smooth');
+      return;
+    }
+
+    // 2. If user was already near the bottom, auto-scroll smoothly with new messages
+    if (isNearBottomRef.current) {
+      scrollToBottom('smooth');
+      return;
+    }
+
+    // 3. If user is scrolled up reading previous messages, preserve scroll position and show pill
+    if (newCount > prevCount && prevCount > 0) {
+      setShowNewMessagesPill(true);
+    }
+  }, [messages, currentUser]);
 
   const activeConversation = useMemo(() => {
     return conversations.find(c => c.id === activeConvId) || null;
@@ -739,7 +797,11 @@ export const ChatPage: React.FC = () => {
               </div>
 
               {/* Message Feed */}
-              <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4">
+              <div 
+                ref={chatScrollContainerRef}
+                onScroll={handleChatScroll}
+                className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4 relative"
+              >
                 {messages.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-center p-8 text-secondary space-y-2">
                     <span className="material-symbols-outlined text-4xl text-outline-variant">forum</span>
@@ -1038,6 +1100,20 @@ export const ChatPage: React.FC = () => {
                   })
                 )}
                 <div ref={messagesEndRef} />
+
+                {/* Floating "New Messages Below" pill when user is scrolled up */}
+                {showNewMessagesPill && (
+                  <div className="sticky bottom-3 left-0 right-0 flex justify-center z-30 pointer-events-none animate-in fade-in slide-in-from-bottom-2 duration-150">
+                    <button
+                      type="button"
+                      onClick={() => scrollToBottom('smooth')}
+                      className="pointer-events-auto shadow-lg bg-primary text-white text-xs font-bold px-3.5 py-1.5 rounded-full flex items-center gap-1.5 hover:bg-primary/90 transition-all cursor-pointer animate-bounce"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">arrow_downward</span>
+                      <span>New messages below</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Bottom Input Area */}

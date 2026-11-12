@@ -26,6 +26,7 @@ export const CoursesCohortsPage: React.FC = () => {
     reviewMentorPayout,
     issueCertificate,
     setSelectedSlotForAttendance,
+    setSelectedSlotForRecording,
     setSelectedStudentId,
     setSelectedStudentForAssignmentId,
     openModal,
@@ -926,16 +927,23 @@ export const CoursesCohortsPage: React.FC = () => {
                         </div>
 
                         {slot.meetingLink ? (
-                          <div className="flex items-center gap-1.5 text-secondary">
-                            <span className="material-symbols-outlined text-[15px] text-primary">videocam</span>
-                            <a
-                              href={slot.meetingLink}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-primary hover:underline font-medium line-clamp-1"
-                            >
-                              Join Virtual Class
-                            </a>
+                          <div className="flex items-center justify-between gap-1.5 text-secondary">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="material-symbols-outlined text-[15px] text-primary">videocam</span>
+                              <a
+                                href={slot.meetingLink}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-primary hover:underline font-medium text-xs truncate"
+                              >
+                                {slot.meetingLink.includes('sipcore.org') ? 'SIPCore Virtual Room' : 'Join Virtual Class'}
+                              </a>
+                            </div>
+                            {slot.enableAiNotetaker && (
+                              <span className="text-[10px] bg-primary/10 text-primary font-bold px-1.5 py-0.2 rounded shrink-0">
+                                AI Notes
+                              </span>
+                            )}
                           </div>
                         ) : slot.venue ? (
                           <div className="flex items-center gap-1.5 text-secondary">
@@ -943,29 +951,61 @@ export const CoursesCohortsPage: React.FC = () => {
                             <span className="line-clamp-1">{slot.venue}</span>
                           </div>
                         ) : null}
+
+                        {/* Approach 3: Video Replay Link */}
+                        {slot.recordingUrl && (
+                          <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between gap-1 text-xs">
+                            <a
+                              href={slot.recordingUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-bold text-emerald-800 dark:text-emerald-300 hover:underline flex items-center gap-1 truncate"
+                            >
+                              <span className="material-symbols-outlined text-[16px] text-emerald-600">smart_display</span>
+                              <span>Watch Lecture Replay</span>
+                            </a>
+                            <span className="text-[10px] uppercase font-bold text-emerald-700 bg-white dark:bg-emerald-900 px-1.5 py-0.5 rounded border border-emerald-300">
+                              {slot.recordingPlatform || 'Ready'}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t border-outline-variant/60 flex items-center justify-between gap-2">
-                      <button
-                        onClick={() => {
-                          setSelectedSlotForAttendance(slot);
-                          openModal('take-attendance');
-                        }}
-                        className={`h-7 px-2.5 rounded text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ${
-                          slot.attendanceMarked
-                            ? 'bg-surface border border-outline-variant text-secondary hover:text-on-surface hover:bg-surface-container'
-                            : 'bg-primary text-on-primary hover:bg-primary/90 shadow-xs'
-                        }`}
-                      >
-                        <span className="material-symbols-outlined text-[13px]">how_to_reg</span>
-                        <span>{slot.attendanceMarked ? 'Review Attendance' : 'Mark Attendance'}</span>
-                      </button>
+                    <div className="pt-3 border-t border-outline-variant/60 flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => {
+                            setSelectedSlotForAttendance(slot);
+                            openModal('take-attendance');
+                          }}
+                          className={`h-7 px-2.5 rounded text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                            slot.attendanceMarked
+                              ? 'bg-surface border border-outline-variant text-secondary hover:text-on-surface hover:bg-surface-container'
+                              : 'bg-primary text-on-primary hover:bg-primary/90 shadow-xs'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[13px]">how_to_reg</span>
+                          <span>{slot.attendanceMarked ? 'Attendance' : 'Mark'}</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setSelectedSlotForRecording(slot);
+                            openModal('attach-recording');
+                          }}
+                          className="h-7 px-2 rounded border border-outline-variant bg-surface hover:bg-surface-container text-secondary hover:text-on-surface text-[11px] font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                          title="Attach YouTube, Google Drive, or Loom lecture recording"
+                        >
+                          <span className="material-symbols-outlined text-[14px] text-emerald-600">video_camera_front</span>
+                          <span>{slot.recordingUrl ? 'Edit Replay' : 'Attach Replay'}</span>
+                        </button>
+                      </div>
 
                       {canScheduleClasses && (
                         <button
                           onClick={() => deleteTimetableSlot(slot.id)}
-                          className="h-7 w-7 rounded flex items-center justify-center text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
+                          className="h-7 w-7 rounded flex items-center justify-center text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer ml-auto"
                           title="Delete Schedule Slot"
                         >
                           <span className="material-symbols-outlined text-[16px]">delete</span>

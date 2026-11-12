@@ -49,9 +49,10 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
         s.name.toLowerCase().includes(tableSearch.toLowerCase()) ||
         s.email.toLowerCase().includes(tableSearch.toLowerCase()) ||
         (s.studentCode && s.studentCode.toLowerCase().includes(tableSearch.toLowerCase())) ||
-        (s.program && s.program.toLowerCase().includes(tableSearch.toLowerCase()));
+        (s.program && s.program.toLowerCase().includes(tableSearch.toLowerCase())) ||
+        (Array.isArray(s.courses) && s.courses.some(c => c.name?.toLowerCase().includes(tableSearch.toLowerCase())));
       const matchesStatus = statusFilter === 'All' || s.status === statusFilter;
-      const matchesCourse = courseFilter === 'All' || s.program === courseFilter;
+      const matchesCourse = courseFilter === 'All' || s.program === courseFilter || (Array.isArray(s.courses) && s.courses.some(c => c.name === courseFilter));
       return matchesSearch && matchesStatus && matchesCourse;
     });
   }, [displayedStudents, tableSearch, statusFilter, courseFilter]);
@@ -381,7 +382,14 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                               {student.name.slice(0, 2).toUpperCase()}
                             </div>
                             <div>
-                              <div className="font-bold text-on-surface">{student.name}</div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-bold text-on-surface">{student.name}</span>
+                                {student.courses && student.courses.length > 1 && (
+                                  <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                                    {student.courses.length} Programs
+                                  </span>
+                                )}
+                              </div>
                               <div className="flex items-center gap-1.5 text-[11px] text-secondary">
                                 <span className="font-mono text-primary font-semibold">{student.studentCode}</span>
                                 <span>•</span>
@@ -392,12 +400,36 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                         </td>
 
                         <td className="p-3">
-                          <div className="font-semibold text-on-surface">{student.program || 'Software Engineering'}</div>
-                          <div className="text-[11px] text-secondary font-mono mt-0.5">
-                            <span className="inline-flex items-center px-1.5 py-0.2 rounded bg-surface-container text-secondary text-[10px] font-bold">
-                              {student.cohort || 'Cohort Alpha'}
-                            </span>
-                          </div>
+                          {student.courses && student.courses.length > 1 ? (
+                            <div className="space-y-1.5">
+                              {student.courses.map((c, idx) => (
+                                <div key={c.id || idx} className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-semibold text-on-surface text-xs">{c.name}</span>
+                                  <span className="inline-flex items-center px-1.5 py-0.2 rounded bg-surface-container text-secondary text-[10px] font-mono">
+                                    {c.cohort || student.cohort || 'Active'}
+                                  </span>
+                                  {c.status && (
+                                    <span className={`inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider ${
+                                      c.status === 'Active' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' :
+                                      c.status === 'Dropped' ? 'bg-slate-500/15 text-slate-700 dark:text-slate-300' :
+                                      'bg-blue-500/15 text-blue-700 dark:text-blue-300'
+                                    }`}>
+                                      {c.status}
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <>
+                              <div className="font-semibold text-on-surface">{student.program || 'Software Engineering'}</div>
+                              <div className="text-[11px] text-secondary font-mono mt-0.5">
+                                <span className="inline-flex items-center px-1.5 py-0.2 rounded bg-surface-container text-secondary text-[10px] font-bold">
+                                  {student.cohort || 'Cohort Alpha'}
+                                </span>
+                              </div>
+                            </>
+                          )}
                         </td>
 
                         <td className="p-3">

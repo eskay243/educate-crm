@@ -408,14 +408,40 @@ export const StudentCoursesPage: React.FC = () => {
               {activeTab === 'content' && (
                 <div className="space-y-6">
                   {activeLesson.videoUrl && (
-                    <div className="rounded-xl overflow-hidden aspect-video bg-black shadow-md border border-outline-variant/60">
-                      <iframe
-                        src={activeLesson.videoUrl}
-                        title={activeLesson.title}
-                        className="w-full h-full"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
+                    <div className="space-y-2">
+                      <div className="rounded-xl overflow-hidden aspect-video bg-black shadow-md border border-outline-variant/60">
+                        <iframe
+                          src={activeLesson.videoUrl}
+                          title={activeLesson.title}
+                          className="w-full h-full"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-secondary px-1">
+                        <span className="flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-400">
+                          <span className="material-symbols-outlined text-[16px]">verified</span>
+                          <span>Faculty Lecture Replay</span>
+                        </span>
+                        {activeLesson.recordingDate && (
+                          <span>Recorded on {activeLesson.recordingDate}</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* AI Lecture Notes & High-Yield Summary */}
+                  {activeLesson.aiSummaryMarkdown && (
+                    <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-primary text-[18px]">psychology</span>
+                        <h4 className="font-bold text-xs uppercase tracking-wider text-on-surface">
+                          SIPCore AI Note Taker • High-Yield Study Summary
+                        </h4>
+                      </div>
+                      <div className="prose dark:prose-invert max-w-none text-xs text-on-surface-variant leading-relaxed whitespace-pre-line">
+                        {activeLesson.aiSummaryMarkdown}
+                      </div>
                     </div>
                   )}
 
@@ -799,7 +825,19 @@ export const StudentCoursesPage: React.FC = () => {
                           <span>Faculty: <strong className="text-on-surface">{slot.mentorName}</strong></span>
                         </div>
 
-                        {slot.meetingLink ? (
+                        {slot.recordingUrl ? (
+                          <div className="pt-1">
+                            <a
+                              href={slot.recordingUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs w-full"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">smart_display</span>
+                              <span>Watch Lecture Replay</span>
+                            </a>
+                          </div>
+                        ) : slot.meetingLink ? (
                           <div className="pt-1">
                             <a
                               href={slot.meetingLink}

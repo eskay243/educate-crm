@@ -30,6 +30,7 @@ export const SettingsPage: React.FC = () => {
   const { 
     settings, 
     updateSettings, 
+    saveCampusLocations,
     resetAllData, 
     staffUsers, 
     addStaffUser, 
@@ -571,6 +572,19 @@ export const SettingsPage: React.FC = () => {
   const [studentHandbookUrl, setStudentHandbookUrl] = useState(settings.studentHandbookUrl || '');
   const [defaultCurriculumUrl, setDefaultCurriculumUrl] = useState(settings.defaultCurriculumUrl || '');
 
+  // SIPCore Virtual Meetings & Smart Video Replay State
+  const [sipcoreEnabled, setSipcoreEnabled] = useState(settings.sipcore?.enabled ?? true);
+  const [sipcoreApiBaseUrl, setSipcoreApiBaseUrl] = useState(settings.sipcore?.apiBaseUrl || 'https://softworks-us.org');
+  const [sipcoreEmail, setSipcoreEmail] = useState(settings.sipcore?.email || '');
+  const [sipcorePassword, setSipcorePassword] = useState(settings.sipcore?.password || '');
+  const [sipcoreCompanyId, setSipcoreCompanyId] = useState<number | undefined>(settings.sipcore?.companyId);
+  const [sipcoreDefaultExtension, setSipcoreDefaultExtension] = useState(settings.sipcore?.defaultCreatorExtension || '4102');
+  const [sipcoreEnableAiNotetaker, setSipcoreEnableAiNotetaker] = useState(settings.sipcore?.enableAiNotetakerDefault ?? true);
+  const [sipcoreIsRecorded, setSipcoreIsRecorded] = useState(settings.sipcore?.isRecordedDefault ?? false);
+  const [showSipcorePassword, setShowSipcorePassword] = useState(false);
+  const [testingSipcore, setTestingSipcore] = useState(false);
+  const [sipcoreTestResult, setSipcoreTestResult] = useState<{ success: boolean; message: string; companyId?: number } | null>(null);
+
   // Academic Gatekeeping & Multi-Campus Geofencing State
   const [defaultMinimumLearningHours, setDefaultMinimumLearningHours] = useState<number>(
     settings.defaultMinimumLearningHours || 40
@@ -581,6 +595,19 @@ export const SettingsPage: React.FC = () => {
       : initialCampuses
   );
   const [capturingGpsForCampus, setCapturingGpsForCampus] = useState<string | null>(null);
+  const [isSavingCampuses, setIsSavingCampuses] = useState(false);
+
+  // Synchronize state when settings.campusLocationsList loads or updates
+  useEffect(() => {
+    if (settings.campusLocationsList && settings.campusLocationsList.length > 0) {
+      setCampusLocationsList(settings.campusLocationsList);
+    }
+  }, [settings.campusLocationsList]);
+
+  const isCampusesDirty = useMemo(() => {
+    const authoritative = settings.campusLocationsList || initialCampuses;
+    return JSON.stringify(campusLocationsList) !== JSON.stringify(authoritative);
+  }, [campusLocationsList, settings.campusLocationsList]);
 
   // Module enablement feature flags
   const [enabledModules, setEnabledModules] = useState<EnabledModules>({
@@ -1113,6 +1140,21 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
+  const handleSaveCampusesOnly = async () => {
+    if (campusLocationsList.length === 0) {
+      showToast('Validation Error', 'At least one campus location is required for institutional geofencing.', 'error');
+      return;
+    }
+    setIsSavingCampuses(true);
+    try {
+      await saveCampusLocations(campusLocationsList);
+    } catch {
+      showToast('Error', 'Failed to save campus locations.', 'error');
+    } finally {
+      setIsSavingCampuses(false);
+    }
+  };
+
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     const primaryActiveCampus = campusLocationsList.find(c => c.isActive) || campusLocationsList[0];
@@ -1154,6 +1196,20 @@ export const SettingsPage: React.FC = () => {
       },
       studentHandbookUrl: studentHandbookUrl.trim() || undefined,
       defaultCurriculumUrl: defaultCurriculumUrl.trim() || undefined,
+      sipcore: {
+        enabled: sipcoreEnabled,
+        apiBaseUrl: sipcoreApiBaseUrl.trim() || 'https://softworks-us.org',
+        webMeetBaseUrl: 'https://meet.sipcore.org',
+        email: sipcoreEmail.trim(),
+        password: sipcorePassword,
+        companyId: sipcoreCompanyId,
+        defaultCreatorExtension: sipcoreDefaultExtension.trim() || '4102',
+        enableAiNotetakerDefault: sipcoreEnableAiNotetaker,
+        isRecordedDefault: sipcoreIsRecorded,
+        allowGuestJoinDefault: true,
+        requireGuestApprovalDefault: false,
+        autoDeleteAfterEndDefault: true,
+      },
     });
 
     setSavedSuccess(true);
@@ -1225,6 +1281,51 @@ export const SettingsPage: React.FC = () => {
       showToast('Test Error', err.message, 'error');
     } finally {
       setTestingPaystack(false);
+    }
+  };
+
+  const handleTestSipcore = async () => {
+    setTestingSipcore(true);
+    setSipcoreTestResult(null);
+    try {
+      updateSettings({
+        sipcore: {
+          enabled: sipcoreEnabled,
+          apiBaseUrl: sipcoreApiBaseUrl.trim() || 'https://softworks-us.org',
+          webMeetBaseUrl: 'https://meet.sipcore.org',
+          email: sipcoreEmail.trim(),
+          password: sipcorePassword,
+          companyId: sipcoreCompanyId,
+          defaultCreatorExtension: sipcoreDefaultExtension.trim() || '4102',
+          enableAiNotetakerDefault: sipcoreEnableAiNotetaker,
+          isRecordedDefault: sipcoreIsRecorded,
+          allowGuestJoinDefault: true,
+          requireGuestApprovalDefault: false,
+          autoDeleteAfterEndDefault: true,
+        },
+      });
+
+      const res = await apiService.testSipcoreConnection({
+        email: sipcoreEmail.trim(),
+        password: sipcorePassword,
+        apiBaseUrl: sipcoreApiBaseUrl.trim(),
+        defaultCreatorExtension: sipcoreDefaultExtension.trim(),
+      });
+
+      if (res && res.success) {
+        if (res.companyId) setSipcoreCompanyId(res.companyId);
+        if (res.extension) setSipcoreDefaultExtension(res.extension);
+        setSipcoreTestResult({ success: true, message: res.message, companyId: res.companyId });
+        showToast('SIPCore Connected', res.message, 'success');
+      } else {
+        setSipcoreTestResult({ success: false, message: res?.message || 'Authentication failed' });
+        showToast('SIPCore Notice', res?.message || 'Authentication failed', 'warning');
+      }
+    } catch (err: any) {
+      setSipcoreTestResult({ success: false, message: `Could not reach SIPCore API: ${err.message}` });
+      showToast('SIPCore Error', err.message, 'error');
+    } finally {
+      setTestingSipcore(false);
     }
   };
 
@@ -3638,6 +3739,160 @@ export const SettingsPage: React.FC = () => {
             )}
           </div>
 
+          {/* SIPCore Virtual Meetings & AI Note Taker Configuration Card */}
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-outline-variant pb-2">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-xl">videocam</span>
+                <h3 className="font-headline-sm text-base font-bold text-on-surface">
+                  SIPCore Public Meetings &amp; AI Note Taker Integration
+                </h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-secondary">
+                  <input
+                    type="checkbox"
+                    checked={sipcoreEnabled}
+                    onChange={(e) => setSipcoreEnabled(e.target.checked)}
+                    className="rounded border-outline-variant text-primary focus:ring-primary cursor-pointer"
+                  />
+                  <span>Enable SIPCore</span>
+                </label>
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                  sipcoreCompanyId ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/30' : 'bg-surface-container text-secondary border border-outline-variant'
+                }`}>
+                  {sipcoreCompanyId ? `● Active • Company ID #${sipcoreCompanyId}` : '○ Not Configured'}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-secondary leading-relaxed">
+              Enables 1-click virtual classrooms and 1-on-1 coaching sessions hosted on SIPCore infrastructure (<code className="bg-surface-container px-1 py-0.5 rounded text-[11px]">https://meet.sipcore.org</code>). Includes automated speech transcription and high-yield AI study notes for scholars.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1">
+                  API Base URL
+                </label>
+                <input
+                  type="text"
+                  value={sipcoreApiBaseUrl}
+                  onChange={(e) => setSipcoreApiBaseUrl(e.target.value)}
+                  placeholder="https://softworks-us.org"
+                  className="w-full h-10 px-3 rounded bg-surface border border-outline-variant text-sm font-mono focus:border-primary outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1">
+                  Default Creator Extension Number *
+                </label>
+                <input
+                  type="text"
+                  value={sipcoreDefaultExtension}
+                  onChange={(e) => setSipcoreDefaultExtension(e.target.value)}
+                  placeholder="e.g. 4102"
+                  className="w-full h-10 px-3 rounded bg-surface border border-outline-variant text-sm font-mono focus:border-primary outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1">
+                  SIPCore Account Email *
+                </label>
+                <input
+                  type="email"
+                  value={sipcoreEmail}
+                  onChange={(e) => setSipcoreEmail(e.target.value)}
+                  placeholder="admin@institution.com"
+                  className="w-full h-10 px-3 rounded bg-surface border border-outline-variant text-sm focus:border-primary outline-none"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-secondary uppercase tracking-wider">
+                    Account Password *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowSipcorePassword(!showSipcorePassword)}
+                    className="text-[11px] text-primary hover:underline cursor-pointer"
+                  >
+                    {showSipcorePassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+                <input
+                  type={showSipcorePassword ? 'text' : 'password'}
+                  value={sipcorePassword}
+                  onChange={(e) => setSipcorePassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  className="w-full h-10 px-3 rounded bg-surface border border-outline-variant text-sm focus:border-primary outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <span className="text-xs font-bold text-on-surface block">Smart Features Policy</span>
+                <div className="flex items-center gap-4 text-xs">
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={sipcoreEnableAiNotetaker}
+                      onChange={(e) => setSipcoreEnableAiNotetaker(e.target.checked)}
+                      className="rounded border-outline-variant text-primary focus:ring-primary cursor-pointer"
+                    />
+                    <span>Default AI Note Taker Enabled</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={sipcoreIsRecorded}
+                      onChange={(e) => setSipcoreIsRecorded(e.target.checked)}
+                      className="rounded border-outline-variant text-primary focus:ring-primary cursor-pointer"
+                    />
+                    <span>Default Meeting Recording</span>
+                  </label>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleTestSipcore}
+                disabled={testingSipcore}
+                className="px-3.5 py-2 rounded-lg bg-surface border border-outline-variant hover:bg-surface-container font-bold text-xs text-primary transition-all flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-[16px] text-primary">
+                  {testingSipcore ? 'sync' : 'verified_user'}
+                </span>
+                <span>{testingSipcore ? 'Authenticating...' : 'Test SIPCore Connection'}</span>
+              </button>
+            </div>
+
+            {/* Test Connection Results Notice */}
+            {sipcoreTestResult && (
+              <div className={`p-3 rounded-lg border text-xs flex items-start gap-2.5 animate-in fade-in ${
+                sipcoreTestResult.success 
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900' 
+                  : 'bg-error-container/30 border-error/30 text-error'
+              }`}>
+                <span className="material-symbols-outlined text-sm mt-0.5 shrink-0">
+                  {sipcoreTestResult.success ? 'check_circle' : 'error'}
+                </span>
+                <div className="flex-1">
+                  <p className="font-bold">{sipcoreTestResult.message}</p>
+                  {sipcoreTestResult.companyId && (
+                    <p className="text-[11px] opacity-80 mt-0.5">
+                      ✓ Company ID #{sipcoreTestResult.companyId} registered • Ready for timetable virtual classroom generation.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Academic Gatekeeping & Graduation Standards Card */}
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-4">
             <div className="flex items-center justify-between border-b border-outline-variant pb-2">
@@ -3696,22 +3951,47 @@ export const SettingsPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-xl">share_location</span>
                 <div>
-                  <h3 className="font-headline-sm text-base font-bold text-on-surface">
-                    Multi-Campus Physical Hubs &amp; Geofencing Perimeter Manager
-                  </h3>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-headline-sm text-base font-bold text-on-surface">
+                      Multi-Campus Physical Hubs &amp; Geofencing Perimeter Manager
+                    </h3>
+                    {isCampusesDirty ? (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 flex items-center gap-1 animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                        Unsaved Changes
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[12px]">check</span>
+                        Synchronized
+                      </span>
+                    )}
+                  </div>
                   <p className="text-[11px] text-secondary">
                     Configure authorized regional facilities for high-precision GPS shift check-ins and punctuality tracking.
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={handleAddCampus}
-                className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20 text-xs font-bold hover:bg-primary/20 transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[16px]">add_location_alt</span>
-                <span>Add Campus Hub</span>
-              </button>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleSaveCampusesOnly}
+                  disabled={isSavingCampuses}
+                  className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">{isSavingCampuses ? 'sync' : 'save'}</span>
+                  <span>{isSavingCampuses ? 'Saving...' : 'Save Campus Hubs'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddCampus}
+                  className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20 text-xs font-bold hover:bg-primary/20 transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">add_location_alt</span>
+                  <span>Add Campus Hub</span>
+                </button>
+              </div>
             </div>
 
             <div className="space-y-3 pt-1">
@@ -3862,6 +4142,35 @@ export const SettingsPage: React.FC = () => {
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Card Footer Save & Status Bar */}
+            <div className="pt-3 border-t border-outline-variant/60 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-xs text-secondary flex-wrap">
+                <span className="font-semibold text-on-surface">
+                  {campusLocationsList.filter(c => c.isActive).length} of {campusLocationsList.length} Hubs Active
+                </span>
+                <span>•</span>
+                <span>Primary Geofence: <strong className="text-primary">{campusLocationsList.find(c => c.isActive)?.name || 'None'}</strong></span>
+                {isCampusesDirty && (
+                  <span className="text-amber-600 font-semibold text-[11px] flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px]">warning</span>
+                    Click &quot;Save Campus Hubs&quot; to apply changes
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={handleSaveCampusesOnly}
+                  disabled={isSavingCampuses}
+                  className="w-full sm:w-auto px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">{isSavingCampuses ? 'sync' : 'save'}</span>
+                  <span>{isSavingCampuses ? 'Saving Changes...' : 'Save Campus Hubs'}</span>
+                </button>
+              </div>
             </div>
           </div>
 

@@ -41,12 +41,16 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) =
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email) return;
+    if (!name.trim()) return;
+    if (!phone.trim() && !email.trim()) {
+      alert('Please provide at least a Phone Number or Email Address to contact this prospect.');
+      return;
+    }
 
     addLead({
-      name,
-      email,
-      phone: phone || '+234 800 123 4567',
+      name: name.trim(),
+      email: email.trim() || undefined,
+      phone: phone.trim() || '+234 800 000 0000',
       company: company || 'Enterprise Client',
       programInterest: effectiveProgram,
       status: 'New',
@@ -121,15 +125,15 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) =
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-                Email Address <span className="text-error">*</span>
+              <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider flex items-center justify-between">
+                <span>Email Address</span>
+                <span className="text-[10px] text-secondary font-normal lowercase">(optional)</span>
               </label>
               <input
                 type="email"
-                required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="samuel@techvision.io"
+                placeholder="samuel@techvision.io (optional)"
                 className="w-full h-10 px-3 border border-outline-variant/80 rounded-md bg-surface text-body-md focus:border-primary focus:ring-1 focus:ring-primary outline-hidden"
               />
             </div>

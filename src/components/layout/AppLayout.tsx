@@ -40,6 +40,8 @@ import { RecordInstallmentPaymentModal } from '../modals/RecordInstallmentPaymen
 import { CreateSubgroupModal } from '../modals/CreateSubgroupModal';
 import { ForwardMessageModal } from '../modals/ForwardMessageModal';
 import { DailyStandupModal } from '../modals/DailyStandupModal';
+import { InstantMeetingModal } from '../modals/InstantMeetingModal';
+import { AttachRecordingModal } from '../modals/AttachRecordingModal';
 import { MobileBottomNav } from './MobileBottomNav';
 import { FloatingChatWidget } from '../chat/FloatingChatWidget';
 
@@ -233,6 +235,14 @@ export const AppLayout: React.FC = () => {
       />
       <DailyStandupModal
         isOpen={activeModal === 'daily-standup'}
+        onClose={closeModal}
+      />
+      <InstantMeetingModal
+        isOpen={activeModal === 'instant-meeting'}
+        onClose={closeModal}
+      />
+      <AttachRecordingModal
+        isOpen={activeModal === 'attach-recording'}
         onClose={closeModal}
       />
       <ChangePasswordModal />

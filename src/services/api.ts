@@ -8,6 +8,7 @@ import {
   Invoice, 
   MentorshipSession, 
   OrganizationSettings, 
+  CampusLocation, 
   NotificationItem,
   AuthUser,
   ExpenseStatus,
@@ -314,6 +315,13 @@ class ApiService {
     return this.request<OrganizationSettings>('/settings', {
       method: 'PUT',
       body: JSON.stringify(settingsData),
+    });
+  }
+
+  async updateCampusLocations(campusLocationsList: CampusLocation[]): Promise<OrganizationSettings | null> {
+    return this.request<OrganizationSettings>('/settings/campuses', {
+      method: 'PUT',
+      body: JSON.stringify({ campusLocationsList }),
     });
   }
 
@@ -772,6 +780,61 @@ class ApiService {
   async submitClassAttendance(id: string, payload: { attendanceRecords: any[]; notes?: string }) {
     return this.request<{ success: boolean; message: string; data: any }>(`/timetables/${id}/attendance`, {
       method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // SIPCore Virtual Meetings & Recordings
+  async testSipcoreConnection(payload?: { email?: string; password?: string; apiBaseUrl?: string; defaultCreatorExtension?: string }) {
+    return this.request<{ success: boolean; message: string; companyId?: number; extension?: string; companyName?: string; user?: any }>('/sipcore/test-connection', {
+      method: 'POST',
+      body: JSON.stringify(payload || {}),
+    });
+  }
+
+  async createSipcoreMeeting(payload: {
+    title: string;
+    description?: string;
+    createdByExtension?: string;
+    participantExtensions?: string[];
+    externalParticipants?: { name: string; email: string }[];
+    isInstant?: boolean;
+    startDateTime?: string;
+    endDateTime?: string;
+    isRecorded?: boolean;
+    enableAiNotetaker?: boolean;
+    allowGuestJoin?: boolean;
+    requireGuestApproval?: boolean;
+    autoDeleteAfterEnd?: boolean;
+    maxMembers?: number;
+  }) {
+    return this.request<{ success: boolean; data: any }>('/sipcore/meetings/create', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getSipcoreMeeting(meetingId: string, extension?: string) {
+    const q = extension ? `?extension=${encodeURIComponent(extension)}` : '';
+    return this.request<{ success: boolean; data: any }>(`/sipcore/meetings/${encodeURIComponent(meetingId)}${q}`);
+  }
+
+  async attachTimetableRecording(id: string, payload: {
+    recordingUrl: string;
+    recordingNotes?: string;
+    aiTranscriptSummary?: any;
+    syncToLmsLesson?: boolean;
+    lessonId?: string;
+  }) {
+    return this.request<{ success: boolean; message: string; data: { slot: TimetableSlot; syncedLesson?: any } }>(`/timetables/${id}/recording`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async attachSessionRecording(id: string, payload: { recordingUrl: string }) {
+    return this.request<{ success: boolean; message: string; data: any }>(`/sessions/${id}/recording`, {
+      method: 'PATCH',
       body: JSON.stringify(payload),
     });
   }

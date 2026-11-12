@@ -165,6 +165,7 @@ export interface AuthUser extends NigerianBiodataKYC {
   deactivatedReason?: string;
   isApprover?: boolean; // Super Admin assigned official Approver authority
   assignedModules?: string[]; // e.g. ['leads', 'expenses', 'lms', 'billing', 'mentors', 'students', 'attendance', 'tickets']
+  sipcoreExtension?: string;
 }
 
 export type LeadStatus = 'Qualified' | 'Negotiation' | 'Discovery' | 'Overdue' | 'Contacted' | 'New' | 'Converted' | 'Lost';
@@ -182,7 +183,7 @@ export interface LeadFollowUpActivity {
 export interface Lead {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   phone: string;
   company: string;
   programInterest: string;
@@ -331,6 +332,15 @@ export interface EnrolledCourse {
   instructor: string;
   fee: number;
   billedDate: string;
+  cohort?: string;
+  mentorId?: string;
+  mentorName?: string;
+  status?: StudentStatus;
+  totalFees?: number;
+  paidAmount?: number;
+  outstandingBalance?: number;
+  tuitionStatus?: TuitionStatus;
+  progressPercent?: number;
 }
 
 export interface PaymentInstallment {
@@ -369,6 +379,10 @@ export interface LMSLesson {
   dayNumber?: number;
   practicalLabTask?: string;
   submissionRequired?: boolean;
+  recordingSlotId?: string;
+  recordingDate?: string;
+  recordingPlatform?: 'youtube' | 'google_drive' | 'vimeo' | 'loom' | 'sipcore' | 'custom';
+  aiSummaryMarkdown?: string;
 }
 
 export type CourseDurationTrack = '30-Day Sprint' | '60-Day Practitioner' | '90-Day Diploma' | '120-Day Enterprise';
@@ -655,6 +669,7 @@ export interface Mentor extends NigerianBiodataKYC {
   annualLeaveUsed?: number;
   sickLeaveAllowance?: number;
   sickLeaveUsed?: number;
+  sipcoreExtension?: string;
 }
 
 export interface MentorAvailabilitySlot {
@@ -947,6 +962,15 @@ export interface MentorshipSession {
   attendanceMarkedAt?: string;
   attendanceMarkedBy?: string;
   hoursCredited?: number;
+  sipcoreMeetingId?: string;
+  publicMeetingCode?: string;
+  moderatorPin?: string;
+  participantPin?: string;
+  enableAiNotetaker?: boolean;
+  aiNotetakerStatus?: string;
+  hasAiReport?: boolean;
+  isRecorded?: boolean;
+  recordingUrl?: string;
 }
 
 export interface StudentPerformanceReport {
@@ -1011,6 +1035,21 @@ export interface EnabledModules {
   billing: boolean;    // Student Tuition & Invoicing Portal (/student/billing)
 }
 
+export interface SipcoreSettings {
+  enabled: boolean;
+  apiBaseUrl: string; // e.g. "https://softworks-us.org"
+  webMeetBaseUrl: string; // e.g. "https://meet.sipcore.org"
+  email: string;
+  password?: string;
+  companyId?: number;
+  defaultCreatorExtension: string; // e.g. "4102"
+  enableAiNotetakerDefault: boolean;
+  isRecordedDefault: boolean;
+  allowGuestJoinDefault: boolean;
+  requireGuestApprovalDefault: boolean;
+  autoDeleteAfterEndDefault: boolean;
+}
+
 export interface OrganizationSettings {
   instituteName: string;
   portalTitle: string;
@@ -1068,6 +1107,7 @@ export interface OrganizationSettings {
   studentHandbookUrl?: string; // Google Drive link to universal student handbook
   defaultCurriculumUrl?: string; // Fallback Google Drive link for course curriculum
   sessionTimeoutMinutes?: number; // Inactivity timeout in minutes (default 30, 0 = disabled)
+  sipcore?: SipcoreSettings;
 }
 
 export interface VirtualAccountDetails {
@@ -1146,8 +1186,10 @@ export interface ActivityLogItem {
   timestamp: string;
   title: string;
   description: string;
-  type: 'lead' | 'student' | 'finance' | 'mentor' | 'system';
+  type: 'lead' | 'student' | 'finance' | 'mentor' | 'system' | 'attendance' | 'auth';
   user: string;
+  userId?: string;
+  userRole?: string;
 }
 
 export interface NotificationItem {
@@ -1200,6 +1242,25 @@ export interface TimetableSlot {
   createdAt: string;
   createdBy: string;
   notes?: string;
+  sipcoreMeetingId?: string;
+  publicMeetingCode?: string;
+  moderatorPin?: string;
+  participantPin?: string;
+  enableAiNotetaker?: boolean;
+  aiNotetakerStatus?: string;
+  hasAiReport?: boolean;
+  isRecorded?: boolean;
+  recordingUrl?: string; // YouTube, Google Drive, Loom, Vimeo, or SIPCore playback link
+  recordingPlatform?: 'youtube' | 'google_drive' | 'vimeo' | 'loom' | 'sipcore' | 'custom';
+  recordingNotes?: string;
+  aiTranscriptSummary?: {
+    overview?: string;
+    keyPoints?: string[];
+    actionItems?: string[];
+    chapters?: { time: string; title: string }[];
+    fullTranscriptUrl?: string;
+  };
+  syncedToLmsLessonId?: string;
 }
 
 export type ModalType = 
@@ -1245,6 +1306,8 @@ export type ModalType =
   | 'student-profile'
   | 'mentor-profile'
   | 'view-mentor-profile'
+  | 'instant-meeting'
+  | 'attach-recording'
   | null;
 
 export interface DailyStandupTask {

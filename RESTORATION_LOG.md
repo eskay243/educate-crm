@@ -6,6 +6,60 @@ This log is strictly maintained before every deployment or production update. It
 If any issue occurs after a deployment, execute the **Rollback Command** documented in the corresponding snapshot entry below.
 
 ---
+### 📦 Backup Snapshot: `db_backup_20261112074423.json`
+- **Timestamp**: `2026-11-12T07:44:23.552Z`
+- **Git Commit**: `3fa56eb`
+- **Backup Location**: `/Users/abiolaadefowope/cursor 2.0/educate crm/server/backups/db_backup_20261112074423.json`
+- **SHA-256 Checksum**: `cb96d4c1d91faf72...`
+- **File Size**: `7003 KB`
+
+| Metric | Count / Value |
+| :--- | :--- |
+| **Students** | `81` |
+| **Mentors** | `23` |
+| **Leads** | `33` |
+| **Expenses** | `25` |
+| **Courses & Cohorts** | `20 courses / 5 cohorts` |
+| **Invoices** | `38` |
+| **Support Tickets** | `56` |
+| **Attendance Logs** | `51` |
+| **Wallet Balance** | `₦6,640,000` |
+| **DVA Account Number** | `9817707007` |
+
+**Rollback Command**:
+```bash
+cp "/Users/abiolaadefowope/cursor 2.0/educate crm/server/backups/db_backup_20261112074423.json" "/Users/abiolaadefowope/cursor 2.0/educate crm/server/data/db.json" && pm2 restart nexus-crm-api
+```
+
+---
+---
+### 📦 Backup Snapshot: `db_backup_20261111110713.json`
+- **Timestamp**: `2026-11-11T11:07:13.765Z`
+- **Git Commit**: `3fa56eb`
+- **Backup Location**: `/Users/abiolaadefowope/cursor 2.0/educate crm/server/backups/db_backup_20261111110713.json`
+- **SHA-256 Checksum**: `5a72976d043b03c8...`
+- **File Size**: `6961 KB`
+
+| Metric | Count / Value |
+| :--- | :--- |
+| **Students** | `78` |
+| **Mentors** | `21` |
+| **Leads** | `31` |
+| **Expenses** | `23` |
+| **Courses & Cohorts** | `20 courses / 5 cohorts` |
+| **Invoices** | `34` |
+| **Support Tickets** | `54` |
+| **Attendance Logs** | `51` |
+| **Wallet Balance** | `₦5,810,000` |
+| **DVA Account Number** | `9817707007` |
+
+**Rollback Command**:
+```bash
+cp "/Users/abiolaadefowope/cursor 2.0/educate crm/server/backups/db_backup_20261111110713.json" "/Users/abiolaadefowope/cursor 2.0/educate crm/server/data/db.json" && pm2 restart nexus-crm-api
+```
+
+---
+---
 ### 📦 Backup Snapshot: `db_backup_20261019172037.json`
 - **Timestamp**: `2026-10-19T17:20:37.957Z`
 - **Git Commit**: `f2ad8db`

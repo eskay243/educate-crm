@@ -1683,7 +1683,7 @@ export const initialNotifications: NotificationItem[] = [
 export const initialActivityLogs: ActivityLogItem[] = [
   {
     id: 'act-init',
-    timestamp: 'Just now',
+    timestamp: new Date().toISOString(),
     title: 'System Initialized for Production',
     description: 'Workspace cleared with abiola.adefowope@codelab.institute as Super Admin.',
     type: 'system',

@@ -402,14 +402,38 @@ export const Student360Dossier: React.FC<Student360DossierProps> = ({
               </div>
 
               <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-secondary mt-1">
-                <span className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[16px] text-primary">school</span>
-                  <strong className="text-on-surface">{student.program}</strong>
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[16px]">groups</span>
-                  <span>{student.cohort}</span>
-                </span>
+                {student.courses && student.courses.length > 1 ? (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[16px] text-primary">school</span>
+                      <strong className="text-on-surface">Dual Enrolled ({student.courses.length} Programs):</strong>
+                    </span>
+                    {student.courses.map((c, i) => (
+                      <span key={c.id || i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-container border border-outline-variant font-medium text-on-surface">
+                        <span>{c.name}</span>
+                        <span className="text-[10px] text-secondary font-mono">({c.cohort || 'Active'})</span>
+                        {c.status && (
+                          <span className={`text-[9px] font-bold px-1 rounded uppercase ${
+                            c.status === 'Active' ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-500'
+                          }`}>
+                            • {c.status}
+                          </span>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[16px] text-primary">school</span>
+                      <strong className="text-on-surface">{student.program}</strong>
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[16px]">groups</span>
+                      <span>{student.cohort}</span>
+                    </span>
+                  </>
+                )}
                 <span className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-[16px]">calendar_today</span>
                   <span>Enrolled: {student.enrolledDate}</span>
@@ -1035,6 +1059,52 @@ export const Student360Dossier: React.FC<Student360DossierProps> = ({
                 </span>
               </div>
             </div>
+
+            {/* Enrolled Academic Programs (Multi-Program Architecture) */}
+            {student.courses && student.courses.length > 0 && (
+              <div className="bg-surface-container-low border border-outline-variant rounded-xl p-5 shadow-xs">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-bold text-on-surface flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-[18px]">layers</span>
+                    <span>Enrolled Academic Programs &amp; Courses ({student.courses.length} Track{student.courses.length > 1 ? 's' : ''})</span>
+                  </h3>
+                  {student.courses.length > 1 && (
+                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-primary/10 text-primary border border-primary/20">
+                      Multi-Program Scholar
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {student.courses.map((course, idx) => (
+                    <div key={course.id || idx} className="p-3 bg-surface-container rounded-lg border border-outline-variant/60 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <strong className="text-xs text-on-surface">{course.name}</strong>
+                        {course.status && (
+                          <span className={`px-2 py-0.2 rounded text-[10px] font-bold uppercase tracking-wider ${
+                            course.status === 'Active' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' :
+                            course.status === 'Dropped' ? 'bg-slate-500/15 text-slate-700 dark:text-slate-300' :
+                            'bg-blue-500/15 text-blue-700 dark:text-blue-300'
+                          }`}>
+                            {course.status}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-secondary">
+                        <span>Cohort: <strong className="text-on-surface">{course.cohort || student.cohort || 'Active'}</strong></span>
+                        <span>Fee: <strong className="font-data-tabular text-on-surface">{formatNaira(course.fee || 0)}</strong></span>
+                      </div>
+                      {course.instructor && (
+                        <div className="text-[11px] text-secondary flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px] text-primary">psychology</span>
+                          <span>{course.instructor}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Payment Plan & Installments */}
             <div className="bg-surface-container-low border border-outline-variant rounded-xl p-5 shadow-xs">

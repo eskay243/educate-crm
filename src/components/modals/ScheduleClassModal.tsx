@@ -8,7 +8,7 @@ interface ScheduleClassModalProps {
 }
 
 export const ScheduleClassModal: React.FC<ScheduleClassModalProps> = ({ isOpen, onClose }) => {
-  const { courses, cohorts, activeMentors, lmsModules, scheduleClass } = useCRM();
+  const { courses, cohorts, activeMentors, lmsModules, scheduleClass, createSipcoreMeeting, showToast } = useCRM();
 
   const [courseId, setCourseId] = useState(courses[0]?.id || '');
   const [cohortId, setCohortId] = useState(cohorts[0]?.id || '');
@@ -19,9 +19,13 @@ export const ScheduleClassModal: React.FC<ScheduleClassModalProps> = ({ isOpen, 
   const [startTime, setStartTime] = useState('10:00 AM');
   const [endTime, setEndTime] = useState('12:00 PM');
   const [durationHours, setDurationHours] = useState(2);
-  const [venue, setVenue] = useState('Google Meet Virtual Classroom');
+  const [venue, setVenue] = useState('SIPCore Virtual Classroom');
   const [meetingLink, setMeetingLink] = useState('');
   const [notes, setNotes] = useState('');
+  const [enableAiNotetaker, setEnableAiNotetaker] = useState(true);
+  const [isRecorded, setIsRecorded] = useState(false);
+  const [isGeneratingMeeting, setIsGeneratingMeeting] = useState(false);
+  const [sipcoreMeetingInfo, setSipcoreMeetingInfo] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
@@ -34,6 +38,34 @@ export const ScheduleClassModal: React.FC<ScheduleClassModalProps> = ({ isOpen, 
   const courseLessons = lmsModules
     .filter(m => !selectedCourse || m.courseTitle === selectedCourse.title)
     .flatMap(m => m.lessons);
+
+  const handleGenerateSipcore = async () => {
+    setIsGeneratingMeeting(true);
+    try {
+      const startDateTime = `${date}T${startTime.replace(' AM', ':00').replace(' PM', ':00')}`;
+      const endDateTime = `${date}T${endTime.replace(' AM', ':00').replace(' PM', ':00')}`;
+
+      const res = await createSipcoreMeeting({
+        title: topic.trim() || `${selectedCourse?.title || 'Academic'} Lecture`,
+        description: `Cohort: ${selectedCohort?.name || ''} | Faculty: ${selectedMentor?.name || ''}`,
+        isInstant: false,
+        startDateTime,
+        endDateTime,
+        enableAiNotetaker,
+        isRecorded,
+        allowGuestJoin: true,
+      });
+
+      if (res && res.joinUrl) {
+        setMeetingLink(res.joinUrl);
+        setVenue('SIPCore Virtual Classroom');
+        setSipcoreMeetingInfo(res);
+        showToast('SIPCore Room Ready', `Public link: ${res.joinUrl}`, 'success');
+      }
+    } finally {
+      setIsGeneratingMeeting(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,6 +91,12 @@ export const ScheduleClassModal: React.FC<ScheduleClassModalProps> = ({ isOpen, 
         status: 'Scheduled',
         notes: notes.trim() || undefined,
         createdBy: 'Academic Program Office',
+        sipcoreMeetingId: sipcoreMeetingInfo?.meetingId,
+        publicMeetingCode: sipcoreMeetingInfo?.publicMeetingCode,
+        moderatorPin: sipcoreMeetingInfo?.moderatorPin,
+        participantPin: sipcoreMeetingInfo?.participantPin,
+        enableAiNotetaker,
+        isRecorded,
       });
       onClose();
     } finally {
@@ -267,16 +305,57 @@ export const ScheduleClassModal: React.FC<ScheduleClassModalProps> = ({ isOpen, 
               </div>
 
               <div>
-                <label className="block text-label-sm font-semibold text-on-surface mb-1">
-                  Virtual Meeting Link (Optional)
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-label-sm font-semibold text-on-surface">
+                    Virtual Meeting Link
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleGenerateSipcore}
+                    disabled={isGeneratingMeeting}
+                    className="text-[11px] font-bold text-primary hover:text-primary/80 flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">videocam</span>
+                    <span>{isGeneratingMeeting ? 'Provisioning...' : 'Auto-Generate SIPCore'}</span>
+                  </button>
+                </div>
                 <input
                   type="url"
                   value={meetingLink}
                   onChange={(e) => setMeetingLink(e.target.value)}
-                  placeholder="https://meet.google.com/xyz-abc"
+                  placeholder="https://meet.sipcore.org/xyz-abc or Google Meet link"
                   className="w-full h-10 px-3 rounded-lg border border-outline bg-surface text-on-surface text-body-sm focus:border-primary focus:outline-none"
                 />
+              </div>
+            </div>
+
+            {/* Smart Conferencing Toggles */}
+            <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-on-surface">SIPCore Smart Conferencing Options</span>
+                <span className="text-[10px] uppercase font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  Ready
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={enableAiNotetaker}
+                    onChange={(e) => setEnableAiNotetaker(e.target.checked)}
+                    className="w-4 h-4 text-primary rounded border-outline-variant"
+                  />
+                  <span>SIPCore AI Note Taker (Auto-Summaries)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isRecorded}
+                    onChange={(e) => setIsRecorded(e.target.checked)}
+                    className="w-4 h-4 text-primary rounded border-outline-variant"
+                  />
+                  <span>Record Meeting (for Replay Vault)</span>
+                </label>
               </div>
             </div>
 

@@ -136,6 +136,18 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
             </button>
           )}
 
+          {/* Instant Virtual Classroom / Meeting Launcher */}
+          {currentUser && currentUser.role !== 'student' && (
+            <button
+              onClick={() => openModal('instant-meeting')}
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 h-8 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300 transition-colors cursor-pointer shadow-xs"
+              title="Launch instant SIPCore virtual classroom or faculty sync"
+            >
+              <span className="material-symbols-outlined text-[16px] text-emerald-600">videocam</span>
+              <span className="hidden sm:inline">Instant Class</span>
+            </button>
+          )}
+
           {/* Quick Record Creator (Restricted to non-students and non-mentors) */}
           {currentUser && currentUser.role !== 'student' && currentUser.role !== 'mentor' && (
             <button
