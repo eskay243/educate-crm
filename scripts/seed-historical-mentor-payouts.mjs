@@ -211,11 +211,30 @@ function run() {
     }
   }
 
-  // Build mentor lookup by normalized name
+  // Build mentor lookup by normalized name + production ID aliases
   const mentorByName = new Map();
+  const mentorById = new Map();
   for (const m of db.mentors) {
     mentorByName.set(normalizeName(m.name), m);
+    mentorById.set(m.id, m);
   }
+  const LEGACY_MENTOR_ID_ALIASES = {
+    'godsmiracle ibitoye': 'men-1789126021588',
+    'godsmiracle ibitayo': 'men-1789126021588',
+    'damilola ajuwon': 'men-1789126200444',
+    'oluwadamilola ajuwon favour': 'men-1789126200444',
+    'obasesam usang': 'men-1789126765011',
+    'obassesam usang': 'men-1789126765011',
+    'promise oviawele': 'men-1789126100630',
+    'promise': 'men-1789126100630'
+  };
+  const resolveMentor = (name) => {
+    const norm = normalizeName(name);
+    if (mentorByName.has(norm)) return mentorByName.get(norm);
+    const aliasId = LEGACY_MENTOR_ID_ALIASES[norm];
+    if (aliasId && mentorById.has(aliasId)) return mentorById.get(aliasId);
+    return null;
+  };
 
   // 2. Normalize known student mentorName typos (e.g. Obassesam Usang -> Obasesam Usang)
   let fixedStudents = 0;
@@ -241,7 +260,7 @@ function run() {
   let createdExpenses = 0;
 
   for (const row of HISTORICAL_LEDGER_ROWS) {
-    const mentor = mentorByName.get(normalizeName(row.mentorName));
+    const mentor = resolveMentor(row.mentorName);
     if (!mentor) {
       throw new Error(`Mentor not found for row ${row.id}: ${row.mentorName}`);
     }
