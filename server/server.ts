@@ -77,6 +77,7 @@ interface DatabaseSchema {
   wallet?: any;
   timetables?: any[];
   payoutRequests?: any[];
+  mentorCohortLedgers?: any[];
   pushSubscriptions?: any[];
   chatConversations?: any[];
   chatMessages?: any[];
@@ -214,6 +215,7 @@ const getInitialDatabase = (): DatabaseSchema => ({
   wallet: defaultWallet,
   timetables: initialTimetables,
   payoutRequests: [],
+  mentorCohortLedgers: [],
   pushSubscriptions: [],
   chatConversations: initialChatConversations,
   chatMessages: initialChatMessages,
@@ -247,6 +249,7 @@ const loadDatabase = (): DatabaseSchema => {
     }
     if (!Array.isArray(parsed.timetables)) parsed.timetables = initialTimetables;
     if (!Array.isArray(parsed.payoutRequests)) parsed.payoutRequests = [];
+    if (!Array.isArray(parsed.mentorCohortLedgers)) parsed.mentorCohortLedgers = [];
     if (!parsed.wallet) parsed.wallet = defaultWallet;
     if (!Array.isArray(parsed.chatConversations)) parsed.chatConversations = initialChatConversations;
     if (!Array.isArray(parsed.chatMessages)) parsed.chatMessages = initialChatMessages;
@@ -4249,12 +4252,13 @@ app.post('/api/timetables/:id/attendance', (req: Request, res: Response) => {
 
   // 3. Credit lecturing hours to the mentor
   let mentorCredited = false;
-  if (slot.mentorId) {
-    const mentor = db.mentors.find(m => m.id === slot.mentorId || m.name === slot.mentorName);
-    if (mentor) {
-      mentor.lecturedHours = (mentor.lecturedHours || 0) + durationHours;
-      mentorCredited = true;
-    }
+  const mentor = db.mentors.find(m => 
+    (slot.mentorId && m.id === slot.mentorId) || 
+    (slot.mentorName && m.name && m.name.trim().toLowerCase() === slot.mentorName.trim().toLowerCase())
+  );
+  if (mentor) {
+    mentor.lecturedHours = (mentor.lecturedHours || 0) + durationHours;
+    mentorCredited = true;
   }
 
   db.timetables[slotIndex] = slot;
@@ -5240,7 +5244,7 @@ app.post('/api/paystack/disburse-mentor', async (req: Request, res: Response) =>
       return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin, Finance, and designated Approvers can authorize payouts.' });
     }
 
-    const { mentorId, amount, reason } = req.body;
+    const { mentorId, amount, reason, bypassHoursCheck, cohortLedgerId } = req.body;
     const mentor = db.mentors.find(m => m.id === mentorId);
 
     if (!mentor) {
@@ -5249,7 +5253,10 @@ app.post('/api/paystack/disburse-mentor', async (req: Request, res: Response) =>
 
     const minRequired = mentor.minimumRequiredHours ?? db.settings?.mentorMinimumLecturedHours ?? 20;
     const actualHours = mentor.lecturedHours ?? 0;
-    if (actualHours < minRequired) {
+    const callerRoleHeader = String(req.headers['x-user-role'] || req.body?.callerRole || '').toLowerCase();
+    const canBypassHours = Boolean(bypassHoursCheck) && (callerRoleHeader.includes('super admin') || callerRoleHeader.includes('finance') || callerRoleHeader.includes('admin'));
+
+    if (actualHours < minRequired && !canBypassHours) {
       return res.status(400).json({
         success: false,
         error: 'Lecturing Hours Requirement Not Met',
@@ -5329,6 +5336,16 @@ app.post('/api/paystack/disburse-mentor', async (req: Request, res: Response) =>
     // Deduct from mentor pending payout
     mentor.pendingPayout = Math.max(0, (mentor.pendingPayout || 0) - disburseAmount);
     mentor.paidPayout = (mentor.paidPayout || 0) + disburseAmount;
+    mentor.payoutStatus = mentor.pendingPayout === 0 ? 'Paid' : 'Partial';
+
+    // Reconcile cohort ledger if provided
+    if (cohortLedgerId && Array.isArray(db.mentorCohortLedgers)) {
+      const ledger = db.mentorCohortLedgers.find((l: any) => l.id === cohortLedgerId);
+      if (ledger) {
+        ledger.amountDisbursed = Number(ledger.amountDisbursed || 0) + disburseAmount;
+        ledger.updatedAt = new Date().toISOString();
+      }
+    }
 
     // Deduct from wallet balance & record ledger
     db.wallet.balance = Math.max(0, (db.wallet.balance || 0) - disburseAmount);
@@ -5378,6 +5395,385 @@ app.post('/api/paystack/disburse-mentor', async (req: Request, res: Response) =>
   } catch (error: any) {
     console.error('Paystack disbursement error:', error);
     res.status(500).json({ success: false, message: error.message || 'Disbursement failed' });
+  }
+});
+
+// --------------------------------------------------------------------------
+// Mentor Commission Reconciliation & Manual Subsequent Payout Endpoints
+// --------------------------------------------------------------------------
+const normalizeMatchText = (val: any) => String(val || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+const recalculateMentorPayoutTotals = (mentorId: string) => {
+  const mentor = db.mentors.find((m: any) => m.id === mentorId);
+  if (!mentor) return null;
+  const ledgers = (db.mentorCohortLedgers || []).filter((l: any) => l.mentorId === mentorId);
+  if (ledgers.length > 0) {
+    const ledgerEarned = ledgers.reduce((sum: number, l: any) => sum + Number(l.agreedAmountDue || 0), 0);
+    const ledgerDisbursed = ledgers.reduce((sum: number, l: any) => sum + Number(l.amountDisbursed || 0), 0);
+    const extraDisbursed = (db.payoutRequests || [])
+      .filter((r: any) => r.mentorId === mentorId && r.status === 'Disbursed' && !r.isHistorical && !r.cohortLedgerId)
+      .reduce((sum: number, r: any) => sum + Number(r.amount || 0), 0);
+    mentor.totalEarned = ledgerEarned;
+    mentor.paidPayout = ledgerDisbursed + extraDisbursed;
+    mentor.pendingPayout = Math.max(0, mentor.totalEarned - mentor.paidPayout);
+    mentor.payoutStatus = mentor.pendingPayout === 0 ? 'Paid' : mentor.paidPayout > 0 ? 'Partial' : 'Pending';
+  }
+  return mentor;
+};
+
+app.get('/api/mentor-reconciliation', (_req: Request, res: Response) => {
+  try {
+    if (!Array.isArray(db.mentorCohortLedgers)) db.mentorCohortLedgers = [];
+    const realStudents = (db.students || []).filter((s: any) => !String(s.email || '').includes('.qa.'));
+
+    const rows = db.mentorCohortLedgers.map((ledger: any) => {
+      const targetCourse = normalizeMatchText(ledger.courseName);
+      const targetMentor = normalizeMatchText(ledger.mentorName);
+
+      const matchedStudents = realStudents
+        .filter((s: any) => {
+          const mentorMatch =
+            (s.mentorId && s.mentorId === ledger.mentorId) ||
+            normalizeMatchText(s.mentorName) === targetMentor;
+          if (!mentorMatch) return false;
+          const prog = normalizeMatchText(s.program);
+          return prog === targetCourse || prog.includes(targetCourse) || targetCourse.includes(prog);
+        })
+        .map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          email: s.email,
+          program: s.program,
+          cohort: s.cohort,
+          totalFees: Number(s.totalFees || 0),
+          paidAmount: Number(s.paidAmount || 0),
+          outstandingBalance: Number(s.outstandingBalance ?? Math.max(0, Number(s.totalFees || 0) - Number(s.paidAmount || 0))),
+          tuitionStatus: s.tuitionStatus || 'Pending'
+        }));
+
+      const liveStudentPaid = matchedStudents.reduce((sum: number, s: any) => sum + s.paidAmount, 0);
+      const historicalStudentPaid = Number(ledger.historicalStudentPaid || 0);
+      const effectiveStudentPaid = Math.max(historicalStudentPaid, liveStudentPaid);
+      const rate = Number(ledger.commissionRate ?? 0.37);
+      const calculatedCommission37 = Math.round(effectiveStudentPaid * rate);
+      const agreedAmountDue = Number(ledger.agreedAmountDue ?? calculatedCommission37);
+      const varianceAmount = agreedAmountDue - calculatedCommission37;
+      const amountDisbursed = Number(ledger.amountDisbursed || 0);
+      const outstandingAmount = Math.max(0, agreedAmountDue - amountDisbursed);
+      const paymentStatus = outstandingAmount === 0 && agreedAmountDue > 0
+        ? 'Completed'
+        : amountDisbursed > 0
+          ? 'Partial'
+          : 'Pending';
+
+      return {
+        ...ledger,
+        liveStudentPaid,
+        effectiveStudentPaid,
+        calculatedCommission37,
+        varianceAmount,
+        outstandingAmount,
+        paymentStatus,
+        matchedStudents
+      };
+    });
+
+    const summaryMap = new Map<string, any>();
+    for (const r of rows) {
+      const mentor = db.mentors.find((m: any) => m.id === r.mentorId);
+      if (!summaryMap.has(r.mentorId)) {
+        summaryMap.set(r.mentorId, {
+          mentorId: r.mentorId,
+          mentorName: mentor?.name || r.mentorName,
+          mentorEmail: mentor?.email || '',
+          lecturedHours: mentor?.lecturedHours || 0,
+          minimumRequiredHours: mentor?.minimumRequiredHours ?? db.settings?.mentorMinimumLecturedHours ?? 20,
+          totalStudentDeposits: 0,
+          totalCalculatedCommission37: 0,
+          totalAgreedDue: 0,
+          totalVariance: 0,
+          totalDisbursed: 0,
+          totalOutstanding: 0,
+          rowCount: 0,
+          varianceCount: 0
+        });
+      }
+      const s = summaryMap.get(r.mentorId);
+      s.totalStudentDeposits += r.effectiveStudentPaid;
+      s.totalCalculatedCommission37 += r.calculatedCommission37;
+      s.totalAgreedDue += r.agreedAmountDue;
+      s.totalVariance += r.varianceAmount;
+      s.totalDisbursed += r.amountDisbursed;
+      s.totalOutstanding += r.outstandingAmount;
+      s.rowCount += 1;
+      if (Math.abs(r.varianceAmount) > 0) s.varianceCount += 1;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        rows,
+        mentorSummaries: Array.from(summaryMap.values())
+      }
+    });
+  } catch (error: any) {
+    console.error('Reconciliation fetch error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to compute reconciliation' });
+  }
+});
+
+app.post('/api/mentor-reconciliation/ledger', (req: Request, res: Response) => {
+  try {
+    if (!isAuthorizedApprover(req)) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin or Finance can add reconciliation entries.' });
+    }
+    if (!Array.isArray(db.mentorCohortLedgers)) db.mentorCohortLedgers = [];
+
+    const { cohortName, courseName, mentorId, courseStatus, studentCount, startDate, dueDate, historicalStudentPaid, agreedAmountDue, commissionRate, notes } = req.body;
+    const mentor = db.mentors.find((m: any) => m.id === mentorId);
+    if (!mentor) {
+      return res.status(404).json({ success: false, message: 'Mentor not found' });
+    }
+    const rate = Number(commissionRate ?? 0.37);
+    const paid = Number(historicalStudentPaid || 0);
+    const due = agreedAmountDue !== undefined ? Number(agreedAmountDue) : Math.round(paid * rate);
+
+    const newEntry = {
+      id: `ledger-${Date.now()}`,
+      cohortName: String(cohortName || 'CURRENT COHORT').trim(),
+      courseName: String(courseName || 'GENERAL').trim(),
+      mentorId: mentor.id,
+      mentorName: mentor.name,
+      courseStatus: courseStatus || 'In progress',
+      studentCount: Number(studentCount || 0),
+      startDate: startDate || new Date().toISOString().split('T')[0],
+      dueDate: dueDate || '',
+      historicalStudentPaid: paid,
+      agreedAmountDue: due,
+      commissionRate: rate,
+      amountDisbursed: 0,
+      isHistoricalSeed: false,
+      notes: notes || '',
+      updatedAt: new Date().toISOString()
+    };
+
+    db.mentorCohortLedgers.unshift(newEntry);
+    recalculateMentorPayoutTotals(mentor.id);
+    saveDatabase(db);
+    res.json({ success: true, data: newEntry });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.patch('/api/mentor-reconciliation/ledger/:id', (req: Request, res: Response) => {
+  try {
+    if (!isAuthorizedApprover(req)) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin or Finance can edit reconciliation entries.' });
+    }
+    if (!Array.isArray(db.mentorCohortLedgers)) db.mentorCohortLedgers = [];
+    const ledger = db.mentorCohortLedgers.find((l: any) => l.id === req.params.id);
+    if (!ledger) {
+      return res.status(404).json({ success: false, message: 'Reconciliation ledger entry not found' });
+    }
+
+    const previousMentorId = ledger.mentorId;
+    const { mentorId, historicalStudentPaid, agreedAmountDue, amountDisbursed, courseStatus, notes } = req.body;
+    if (mentorId && mentorId !== ledger.mentorId) {
+      const nextMentor = db.mentors.find((m: any) => m.id === mentorId);
+      if (!nextMentor) return res.status(404).json({ success: false, message: 'Target mentor not found' });
+      ledger.mentorId = nextMentor.id;
+      ledger.mentorName = nextMentor.name;
+    }
+    if (historicalStudentPaid !== undefined) ledger.historicalStudentPaid = Number(historicalStudentPaid);
+    if (agreedAmountDue !== undefined) ledger.agreedAmountDue = Number(agreedAmountDue);
+    if (amountDisbursed !== undefined) ledger.amountDisbursed = Number(amountDisbursed);
+    if (courseStatus !== undefined) ledger.courseStatus = courseStatus;
+    if (notes !== undefined) ledger.notes = notes;
+    ledger.updatedAt = new Date().toISOString();
+
+    recalculateMentorPayoutTotals(previousMentorId);
+    if (ledger.mentorId !== previousMentorId) {
+      recalculateMentorPayoutTotals(ledger.mentorId);
+    }
+    saveDatabase(db);
+    res.json({ success: true, data: ledger });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/api/mentors/:id/record-student-deposit', (req: Request, res: Response) => {
+  try {
+    if (!isAuthorizedApprover(req)) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin or Finance can record student deposits.' });
+    }
+    const { studentId, amount, paymentReference, cohortLedgerId } = req.body;
+    const depositAmount = Number(amount || 0);
+    if (depositAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'Deposit amount must be greater than 0' });
+    }
+    const student = db.students.find((s: any) => s.id === studentId);
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+    const mentor = db.mentors.find((m: any) => m.id === req.params.id);
+    if (!mentor) {
+      return res.status(404).json({ success: false, message: 'Mentor not found' });
+    }
+
+    student.paidAmount = Number(student.paidAmount || 0) + depositAmount;
+    const totalFees = Number(student.totalFees || student.paidAmount);
+    student.outstandingBalance = Math.max(0, totalFees - student.paidAmount);
+    student.tuitionStatus = student.outstandingBalance === 0 ? 'Paid' : 'Partial';
+
+    const commission = Math.round(depositAmount * Number(mentor.commissionRate ?? 0.37));
+    if (cohortLedgerId && Array.isArray(db.mentorCohortLedgers)) {
+      const ledger = db.mentorCohortLedgers.find((l: any) => l.id === cohortLedgerId);
+      if (ledger) {
+        ledger.agreedAmountDue = Number(ledger.agreedAmountDue || 0) + commission;
+        ledger.updatedAt = new Date().toISOString();
+      }
+      recalculateMentorPayoutTotals(mentor.id);
+    } else {
+      mentor.totalEarned = Number(mentor.totalEarned || 0) + commission;
+      mentor.pendingPayout = Number(mentor.pendingPayout || 0) + commission;
+    }
+
+    db.activityLogs.unshift({
+      id: `act-${Date.now()}-dep`,
+      timestamp: new Date().toISOString(),
+      title: `Student Deposit Logged (₦${depositAmount.toLocaleString()})`,
+      description: `Recorded deposit for ${student.name} (Ref: ${paymentReference || 'MANUAL-DEP'}). Credited 37% commission (₦${commission.toLocaleString()}) to ${mentor.name}.`,
+      type: 'finance',
+      user: 'Finance Controller'
+    });
+
+    saveDatabase(db);
+    res.json({ success: true, data: { student, mentor, commission } });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/api/mentors/:id/manual-payout', (req: Request, res: Response) => {
+  try {
+    if (!isAuthorizedApprover(req)) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin, Finance, and designated Approvers can record mentor payouts.' });
+    }
+    const mentor = db.mentors.find((m: any) => m.id === req.params.id);
+    if (!mentor) {
+      return res.status(404).json({ success: false, message: 'Mentor not found' });
+    }
+
+    const { amount, bankReference, bankName, notes, cohortLedgerId, bypassHoursCheck } = req.body;
+    const payoutAmount = Number(amount || 0);
+    if (payoutAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'Payout amount must be greater than 0' });
+    }
+
+    const minRequired = mentor.minimumRequiredHours ?? db.settings?.mentorMinimumLecturedHours ?? 20;
+    const actualHours = mentor.lecturedHours ?? 0;
+    const callerRoleHeader = String(req.headers['x-user-role'] || req.body?.callerRole || '').toLowerCase();
+    const canBypass = Boolean(bypassHoursCheck) && (callerRoleHeader.includes('super admin') || callerRoleHeader.includes('finance') || callerRoleHeader.includes('admin'));
+
+    if (actualHours < minRequired && !canBypass) {
+      return res.status(400).json({
+        success: false,
+        error: 'Lecturing Hours Requirement Not Met',
+        message: `Payout locked: Faculty mentor has logged ${actualHours} lecturing hours (minimum ${minRequired}h required). Enable Super Admin Legacy Override to proceed.`
+      });
+    }
+
+    const nowIso = new Date().toISOString();
+    const ref = bankReference || `MAN-TRF-${Date.now()}`;
+    const voucherNo = `VCH-MAN-${Date.now().toString().slice(-6)}`;
+    const expenseId = `exp-man-${Date.now()}`;
+    const payoutId = `req-man-${Date.now()}`;
+
+    if (cohortLedgerId && Array.isArray(db.mentorCohortLedgers)) {
+      const ledger = db.mentorCohortLedgers.find((l: any) => l.id === cohortLedgerId);
+      if (ledger) {
+        ledger.amountDisbursed = Number(ledger.amountDisbursed || 0) + payoutAmount;
+        ledger.updatedAt = nowIso;
+      }
+    }
+
+    mentor.paidPayout = Number(mentor.paidPayout || 0) + payoutAmount;
+    mentor.pendingPayout = Math.max(0, Number(mentor.pendingPayout || 0) - payoutAmount);
+    mentor.payoutStatus = mentor.pendingPayout === 0 ? 'Paid' : 'Partial';
+
+    if (!Array.isArray(db.payoutRequests)) db.payoutRequests = [];
+    const newPayout = {
+      id: payoutId,
+      mentorId: mentor.id,
+      mentorName: mentor.name,
+      mentorEmail: mentor.email,
+      amount: payoutAmount,
+      lecturedHours: actualHours,
+      minimumRequiredHours: minRequired,
+      bankName: bankName || mentor.bankName || 'Manual Bank Transfer',
+      accountNumber: mentor.accountNumber || 'N/A',
+      accountName: mentor.accountName || mentor.name,
+      bankCode: mentor.bankCode || '',
+      status: 'Disbursed',
+      netDisbursedAmount: payoutAmount,
+      voucherNumber: voucherNo,
+      requestedAt: nowIso,
+      reviewedAt: nowIso,
+      reviewedBy: 'Finance / Super Admin',
+      disbursedAt: nowIso,
+      disburseReference: ref,
+      notes: notes || 'Manual bank transfer recorded via Commission Reconciliation',
+      expenseId,
+      isHistorical: false,
+      cohortLedgerId: cohortLedgerId || undefined,
+      paymentMethod: 'manual_bank'
+    };
+    db.payoutRequests.unshift(newPayout);
+
+    db.expenses.unshift({
+      id: expenseId,
+      expenseCode: voucherNo,
+      title: `Mentor Payout (Manual Bank): ${mentor.name}`,
+      category: 'Faculty & Mentor Payouts',
+      amount: payoutAmount,
+      date: nowIso.split('T')[0],
+      createdAt: nowIso,
+      department: 'Academic Faculty',
+      paymentMethod: 'Manual Bank Transfer',
+      status: 'Paid',
+      vendor: mentor.name,
+      requestedBy: 'Finance / Super Admin',
+      description: notes || `Manual bank transfer settlement (Ref: ${ref})`,
+      disbursedAt: nowIso,
+      transferReference: ref,
+      mentorId: mentor.id,
+      mentorName: mentor.name,
+      payoutRequestId: payoutId,
+      voucherNumber: voucherNo,
+      isHistorical: false,
+      walletDeducted: false
+    });
+
+    db.activityLogs.unshift({
+      id: `act-${Date.now()}-manpay`,
+      timestamp: nowIso,
+      title: `Manual Mentor Payout Recorded (₦${payoutAmount.toLocaleString()})`,
+      description: `Recorded manual bank transfer to ${mentor.name} (Ref: ${ref})${canBypass ? ' [20h Legacy Override]' : ''}.`,
+      type: 'mentor',
+      user: 'Finance Controller'
+    });
+
+    saveDatabase(db);
+    sendMentorPayoutAdviceEmail(mentor, payoutAmount, ref);
+    res.json({
+      success: true,
+      message: `₦${payoutAmount.toLocaleString()} manual payout recorded for ${mentor.name}.`,
+      data: { mentor, payout: newPayout }
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
@@ -5480,6 +5876,24 @@ app.patch('/api/payout-requests/:id', (req: Request, res: Response) => {
 
   saveDatabase(db);
   res.json({ success: true, data: db.payoutRequests[index] });
+});
+
+app.delete('/api/payout-requests/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  if (!Array.isArray(db.payoutRequests)) db.payoutRequests = [];
+  const index = db.payoutRequests.findIndex((r: any) => r.id === id);
+  if (index === -1) {
+    return res.status(404).json({ success: false, message: 'Payout request not found.' });
+  }
+
+  const removed = db.payoutRequests.splice(index, 1)[0];
+  // Reconcile and remove linked expense if present
+  if (Array.isArray(db.expenses)) {
+    db.expenses = db.expenses.filter((e: any) => e.payoutRequestId !== id && e.id !== removed.expenseId);
+  }
+
+  saveDatabase(db);
+  res.json({ success: true, message: 'Payout request deleted successfully.', data: removed });
 });
 
 // ----------------------------------------------------
@@ -6519,6 +6933,64 @@ app.post('/api/lms/assignments/submit', (req: Request, res: Response) => {
   }
 
   res.status(201).json({ success: true, data: newSubmission });
+});
+
+app.post('/api/lms/assignments/create', (req: Request, res: Response) => {
+  if (!db.assignments) db.assignments = initialAssignments;
+  const {
+    taskTitle,
+    courseTitle,
+    moduleTitle,
+    mentorId,
+    mentorName,
+    studentId,
+    studentName,
+    instructions,
+    maxScore,
+    dueDate,
+    assignmentType,
+    grade,
+    status,
+    mentorFeedback,
+  } = req.body;
+
+  if (!taskTitle || !courseTitle) {
+    return res.status(400).json({ success: false, message: 'Task title and course title are required.' });
+  }
+
+  // Create submission / assignment entry
+  const newAssignment: any = {
+    id: `sub-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    studentId: studentId || '',
+    studentName: studentName || 'Assigned Cohort Student',
+    courseTitle,
+    moduleTitle: moduleTitle || 'Curriculum Sprint Milestone',
+    taskTitle,
+    instructions: instructions || '',
+    maxScore: maxScore || 100,
+    dueDate: dueDate || '',
+    assignmentType: assignmentType || 'assignment',
+    status: status || 'Pending',
+    grade: grade !== undefined ? Number(grade) : undefined,
+    mentorFeedback: mentorFeedback || '',
+    reviewedBy: grade !== undefined ? (mentorName || 'Faculty Mentor') : undefined,
+    reviewedAt: grade !== undefined ? new Date().toISOString() : undefined,
+    submittedAt: new Date().toISOString(),
+    mentorId: mentorId || '',
+  };
+
+  db.assignments.unshift(newAssignment);
+
+  if (studentId) {
+    const student = db.students.find(s => s.id === studentId);
+    if (student) {
+      if (!student.assignmentSubmissions) student.assignmentSubmissions = [];
+      student.assignmentSubmissions.unshift(newAssignment);
+    }
+  }
+
+  saveDatabase(db);
+  res.status(201).json({ success: true, data: newAssignment });
 });
 
 app.post('/api/lms/assignments/:id/grade', (req: Request, res: Response) => {
@@ -7594,13 +8066,31 @@ app.post('/api/scrum/standup', (req: Request, res: Response) => {
   if (!Array.isArray((db as any).dailyStandups)) (db as any).dailyStandups = [];
   const today = new Date().toISOString().split('T')[0];
 
-  const completedCount = Array.isArray(tasksYesterday) ? tasksYesterday.filter((t: any) => t.status === 'completed').length : 0;
-  const plannedCount = Array.isArray(tasksToday) ? tasksToday.length : 0;
-  const hasBlockers = Array.isArray(blockers) && blockers.length > 0;
+  const sanitizeTasks = (arr: any[]): any[] => {
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .filter((t: any) => t && typeof t.description === 'string' && t.description.trim().length > 0)
+      .map((t: any) => ({
+        ...t,
+        description: t.description.trim(),
+      }));
+  };
+
+  const cleanYesterday = sanitizeTasks(tasksYesterday);
+  const cleanToday = sanitizeTasks(tasksToday);
+  const cleanBlockers = Array.isArray(blockers)
+    ? blockers
+        .filter((b: any) => typeof b === 'string' && b.trim().length > 0)
+        .map((b: string) => b.trim())
+    : [];
+
+  const completedCount = cleanYesterday.filter((t: any) => t.status === 'completed').length;
+  const plannedCount = cleanToday.length;
+  const hasBlockers = cleanBlockers.length > 0;
   
   let aiFeedback = '';
   if (hasBlockers) {
-    aiFeedback = `⚠️ Blockers flagged: ${blockers.join(', ')}. AI Scrum Master has alerted the responsible department leads. Prioritize unblocked module items.`;
+    aiFeedback = `⚠️ Blockers flagged: ${cleanBlockers.join(', ')}. AI Scrum Master has alerted the responsible department leads. Prioritize unblocked module items.`;
   } else if (completedCount > 0 && plannedCount > 0) {
     aiFeedback = `⚡ Excellent sprint velocity! ${completedCount} deliverables completed, ${plannedCount} planned for today. Module alignment is strong.`;
   } else {
@@ -7613,9 +8103,9 @@ app.post('/api/scrum/standup', (req: Request, res: Response) => {
     userName,
     userRole: userRole || 'staff',
     date: today,
-    tasksYesterday: Array.isArray(tasksYesterday) ? tasksYesterday : [],
-    tasksToday: Array.isArray(tasksToday) ? tasksToday : [],
-    blockers: Array.isArray(blockers) ? blockers : [],
+    tasksYesterday: cleanYesterday,
+    tasksToday: cleanToday,
+    blockers: cleanBlockers,
     taggedModuleIds: Array.isArray(taggedModuleIds) ? taggedModuleIds : [],
     aiAgentFeedback: aiFeedback,
     sentiment: hasBlockers ? 'blocked' : 'positive',
@@ -7745,6 +8235,45 @@ app.post('/api/scrum/weekly-evaluation', (req: Request, res: Response) => {
     (db.students || []).find((s: any) => s.id === userId) ||
     { name: 'Team Member', role: 'Staff' };
 
+  // Calculate real module throughput breakdown across user standups
+  const moduleBreakdown: Record<string, { tasksPlanned: number; tasksCompleted: number }> = {};
+
+  userStandups.forEach((s: any) => {
+    if (Array.isArray(s.tasksToday)) {
+      s.tasksToday.forEach((t: any) => {
+        if (!t || !t.description || !t.description.trim()) return;
+        const mod = t.moduleId || 'leads';
+        if (!moduleBreakdown[mod]) moduleBreakdown[mod] = { tasksPlanned: 0, tasksCompleted: 0 };
+        moduleBreakdown[mod].tasksPlanned += 1;
+        if (t.status === 'completed') {
+          moduleBreakdown[mod].tasksCompleted += 1;
+        }
+      });
+    }
+    if (Array.isArray(s.tasksYesterday)) {
+      s.tasksYesterday.forEach((t: any) => {
+        if (!t || !t.description || !t.description.trim()) return;
+        const mod = t.moduleId || 'leads';
+        if (!moduleBreakdown[mod]) moduleBreakdown[mod] = { tasksPlanned: 0, tasksCompleted: 0 };
+        if (t.status === 'completed') {
+          moduleBreakdown[mod].tasksCompleted += 1;
+          if (moduleBreakdown[mod].tasksPlanned < moduleBreakdown[mod].tasksCompleted) {
+            moduleBreakdown[mod].tasksPlanned = moduleBreakdown[mod].tasksCompleted;
+          }
+        }
+      });
+    }
+  });
+
+  // Populate assigned modules with 0/0 if no tasks have been recorded for them yet
+  if (Array.isArray((userObj as any).assignedModules)) {
+    (userObj as any).assignedModules.forEach((modId: string) => {
+      if (!moduleBreakdown[modId]) {
+        moduleBreakdown[modId] = { tasksPlanned: 0, tasksCompleted: 0 };
+      }
+    });
+  }
+
   const weeklyReport = {
     id: `scr-rep-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     userId,
@@ -7763,7 +8292,7 @@ app.post('/api/scrum/weekly-evaluation', (req: Request, res: Response) => {
       totalTasksLogged,
       totalTasksCompleted
     },
-    moduleBreakdown: {},
+    moduleBreakdown,
     aiExecutiveSummary: `Sprint evaluation for ${userObj.name}: High operational execution across assigned modules with consistent daily check-ins and strong closure velocity.`,
     aiStrengths: ['Proactive daily task logging', 'Rapid deliverable execution', 'High module alignment'],
     aiGrowthAreas: ['Pre-empt cross-department dependency handoffs', 'Log granular estimated completion hours'],

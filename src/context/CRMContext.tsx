@@ -28,6 +28,9 @@ import {
   WorkMode,
   GeoVerificationStatus,
   PunctualityStatus,
+  MentorCohortLedgerEntry,
+  MentorReconciliationRow,
+  MentorReconciliationSummary,
   LMSModule,
   StudentAssignmentSubmission,
   EnabledModules,
@@ -200,7 +203,14 @@ interface CRMContextType {
     bankReference?: string;
   }) => Promise<boolean>;
   verifyBankTransferStatus: (reference: string) => Promise<WalletTransaction | null>;
-  disburseMentorFromWallet: (mentorId: string, amount: number, reason?: string, payoutRequestId?: string) => Promise<boolean>;
+  disburseMentorFromWallet: (mentorId: string, amount: number, reason?: string, payoutRequestId?: string, options?: { bypassHoursCheck?: boolean; cohortLedgerId?: string }) => Promise<boolean>;
+  reconciliationRows: MentorReconciliationRow[];
+  reconciliationSummaries: MentorReconciliationSummary[];
+  fetchMentorReconciliation: () => Promise<void>;
+  createReconciliationLedger: (payload: Partial<MentorCohortLedgerEntry>) => Promise<boolean>;
+  updateReconciliationLedger: (id: string, payload: Partial<MentorCohortLedgerEntry>) => Promise<boolean>;
+  recordMentorStudentDeposit: (mentorId: string, payload: { studentId: string; amount: number; paymentReference?: string; cohortLedgerId?: string }) => Promise<boolean>;
+  recordManualMentorPayout: (mentorId: string, payload: { amount: number; bankReference?: string; bankName?: string; notes?: string; cohortLedgerId?: string; bypassHoursCheck?: boolean }) => Promise<boolean>;
   updateWalletBudgetLimit: (limit: number) => Promise<void>;
   refreshWalletSummary: () => Promise<void>;
   reconcileWalletWithPaystack: () => Promise<void>;
@@ -208,7 +218,25 @@ interface CRMContextType {
   
   // Mentor Payout Requests & Rev-Share Calculation
   payoutRequests: MentorPayoutRequest[];
-  requestMentorPayout: (amount: number, notes?: string) => Promise<{ success: boolean; message: string }>;
+  requestMentorPayout: (amount: number, notes?: string, targetMentorId?: string) => Promise<{ success: boolean; message: string }>;
+  deleteMentorPayoutRequest: (requestId: string) => Promise<{ success: boolean; message: string }>;
+  createAssignment: (payload: {
+    taskTitle: string;
+    courseTitle: string;
+    moduleTitle?: string;
+    mentorId?: string;
+    mentorName?: string;
+    studentId?: string;
+    studentName?: string;
+    instructions?: string;
+    maxScore?: number;
+    dueDate?: string;
+    assignmentType?: 'assignment' | 'capstone_project' | 'lab';
+    grade?: number;
+    status?: 'Pending' | 'Passed' | 'Needs Revision' | 'Exceptional';
+    mentorFeedback?: string;
+  }) => Promise<{ success: boolean; data?: any }>;
+  recalculateMentorLecturedHours: (mentorId?: string) => Promise<{ credited: number; total: number }>;
   reviewMentorPayout: (requestId: string, status: 'Approved' | 'Rejected', reason?: string) => Promise<boolean>;
   calculateMentorTuitionCommission: (mentorId: string) => {
     totalTuitionPool: number;
@@ -771,6 +799,8 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const saved = safeLocalStorage.getItem(STORAGE_KEYS.PAYOUT_REQUESTS);
     return saved ? JSON.parse(saved) : initialPayoutRequests;
   });
+  const [reconciliationRows, setReconciliationRows] = useState<MentorReconciliationRow[]>([]);
+  const [reconciliationSummaries, setReconciliationSummaries] = useState<MentorReconciliationSummary[]>([]);
 
   // Chat message management state
   const [selectedMessageForForward, setSelectedMessageForForward] = useState<ChatMessage | null>(null);
@@ -5252,14 +5282,98 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const disburseMentorFromWallet = async (mentorId: string, amount: number, reason?: string, payoutRequestId?: string): Promise<boolean> => {
+  const fetchMentorReconciliation = useCallback(async () => {
+    try {
+      const res = await apiService.getMentorReconciliation();
+      if (res) {
+        setReconciliationRows(res.rows || []);
+        setReconciliationSummaries(res.mentorSummaries || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch mentor reconciliation:', err);
+    }
+  }, []);
+
+  const createReconciliationLedger = async (payload: Partial<MentorCohortLedgerEntry>): Promise<boolean> => {
+    try {
+      await apiService.createReconciliationLedger(payload);
+      await fetchMentorReconciliation();
+      showToast('Ledger Entry Added', 'Cohort commission ledger entry saved.', 'success');
+      return true;
+    } catch (err: any) {
+      showToast('Failed to Add Entry', err?.message || 'Unable to add ledger entry', 'error');
+      return false;
+    }
+  };
+
+  const updateReconciliationLedger = async (id: string, payload: Partial<MentorCohortLedgerEntry>): Promise<boolean> => {
+    try {
+      await apiService.updateReconciliationLedger(id, payload);
+      await fetchMentorReconciliation();
+      showToast('Ledger Updated', 'Reconciliation entry updated and mentor balances synced.', 'success');
+      return true;
+    } catch (err: any) {
+      showToast('Update Failed', err?.message || 'Unable to update ledger entry', 'error');
+      return false;
+    }
+  };
+
+  const recordMentorStudentDeposit = async (
+    mentorId: string,
+    payload: { studentId: string; amount: number; paymentReference?: string; cohortLedgerId?: string }
+  ): Promise<boolean> => {
+    try {
+      const res = await apiService.recordMentorStudentDeposit(mentorId, payload);
+      if (res?.student) {
+        setStudents(prev => prev.map(s => s.id === res.student.id ? res.student : s));
+      }
+      if (res?.mentor) {
+        setMentors(prev => prev.map(m => m.id === res.mentor.id ? res.mentor : m));
+      }
+      await fetchMentorReconciliation();
+      showToast('Deposit Recorded', `Student deposit logged and 37% commission credited.`, 'success');
+      return true;
+    } catch (err: any) {
+      showToast('Deposit Error', err?.message || 'Failed to record student deposit', 'error');
+      return false;
+    }
+  };
+
+  const recordManualMentorPayout = async (
+    mentorId: string,
+    payload: { amount: number; bankReference?: string; bankName?: string; notes?: string; cohortLedgerId?: string; bypassHoursCheck?: boolean }
+  ): Promise<boolean> => {
+    try {
+      const res = await apiService.recordManualMentorPayout(mentorId, payload);
+      if (res?.mentor) {
+        setMentors(prev => prev.map(m => m.id === mentorId ? res.mentor : m));
+      }
+      if (res?.payout) {
+        setPayoutRequests(prev => [res.payout, ...prev]);
+      }
+      await fetchMentorReconciliation();
+      showToast('Manual Payout Recorded', `₦${Number(payload.amount).toLocaleString()} recorded for mentor.`, 'success');
+      return true;
+    } catch (err: any) {
+      showToast('Payout Failed', err?.message || 'Unable to record manual payout', 'error');
+      return false;
+    }
+  };
+
+  const disburseMentorFromWallet = async (
+    mentorId: string,
+    amount: number,
+    reason?: string,
+    payoutRequestId?: string,
+    options?: { bypassHoursCheck?: boolean; cohortLedgerId?: string }
+  ): Promise<boolean> => {
     const mentor = mentors.find(m => m.id === mentorId);
     if (!mentor) return false;
 
-    // Check minimum required lectured hours threshold
+    // Check minimum required lectured hours threshold unless Super Admin / Finance explicitly overrides for legacy balance
     const minRequired = mentor.minimumRequiredHours ?? settings.mentorMinimumLecturedHours ?? 20;
     const actualHours = mentor.lecturedHours ?? 0;
-    if (actualHours < minRequired) {
+    if (actualHours < minRequired && !options?.bypassHoursCheck) {
       showToast(
         'Payout Locked',
         `Faculty member has logged ${actualHours} lectured hours. A minimum of ${minRequired} lectured hours is strictly required before payout eligibility.`,
@@ -5275,7 +5389,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     try {
-      const res = await apiService.disburseMentorFromWallet(mentorId, amount, reason, payoutRequestId);
+      const res = await apiService.disburseMentorFromWallet(mentorId, amount, reason, payoutRequestId, options);
       if (res && res.mentor) {
         setMentors(prev => prev.map(m => m.id === mentorId ? res.mentor : m));
         if (payoutRequestId) {
@@ -5435,10 +5549,14 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
-  const requestMentorPayout = async (amount: number, notes?: string): Promise<{ success: boolean; message: string }> => {
+  const requestMentorPayout = async (amount: number, notes?: string, targetMentorId?: string): Promise<{ success: boolean; message: string }> => {
     const myMentorProfile = mentors.find(
-      m => m.id === currentUser?.mentorId || m.name === currentUser?.name || m.email === currentUser?.email
-    );
+      m => (targetMentorId && m.id === targetMentorId) ||
+           m.id === currentUser?.mentorId ||
+           (currentUser?.name && m.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()) ||
+           (currentUser?.email && m.email.toLowerCase() === currentUser.email.toLowerCase())
+    ) || (targetMentorId ? mentors.find(m => m.id === targetMentorId) : null);
+
     if (!myMentorProfile) {
       return { success: false, message: 'Mentor profile not found.' };
     }
@@ -5471,6 +5589,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const whtDeductedAmount = Math.round(reqAmount * (whtRatePercent / 100));
     const netDisbursedAmount = reqAmount - whtDeductedAmount;
     const voucherNumber = `VCHR-CDL-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const expenseId = `exp-payout-${Date.now()}`;
 
     const newReq: MentorPayoutRequest = {
       id: `req-${Date.now()}`,
@@ -5491,9 +5610,37 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'Pending',
       requestedAt: new Date().toISOString(),
       notes: notes || '',
+      expenseId,
     };
 
     setPayoutRequests(prev => [newReq, ...prev]);
+
+    // Automatically record corresponding entry in Business Expenses & Budget module
+    const newExpense: Expense = {
+      id: expenseId,
+      expenseCode: `EXP-MTR-${Date.now().toString().slice(-4)}`,
+      title: `Faculty Payout: ${myMentorProfile.name}`,
+      category: 'Faculty Mentorship & Payout',
+      amount: reqAmount,
+      date: new Date().toISOString().split('T')[0],
+      createdAt: new Date().toISOString(),
+      department: myMentorProfile.department || 'Academic Faculty',
+      paymentMethod: 'Bank Transfer',
+      status: 'Pending',
+      vendor: myMentorProfile.name,
+      requestedBy: currentUser?.name || myMentorProfile.name,
+      requesterEmail: currentUser?.email || myMentorProfile.email,
+      description: `Commission Payout Request (${voucherNumber}). Net settlement after 5% statutory WHT: ${formatNaira(netDisbursedAmount)} to ${myMentorProfile.bankName} (${myMentorProfile.accountNumber}). ${notes || ''}`,
+      disbursementBankName: myMentorProfile.bankName,
+      disbursementAccountNumber: myMentorProfile.accountNumber,
+      disbursementAccountName: myMentorProfile.accountName || myMentorProfile.name,
+      disbursementBankCode: myMentorProfile.bankCode,
+      mentorId: myMentorProfile.id,
+      payoutRequestId: newReq.id,
+      voucherNumber,
+    };
+
+    setExpenses(prev => [newExpense, ...prev]);
 
     if (isBackendConnected) {
       try {
@@ -5502,26 +5649,176 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           amount: reqAmount,
           notes,
         });
+        await apiService.createExpense(newExpense);
       } catch (e) {
         console.warn('Backend sync failed for payout request:', e);
       }
     }
 
-    showToast('Payout Requested', `Payout request for ${formatNaira(reqAmount)} submitted to Finance.`, 'success');
+    showToast('Payout Requested & Logged', `Payout request for ${formatNaira(reqAmount)} logged in Finance & Expenses.`, 'success');
     addNotification({
       title: '💵 Faculty Payout Request Submitted',
-      message: `${myMentorProfile.name} requested ${formatNaira(reqAmount)} (${actualHours.toFixed(1)}h logged).`,
+      message: `${myMentorProfile.name} requested ${formatNaira(reqAmount)} (${actualHours.toFixed(1)}h logged). Logged in OpEx.`,
       type: 'mentor',
       link: '/mentors',
     });
     logActivity({
       title: 'Mentor Payout Requested',
-      description: `${myMentorProfile.name} submitted a commission payout request of ${formatNaira(reqAmount)}.`,
+      description: `${myMentorProfile.name} submitted commission payout request of ${formatNaira(reqAmount)}. Logged in Expenses.`,
       type: 'mentor',
       user: myMentorProfile.name,
     });
 
     return { success: true, message: 'Payout request successfully submitted.' };
+  };
+
+  const deleteMentorPayoutRequest = async (requestId: string): Promise<{ success: boolean; message: string }> => {
+    const req = payoutRequests.find(r => r.id === requestId);
+    if (!req) return { success: false, message: 'Payout request not found.' };
+
+    const isSuperAdmin = currentUser?.role === 'super_admin';
+    const isAuthor = currentUser?.mentorId === req.mentorId || 
+      (currentUser?.name && currentUser.name.trim().toLowerCase() === req.mentorName.trim().toLowerCase()) ||
+      (currentUser?.email && currentUser.email.toLowerCase() === req.mentorEmail.toLowerCase());
+
+    if (!isSuperAdmin && !isAuthor) {
+      return { success: false, message: 'You do not have permission to delete this request.' };
+    }
+
+    if (req.status !== 'Pending') {
+      return { success: false, message: `Only requests with 'Pending' status can be deleted/cancelled.` };
+    }
+
+    // Remove from payout requests
+    setPayoutRequests(prev => prev.filter(r => r.id !== requestId));
+
+    // Remove linked expense in Expenses & Budget module
+    setExpenses(prev => prev.filter(e => e.payoutRequestId !== requestId && e.id !== req.expenseId));
+
+    if (isBackendConnected) {
+      try {
+        await apiService.deletePayoutRequest(requestId);
+      } catch (e) {
+        console.warn('Backend delete payout request error:', e);
+      }
+    }
+
+    showToast('Payout Request Cancelled', `Payout request (${req.voucherNumber || formatNaira(req.amount)}) deleted.`, 'info');
+    logActivity({
+      title: 'Payout Request Cancelled',
+      description: `${currentUser?.name || 'User'} cancelled payout request of ${formatNaira(req.amount)} for ${req.mentorName}.`,
+      type: 'mentor',
+      user: currentUser?.name || 'System',
+    });
+
+    return { success: true, message: 'Payout request deleted successfully.' };
+  };
+
+  const createAssignment = async (payload: {
+    taskTitle: string;
+    courseTitle: string;
+    moduleTitle?: string;
+    mentorId?: string;
+    mentorName?: string;
+    studentId?: string;
+    studentName?: string;
+    instructions?: string;
+    maxScore?: number;
+    dueDate?: string;
+    assignmentType?: 'assignment' | 'capstone_project' | 'lab';
+    grade?: number;
+    status?: 'Pending' | 'Passed' | 'Needs Revision' | 'Exceptional';
+    mentorFeedback?: string;
+  }): Promise<{ success: boolean; data?: any }> => {
+    const isGraded = payload.grade !== undefined;
+    const newSub: StudentAssignmentSubmission = {
+      id: `sub-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      studentId: payload.studentId || '',
+      studentName: payload.studentName || 'Course Cohort',
+      courseTitle: payload.courseTitle,
+      moduleTitle: payload.moduleTitle || 'Curriculum Milestone',
+      taskTitle: payload.taskTitle,
+      instructions: payload.instructions,
+      maxScore: payload.maxScore || 100,
+      dueDate: payload.dueDate,
+      assignmentType: payload.assignmentType || 'assignment',
+      status: payload.status || (isGraded ? 'Passed' : 'Pending'),
+      grade: payload.grade,
+      mentorFeedback: payload.mentorFeedback,
+      reviewedBy: isGraded ? (payload.mentorName || currentUser?.name || 'Faculty Mentor') : undefined,
+      reviewedAt: isGraded ? new Date().toISOString() : undefined,
+      submittedAt: new Date().toISOString(),
+      mentorId: payload.mentorId || currentUser?.mentorId || '',
+    };
+
+    setAssignments(prev => [newSub, ...prev]);
+
+    if (payload.studentId) {
+      setStudents(prev => prev.map(s => {
+        if (s.id !== payload.studentId) return s;
+        const subs = s.assignmentSubmissions ? [...s.assignmentSubmissions] : [];
+        return {
+          ...s,
+          assignmentSubmissions: [newSub, ...subs],
+        };
+      }));
+    }
+
+    if (isBackendConnected) {
+      try {
+        await apiService.createAssignment(newSub);
+      } catch (e) {
+        console.warn('Backend create assignment error:', e);
+      }
+    }
+
+    showToast('Assignment Created', `Assignment "${payload.taskTitle}" added successfully.`, 'success');
+    return { success: true, data: newSub };
+  };
+
+  const recalculateMentorLecturedHours = async (mentorId?: string): Promise<{ credited: number; total: number }> => {
+    const targetMentor = mentorId 
+      ? mentors.find(m => m.id === mentorId) 
+      : (mentors.find(m => m.id === currentUser?.mentorId || (m.name && currentUser?.name && m.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase())) || mentors[0]);
+
+    if (!targetMentor) return { credited: 0, total: 0 };
+
+    const now = Date.now();
+    let totalHours = 0;
+    timetables.forEach(t => {
+      const matchMentor = (t.mentorId && t.mentorId === targetMentor.id) ||
+        (t.mentorName && targetMentor.name && t.mentorName.trim().toLowerCase() === targetMentor.name.trim().toLowerCase());
+      if (matchMentor) {
+        const slotEnd = new Date(`${t.date}T${t.endTime || '23:59:59'}`).getTime();
+        const isPastOrMarked = t.attendanceMarked || t.status === 'Completed' || (!isNaN(slotEnd) && slotEnd <= now);
+        if (isPastOrMarked) {
+          totalHours += (t.durationHours || 2);
+        }
+      }
+    });
+
+    sessions.forEach(s => {
+      const matchMentor = (s.mentorId && s.mentorId === targetMentor.id) ||
+        (s.mentorName && targetMentor.name && s.mentorName.trim().toLowerCase() === targetMentor.name.trim().toLowerCase());
+      if (matchMentor && (s.studentAttendance === 'Attended' || s.status === 'Completed')) {
+        totalHours += (s.durationHours || 1);
+      }
+    });
+
+    const updatedHours = Math.max(totalHours, targetMentor.lecturedHours || 0);
+
+    setMentors(prev => prev.map(m => m.id === targetMentor.id ? { ...m, lecturedHours: updatedHours } : m));
+
+    if (isBackendConnected) {
+      try {
+        await apiService.updateMentor(targetMentor.id, { lecturedHours: updatedHours });
+      } catch (e) {
+        console.warn('Backend sync update mentor hours failed:', e);
+      }
+    }
+
+    showToast('Lecturing Hours Synced', `Verified ${updatedHours.toFixed(1)} teaching hours logged for ${targetMentor.name}.`, 'success');
+    return { credited: totalHours, total: updatedHours };
   };
 
   const reviewMentorPayout = async (requestId: string, status: 'Approved' | 'Rejected', reason?: string): Promise<boolean> => {
@@ -6923,6 +7220,16 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleRoleModule,
         payoutRequests,
         requestMentorPayout,
+        deleteMentorPayoutRequest,
+        reconciliationRows,
+        reconciliationSummaries,
+        fetchMentorReconciliation,
+        createReconciliationLedger,
+        updateReconciliationLedger,
+        recordMentorStudentDeposit,
+        recordManualMentorPayout,
+        createAssignment,
+        recalculateMentorLecturedHours,
         reviewMentorPayout,
         calculateMentorTuitionCommission,
         selectedPayoutRequestForEdit,

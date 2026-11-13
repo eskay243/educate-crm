@@ -7,7 +7,8 @@ import { getStudentEnrolledModules } from '../utils/courseCurriculum';
 export const CourseOutlinePage: React.FC = () => {
   const { 
     lmsModules, 
-    courses, 
+    courses,
+    mentors,
     currentUser, 
     markTopicAsTaught, 
     approveTopicByProgramOfficer, 
@@ -62,18 +63,40 @@ export const CourseOutlinePage: React.FC = () => {
     ];
   }, [courses]);
 
-  // Filter courses by duration if selected, and scope to mentor's assigned courses if isMentor
+  // Mentor's assigned courses (loose case, whitespace & title prefix matching)
+  const mentorAssignedCourses = useMemo(() => {
+    if (!currentUser) return [];
+    const norm = (s?: string) =>
+      (s || '')
+        .toLowerCase()
+        .replace(/^(dr\.|engr\.|mr\.|mrs\.|ms\.|prof\.)\s+/i, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    const myName = norm(currentUser.name);
+    const myMentor = mentors?.find(
+      m => m.id === currentUser.mentorId || norm(m.name) === myName || (currentUser.email && norm(m.email) === norm(currentUser.email))
+    );
+    const myId = myMentor?.id || currentUser.mentorId || currentUser.id;
+    const targetName = myMentor ? norm(myMentor.name) : myName;
+
+    return allCourses.filter(c => {
+      const isLead = norm(c.leadInstructor) === targetName || norm(c.leadInstructor) === myName;
+      const isIdMatch = c.id === myId;
+      const isAssigned = c.assignedMentors?.some(am => 
+        (am.mentorId && am.mentorId === myId) || 
+        norm(am.mentorName) === targetName ||
+        norm(am.mentorName) === myName
+      );
+      return isLead || isIdMatch || isAssigned;
+    });
+  }, [allCourses, currentUser, mentors]);
+
+  // Filter courses by duration if selected, and strictly scope to mentor's assigned courses if isMentor
   const filteredCourses = useMemo(() => {
-    let list = allCourses;
-    if (isMentor) {
-      const myCourseList = list.filter(c => c.leadInstructor === currentUser?.name || c.id === currentUser?.mentorId);
-      if (myCourseList.length > 0) {
-        list = myCourseList;
-      }
-    }
+    let list = isMentor ? mentorAssignedCourses : allCourses;
     if (durationFilter === 'All') return list;
     return list.filter(c => c && c.durationTrack === durationFilter);
-  }, [allCourses, durationFilter, isMentor, currentUser]);
+  }, [allCourses, durationFilter, isMentor, mentorAssignedCourses]);
 
   // Synchronize active course with URL search parameters (?courseId=... or ?courseTitle=...)
   useEffect(() => {
@@ -112,34 +135,15 @@ export const CourseOutlinePage: React.FC = () => {
   };
 
   const activeCourse = useMemo(() => {
+    if (isMentor && filteredCourses.length === 0) return null;
     const normalize = (t?: string) => (t || '').trim().toLowerCase();
     const target = normalize(activeCourseTitle);
     return filteredCourses.find(c => normalize(c?.title) === target) || 
-      allCourses.find(c => normalize(c?.title) === target) || 
+      (isMentor ? null : allCourses.find(c => normalize(c?.title) === target)) || 
       filteredCourses[0] || 
-      allCourses[0] ||
-      {
-        id: 'course-se-01',
-        code: 'CSE-101',
-        title: activeCourseTitle || 'Full-Stack Software Engineering',
-        category: 'Software Engineering',
-        description: 'Comprehensive modular curriculum aligned with NBTE and NITDA competency frameworks.',
-        durationWeeks: 9,
-        durationDays: 60,
-        durationTrack: '60-Day Practitioner' as CourseDurationTrack,
-        tuitionFee: 350000,
-        syllabusModules: ['mod-1', 'mod-2'],
-        leadInstructor: 'Dr. Chidi Okeke',
-        enrolledCount: 1,
-        status: 'Active' as const,
-        rating: 4.9,
-        minimumRequiredHours: 40,
-        nsqfLevel: 'NSQF Level 4 (National Vocational Certificate)',
-        nitdaTrack: 'NITDA 3MTT / NDLEP Software Engineering Track',
-        theoryHours: 25,
-        practicalHours: 60,
-      };
-  }, [filteredCourses, allCourses, activeCourseTitle]);
+      (isMentor ? null : allCourses[0]) ||
+      null;
+  }, [filteredCourses, allCourses, activeCourseTitle, isMentor]);
 
   // Active modules for selected course — dynamically bound to course's own updated syllabusModules & LMS modules
   const activeCourseModules = useMemo(() => {
@@ -405,6 +409,69 @@ export const CourseOutlinePage: React.FC = () => {
         </div>
       </div>
 
+      {/* Mentor Multi-Course Quick Switcher */}
+      {isMentor && (
+        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 shadow-xs">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-primary flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px]">school</span>
+                <span>Assigned Faculty Tracks</span>
+              </span>
+              <h3 className="text-sm font-bold text-on-surface mt-0.5">
+                Toggle Curriculum: <span className="text-primary">{activeCourse?.title}</span>
+              </h3>
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <label htmlFor="mentor-course-select" className="text-xs font-semibold text-secondary shrink-0">Switch Track:</label>
+              <select
+                id="mentor-course-select"
+                value={activeCourse?.id || ''}
+                onChange={(e) => {
+                  const targetCourse = allCourses.find(c => c.id === e.target.value);
+                  if (targetCourse) handleSelectCourse(targetCourse);
+                }}
+                className="w-full sm:w-auto h-9 px-3 rounded-xl bg-surface border border-outline-variant text-xs font-bold text-on-surface focus:border-primary focus:outline-none cursor-pointer shadow-xs"
+              >
+                {(mentorAssignedCourses.length > 0 ? mentorAssignedCourses : allCourses).map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.title} ({c.code || 'Track'})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Quick Click Course Badges */}
+          <div className="flex gap-2 overflow-x-auto pt-3 pb-1 scrollbar-none">
+            {(mentorAssignedCourses.length > 0 ? mentorAssignedCourses : allCourses).map(course => {
+              const isSelected = (activeCourse?.title || '').trim().toLowerCase() === (course?.title || '').trim().toLowerCase();
+              return (
+                <button
+                  key={course.id || course.title}
+                  type="button"
+                  onClick={() => handleSelectCourse(course)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-2 cursor-pointer border ${
+                    isSelected
+                      ? 'bg-primary text-on-primary border-primary shadow-xs'
+                      : 'bg-surface text-secondary hover:text-on-surface border-outline-variant hover:border-primary/40'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[15px]">auto_stories</span>
+                  <span>{course.title}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
+                    isSelected ? 'bg-white/20 text-white' : 'bg-surface-container text-secondary'
+                  }`}>
+                    {course.code || 'CSE'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Duration Track Filter Bar */}
       <div className="bg-surface border border-outline-variant rounded-xl p-3 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2 flex-wrap">
@@ -467,8 +534,23 @@ export const CourseOutlinePage: React.FC = () => {
         </div>
       )}
 
-      {/* Selected Course Specifications Card */}
-      <div className="p-5 rounded-2xl bg-surface border border-outline-variant shadow-xs space-y-4">
+      {/* Selected Course Specifications or Empty State */}
+      {!activeCourse ? (
+        <div className="p-12 rounded-2xl bg-surface border border-outline-variant shadow-xs text-center space-y-3">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto">
+            <span className="material-symbols-outlined text-[32px]">menu_book</span>
+          </div>
+          <h3 className="font-bold text-base text-on-surface">No Courses Assigned Yet</h3>
+          <p className="text-xs text-secondary max-w-md mx-auto leading-relaxed">
+            {isMentor
+              ? "You are currently not assigned as lead instructor or co-mentor on any active course track. Please contact your Academic Program Officer to have your syllabus allocated."
+              : "No accredited courses match the selected duration filter. Try selecting 'All' or adjusting your filter criteria."}
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Selected Course Specifications Card */}
+          <div className="p-5 rounded-2xl bg-surface border border-outline-variant shadow-xs space-y-4">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
@@ -806,6 +888,8 @@ export const CourseOutlinePage: React.FC = () => {
           );
         })}
       </div>
+      </>
+      )}
 
       {/* Teaching Notes & Classroom Completion Modal */}
       {teachingNotesLesson && (
@@ -929,7 +1013,7 @@ export const CourseOutlinePage: React.FC = () => {
                 <div>
                   <h3 className="font-bold text-sm text-on-surface line-clamp-1">{activeVideoLesson.title}</h3>
                   <span className="text-[11px] text-secondary">
-                    {activeCourse.title} &bull; Day {activeVideoLesson.dayNumber || 1} &bull; {activeVideoLesson.durationMinutes || 45} mins
+                    {activeCourse?.title || 'Course Track'} &bull; Day {activeVideoLesson.dayNumber || 1} &bull; {activeVideoLesson.durationMinutes || 45} mins
                   </span>
                 </div>
               </div>

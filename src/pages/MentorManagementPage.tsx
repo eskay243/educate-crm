@@ -7,6 +7,7 @@ import { PayoutVoucherModal } from '../components/modals/PayoutVoucherModal';
 import { StudentWelfareInterventionModal } from '../components/modals/StudentWelfareInterventionModal';
 import { CrispStatusBadge } from '../components/common/CrispStatusBadge';
 import { TransferTasksAndDeleteModal } from '../components/modals/TransferTasksAndDeleteModal';
+import { MentorReconciliationTab } from '../components/mentors/MentorReconciliationTab';
 
 export const MentorManagementPage: React.FC = () => {
   const { 
@@ -28,6 +29,7 @@ export const MentorManagementPage: React.FC = () => {
     settings,
     setSelectedSlotForAttendance,
     payoutRequests,
+    deleteMentorPayoutRequest,
     reviewMentorPayout,
     openEditPayoutRequestModal,
     getUserTaskFootprint,
@@ -40,7 +42,7 @@ export const MentorManagementPage: React.FC = () => {
 
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'roster' | 'sessions' | 'reports' | 'timetable' | 'payouts'>('roster');
+  const [activeTab, setActiveTab] = useState<'roster' | 'sessions' | 'reports' | 'timetable' | 'payouts' | 'reconciliation'>('roster');
   const [tableSearch, setTableSearch] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'deactivated'>('all');
@@ -79,7 +81,7 @@ export const MentorManagementPage: React.FC = () => {
       return;
     }
 
-    if (tabParam && ['roster', 'sessions', 'reports', 'timetable', 'payouts'].includes(tabParam)) {
+    if (tabParam && ['roster', 'sessions', 'reports', 'timetable', 'payouts', 'reconciliation'].includes(tabParam)) {
       setActiveTab(tabParam as any);
     }
 
@@ -533,6 +535,19 @@ export const MentorManagementPage: React.FC = () => {
                 </span>
               )}
             </button>
+            {!isMentor && (
+              <button
+                onClick={() => setActiveTab('reconciliation')}
+                className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                  activeTab === 'reconciliation'
+                    ? 'bg-primary text-white'
+                    : 'text-secondary hover:text-crisp-black'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">account_balance</span>
+                <span>Commission &amp; Reconciliation</span>
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
@@ -1281,6 +1296,13 @@ export const MentorManagementPage: React.FC = () => {
           </div>
         )}
 
+        {/* Tab 6: Commission & Reconciliation */}
+        {activeTab === 'reconciliation' && !isMentor && (
+          <div className="p-stack-md">
+            <MentorReconciliationTab />
+          </div>
+        )}
+
         {/* Tab 5: Faculty Commission Payout Requests */}
         {activeTab === 'payouts' && (
           <div className="p-stack-md space-y-4">
@@ -1346,8 +1368,15 @@ export const MentorManagementPage: React.FC = () => {
                       return (
                         <tr key={req.id} className="hover:bg-surface-container/50 transition-colors">
                           <td className="px-4 py-3 font-mono">
-                            <span className="font-bold text-primary block">{voucherCode}</span>
-                            <span className="text-[10px] text-secondary">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-primary">{voucherCode}</span>
+                              {req.isHistorical && (
+                                <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[9px] font-sans font-bold uppercase">
+                                  Historical
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-secondary block">
                               {new Date(req.requestedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                             </span>
                           </td>
@@ -1400,15 +1429,30 @@ export const MentorManagementPage: React.FC = () => {
                               </button>
 
                               {req.status === 'Pending' && (isSuperAdmin || isFinance || req.mentorId === myMentorProfile?.id || req.mentorEmail.toLowerCase() === currentUser?.email.toLowerCase()) && (
-                                <button
-                                  type="button"
-                                  onClick={() => openEditPayoutRequestModal(req)}
-                                  className="px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[11px] font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
-                                  title="Edit pending payout request amount or memo"
-                                >
-                                  <span className="material-symbols-outlined text-[14px]">edit</span>
-                                  <span>Edit</span>
-                                </button>
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => openEditPayoutRequestModal(req)}
+                                    className="px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[11px] font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
+                                    title="Edit pending payout request amount or memo"
+                                  >
+                                    <span className="material-symbols-outlined text-[14px]">edit</span>
+                                    <span>Edit</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (window.confirm(`Are you sure you want to cancel and delete this payout request (${formatNaira(req.amount)})?`)) {
+                                        deleteMentorPayoutRequest(req.id);
+                                      }
+                                    }}
+                                    className="px-2.5 py-1 rounded bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 text-[11px] font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
+                                    title="Delete and cancel pending payout request"
+                                  >
+                                    <span className="material-symbols-outlined text-[14px]">delete</span>
+                                    <span>Delete</span>
+                                  </button>
+                                </>
                               )}
 
                               {(isSuperAdmin || isFinance) && req.status === 'Pending' && (

@@ -154,7 +154,7 @@ export const App: React.FC = () => {
                 <Route
                   path="mentors"
                   element={
-                    <ProtectedRoute allowedRoles={['super_admin', 'mentor', 'program_officer']} requiredModule="mentors">
+                    <ProtectedRoute allowedRoles={['super_admin', 'mentor', 'program_officer', 'finance']} requiredModule="mentors">
                       <MentorManagementPage />
                     </ProtectedRoute>
                   }

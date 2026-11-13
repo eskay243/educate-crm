@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCRM } from '../../context/CRMContext';
 import { DailyStandupTask, WeeklyScrumPerformance } from '../../types/crm';
+import { safeLocalStorage, safeJsonParse } from '../../utils/safeStorage';
 
 export interface DailyStandupModalProps {
   isOpen: boolean;
@@ -18,6 +19,25 @@ const AVAILABLE_MODULES = [
   { id: 'tickets', name: 'Support Tickets' },
 ];
 
+const getDefaultModule = (user?: any, currentSelected: string[] = []): string => {
+  if (user?.assignedModules && Array.isArray(user.assignedModules) && user.assignedModules.length > 0) {
+    const valid = user.assignedModules.find((m: string) => AVAILABLE_MODULES.some(am => am.id === m));
+    if (valid) return valid;
+  }
+  const role = (user?.role || '').toLowerCase();
+  if (role.includes('support') || role.includes('it_support') || role.includes('tech')) return 'tickets';
+  if (role.includes('mentor') || role.includes('instructor') || role.includes('faculty')) return 'lms';
+  if (role.includes('finance') || role.includes('account')) return 'expenses';
+  if (role.includes('admission') || role.includes('lead') || role.includes('counselor')) return 'leads';
+  if (role.includes('program') || role.includes('attendance') || role.includes('academic')) return 'attendance';
+  if (role.includes('student') || role.includes('registrar')) return 'students';
+
+  if (currentSelected.length > 0 && currentSelected[0] !== 'leads') {
+    return currentSelected[0];
+  }
+  return currentSelected[0] || 'leads';
+};
+
 export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, onClose }) => {
   const {
     currentUser,
@@ -29,6 +49,7 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
     triggerStandupReminders,
     hasFeaturePermission,
     showToast,
+    dailyStandups,
   } = useCRM();
 
   const [activeTab, setActiveTab] = useState<'standup' | 'weekly' | 'management_report'>('standup');
@@ -45,6 +66,11 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEvaluatingWeekly, setIsEvaluatingWeekly] = useState(false);
   const [activeWeeklyReport, setActiveWeeklyReport] = useState<WeeklyScrumPerformance | null>(null);
+
+  // LocalStorage Draft State
+  const draftKey = currentUser ? `standup_draft_${currentUser.id}` : null;
+  const [hasRestoredDraft, setHasRestoredDraft] = useState(false);
+  const [draftSavedTime, setDraftSavedTime] = useState<string | null>(null);
 
   // Management Rollup Report State & Role Capability
   const canViewReports = currentUser?.role === 'super_admin' || (typeof hasFeaturePermission === 'function' && hasFeaturePermission('canViewStandupReports'));
@@ -127,7 +153,8 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
     if (currentUser?.assignedModules && currentUser.assignedModules.length > 0) {
       setSelectedModules(currentUser.assignedModules);
     } else {
-      setSelectedModules(AVAILABLE_MODULES.map(m => m.id));
+      const defaultMod = getDefaultModule(currentUser);
+      setSelectedModules([defaultMod]);
     }
   }, [currentUser]);
 
@@ -143,9 +170,11 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
     }
   }, [isOpen, currentUser, fetchTodayStandup, weeklyScrumReports]);
 
-  // Prefill form states when todayStandup is loaded
+  // Prefill form states when todayStandup is loaded or auto-rollover yesterday's tasks
   useEffect(() => {
-    if (isOpen && todayStandup) {
+    if (!isOpen) return;
+
+    if (todayStandup) {
       if (Array.isArray(todayStandup.tasksYesterday) && todayStandup.tasksYesterday.length > 0) {
         setTasksYesterday(todayStandup.tasksYesterday);
       }
@@ -160,26 +189,132 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
       if (Array.isArray(todayStandup.taggedModuleIds) && todayStandup.taggedModuleIds.length > 0) {
         setSelectedModules(todayStandup.taggedModuleIds);
       }
-    } else if (isOpen && !todayStandup) {
-      setTasksYesterday([
-        { id: `y-${Date.now()}-1`, description: '', moduleId: selectedModules[0] || 'leads', status: 'completed' },
-      ]);
+    } else {
+      // 1. Check for unsaved local draft first
+      if (draftKey) {
+        const savedDraft = safeLocalStorage.getItem(draftKey);
+        if (savedDraft) {
+          const parsed = safeJsonParse<any>(savedDraft, null);
+          if (parsed && (parsed.tasksYesterday?.length > 0 || parsed.tasksToday?.length > 0)) {
+            setTasksYesterday(parsed.tasksYesterday || []);
+            setTasksToday(parsed.tasksToday || []);
+            setBlockers(parsed.blockers?.length > 0 ? parsed.blockers : ['']);
+            if (Array.isArray(parsed.selectedModules) && parsed.selectedModules.length > 0) {
+              setSelectedModules(parsed.selectedModules);
+            }
+            setHasRestoredDraft(true);
+            setDraftSavedTime(parsed.savedAt ? new Date(parsed.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null);
+            return;
+          }
+        }
+      }
+
+      // 2. Auto-rollover yesterday's tasks from the most recent prior standup
+      const todayDateStr = new Date().toISOString().split('T')[0];
+      const previousStandups = (dailyStandups || [])
+        .filter(s => s.userId === currentUser?.id && s.date < todayDateStr)
+        .sort((a, b) => b.date.localeCompare(a.date));
+      const lastStandup = previousStandups[0];
+
+      const defaultMod = getDefaultModule(currentUser, selectedModules);
+
+      let initialYesterday: DailyStandupTask[] = [];
+      if (lastStandup && Array.isArray(lastStandup.tasksToday) && lastStandup.tasksToday.length > 0) {
+        // Carry forward commitments from previous standup: marked completed or in progress
+        initialYesterday = lastStandup.tasksToday
+          .filter(t => t.description && t.description.trim().length > 0)
+          .map((t, idx) => ({
+            id: `y-rolled-${Date.now()}-${idx}`,
+            description: t.description.trim(),
+            moduleId: t.moduleId || defaultMod,
+            status: (t.status === 'completed' ? 'completed' : 'in_progress') as 'completed' | 'in_progress',
+          }));
+      }
+
+      if (initialYesterday.length === 0) {
+        initialYesterday = [
+          { id: `y-${Date.now()}-1`, description: '', moduleId: defaultMod, status: 'completed' },
+        ];
+      }
+
+      setTasksYesterday(initialYesterday);
       setTasksToday([
-        { id: `t-${Date.now()}-1`, description: '', moduleId: selectedModules[0] || 'leads', status: 'in_progress' },
+        { id: `t-${Date.now()}-1`, description: '', moduleId: defaultMod, status: 'in_progress' },
       ]);
       setBlockers(['']);
     }
-  }, [isOpen, todayStandup]);
+  }, [isOpen, todayStandup, draftKey, dailyStandups, currentUser]);
+
+  // Auto-save draft on any change when standup has not yet been submitted for today
+  useEffect(() => {
+    if (!isOpen || todayStandup || !draftKey) return;
+
+    const hasContent =
+      tasksYesterday.some(t => t.description.trim().length > 0) ||
+      tasksToday.some(t => t.description.trim().length > 0) ||
+      blockers.some(b => b.trim().length > 0);
+
+    if (hasContent) {
+      const nowStr = new Date().toISOString();
+      safeLocalStorage.setItem(
+        draftKey,
+        JSON.stringify({
+          tasksYesterday,
+          tasksToday,
+          blockers,
+          selectedModules,
+          savedAt: nowStr,
+        })
+      );
+      setDraftSavedTime(new Date(nowStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    }
+  }, [isOpen, todayStandup, draftKey, tasksYesterday, tasksToday, blockers, selectedModules]);
+
+  // Warn on page reload if user has unsaved draft changes
+  useEffect(() => {
+    const hasUnsavedContent =
+      tasksYesterday.some(t => t.description.trim().length > 0) ||
+      tasksToday.some(t => t.description.trim().length > 0) ||
+      blockers.some(b => b.trim().length > 0);
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isOpen && !todayStandup && !isSubmitting && hasUnsavedContent) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isOpen, todayStandup, isSubmitting, tasksYesterday, tasksToday, blockers]);
+
+  const handleClearDraft = () => {
+    if (draftKey) {
+      safeLocalStorage.removeItem(draftKey);
+      setHasRestoredDraft(false);
+      setDraftSavedTime(null);
+      const defaultMod = getDefaultModule(currentUser, selectedModules);
+      setTasksYesterday([
+        { id: `y-${Date.now()}-1`, description: '', moduleId: defaultMod, status: 'completed' },
+      ]);
+      setTasksToday([
+        { id: `t-${Date.now()}-1`, description: '', moduleId: defaultMod, status: 'in_progress' },
+      ]);
+      setBlockers(['']);
+      showToast('Draft Cleared', 'Unsaved standup draft has been cleared.', 'info');
+    }
+  };
 
   if (!isOpen) return null;
 
   const handleAddYesterdayTask = () => {
+    const defaultMod = getDefaultModule(currentUser, selectedModules);
     setTasksYesterday(prev => [
       ...prev,
       {
         id: `y-${Date.now()}-${prev.length + 1}`,
         description: '',
-        moduleId: selectedModules[0] || 'leads',
+        moduleId: defaultMod,
         status: 'completed',
       },
     ]);
@@ -194,12 +329,13 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
   };
 
   const handleAddTodayTask = () => {
+    const defaultMod = getDefaultModule(currentUser, selectedModules);
     setTasksToday(prev => [
       ...prev,
       {
         id: `t-${Date.now()}-${prev.length + 1}`,
         description: '',
-        moduleId: selectedModules[0] || 'leads',
+        moduleId: defaultMod,
         status: 'in_progress',
       },
     ]);
@@ -238,15 +374,54 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
   const handleSubmitStandup = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const validYesterday = tasksYesterday.filter(t => t.description.trim().length > 0);
-    const validToday = tasksToday.filter(t => t.description.trim().length > 0);
+    // 1. Check for tasks containing only spaces (whitespace-only bypass check)
+    const hasWhitespaceOnlyYesterday = tasksYesterday.some(
+      t => t.description.length > 0 && t.description.trim().length === 0
+    );
+    const hasWhitespaceOnlyToday = tasksToday.some(
+      t => t.description.length > 0 && t.description.trim().length === 0
+    );
 
-    if (validYesterday.length === 0 && validToday.length === 0) {
-      showToast('Validation Error', 'Please log at least one task for yesterday or today.', 'warning');
+    if (hasWhitespaceOnlyYesterday || hasWhitespaceOnlyToday) {
+      showToast(
+        'Validation Error',
+        'Task descriptions cannot contain only whitespace or spaces. Please enter a valid description or remove the empty row.',
+        'warning'
+      );
       return;
     }
 
-    const cleanBlockers = blockers.filter(b => b.trim().length > 0);
+    // 2. Discard completely untouched / blank rows
+    const validYesterday = tasksYesterday
+      .filter(t => t.description.trim().length > 0)
+      .map(t => ({ ...t, description: t.description.trim() }));
+
+    const validToday = tasksToday
+      .filter(t => t.description.trim().length > 0)
+      .map(t => ({ ...t, description: t.description.trim() }));
+
+    if (validYesterday.length === 0 && validToday.length === 0) {
+      showToast('Validation Error', 'Please log at least one valid task for yesterday or today.', 'warning');
+      return;
+    }
+
+    // Clean blockers
+    const cleanBlockers = blockers
+      .map(b => b.trim())
+      .filter(b => b.length > 0);
+
+    // Sync state so discarded empty rows don't linger in UI
+    const defaultMod = getDefaultModule(currentUser, selectedModules);
+    setTasksYesterday(
+      validYesterday.length > 0
+        ? validYesterday
+        : [{ id: `y-${Date.now()}-1`, description: '', moduleId: defaultMod, status: 'completed' }]
+    );
+    setTasksToday(
+      validToday.length > 0
+        ? validToday
+        : [{ id: `t-${Date.now()}-1`, description: '', moduleId: defaultMod, status: 'in_progress' }]
+    );
 
     setIsSubmitting(true);
     try {
@@ -257,6 +432,11 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
         taggedModuleIds: selectedModules,
       });
       if (success) {
+        if (draftKey) {
+          safeLocalStorage.removeItem(draftKey);
+          setHasRestoredDraft(false);
+          setDraftSavedTime(null);
+        }
         await fetchTodayStandup();
         onClose();
       }
@@ -367,12 +547,31 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5 bg-canvas">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3.5 sm:p-6 space-y-4 sm:space-y-5 bg-canvas">
           {activeTab === 'standup' ? (
-            <div>
+            <div className="space-y-4">
+              {/* Draft Restored Notice Banner */}
+              {hasRestoredDraft && !todayStandup && (
+                <div className="p-3 sm:p-3.5 rounded-xl bg-blue-50/90 border border-blue-200 text-blue-950 flex items-center justify-between flex-wrap gap-2 animate-in fade-in">
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="material-symbols-outlined text-[18px] text-primary shrink-0">restore_page</span>
+                    <span className="font-medium">
+                      Restored unsaved standup draft{draftSavedTime ? ` (auto-saved at ${draftSavedTime})` : ''}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleClearDraft}
+                    className="text-xs text-primary hover:text-primary-hover font-bold underline cursor-pointer"
+                  >
+                    Discard Draft
+                  </button>
+                </div>
+              )}
+
               {/* Today's Existing Submission Banner if present */}
               {todayStandup && (
-                <div className="mb-5 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950">
+                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950">
                   <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                     <div className="flex items-center gap-2 text-emerald-800 font-bold text-xs sm:text-sm">
                       <span className="material-symbols-outlined text-[18px] text-emerald-600">check_circle</span>
@@ -419,14 +618,14 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                 </div>
               )}
 
-              <form onSubmit={handleSubmitStandup} className="space-y-5">
+              <form onSubmit={handleSubmitStandup} className="space-y-4 sm:space-y-5">
                 {/* Module Scope Selector */}
-                <div className="p-4 rounded-xl bg-surface border border-outline shadow-xs">
+                <div className="p-3.5 sm:p-4 rounded-xl bg-surface border border-outline shadow-xs">
                   <label className="text-xs font-bold text-on-surface mb-2.5 flex items-center gap-1.5 uppercase tracking-wider">
                     <span className="material-symbols-outlined text-[16px] text-primary">layers</span>
                     <span>Assigned Operational Modules ({currentUser?.role})</span>
                   </label>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
                     {AVAILABLE_MODULES.map(mod => {
                       const isSelected = selectedModules.includes(mod.id);
                       return (
@@ -434,7 +633,7 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                           key={mod.id}
                           type="button"
                           onClick={() => toggleModuleSelection(mod.id)}
-                          className={`text-xs px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
+                          className={`text-[11px] sm:text-xs px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg border transition-all cursor-pointer ${
                             isSelected
                               ? 'bg-primary text-white border-primary shadow-xs font-bold'
                               : 'bg-surface border-outline text-secondary hover:border-outline-variant hover:text-on-surface'
@@ -448,7 +647,7 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                 </div>
 
                 {/* Section 1: Tasks Yesterday */}
-                <div className="p-4 rounded-xl bg-surface border border-outline shadow-xs space-y-3">
+                <div className="p-3.5 sm:p-4 rounded-xl bg-surface border border-outline shadow-xs space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs font-bold">
@@ -465,57 +664,77 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                     </button>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     {tasksYesterday.map((task, idx) => (
-                      <div key={task.id} className="flex items-center gap-2 bg-canvas p-2.5 rounded-lg border border-outline">
-                        <input
-                          type="text"
-                          placeholder={`Yesterday task #${idx + 1}...`}
-                          value={task.description}
-                          onChange={e => handleUpdateYesterdayTask(task.id, { description: e.target.value })}
-                          className="flex-1 bg-transparent text-xs sm:text-sm text-on-surface placeholder:text-secondary outline-none font-medium"
-                        />
-                        <select
-                          value={task.moduleId}
-                          onChange={e => handleUpdateYesterdayTask(task.id, { moduleId: e.target.value })}
-                          className="bg-surface border border-outline text-xs text-on-surface font-semibold rounded-lg px-2 py-1 outline-none"
-                        >
-                          {AVAILABLE_MODULES.map(m => (
-                            <option key={m.id} value={m.id}>
-                              {m.name}
-                            </option>
-                          ))}
-                        </select>
-                        <select
-                          value={task.status}
-                          onChange={e =>
-                            handleUpdateYesterdayTask(task.id, {
-                              status: e.target.value as 'completed' | 'in_progress' | 'blocked',
-                            })
-                          }
-                          className="bg-surface border border-outline text-xs text-emerald-700 font-bold rounded-lg px-2 py-1 outline-none"
-                        >
-                          <option value="completed">Completed</option>
-                          <option value="in_progress">In Progress</option>
-                          <option value="blocked">Blocked</option>
-                        </select>
-                        {tasksYesterday.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveYesterdayTask(task.id)}
-                            className="text-secondary hover:text-error p-1 cursor-pointer transition-colors"
-                            title="Remove task"
+                      <div
+                        key={task.id}
+                        className="flex flex-col sm:flex-row sm:items-start gap-2 bg-canvas p-2.5 sm:p-3 rounded-lg border border-outline w-full"
+                      >
+                        {/* Top / Left: Sequential Number Badge + Auto-expanding Textarea */}
+                        <div className="flex items-start gap-2 flex-1 min-w-0 w-full">
+                          <span className="w-5 h-5 rounded-md bg-surface-container font-mono text-[11px] font-bold flex items-center justify-center text-secondary shrink-0 mt-1 border border-outline/50">
+                            {idx + 1}
+                          </span>
+                          <textarea
+                            rows={1}
+                            placeholder={`Yesterday task #${idx + 1}...`}
+                            value={task.description}
+                            title={task.description || `Yesterday task #${idx + 1}`}
+                            onChange={e => handleUpdateYesterdayTask(task.id, { description: e.target.value })}
+                            onInput={e => {
+                              const target = e.currentTarget;
+                              target.style.height = 'auto';
+                              target.style.height = `${Math.min(180, Math.max(34, target.scrollHeight))}px`;
+                            }}
+                            className="flex-1 min-w-0 bg-transparent text-xs sm:text-sm text-on-surface placeholder:text-secondary outline-none font-medium resize-none leading-relaxed"
+                            style={{ minHeight: '2.125rem' }}
+                          />
+                        </div>
+
+                        {/* Bottom / Right: Module Select + Status Select + Delete Button */}
+                        <div className="flex items-center justify-between sm:justify-end gap-1.5 w-full sm:w-auto shrink-0 pt-1 sm:pt-0 border-t border-outline/30 sm:border-0">
+                          <select
+                            value={task.moduleId}
+                            onChange={e => handleUpdateYesterdayTask(task.id, { moduleId: e.target.value })}
+                            className="flex-1 sm:flex-initial max-w-[155px] bg-surface border border-outline text-xs text-on-surface font-semibold rounded-lg px-2 py-1 outline-none truncate"
                           >
-                            <span className="material-symbols-outlined text-[16px]">delete</span>
-                          </button>
-                        )}
+                            {AVAILABLE_MODULES.map(m => (
+                              <option key={m.id} value={m.id}>
+                                {m.name}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            value={task.status}
+                            onChange={e =>
+                              handleUpdateYesterdayTask(task.id, {
+                                status: e.target.value as 'completed' | 'in_progress' | 'blocked',
+                              })
+                            }
+                            className="flex-1 sm:flex-initial max-w-[125px] bg-surface border border-outline text-xs text-emerald-700 font-bold rounded-lg px-2 py-1 outline-none truncate"
+                          >
+                            <option value="completed">Completed</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="blocked">Blocked</option>
+                          </select>
+                          {tasksYesterday.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveYesterdayTask(task.id)}
+                              className="text-secondary hover:text-error p-1 rounded-md hover:bg-error/10 cursor-pointer transition-colors shrink-0"
+                              title="Remove task"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">delete</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 {/* Section 2: Tasks Today */}
-                <div className="p-4 rounded-xl bg-surface border border-outline shadow-xs space-y-3">
+                <div className="p-3.5 sm:p-4 rounded-xl bg-surface border border-outline shadow-xs space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-5 h-5 rounded-full bg-blue-100 text-primary flex items-center justify-center text-xs font-bold">
@@ -532,88 +751,104 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                     </button>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     {tasksToday.map((task, idx) => {
                       const isCompleted = task.status === 'completed';
                       const isBlocked = task.status === 'blocked';
                       return (
                         <div 
                           key={task.id} 
-                          className={`flex items-center gap-2 p-2.5 rounded-lg border transition-all ${
+                          className={`flex flex-col sm:flex-row sm:items-start gap-2 p-2.5 sm:p-3 rounded-lg border transition-all w-full ${
                             isCompleted ? 'bg-emerald-50/40 border-emerald-200' : isBlocked ? 'bg-red-50/40 border-red-200' : 'bg-canvas border-outline'
                           }`}
                         >
-                          {/* Quick-toggle Completion Button */}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleUpdateTodayTask(task.id, {
-                                status: isCompleted ? 'in_progress' : 'completed',
-                              })
-                            }
-                            className={`w-6 h-6 rounded-md flex items-center justify-center transition-all cursor-pointer shrink-0 border ${
-                              isCompleted
-                                ? 'bg-emerald-600 border-emerald-600 text-white'
-                                : isBlocked
-                                ? 'bg-red-50 border-red-300 text-red-600'
-                                : 'bg-surface border-outline text-transparent hover:border-primary'
-                            }`}
-                            title={isCompleted ? 'Mark In Progress' : 'Mark Completed'}
-                          >
-                            <span className="material-symbols-outlined text-[16px]">
-                              {isCompleted ? 'check' : isBlocked ? 'priority_high' : 'check'}
+                          {/* Top / Left: Sequential Number Badge + Quick-toggle Completion + Auto-expanding Textarea */}
+                          <div className="flex items-start gap-2 flex-1 min-w-0 w-full">
+                            <span className="w-5 h-5 rounded-md bg-surface-container font-mono text-[11px] font-bold flex items-center justify-center text-secondary shrink-0 mt-1 border border-outline/50">
+                              {idx + 1}
                             </span>
-                          </button>
-
-                          <input
-                            type="text"
-                            placeholder={`Today commitment #${idx + 1}...`}
-                            value={task.description}
-                            onChange={e => handleUpdateTodayTask(task.id, { description: e.target.value })}
-                            className={`flex-1 bg-transparent text-xs sm:text-sm placeholder:text-secondary outline-none font-medium ${
-                              isCompleted ? 'line-through text-secondary' : 'text-on-surface'
-                            }`}
-                          />
-                          <select
-                            value={task.moduleId}
-                            onChange={e => handleUpdateTodayTask(task.id, { moduleId: e.target.value })}
-                            className="bg-surface border border-outline text-xs text-on-surface font-semibold rounded-lg px-2 py-1 outline-none"
-                          >
-                            {AVAILABLE_MODULES.map(m => (
-                              <option key={m.id} value={m.id}>
-                                {m.name}
-                              </option>
-                            ))}
-                          </select>
-                          <select
-                            value={task.status || 'in_progress'}
-                            onChange={e =>
-                              handleUpdateTodayTask(task.id, {
-                                status: e.target.value as 'completed' | 'in_progress' | 'blocked',
-                              })
-                            }
-                            className={`bg-surface border text-xs font-bold rounded-lg px-2 py-1 outline-none ${
-                              isCompleted
-                                ? 'border-emerald-300 text-emerald-700'
-                                : isBlocked
-                                ? 'border-red-300 text-red-700'
-                                : 'border-blue-300 text-blue-700'
-                            }`}
-                          >
-                            <option value="in_progress">In Progress</option>
-                            <option value="completed">Completed</option>
-                            <option value="blocked">Blocked</option>
-                          </select>
-                          {tasksToday.length > 1 && (
                             <button
                               type="button"
-                              onClick={() => handleRemoveTodayTask(task.id)}
-                              className="text-secondary hover:text-error p-1 cursor-pointer transition-colors"
-                              title="Remove task"
+                              onClick={() =>
+                                handleUpdateTodayTask(task.id, {
+                                  status: isCompleted ? 'in_progress' : 'completed',
+                                })
+                              }
+                              className={`w-6 h-6 rounded-md flex items-center justify-center transition-all cursor-pointer shrink-0 mt-0.5 border ${
+                                isCompleted
+                                  ? 'bg-emerald-600 border-emerald-600 text-white'
+                                  : isBlocked
+                                  ? 'bg-red-50 border-red-300 text-red-600'
+                                  : 'bg-surface border-outline text-transparent hover:border-primary'
+                              }`}
+                              title={isCompleted ? 'Mark In Progress' : 'Mark Completed'}
                             >
-                              <span className="material-symbols-outlined text-[16px]">delete</span>
+                              <span className="material-symbols-outlined text-[16px]">
+                                {isCompleted ? 'check' : isBlocked ? 'priority_high' : 'check'}
+                              </span>
                             </button>
-                          )}
+
+                            <textarea
+                              rows={1}
+                              placeholder={`Today commitment #${idx + 1}...`}
+                              value={task.description}
+                              title={task.description || `Today commitment #${idx + 1}`}
+                              onChange={e => handleUpdateTodayTask(task.id, { description: e.target.value })}
+                              onInput={e => {
+                                const target = e.currentTarget;
+                                target.style.height = 'auto';
+                                target.style.height = `${Math.min(180, Math.max(34, target.scrollHeight))}px`;
+                              }}
+                              className={`flex-1 min-w-0 bg-transparent text-xs sm:text-sm placeholder:text-secondary outline-none font-medium resize-none leading-relaxed ${
+                                isCompleted ? 'line-through text-secondary' : 'text-on-surface'
+                              }`}
+                              style={{ minHeight: '2.125rem' }}
+                            />
+                          </div>
+
+                          {/* Bottom / Right: Module Select + Status Select + Delete Button */}
+                          <div className="flex items-center justify-between sm:justify-end gap-1.5 w-full sm:w-auto shrink-0 pt-1 sm:pt-0 border-t border-outline/30 sm:border-0">
+                            <select
+                              value={task.moduleId}
+                              onChange={e => handleUpdateTodayTask(task.id, { moduleId: e.target.value })}
+                              className="flex-1 sm:flex-initial max-w-[155px] bg-surface border border-outline text-xs text-on-surface font-semibold rounded-lg px-2 py-1 outline-none truncate"
+                            >
+                              {AVAILABLE_MODULES.map(m => (
+                                <option key={m.id} value={m.id}>
+                                  {m.name}
+                                </option>
+                              ))}
+                            </select>
+                            <select
+                              value={task.status || 'in_progress'}
+                              onChange={e =>
+                                handleUpdateTodayTask(task.id, {
+                                  status: e.target.value as 'completed' | 'in_progress' | 'blocked',
+                                })
+                              }
+                              className={`flex-1 sm:flex-initial max-w-[125px] bg-surface border text-xs font-bold rounded-lg px-2 py-1 outline-none truncate ${
+                                isCompleted
+                                  ? 'border-emerald-300 text-emerald-700'
+                                  : isBlocked
+                                  ? 'border-red-300 text-red-700'
+                                  : 'border-blue-300 text-blue-700'
+                              }`}
+                            >
+                              <option value="in_progress">In Progress</option>
+                              <option value="completed">Completed</option>
+                              <option value="blocked">Blocked</option>
+                            </select>
+                            {tasksToday.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveTodayTask(task.id)}
+                                className="text-secondary hover:text-error p-1 rounded-md hover:bg-error/10 cursor-pointer transition-colors shrink-0"
+                                title="Remove task"
+                              >
+                                <span className="material-symbols-outlined text-[16px]">delete</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
@@ -621,7 +856,7 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                 </div>
 
                 {/* Section 3: Blockers / Impediments */}
-                <div className="p-4 rounded-xl bg-surface border border-outline shadow-xs space-y-3">
+                <div className="p-3.5 sm:p-4 rounded-xl bg-surface border border-outline shadow-xs space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-5 h-5 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center text-xs font-bold">
@@ -640,20 +875,26 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
 
                   <div className="space-y-2">
                     {blockers.map((b, idx) => (
-                      <div key={idx} className="flex items-center gap-2 bg-canvas p-2.5 rounded-lg border border-outline">
-                        <span className="material-symbols-outlined text-amber-600 text-[18px] shrink-0">warning</span>
-                        <input
-                          type="text"
+                      <div key={idx} className="flex items-start gap-2 bg-canvas p-2.5 rounded-lg border border-outline w-full">
+                        <span className="material-symbols-outlined text-amber-600 text-[18px] shrink-0 mt-1">warning</span>
+                        <textarea
+                          rows={1}
                           placeholder="E.g. Waiting on student payment proof, mentor syllabus sign-off..."
                           value={b}
                           onChange={e => handleUpdateBlocker(idx, e.target.value)}
-                          className="flex-1 bg-transparent text-xs sm:text-sm text-on-surface placeholder:text-secondary outline-none font-medium"
+                          onInput={e => {
+                            const target = e.currentTarget;
+                            target.style.height = 'auto';
+                            target.style.height = `${Math.min(180, Math.max(34, target.scrollHeight))}px`;
+                          }}
+                          className="flex-1 min-w-0 bg-transparent text-xs sm:text-sm text-on-surface placeholder:text-secondary outline-none font-medium resize-none leading-relaxed"
+                          style={{ minHeight: '2.125rem' }}
                         />
                         {blockers.length > 1 && (
                           <button
                             type="button"
                             onClick={() => handleRemoveBlocker(idx)}
-                            className="text-secondary hover:text-error p-1 cursor-pointer transition-colors"
+                            className="text-secondary hover:text-error p-1 rounded-md hover:bg-error/10 cursor-pointer transition-colors shrink-0 mt-0.5"
                             title="Remove blocker"
                           >
                             <span className="material-symbols-outlined text-[16px]">delete</span>
@@ -814,26 +1055,35 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                         Assigned Module Throughput Breakdown
                       </h4>
                       <div className="space-y-2.5">
-                        {Object.entries(activeWeeklyReport.moduleBreakdown).map(([modId, data]) => {
-                          const modInfo = AVAILABLE_MODULES.find(m => m.id === modId);
-                          const percentage = data.tasksPlanned > 0 ? Math.round((data.tasksCompleted / data.tasksPlanned) * 100) : 100;
-                          return (
-                            <div key={modId} className="space-y-1">
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="text-on-surface font-semibold">{modInfo?.name || modId}</span>
-                                <span className="text-secondary font-mono">
-                                  {data.tasksCompleted}/{data.tasksPlanned} tasks ({percentage}%)
-                                </span>
+                        {Object.entries(activeWeeklyReport.moduleBreakdown).length > 0 ? (
+                          Object.entries(activeWeeklyReport.moduleBreakdown).map(([modId, data]) => {
+                            const modInfo = AVAILABLE_MODULES.find(m => m.id === modId);
+                            const percentage = data.tasksPlanned > 0 ? Math.round((data.tasksCompleted / data.tasksPlanned) * 100) : 100;
+                            return (
+                              <div key={modId} className="space-y-1">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-on-surface font-semibold">{modInfo?.name || modId}</span>
+                                  <span className="text-secondary font-mono">
+                                    {data.tasksCompleted}/{data.tasksPlanned} tasks ({percentage}%)
+                                  </span>
+                                </div>
+                                <div className="w-full h-2 rounded-full bg-surface-container-high overflow-hidden">
+                                  <div
+                                    className="h-full bg-primary rounded-full transition-all duration-300"
+                                    style={{ width: `${Math.min(100, percentage)}%` }}
+                                  />
+                                </div>
                               </div>
-                              <div className="w-full h-2 rounded-full bg-surface-container-high overflow-hidden">
-                                <div
-                                  className="h-full bg-primary rounded-full transition-all duration-300"
-                                  style={{ width: `${Math.min(100, percentage)}%` }}
-                                />
-                              </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })
+                        ) : (
+                          <div className="p-4 rounded-lg bg-surface-container/40 border border-outline/50 text-center text-secondary text-xs">
+                            <p className="font-semibold text-on-surface">No module task throughput recorded yet for this evaluation period.</p>
+                            <p className="text-[11px] text-secondary/80 mt-1">
+                              Log daily standups with assigned module tags to visualize your weekly completion velocity.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

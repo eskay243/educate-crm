@@ -23,7 +23,10 @@ import {
   VirtualAccountDetails,
   TimetableSlot,
   MentorPayoutRequest,
-  WalletTransaction
+  WalletTransaction,
+  MentorCohortLedgerEntry,
+  MentorReconciliationRow,
+  MentorReconciliationSummary
 } from '../types/crm';
 import {
   ChatConversation,
@@ -522,6 +525,13 @@ class ApiService {
     });
   }
 
+  async createAssignment(payload: any) {
+    return this.request<{ success: boolean; data: any }>('/lms/assignments/create', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
   // Student Payment Proof
   async submitProofOfPayment(studentId: string, payload: { amount: number; bankName: string; referenceNumber: string; receiptProofUrl?: string; notes?: string }) {
     return this.request(`/students/${studentId}/proof-of-payment`, {
@@ -716,10 +726,61 @@ class ApiService {
     }>(`/wallet/verify-transfer/${encodeURIComponent(reference)}`);
   }
 
-  async disburseMentorFromWallet(mentorId: string, amount: number, reason?: string, payoutRequestId?: string) {
+  async disburseMentorFromWallet(
+    mentorId: string,
+    amount: number,
+    reason?: string,
+    payoutRequestId?: string,
+    options?: { bypassHoursCheck?: boolean; cohortLedgerId?: string }
+  ) {
     return this.request<{ mentor: Mentor; transferRef: string; disburseAmount: number; walletBalance: number }>('/paystack/disburse-mentor', {
       method: 'POST',
-      body: JSON.stringify({ mentorId, amount, reason, payoutRequestId }),
+      body: JSON.stringify({
+        mentorId,
+        amount,
+        reason,
+        payoutRequestId,
+        bypassHoursCheck: options?.bypassHoursCheck,
+        cohortLedgerId: options?.cohortLedgerId
+      }),
+    });
+  }
+
+  async getMentorReconciliation() {
+    return this.request<{ rows: MentorReconciliationRow[]; mentorSummaries: MentorReconciliationSummary[] }>('/mentor-reconciliation');
+  }
+
+  async createReconciliationLedger(payload: Partial<MentorCohortLedgerEntry>) {
+    return this.request<MentorCohortLedgerEntry>('/mentor-reconciliation/ledger', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateReconciliationLedger(id: string, payload: Partial<MentorCohortLedgerEntry>) {
+    return this.request<MentorCohortLedgerEntry>(`/mentor-reconciliation/ledger/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async recordMentorStudentDeposit(
+    mentorId: string,
+    payload: { studentId: string; amount: number; paymentReference?: string; cohortLedgerId?: string }
+  ) {
+    return this.request<{ student: Student; mentor: Mentor; commission: number }>(`/mentors/${encodeURIComponent(mentorId)}/record-student-deposit`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async recordManualMentorPayout(
+    mentorId: string,
+    payload: { amount: number; bankReference?: string; bankName?: string; notes?: string; cohortLedgerId?: string; bypassHoursCheck?: boolean }
+  ) {
+    return this.request<{ mentor: Mentor; payout: MentorPayoutRequest }>(`/mentors/${encodeURIComponent(mentorId)}/manual-payout`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
     });
   }
 
@@ -870,6 +931,12 @@ class ApiService {
     return this.request<{ success: boolean; data: MentorPayoutRequest }>(`/payout-requests/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(updates),
+    });
+  }
+
+  async deletePayoutRequest(id: string) {
+    return this.request<{ success: boolean; message: string }>(`/payout-requests/${id}`, {
+      method: 'DELETE',
     });
   }
 

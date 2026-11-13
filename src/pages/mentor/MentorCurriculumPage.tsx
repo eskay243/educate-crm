@@ -1,7 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useCRM } from '../../context/CRMContext';
 import { MentorWeeklyReport, MentorLearningMaterial, LMSLesson } from '../../types/crm';
 import { getStudentEnrolledModules } from '../../utils/courseCurriculum';
+
+const normalizeStr = (s?: string) =>
+  (s || '')
+    .toLowerCase()
+    .replace(/^(dr\.|engr\.|mr\.|mrs\.|ms\.|prof\.)\s+/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 
 export const MentorCurriculumPage: React.FC = () => {
   const {
@@ -14,14 +21,44 @@ export const MentorCurriculumPage: React.FC = () => {
     showToast,
   } = useCRM();
 
-  // Find active mentor
+  const isSuperAdmin = currentUser?.role === 'super_admin';
+  const isProgramOfficer = currentUser?.role === 'program_officer';
+  const isMentorRole = currentUser?.role === 'mentor';
+
+  const [selectedMentorFilter, setSelectedMentorFilter] = useState<string>('all');
+
+  // Find active mentor based on currentUser
   const myMentor = useMemo(() => {
-    return (
-      mentors.find(
-        m => m.id === currentUser?.mentorId || m.name === currentUser?.name || m.email === currentUser?.email
-      ) || mentors[0]
-    );
-  }, [mentors, currentUser]);
+    if (!currentUser) return null;
+    const cName = normalizeStr(currentUser.name);
+    const cEmail = normalizeStr(currentUser.email);
+    const cMentorId = currentUser.mentorId || currentUser.id;
+
+    // 1. Explicit ID match
+    const byId = mentors.find(m => m.id === cMentorId);
+    if (byId) return byId;
+
+    // 2. Email match
+    if (cEmail) {
+      const byEmail = mentors.find(m => normalizeStr(m.email) === cEmail);
+      if (byEmail) return byEmail;
+    }
+
+    // 3. Normalized Name match
+    if (cName) {
+      const byName = mentors.find(m => normalizeStr(m.name) === cName);
+      if (byName) return byName;
+    }
+
+    // If Super Admin / Program Officer inspecting a selected mentor
+    if ((isSuperAdmin || isProgramOfficer) && selectedMentorFilter !== 'all') {
+      const selected = mentors.find(m => m.id === selectedMentorFilter);
+      if (selected) return selected;
+    }
+
+    // If user is a mentor and not matched, do not leak another mentor's profile
+    return isMentorRole ? null : mentors[0] || null;
+  }, [mentors, currentUser, isMentorRole, isSuperAdmin, isProgramOfficer, selectedMentorFilter]);
 
   const [activeTab, setActiveTab] = useState<'courses' | 'materials' | 'reports'>('courses');
 
@@ -40,22 +77,54 @@ export const MentorCurriculumPage: React.FC = () => {
   const [materialUrl, setMaterialUrl] = useState('');
   const [materialCourse, setMaterialCourse] = useState('');
 
-  // Assigned courses for this mentor
+  // Assigned courses for this mentor (strictly scoped, no leakage of unassigned courses)
   const myCourses = useMemo(() => {
-    if (!myMentor) return courses;
+    // If Super Admin or Program Officer viewing all institutional courses
+    if ((isSuperAdmin || isProgramOfficer) && !isMentorRole && selectedMentorFilter === 'all') {
+      return courses;
+    }
+
+    // Determine target mentor to scope to
+    const targetMentor = (isSuperAdmin || isProgramOfficer) && !isMentorRole && selectedMentorFilter !== 'all'
+      ? mentors.find(m => m.id === selectedMentorFilter)
+      : myMentor;
+
+    // If mentor role or no mentor profile found, strictly return empty array
+    if (!targetMentor) {
+      return [];
+    }
+
+    const mName = normalizeStr(targetMentor.name);
+    const mId = targetMentor.id;
+
     return courses.filter(c => {
-      const isLead = c.leadInstructor?.toLowerCase() === myMentor.name?.toLowerCase();
+      const isLead = normalizeStr(c.leadInstructor) === mName;
       const isAssigned = c.assignedMentors?.some(
-        am => am.mentorId === myMentor.id || am.mentorName?.toLowerCase() === myMentor.name?.toLowerCase()
+        am => (am.mentorId && am.mentorId === mId) || normalizeStr(am.mentorName) === mName
       );
-      return isLead || isAssigned;
+      const isIdMatch = c.id === mId;
+      return isLead || isAssigned || isIdMatch;
     });
-  }, [courses, myMentor]);
+  }, [courses, myMentor, selectedMentorFilter, isSuperAdmin, isProgramOfficer, isMentorRole, mentors]);
 
   // Selected course for syllabus inspect
-  const [selectedCourseId, setSelectedCourseId] = useState<string>(myCourses[0]?.id || '');
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+
+  // Keep selectedCourseId synchronized with available courses
+  useEffect(() => {
+    if (myCourses.length > 0) {
+      const exists = myCourses.some(c => c.id === selectedCourseId);
+      if (!exists) {
+        setSelectedCourseId(myCourses[0].id);
+      }
+    } else {
+      setSelectedCourseId('');
+    }
+  }, [myCourses, selectedCourseId]);
+
   const activeCourse = useMemo(() => {
-    return myCourses.find(c => c.id === selectedCourseId) || myCourses[0];
+    if (myCourses.length === 0) return null;
+    return myCourses.find(c => c.id === selectedCourseId) || myCourses[0] || null;
   }, [myCourses, selectedCourseId]);
 
   const activeCourseModules = useMemo(() => {
@@ -76,6 +145,11 @@ export const MentorCurriculumPage: React.FC = () => {
 
   // Handlers
   const handleSaveWeeklyReport = () => {
+    if (!myMentor) {
+      showToast('Profile Error', 'Faculty mentor profile could not be verified.', 'error');
+      return;
+    }
+
     if (!reportCourse || !reportTopicsCovered.trim()) {
       showToast('Validation Error', 'Please select a course and enter topics covered.', 'error');
       return;
@@ -105,6 +179,11 @@ export const MentorCurriculumPage: React.FC = () => {
   };
 
   const handleSaveLearningMaterial = () => {
+    if (!myMentor) {
+      showToast('Profile Error', 'Faculty mentor profile could not be verified.', 'error');
+      return;
+    }
+
     if (!materialTitle.trim() || !materialUrl.trim()) {
       showToast('Validation Error', 'Please provide a title and valid URL.', 'error');
       return;
@@ -153,12 +232,41 @@ export const MentorCurriculumPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {(isSuperAdmin || isProgramOfficer) && !isMentorRole && (
+            <div className="flex items-center gap-2 bg-surface border border-outline-variant rounded-xl px-3 py-2 shadow-xs">
+              <span className="text-xs font-semibold text-secondary flex items-center gap-1">
+                <span className="material-symbols-outlined text-[16px] text-primary">filter_alt</span>
+                Faculty Filter:
+              </span>
+              <select
+                value={selectedMentorFilter}
+                onChange={(e) => setSelectedMentorFilter(e.target.value)}
+                className="text-xs font-bold text-on-surface bg-transparent border-none outline-none cursor-pointer"
+              >
+                <option value="all">All Institutional Tracks ({courses.length})</option>
+                {mentors.map(m => (
+                  <option key={m.id} value={m.id}>{m.name} ({m.department || 'Faculty'})</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {isMentorRole && (
+            <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-xl px-3 py-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-xs font-bold text-primary">
+                {myMentor?.name || currentUser?.name} &bull; {myCourses.length} Assigned Course{myCourses.length === 1 ? '' : 's'}
+              </span>
+            </div>
+          )}
+
           <button
             onClick={() => {
               setReportCourse(activeCourse?.title || '');
               setIsReportModalOpen(true);
             }}
-            className="h-10 px-4 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-dark transition-all flex items-center gap-2 shadow-xs cursor-pointer"
+            disabled={myCourses.length === 0}
+            className="h-10 px-4 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-dark transition-all flex items-center gap-2 shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="material-symbols-outlined text-[18px]">post_add</span>
             <span>Submit Weekly Report</span>
@@ -168,7 +276,8 @@ export const MentorCurriculumPage: React.FC = () => {
               setMaterialCourse(activeCourse?.title || '');
               setIsMaterialModalOpen(true);
             }}
-            className="h-10 px-4 rounded-xl bg-surface border border-outline-variant hover:border-primary text-xs font-bold text-on-surface flex items-center gap-2 transition-all shadow-xs cursor-pointer"
+            disabled={myCourses.length === 0}
+            className="h-10 px-4 rounded-xl bg-surface border border-outline-variant hover:border-primary text-xs font-bold text-on-surface flex items-center gap-2 transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="material-symbols-outlined text-[18px] text-primary">upload_file</span>
             <span>Add Resource</span>
@@ -217,6 +326,18 @@ export const MentorCurriculumPage: React.FC = () => {
 
       {/* Main Tab Views */}
       {activeTab === 'courses' && (
+        myCourses.length === 0 ? (
+          <div className="bg-surface border border-outline-variant rounded-2xl p-12 text-center shadow-xs">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4">
+              <span className="material-symbols-outlined text-[32px]">menu_book</span>
+            </div>
+            <h3 className="text-base font-bold text-on-surface">No Courses Assigned Yet</h3>
+            <p className="text-xs text-secondary mt-1.5 max-w-md mx-auto leading-relaxed">
+              You are currently not assigned as lead instructor or co-mentor on any active course syllabus.
+              Please contact the Academic Program Officer or Administrator to have your official course tracks allocated.
+            </p>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Course Selection List */}
           <div className="space-y-3">
@@ -438,6 +559,7 @@ export const MentorCurriculumPage: React.FC = () => {
             )}
           </div>
         </div>
+        )
       )}
 
       {/* Learning Materials Tab */}

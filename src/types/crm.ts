@@ -428,6 +428,11 @@ export interface StudentAssignmentSubmission {
   mentorFeedback?: string;
   reviewedBy?: string;
   reviewedAt?: string;
+  mentorId?: string;
+  assignmentType?: 'assignment' | 'capstone_project' | 'lab';
+  maxScore?: number;
+  dueDate?: string;
+  instructions?: string;
 }
 
 export interface Student extends NigerianBiodataKYC {
@@ -817,6 +822,10 @@ export interface Expense {
   nipSessionId?: string;
   mentorId?: string;
   mentorName?: string;
+  payoutRequestId?: string;
+  voucherNumber?: string;
+  isHistorical?: boolean;
+  walletDeducted?: boolean;
 }
 
 export type EmailTemplateType = 
@@ -1398,6 +1407,65 @@ export interface MentorPayoutRequest {
   disburseReference?: string;
   rejectionReason?: string;
   notes?: string;
+  expenseId?: string;
+  isHistorical?: boolean;
+  cohortLedgerId?: string;
+  paymentMethod?: 'paystack' | 'manual_bank';
+}
+
+export interface MentorCohortLedgerEntry {
+  id: string;
+  cohortName: string;
+  courseName: string;
+  mentorId: string;
+  mentorName: string;
+  courseStatus: 'Done' | 'In progress' | 'Skipped';
+  studentCount: number;
+  startDate: string;
+  dueDate: string;
+  historicalStudentPaid: number;
+  agreedAmountDue: number;
+  commissionRate: number;
+  amountDisbursed: number;
+  isHistoricalSeed: boolean;
+  notes?: string;
+  updatedAt: string;
+}
+
+export interface MentorReconciliationRow extends MentorCohortLedgerEntry {
+  liveStudentPaid: number;
+  effectiveStudentPaid: number;
+  calculatedCommission37: number;
+  varianceAmount: number;
+  outstandingAmount: number;
+  paymentStatus: 'Completed' | 'Partial' | 'Pending';
+  matchedStudents: Array<{
+    id: string;
+    name: string;
+    email: string;
+    program: string;
+    cohort: string;
+    totalFees: number;
+    paidAmount: number;
+    outstandingBalance: number;
+    tuitionStatus: string;
+  }>;
+}
+
+export interface MentorReconciliationSummary {
+  mentorId: string;
+  mentorName: string;
+  mentorEmail: string;
+  lecturedHours: number;
+  minimumRequiredHours: number;
+  totalStudentDeposits: number;
+  totalCalculatedCommission37: number;
+  totalAgreedDue: number;
+  totalVariance: number;
+  totalDisbursed: number;
+  totalOutstanding: number;
+  rowCount: number;
+  varianceCount: number;
 }
 
 export interface PushSubscriptionItem {

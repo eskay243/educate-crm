@@ -42,11 +42,13 @@ export const MentorStudentsPage: React.FC = () => {
   const [newGoalNotes, setNewGoalNotes] = useState('');
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
 
-  // Assigned students filter
+  // Assigned students filter (matching by mentorId or trimmed name)
   const assignedStudents = useMemo(() => {
     if (!myMentor) return [];
+    const norm = (s?: string) => (s || '').trim().toLowerCase();
+    const myName = norm(myMentor.name);
     return students.filter(
-      s => s.mentorId === myMentor.id || s.mentorName?.toLowerCase() === myMentor.name?.toLowerCase()
+      s => (s.mentorId && s.mentorId === myMentor.id) || norm(s.mentorName) === myName
     );
   }, [students, myMentor]);
 

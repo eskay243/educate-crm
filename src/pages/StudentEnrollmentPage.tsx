@@ -9,6 +9,8 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
   const { 
     students, 
     courses,
+    mentors,
+    assignMentorToStudent,
     selectedStudentId, 
     setSelectedStudentId, 
     openModal, 
@@ -24,6 +26,8 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
   const [tableSearch, setTableSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [courseFilter, setCourseFilter] = useState<string>('All');
+  const [paymentPlanFilter, setPaymentPlanFilter] = useState<string>('All');
+  const [sortBy, setSortBy] = useState<string>('default');
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -38,13 +42,17 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
 
   // If mentor, filter strictly to their assigned students
   const displayedStudents = isMentor
-    ? students.filter(s => s.mentorId === currentUser?.mentorId || s.mentorName === currentUser?.name)
+    ? students.filter(s => {
+        const norm = (str?: string) => (str || '').trim().toLowerCase();
+        return (s.mentorId && s.mentorId === currentUser?.mentorId) ||
+          norm(s.mentorName) === norm(currentUser?.name);
+      })
     : students;
 
   const currentStudent = displayedStudents.find(s => s.id === selectedStudentId) || displayedStudents[0];
 
   const filteredStudents = useMemo(() => {
-    return displayedStudents.filter(s => {
+    const filtered = displayedStudents.filter(s => {
       const matchesSearch = 
         s.name.toLowerCase().includes(tableSearch.toLowerCase()) ||
         s.email.toLowerCase().includes(tableSearch.toLowerCase()) ||
@@ -53,14 +61,28 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
         (Array.isArray(s.courses) && s.courses.some(c => c.name?.toLowerCase().includes(tableSearch.toLowerCase())));
       const matchesStatus = statusFilter === 'All' || s.status === statusFilter;
       const matchesCourse = courseFilter === 'All' || s.program === courseFilter || (Array.isArray(s.courses) && s.courses.some(c => c.name === courseFilter));
-      return matchesSearch && matchesStatus && matchesCourse;
+      const bal = s.outstandingBalance ?? ((s.totalFees || 0) - (s.paidAmount || 0));
+      const derivedTuition = s.tuitionStatus || (bal <= 0 ? 'Paid' : (s.paidAmount || 0) > 0 ? 'Partial' : 'Pending');
+      const matchesPaymentPlan = paymentPlanFilter === 'All' || derivedTuition === paymentPlanFilter;
+      return matchesSearch && matchesStatus && matchesCourse && matchesPaymentPlan;
     });
-  }, [displayedStudents, tableSearch, statusFilter, courseFilter]);
+
+    if (sortBy === 'balance_desc') {
+      return [...filtered].sort((a, b) => (b.outstandingBalance ?? ((b.totalFees || 0) - (b.paidAmount || 0))) - (a.outstandingBalance ?? ((a.totalFees || 0) - (a.paidAmount || 0))));
+    }
+    if (sortBy === 'paid_desc') {
+      return [...filtered].sort((a, b) => (b.paidAmount || 0) - (a.paidAmount || 0));
+    }
+    if (sortBy === 'fees_desc') {
+      return [...filtered].sort((a, b) => (b.totalFees || 0) - (a.totalFees || 0));
+    }
+    return filtered;
+  }, [displayedStudents, tableSearch, statusFilter, courseFilter, paymentPlanFilter, sortBy]);
 
   // Reset page when filter or search changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [tableSearch, statusFilter, courseFilter]);
+  }, [tableSearch, statusFilter, courseFilter, paymentPlanFilter, sortBy]);
 
   const totalStudents = filteredStudents.length;
   const totalPages = Math.max(1, Math.ceil(totalStudents / pageSize));
@@ -345,6 +367,32 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                 ))}
               </select>
 
+              {!isMentor && (
+                <>
+                  <select
+                    value={paymentPlanFilter}
+                    onChange={(e) => setPaymentPlanFilter(e.target.value)}
+                    className="text-xs bg-surface border border-outline-variant rounded-lg px-2.5 py-1.5 text-on-surface font-semibold outline-none cursor-pointer"
+                  >
+                    <option value="All">All Payment Plans</option>
+                    <option value="Paid">Paid in Full</option>
+                    <option value="Partial">Installment / Partial</option>
+                    <option value="Pending">Unpaid / Pending</option>
+                  </select>
+
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="text-xs bg-surface border border-outline-variant rounded-lg px-2.5 py-1.5 text-on-surface font-semibold outline-none cursor-pointer"
+                  >
+                    <option value="default">Sort: Default</option>
+                    <option value="balance_desc">Sort: Highest Balance</option>
+                    <option value="paid_desc">Sort: Highest Paid</option>
+                    <option value="fees_desc">Sort: Highest Tuition</option>
+                  </select>
+                </>
+              )}
+
               <span className="text-xs text-secondary font-medium whitespace-nowrap pl-1">
                 Showing {totalStudents === 0 ? 0 : (validCurrentPage - 1) * pageSize + 1}–{Math.min(validCurrentPage * pageSize, totalStudents)} of {totalStudents} students
               </span>
@@ -432,8 +480,26 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
                           )}
                         </td>
 
-                        <td className="p-3">
-                          {student.mentorName ? (
+                        <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                          {!isMentor && (isSuperAdmin || canModifyStudent || currentUser?.role === 'program_officer' || currentUser?.role === 'finance') ? (
+                            <select
+                              value={student.mentorId || mentors.find(m => m.name.trim().toLowerCase() === (student.mentorName || '').trim().toLowerCase())?.id || ''}
+                              onChange={(e) => {
+                                const newMentorId = e.target.value;
+                                if (newMentorId) {
+                                  assignMentorToStudent(student.id, newMentorId, `Assigned for ${student.program || 'course'}`);
+                                }
+                              }}
+                              className="text-xs bg-surface border border-outline-variant rounded-lg px-2 py-1 text-on-surface font-medium outline-none cursor-pointer max-w-[170px]"
+                            >
+                              <option value="">Unassigned</option>
+                              {mentors
+                                .filter((m, idx, arr) => arr.findIndex(x => x.name.trim().toLowerCase() === m.name.trim().toLowerCase()) === idx)
+                                .map(m => (
+                                  <option key={m.id} value={m.id}>{m.name}</option>
+                                ))}
+                            </select>
+                          ) : student.mentorName ? (
                             <div className="flex items-center gap-1.5 text-on-surface font-medium">
                               <span className="material-symbols-outlined text-[16px] text-primary">psychology</span>
                               <span>{student.mentorName}</span>

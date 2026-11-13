@@ -55,7 +55,19 @@ export const StudentDashboardPage: React.FC = () => {
 
   const assignedMentor = mentors.find(m => m.id === student.mentorId || m.name === student.mentorName) || mentors[0];
   const pendingInvoice = invoices.find(inv => (inv.studentId === student.id || inv.studentName === student.name) && inv.status !== 'Paid');
-  const studentAssignments = assignments.filter(a => a.studentId === student.id || a.studentName === student.name);
+  const studentAssignments = useMemo(() => {
+    const list = [...assignments];
+    if (student.assignmentSubmissions && Array.isArray(student.assignmentSubmissions)) {
+      student.assignmentSubmissions.forEach(sub => {
+        if (!list.some(x => x.id === sub.id)) {
+          list.push(sub);
+        }
+      });
+    }
+    const norm = (s?: string) => (s || '').trim().toLowerCase();
+    const myName = norm(student.name);
+    return list.filter(a => (a.studentId && a.studentId === student.id) || norm(a.studentName) === myName);
+  }, [assignments, student]);
 
   // Cohort live timetable slots
   const cohortTimetable = useMemo(() => {

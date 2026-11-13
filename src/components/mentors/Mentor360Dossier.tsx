@@ -38,6 +38,7 @@ export const Mentor360Dossier: React.FC<Mentor360DossierProps> = ({
     timetables,
     studentPerformanceReports,
     updateMentor,
+    recalculateMentorLecturedHours,
     reviewUserKYC,
     openModal,
     showToast,
@@ -136,7 +137,7 @@ export const Mentor360Dossier: React.FC<Mentor360DossierProps> = ({
   const enrolledCount = assignedStudents.length || mentor.assignedEnrollmentsCount || 1;
   const standardTuitionFee = 350000;
   const potentialCommissionPool = enrolledCount * standardTuitionFee * ((mentor.commissionRate || 37) / 100);
-  const lecturedHours = mentor.lecturedHours || 24;
+  const lecturedHours = mentor.lecturedHours ?? 0;
   const requiredHours = mentor.minimumRequiredHours || 20;
   const isQualifiedForPayout = lecturedHours >= requiredHours && (mentor.isBankVerified || mentor.bankVerified);
 
@@ -1436,10 +1437,23 @@ export const Mentor360Dossier: React.FC<Mentor360DossierProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="p-4 bg-surface-container-lowest rounded-xl border border-outline-variant">
-                    <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block">Lectured Hours Delivered</span>
-                    <span className="text-2xl font-black text-on-surface block mt-1">{lecturedHours} hrs</span>
-                    <span className="text-[11px] text-secondary">Minimum required threshold: {requiredHours} hrs</span>
+                  <div className="p-4 bg-surface-container-lowest rounded-xl border border-outline-variant flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block">Lectured Hours Delivered</span>
+                        <button
+                          type="button"
+                          onClick={() => recalculateMentorLecturedHours(mentor.id)}
+                          className="px-2 py-0.5 rounded bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-bold transition-colors cursor-pointer flex items-center gap-1"
+                          title="Recalculate & sync hours from completed classes and coaching sessions"
+                        >
+                          <span className="material-symbols-outlined text-[12px]">sync</span>
+                          <span>Sync</span>
+                        </button>
+                      </div>
+                      <span className="text-2xl font-black text-on-surface block mt-1">{lecturedHours} hrs</span>
+                    </div>
+                    <span className="text-[11px] text-secondary mt-2">Minimum required threshold: {requiredHours} hrs</span>
                   </div>
 
                   <div className="p-4 bg-surface-container-lowest rounded-xl border border-outline-variant">

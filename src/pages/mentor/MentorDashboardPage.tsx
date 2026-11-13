@@ -32,8 +32,10 @@ export const MentorDashboardPage: React.FC = () => {
   // Students assigned directly to this mentor or in their assigned cohorts
   const assignedStudents = useMemo(() => {
     if (!myMentor) return [];
+    const norm = (s?: string) => (s || '').trim().toLowerCase();
+    const myName = norm(myMentor.name);
     return students.filter(
-      s => s.mentorId === myMentor.id || s.mentorName?.toLowerCase() === myMentor.name?.toLowerCase()
+      s => (s.mentorId && s.mentorId === myMentor.id) || norm(s.mentorName) === myName
     );
   }, [students, myMentor]);
 

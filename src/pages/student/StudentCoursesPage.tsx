@@ -30,6 +30,7 @@ export const StudentCoursesPage: React.FC = () => {
     minimumRequiredHours: 40,
     certificateIssued: false,
     mentorName: 'Dr. Chidi Okeke',
+    assignmentSubmissions: [],
   };
 
   const modules = useMemo(() => {
@@ -89,11 +90,40 @@ export const StudentCoursesPage: React.FC = () => {
 
   const isCompleted = student.completedLessonIds?.includes(activeLesson?.id || '');
 
-  // Find submissions for this lesson
-  const currentSubmissions = assignments.filter(a => 
-    (a.studentId === student.id || a.studentName === student.name) && 
-    (a.taskTitle.includes(activeLesson?.title || '') || a.moduleTitle === activeModule?.title)
-  );
+  // Find submissions for this lesson (merging global assignments with student profile records)
+  const allStudentSubmissions = useMemo(() => {
+    const list = [...assignments];
+    const studentSubs = (student as any).assignmentSubmissions;
+    if (studentSubs && Array.isArray(studentSubs)) {
+      studentSubs.forEach((sub: any) => {
+        if (!list.some(x => x.id === sub.id)) {
+          list.push(sub);
+        }
+      });
+    }
+    return list;
+  }, [assignments, (student as any).assignmentSubmissions]);
+
+  const currentSubmissions = useMemo(() => {
+    const norm = (s?: string) => (s || '').trim().toLowerCase();
+    const studentNameNorm = norm(student.name);
+    const activeLessonNorm = norm(activeLesson?.title);
+    const activeModuleNorm = norm(activeModule?.title);
+
+    return allStudentSubmissions.filter(a => {
+      const matchStudent = (a.studentId && a.studentId === student.id) ||
+        norm(a.studentName) === studentNameNorm;
+      if (!matchStudent) return false;
+
+      const taskMatch = activeLessonNorm && (
+        norm(a.taskTitle).includes(activeLessonNorm) ||
+        activeLessonNorm.includes(norm(a.taskTitle))
+      );
+      const moduleMatch = activeModuleNorm && norm(a.moduleTitle) === activeModuleNorm;
+
+      return taskMatch || moduleMatch;
+    });
+  }, [allStudentSubmissions, student, activeLesson, activeModule]);
 
   const handleCompleteLesson = async () => {
     if (!activeLesson) return;

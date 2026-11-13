@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useCRM, formatNaira } from '../../context/CRMContext';
 import { MentorPayoutRequest } from '../../types/crm';
 import { PayoutVoucherModal } from '../../components/modals/PayoutVoucherModal';
@@ -10,10 +10,18 @@ export const MentorPayoutsPage: React.FC = () => {
     mentors,
     payoutRequests,
     requestMentorPayout,
+    deleteMentorPayoutRequest,
+    openEditPayoutRequestModal,
     calculateMentorTuitionCommission,
+    reconciliationRows,
+    fetchMentorReconciliation,
     settings,
     showToast,
   } = useCRM();
+
+  useEffect(() => {
+    fetchMentorReconciliation();
+  }, [fetchMentorReconciliation]);
 
   // Find active mentor profile
   const myMentor = useMemo(() => {
@@ -23,6 +31,11 @@ export const MentorPayoutsPage: React.FC = () => {
       ) || mentors[0]
     );
   }, [mentors, currentUser]);
+
+  const myLedgerRows = useMemo(() => {
+    if (!myMentor) return [];
+    return reconciliationRows.filter(r => r.mentorId === myMentor.id);
+  }, [reconciliationRows, myMentor]);
 
   // Modal states
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
@@ -313,6 +326,51 @@ export const MentorPayoutsPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Historical & Reconciled Cohort Commission Ledger */}
+      {myLedgerRows.length > 0 && (
+        <div className="bg-surface border border-outline-variant rounded-2xl shadow-xs overflow-hidden">
+          <div className="p-5 border-b border-outline-variant flex justify-between items-center">
+            <div>
+              <h2 className="text-base font-bold text-on-surface">Cohort &amp; Course Commission Ledger</h2>
+              <p className="text-xs text-secondary mt-0.5">
+                Reconciled student deposits, 37% commission accrued, previous disbursements, and remaining balance per cohort.
+              </p>
+            </div>
+            <span className="text-xs text-secondary font-semibold">{myLedgerRows.length} Cohorts / Tracks</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-surface-container-lowest text-secondary uppercase text-[10px] font-bold border-b border-outline-variant">
+                <tr>
+                  <th className="py-3 px-4">Cohort</th>
+                  <th className="py-3 px-4">Course</th>
+                  <th className="py-3 px-4 text-right">Students Paid</th>
+                  <th className="py-3 px-4 text-right">Commission Due</th>
+                  <th className="py-3 px-4 text-right">Disbursed</th>
+                  <th className="py-3 px-4 text-right">Outstanding</th>
+                  <th className="py-3 px-4 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-variant">
+                {myLedgerRows.map(row => (
+                  <tr key={row.id} className="hover:bg-surface-container-lowest/50 transition-colors">
+                    <td className="py-3 px-4 font-semibold text-on-surface">{row.cohortName}</td>
+                    <td className="py-3 px-4 text-secondary">{row.courseName}</td>
+                    <td className="py-3 px-4 text-right font-medium">{formatNaira(row.effectiveStudentPaid)}</td>
+                    <td className="py-3 px-4 text-right font-semibold text-on-surface">{formatNaira(row.agreedAmountDue)}</td>
+                    <td className="py-3 px-4 text-right text-emerald-700 font-semibold">{formatNaira(row.amountDisbursed)}</td>
+                    <td className="py-3 px-4 text-right text-amber-700 font-bold">{formatNaira(row.outstandingAmount)}</td>
+                    <td className="py-3 px-4 text-center">
+                      <CrispStatusBadge status={row.paymentStatus} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Payout Voucher Ledger & Request History */}
       <div className="bg-surface border border-outline-variant rounded-2xl shadow-xs overflow-hidden">
         <div className="p-5 border-b border-outline-variant flex justify-between items-center">
@@ -350,7 +408,16 @@ export const MentorPayoutsPage: React.FC = () => {
               ) : (
                 myPayoutRequests.map(req => (
                   <tr key={req.id} className="hover:bg-surface-container-lowest/50 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-primary">{req.voucherNumber}</td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-primary">
+                      <div className="flex items-center gap-1.5">
+                        <span>{req.voucherNumber}</span>
+                        {req.isHistorical && (
+                          <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[9px] font-sans font-bold uppercase">
+                            Historical
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="py-3.5 px-4 text-secondary">{new Date(req.requestedAt).toLocaleDateString()}</td>
                     <td className="py-3.5 px-4 text-right font-semibold text-on-surface">{formatNaira(req.amount)}</td>
                     <td className="py-3.5 px-4 text-right text-rose-600 font-medium">-{formatNaira(req.whtDeductedAmount || 0)}</td>
@@ -359,16 +426,42 @@ export const MentorPayoutsPage: React.FC = () => {
                       <CrispStatusBadge status={req.status} />
                     </td>
                     <td className="py-3.5 px-4 text-center">
-                      <button
-                        onClick={() => {
-                          setSelectedVoucher(req);
-                          setIsVoucherModalOpen(true);
-                        }}
-                        className="px-2.5 py-1 rounded bg-surface border border-outline-variant hover:border-primary text-xs font-bold text-primary transition-all cursor-pointer shadow-xs inline-flex items-center gap-1"
-                      >
-                        <span className="material-symbols-outlined text-[13px]">receipt</span>
-                        <span>Voucher</span>
-                      </button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => {
+                            setSelectedVoucher(req);
+                            setIsVoucherModalOpen(true);
+                          }}
+                          className="px-2 py-1 rounded bg-surface border border-outline-variant hover:border-primary text-xs font-bold text-primary transition-all cursor-pointer shadow-xs inline-flex items-center gap-1"
+                        >
+                          <span className="material-symbols-outlined text-[13px]">receipt</span>
+                          <span>Voucher</span>
+                        </button>
+                        {req.status === 'Pending' && (
+                          <>
+                            <button
+                              onClick={() => openEditPayoutRequestModal(req)}
+                              className="px-2 py-1 rounded bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-700 text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1"
+                              title="Edit requested amount or memo"
+                            >
+                              <span className="material-symbols-outlined text-[13px]">edit</span>
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`Are you sure you want to cancel and delete this payout request (${formatNaira(req.amount)})?`)) {
+                                  deleteMentorPayoutRequest(req.id);
+                                }
+                              }}
+                              className="px-2 py-1 rounded bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 text-rose-700 text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1"
+                              title="Cancel and delete payout request"
+                            >
+                              <span className="material-symbols-outlined text-[13px]">delete</span>
+                              <span>Delete</span>
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

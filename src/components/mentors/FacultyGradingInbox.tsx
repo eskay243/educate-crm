@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useCRM } from '../../context/CRMContext';
 import { StudentAssignmentSubmission } from '../../types/crm';
+import { CreateAssignmentModal } from '../modals/CreateAssignmentModal';
 
 interface FacultyGradingInboxProps {
   isMentor: boolean;
@@ -9,45 +10,66 @@ interface FacultyGradingInboxProps {
 export const FacultyGradingInbox: React.FC<FacultyGradingInboxProps> = ({ isMentor }) => {
   const { assignments, gradeAssignment, showToast, courses, currentUser, mentors, students } = useCRM();
 
-  // Find logged-in mentor profile
+  // Find logged-in mentor profile with loose trimming
   const myMentorProfile = useMemo(() => {
     if (!isMentor) return null;
+    const norm = (s?: string) => (s || '').trim().toLowerCase();
     return mentors.find(
-      m => m.id === currentUser?.mentorId || m.name === currentUser?.name || m.email === currentUser?.email
-    ) || null;
+      m => m.id === currentUser?.mentorId || 
+           norm(m.name) === norm(currentUser?.name) || 
+           (currentUser?.email && m.email.toLowerCase() === currentUser.email.toLowerCase())
+    ) || mentors[0];
   }, [isMentor, mentors, currentUser]);
 
   // Mentor's assigned students & courses
   const myStudents = useMemo(() => {
     if (!isMentor || !myMentorProfile) return [];
-    return students.filter(s => s.mentorId === myMentorProfile.id || s.mentorName === myMentorProfile.name);
+    const norm = (s?: string) => (s || '').trim().toLowerCase();
+    const myName = norm(myMentorProfile.name);
+    return students.filter(s => (s.mentorId && s.mentorId === myMentorProfile.id) || norm(s.mentorName) === myName);
   }, [isMentor, myMentorProfile, students]);
 
   const myStudentIds = useMemo(() => new Set(myStudents.map(s => s.id)), [myStudents]);
-  const myStudentNames = useMemo(() => new Set(myStudents.map(s => s.name.toLowerCase().trim())), [myStudents]);
+  const myStudentNames = useMemo(() => new Set(myStudents.map(s => (s.name || '').trim().toLowerCase())), [myStudents]);
 
   const myCourses = useMemo(() => {
     if (!isMentor || !myMentorProfile) return courses;
-    return courses.filter(c => c.leadInstructor === myMentorProfile.name);
+    const norm = (s?: string) => (s || '').trim().toLowerCase();
+    const myName = norm(myMentorProfile.name);
+    return courses.filter(c => {
+      const isLead = norm(c.leadInstructor) === myName;
+      const isAssigned = c.assignedMentors?.some(
+        am => am.mentorId === myMentorProfile.id || norm(am.mentorName) === myName
+      );
+      return isLead || isAssigned;
+    });
   }, [isMentor, myMentorProfile, courses]);
 
-  const myCourseTitles = useMemo(() => new Set(myCourses.map(c => c.title.toLowerCase().trim())), [myCourses]);
+  const myCourseTitles = useMemo(() => new Set(myCourses.map(c => (c.title || '').trim().toLowerCase())), [myCourses]);
 
-  // Scoped assignments for mentor
+  // Scoped assignments for mentor: strictly their assigned students and courses only
   const accessibleAssignments = useMemo(() => {
-    if (!isMentor || !myMentorProfile) return assignments;
+    if (!isMentor) return assignments;
+    if (!myMentorProfile) return [];
+
+    const norm = (s?: string) => (s || '').trim().toLowerCase();
+    const myName = norm(myMentorProfile.name);
+
     return assignments.filter(a => {
-      const matchesMentorDirect = (a as any).mentorId === myMentorProfile.id || 
-        (a.reviewedBy && a.reviewedBy.toLowerCase().trim() === myMentorProfile.name.toLowerCase().trim());
-      const matchesStudent = a.studentId ? myStudentIds.has(a.studentId) : myStudentNames.has(a.studentName?.toLowerCase().trim());
-      const matchesCourse = a.courseTitle ? myCourseTitles.has(a.courseTitle.toLowerCase().trim()) : false;
-      return matchesMentorDirect || matchesStudent || matchesCourse;
+      const matchesMentorDirect = a.mentorId === myMentorProfile.id || 
+        (a.reviewedBy && norm(a.reviewedBy) === myName);
+      const matchesStudent = a.studentId ? myStudentIds.has(a.studentId) : (a.studentName ? myStudentNames.has(norm(a.studentName)) : false);
+      const matchesCourse = a.courseTitle ? myCourseTitles.has(norm(a.courseTitle)) : false;
+
+      // Strictly return submissions that belong to this mentor's students or their assigned courses
+      return matchesMentorDirect || matchesStudent || (matchesCourse && (!a.mentorId || a.mentorId === myMentorProfile.id));
     });
   }, [assignments, isMentor, myMentorProfile, myStudentIds, myStudentNames, myCourseTitles]);
 
   const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Needs Revision' | 'Passed' | 'Exceptional'>('All');
   const [courseFilter, setCourseFilter] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Selected submission for grading drawer/modal
   const [selectedSubmission, setSelectedSubmission] = useState<StudentAssignmentSubmission | null>(null);
@@ -141,11 +163,19 @@ export const FacultyGradingInbox: React.FC<FacultyGradingInboxProps> = ({ isMent
           </p>
         </div>
 
-        {/* 3 Metric Pills */}
+        {/* 3 Metric Pills & Action */}
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="h-8 px-3 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[16px]">add_circle</span>
+            <span>Add Assignment / Project</span>
+          </button>
           <span className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs font-bold border border-amber-500/30 flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-            <span>{pendingCount} Pending Review</span>
+            <span>{pendingCount} Pending</span>
           </span>
           <span className="px-3 py-1 rounded-full bg-rose-500/10 text-rose-700 dark:text-rose-300 text-xs font-bold border border-rose-500/30">
             {revisionCount} Needs Revision
@@ -520,6 +550,12 @@ export const FacultyGradingInbox: React.FC<FacultyGradingInboxProps> = ({ isMent
           </div>
         </div>
       )}
+
+      {/* Create & Grade Assignment Modal */}
+      <CreateAssignmentModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
     </div>
   );
 };

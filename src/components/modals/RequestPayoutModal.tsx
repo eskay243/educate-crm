@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useCRM, formatNaira } from '../../context/CRMContext';
 
 interface RequestPayoutModalProps {
@@ -19,15 +19,30 @@ export const RequestPayoutModal: React.FC<RequestPayoutModalProps> = ({ isOpen, 
   } = useCRM();
 
   const isEditMode = !!selectedPayoutRequestForEdit;
+  const isPrivileged = currentUser?.role === 'super_admin' || currentUser?.role === 'finance' || currentUser?.role === 'program_officer';
+  const canSelectMentor = isPrivileged && !isEditMode;
 
-  // Find the mentor profile for the logged in user or the one in the request being edited
-  const mentor =
-    mentors.find(
-      m =>
-        (isEditMode && m.id === selectedPayoutRequestForEdit.mentorId) ||
-        m.id === currentUser?.id ||
-        m.email.toLowerCase() === currentUser?.email.toLowerCase()
-    ) || mentors[0];
+  const [selectedMentorId, setSelectedMentorId] = useState<string>('');
+
+  useEffect(() => {
+    if (selectedPayoutRequestForEdit) {
+      setSelectedMentorId(selectedPayoutRequestForEdit.mentorId);
+    } else if (currentUser?.mentorId) {
+      setSelectedMentorId(currentUser.mentorId);
+    } else {
+      const match = mentors.find(
+        m => m.id === currentUser?.id || 
+             (currentUser?.name && m.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()) ||
+             (currentUser?.email && m.email.toLowerCase() === currentUser.email.toLowerCase())
+      );
+      setSelectedMentorId(match ? match.id : (mentors[0]?.id || ''));
+    }
+  }, [selectedPayoutRequestForEdit, currentUser, mentors, isOpen]);
+
+  // Find the mentor profile for the selected mentor or the one in the request being edited
+  const mentor = useMemo(() => {
+    return mentors.find(m => m.id === selectedMentorId) || mentors[0];
+  }, [mentors, selectedMentorId]);
 
   const minRequiredHours = settings.mentorMinimumLecturedHours || 20;
   const currentLecturedHours = mentor?.lecturedHours || 0;
@@ -83,7 +98,7 @@ export const RequestPayoutModal: React.FC<RequestPayoutModalProps> = ({ isOpen, 
           notes,
         });
       } else {
-        await requestMentorPayout(requestedAmount, notes);
+        await requestMentorPayout(requestedAmount, notes, mentor?.id);
       }
       handleClose();
     } catch (err: any) {
@@ -123,6 +138,42 @@ export const RequestPayoutModal: React.FC<RequestPayoutModalProps> = ({ isOpen, 
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5">
+            {/* Faculty Mentor Selector Dropdown for Super Admin & Finance */}
+            {canSelectMentor && (
+              <div className="p-4 rounded-xl bg-surface border border-outline-variant space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px] text-primary">person_search</span>
+                    <span>Beneficiary Faculty Mentor *</span>
+                  </label>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded">
+                    Admin Selector
+                  </span>
+                </div>
+                <select
+                  value={selectedMentorId}
+                  onChange={(e) => {
+                    const newId = e.target.value;
+                    setSelectedMentorId(newId);
+                    const nextMentor = mentors.find(m => m.id === newId);
+                    if (nextMentor) {
+                      setRequestedAmount(nextMentor.pendingPayout || 0);
+                    }
+                  }}
+                  className="w-full h-11 px-3 rounded-xl bg-surface-container-lowest border border-outline-variant text-xs font-semibold text-on-surface focus:border-primary focus:outline-none cursor-pointer"
+                >
+                  {mentors.map(m => (
+                    <option key={m.id} value={m.id}>
+                      {m.name.trim()} ({m.department || m.role || 'Faculty Mentor'}) — Available: {formatNaira(m.pendingPayout)}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-secondary">
+                  Select which mentor's accrued revenue share commission is being requested.
+                </p>
+              </div>
+            )}
+
             {/* Lecturing Hours Threshold Gate (New requests only) */}
             {!isEditMode && (
               <div
