@@ -1753,8 +1753,13 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (permission === 'canApproveExpenses' && (currentUser.role === 'approver' || currentUser.isApprover === true || currentUser.role === 'finance')) return true;
 
     const matchedRole = customRoles.find(r => r.id === currentUser.role);
-    if (matchedRole && matchedRole.permissions) {
+    if (matchedRole && matchedRole.permissions && typeof matchedRole.permissions[permission] === 'boolean') {
       return Boolean(matchedRole.permissions[permission]);
+    }
+
+    const defaultRole = defaultRoleDefinitions.find(r => r.id === currentUser.role);
+    if (defaultRole && defaultRole.permissions && typeof defaultRole.permissions[permission] === 'boolean') {
+      return Boolean(defaultRole.permissions[permission]);
     }
 
     return false;
@@ -5559,22 +5564,28 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       mentorCommission: number;
     }> = [];
 
+    const norm = (val?: string) => (val || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const targetNorm = norm(targetMentor.name);
+
     courses.forEach(course => {
       const assigned = course.assignedMentors?.find(
-        am => am.mentorId === targetMentor.id || am.mentorName?.toLowerCase() === targetMentor.name?.toLowerCase()
+        am => am.mentorId === targetMentor.id || norm(am.mentorName) === targetNorm
       );
-      const isLead = course.leadInstructor?.toLowerCase() === targetMentor.name?.toLowerCase();
+      const isLead = norm(course.leadInstructor) === targetNorm;
 
       if (assigned || isLead) {
         const sharePercentage = assigned ? assigned.sharePercentage : 100;
         const role = assigned?.role || (isLead ? 'Lead Mentor' : 'Co-Mentor');
 
-        const enrolled = students.filter(
-          s => s.courses?.some(ec => ec.id === course.id || ec.code === course.code || ec.name?.toLowerCase() === course.title?.toLowerCase()) || s.program?.toLowerCase() === course.title?.toLowerCase()
-        );
+        const enrolled = students.filter(s => {
+          const mentorMatch = (s.mentorId && s.mentorId === targetMentor.id) || norm(s.mentorName) === targetNorm;
+          if (!mentorMatch) return false;
+          const cTitle = norm(course.title);
+          return s.courses?.some(ec => ec.id === course.id || ec.code === course.code || norm(ec.name) === cTitle) || norm(s.program) === cTitle;
+        });
 
         const totalTuitionPaid = enrolled.reduce((sum, s) => {
-          const paid = s.paidAmount ?? (s.totalFees - (s.outstandingBalance || 0));
+          const paid = Number(s.paidAmount || 0);
           return sum + (paid > 0 ? paid : 0);
         }, 0);
 
@@ -5908,10 +5919,19 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const res = await fetch(`/api/payout-requests/${requestId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(currentUser?.role ? { 'x-user-role': currentUser.role } : {}),
+          ...(currentUser?.email ? { 'x-user-email': currentUser.email } : {}),
+          ...(currentUser?.id ? { 'x-user-id': currentUser.id } : {}),
+        },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
+      if (res.status === 403) {
+        showToast('Permission Denied', data.message || 'You do not have permission to edit this payout request.', 'error');
+        return false;
+      }
       if (data.success && data.data) {
         const updated = data.data;
         setPayoutRequests(prev => prev.map(r => r.id === requestId ? updated : r));

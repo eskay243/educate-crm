@@ -242,9 +242,24 @@ const loadDatabase = (): DatabaseSchema => {
     } else {
       let modified = false;
       for (const defRole of defaultRoleDefinitions) {
-        if (!parsed.customRoles.some((r: any) => r.id === defRole.id)) {
+        const existingRole = parsed.customRoles.find((r: any) => r.id === defRole.id);
+        if (!existingRole) {
           parsed.customRoles.push(defRole);
           modified = true;
+        } else if (defRole.id === 'admissions') {
+          if (!existingRole.permissions) existingRole.permissions = {};
+          if (existingRole.permissions.canEditMentorPayouts === undefined) {
+            existingRole.permissions.canEditMentorPayouts = true;
+            modified = true;
+          }
+          if (existingRole.permissions.canRejectMentorPayouts === undefined) {
+            existingRole.permissions.canRejectMentorPayouts = true;
+            modified = true;
+          }
+          if (Array.isArray(existingRole.allowedModules) && !existingRole.allowedModules.includes('mentors')) {
+            existingRole.allowedModules.push('mentors');
+            modified = true;
+          }
         }
       }
       if (modified) {
@@ -5432,6 +5447,151 @@ const recalculateMentorPayoutTotals = (mentorId: string) => {
   return mentor;
 };
 
+app.get('/api/mentors/:id/payout-breakdown', (req: Request, res: Response) => {
+  try {
+    const mentor = db.mentors.find((m: any) => m.id === req.params.id);
+    if (!mentor) {
+      return res.status(404).json({ success: false, message: 'Mentor not found' });
+    }
+    const targetMentorNorm = normalizeMatchText(mentor.name);
+    const realStudents = (db.students || []).filter((s: any) => !String(s.email || '').includes('.qa.'));
+
+    const isStudentAssignedToMentor = (s: any) =>
+      (s.mentorId && s.mentorId === mentor.id) || normalizeMatchText(s.mentorName) === targetMentorNorm;
+
+    const mentorStudents = realStudents.filter(isStudentAssignedToMentor);
+
+    const mapStudentPayment = (s: any) => {
+      const totalFees = Number(s.totalFees || 0);
+      const paidAmount = Number(s.paidAmount || 0);
+      const outstandingBalance = Math.max(0, totalFees - paidAmount);
+      const paymentType = paidAmount <= 0
+        ? 'Unpaid'
+        : outstandingBalance <= 0
+          ? 'Full Payment'
+          : 'Part Payment';
+      return {
+        id: s.id,
+        name: s.name,
+        email: s.email,
+        program: s.program || '',
+        cohort: s.cohort || '',
+        totalFees,
+        paidAmount,
+        outstandingBalance,
+        paymentType,
+        commission37: Math.round(paidAmount * 0.37),
+        expectedCommission37: Math.round(totalFees * 0.37)
+      };
+    };
+
+    const ledgers = (db.mentorCohortLedgers || [])
+      .filter((l: any) => l.mentorId === mentor.id)
+      .map((ledger: any) => {
+        const targetCourse = normalizeMatchText(ledger.courseName);
+        const matchedStudents = mentorStudents
+          .filter((s: any) => {
+            const prog = normalizeMatchText(s.program);
+            const courseListHit = Array.isArray(s.courses) && s.courses.some((c: any) => {
+              const cn = normalizeMatchText(c.name || c.title);
+              return cn === targetCourse || cn.includes(targetCourse) || targetCourse.includes(cn);
+            });
+            return prog === targetCourse || prog.includes(targetCourse) || targetCourse.includes(prog) || courseListHit;
+          })
+          .map(mapStudentPayment);
+
+        const liveStudentPaid = matchedStudents.reduce((sum: number, s: any) => sum + s.paidAmount, 0);
+        const historicalStudentPaid = Number(ledger.historicalStudentPaid || 0);
+        const effectiveStudentPaid = Math.max(historicalStudentPaid, liveStudentPaid);
+        const rate = Number(ledger.commissionRate ?? 0.37);
+        const calculatedCommission37 = Math.round(effectiveStudentPaid * rate);
+        const agreedAmountDue = Number(ledger.agreedAmountDue ?? calculatedCommission37);
+        const amountDisbursed = Number(ledger.amountDisbursed || 0);
+        const outstandingAmount = Math.max(0, agreedAmountDue - amountDisbursed);
+        const paymentStatus = outstandingAmount === 0 && agreedAmountDue > 0
+          ? 'Completed'
+          : amountDisbursed > 0
+            ? 'Partial'
+            : 'Pending';
+
+        return {
+          ...ledger,
+          liveStudentPaid,
+          effectiveStudentPaid,
+          calculatedCommission37,
+          agreedAmountDue,
+          amountDisbursed,
+          outstandingAmount,
+          paymentStatus,
+          matchedStudents
+        };
+      });
+
+    const courses = (db.courses || [])
+      .filter((c: any) => {
+        const isLead = normalizeMatchText(c.leadInstructor) === targetMentorNorm;
+        const isAssigned = Array.isArray(c.assignedMentors) && c.assignedMentors.some(
+          (am: any) => am.mentorId === mentor.id || normalizeMatchText(am.mentorName) === targetMentorNorm
+        );
+        return isLead || isAssigned;
+      })
+      .map((c: any) => {
+        const assigned = Array.isArray(c.assignedMentors)
+          ? c.assignedMentors.find((am: any) => am.mentorId === mentor.id || normalizeMatchText(am.mentorName) === targetMentorNorm)
+          : null;
+        const sharePercentage = assigned ? Number(assigned.sharePercentage ?? 100) : 100;
+        const role = assigned?.role || 'Lead Instructor';
+        const courseTitleNorm = normalizeMatchText(c.title || c.name);
+        const enrolledStudents = mentorStudents
+          .filter((s: any) => {
+            const prog = normalizeMatchText(s.program);
+            const courseListHit = Array.isArray(s.courses) && s.courses.some(
+              (ec: any) => ec.id === c.id || ec.code === c.code || normalizeMatchText(ec.name) === courseTitleNorm
+            );
+            return prog === courseTitleNorm || courseListHit;
+          })
+          .map(mapStudentPayment);
+
+        const totalFeesBilled = enrolledStudents.reduce((sum: number, s: any) => sum + s.totalFees, 0);
+        const totalTuitionPaid = enrolledStudents.reduce((sum: number, s: any) => sum + s.paidAmount, 0);
+        const courseFacultyPool = Math.round(totalTuitionPaid * 0.37);
+        const mentorCommission = Math.round(courseFacultyPool * (sharePercentage / 100));
+
+        return {
+          courseId: c.id,
+          courseCode: c.code || 'CRS',
+          courseTitle: c.title || c.name,
+          role,
+          sharePercentage,
+          enrolledStudentsCount: enrolledStudents.length,
+          totalFeesBilled,
+          totalTuitionPaid,
+          courseFacultyPool,
+          mentorCommission,
+          students: enrolledStudents
+        };
+      });
+
+    res.json({
+      success: true,
+      data: {
+        mentorId: mentor.id,
+        mentorName: mentor.name,
+        ledgers,
+        courses,
+        assignedStudents: mentorStudents.map(mapStudentPayment),
+        summary: {
+          totalEarned: Number(mentor.totalEarned || 0),
+          paidPayout: Number(mentor.paidPayout || 0),
+          pendingPayout: Number(mentor.pendingPayout || 0)
+        }
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 app.get('/api/mentor-reconciliation', (req: Request, res: Response) => {
   try {
     if (!isSuperAdminOnly(req)) {
@@ -6276,6 +6436,24 @@ app.patch('/api/payout-requests/:id', (req: Request, res: Response) => {
   }
 
   const existing = db.payoutRequests[index];
+  const callerRole = (req.headers['x-user-role'] as string) || '';
+  const callerEmail = ((req.headers['x-user-email'] as string) || '').toLowerCase().trim();
+  const isOwnerEdit = callerEmail && existing.mentorEmail?.toLowerCase().trim() === callerEmail && existing.status === 'Pending' && !req.body.status;
+
+  if (callerRole && callerRole !== 'super_admin' && callerRole !== 'finance' && !isOwnerEdit) {
+    const roleDef = (db.customRoles || defaultRoleDefinitions).find((r: any) => r.id === callerRole);
+    const perms = roleDef?.permissions || {};
+    if (req.body.status === 'Rejected' && !perms.canRejectMentorPayouts) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Your role does not have permission to reject mentor payout requests.' });
+    }
+    if (req.body.status === 'Approved' && !perms.canApproveMentorPayouts) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Your role does not have permission to approve mentor payout requests.' });
+    }
+    if ((req.body.amount !== undefined || req.body.notes !== undefined) && !req.body.status && !perms.canEditMentorPayouts) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Your role does not have permission to edit mentor payout requests.' });
+    }
+  }
+
   let updatedWht = existing.whtDeductedAmount;
   let updatedNet = existing.netDisbursedAmount;
 

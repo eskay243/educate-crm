@@ -59,6 +59,10 @@ export const MentorManagementPage: React.FC = () => {
   const isSuperAdmin = currentUser?.role === 'super_admin';
   const isFinance = currentUser?.role === 'finance';
   const canModifyMentor = isSuperAdmin || hasFeaturePermission('canModifyMentorBiodata');
+  const canEditPayouts = isSuperAdmin || isFinance || hasFeaturePermission('canEditMentorPayouts');
+  const canRejectPayouts = isSuperAdmin || isFinance || hasFeaturePermission('canRejectMentorPayouts');
+  const canApprovePayouts = isSuperAdmin || isFinance || hasFeaturePermission('canApproveMentorPayouts');
+  const canDisbursePayouts = isSuperAdmin || isFinance || hasFeaturePermission('canDisburseApprovedFunds');
 
   // Find current mentor profile if logged in as mentor
   const myMentorProfile = isMentor
@@ -1428,60 +1432,62 @@ export const MentorManagementPage: React.FC = () => {
                                 <span>WHT Slip</span>
                               </button>
 
+                              {req.status === 'Pending' && (canEditPayouts || req.mentorId === myMentorProfile?.id || req.mentorEmail.toLowerCase() === currentUser?.email.toLowerCase()) && (
+                                <button
+                                  type="button"
+                                  onClick={() => openEditPayoutRequestModal(req)}
+                                  className="px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[11px] font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
+                                  title="Edit pending payout request amount or memo"
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">edit</span>
+                                  <span>Edit</span>
+                                </button>
+                              )}
+
                               {req.status === 'Pending' && (isSuperAdmin || isFinance || req.mentorId === myMentorProfile?.id || req.mentorEmail.toLowerCase() === currentUser?.email.toLowerCase()) && (
-                                <>
-                                  <button
-                                    type="button"
-                                    onClick={() => openEditPayoutRequestModal(req)}
-                                    className="px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[11px] font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
-                                    title="Edit pending payout request amount or memo"
-                                  >
-                                    <span className="material-symbols-outlined text-[14px]">edit</span>
-                                    <span>Edit</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      if (window.confirm(`Are you sure you want to cancel and delete this payout request (${formatNaira(req.amount)})?`)) {
-                                        deleteMentorPayoutRequest(req.id);
-                                      }
-                                    }}
-                                    className="px-2.5 py-1 rounded bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 text-[11px] font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
-                                    title="Delete and cancel pending payout request"
-                                  >
-                                    <span className="material-symbols-outlined text-[14px]">delete</span>
-                                    <span>Delete</span>
-                                  </button>
-                                </>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (window.confirm(`Are you sure you want to cancel and delete this payout request (${formatNaira(req.amount)})?`)) {
+                                      deleteMentorPayoutRequest(req.id);
+                                    }
+                                  }}
+                                  className="px-2.5 py-1 rounded bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 text-[11px] font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
+                                  title="Delete and cancel pending payout request"
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">delete</span>
+                                  <span>Delete</span>
+                                </button>
                               )}
 
-                              {(isSuperAdmin || isFinance) && req.status === 'Pending' && (
-                                <>
-                                  <button
-                                    type="button"
-                                    onClick={() => reviewMentorPayout(req.id, 'Approved')}
-                                    className="px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 text-[11px] font-bold transition-colors cursor-pointer"
-                                    title="Approve for payout"
-                                  >
-                                    Approve
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const reason = window.prompt('Enter reason for rejecting this payout request:');
-                                      if (reason !== null) {
-                                        reviewMentorPayout(req.id, 'Rejected', reason);
-                                      }
-                                    }}
-                                    className="px-2 py-1 rounded bg-rose-50 text-rose-700 hover:bg-rose-100 text-[11px] font-bold transition-colors cursor-pointer"
-                                    title="Reject payout request"
-                                  >
-                                    Reject
-                                  </button>
-                                </>
+                              {canApprovePayouts && req.status === 'Pending' && (
+                                <button
+                                  type="button"
+                                  onClick={() => reviewMentorPayout(req.id, 'Approved')}
+                                  className="px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 text-[11px] font-bold transition-colors cursor-pointer"
+                                  title="Approve for payout"
+                                >
+                                  Approve
+                                </button>
                               )}
 
-                              {(isSuperAdmin || isFinance) && (req.status === 'Pending' || req.status === 'Approved') && (
+                              {canRejectPayouts && req.status === 'Pending' && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const reason = window.prompt('Enter reason for rejecting this payout request:');
+                                    if (reason !== null) {
+                                      reviewMentorPayout(req.id, 'Rejected', reason);
+                                    }
+                                  }}
+                                  className="px-2 py-1 rounded bg-rose-50 text-rose-700 hover:bg-rose-100 text-[11px] font-bold transition-colors cursor-pointer"
+                                  title="Reject payout request"
+                                >
+                                  Reject
+                                </button>
+                              )}
+
+                              {canDisbursePayouts && (req.status === 'Pending' || req.status === 'Approved') && (
                                 <button
                                   type="button"
                                   onClick={() => {

@@ -163,18 +163,18 @@ const HISTORICAL_LEDGER_ROWS = [
   { id: 'ledger-2025c2-gd', cohortName: 'COHORT TWO PAYMENTS', courseName: 'GRAPHIC DESIGN', mentorName: 'Omotoyosi Ogunnubi', courseStatus: 'Done', studentCount: 2, startDate: '2025-07-31', dueDate: '2025-09-17', historicalStudentPaid: 110000, agreedAmountDue: 40700, amountDisbursed: 40700, notes: 'Historical Cohort 2 settlement' },
 
   // MENTORS PAYMENT FOR 2026
-  { id: 'ledger-2026-uiux', cohortName: 'MENTORS PAYMENT FOR 2026', courseName: 'UI/UX', mentorName: 'Damilola Ajuwon', courseStatus: 'In progress', studentCount: 2, startDate: '2026-10-02', dueDate: '2026-04-30', historicalStudentPaid: 370000, agreedAmountDue: 136900, amountDisbursed: 40000, notes: 'Partial disbursement; ₦96,900 remaining' },
-  { id: 'ledger-2026-da', cohortName: 'MENTORS PAYMENT FOR 2026', courseName: 'DATA ANALYSIS', mentorName: 'Godsmiracle Ibitoye', courseStatus: 'Done', studentCount: 2, startDate: '2026-05-01', dueDate: '2026-03-27', historicalStudentPaid: 370000, agreedAmountDue: 136900, amountDisbursed: 136900, notes: '2026 Cohort settlement' },
-  { id: 'ledger-2026-frontend', cohortName: 'MENTORS PAYMENT FOR 2026', courseName: 'BASIC FRONTEND', mentorName: 'Abdulgaffar Mohammad', courseStatus: 'Done', studentCount: 4, startDate: '2026-05-01', dueDate: '2026-04-30', historicalStudentPaid: 950000, agreedAmountDue: 351500, amountDisbursed: 351500, notes: '2026 Cohort settlement' },
-  { id: 'ledger-2026-dm', cohortName: 'MENTORS PAYMENT FOR 2026', courseName: 'DIGITAL MARKETING', mentorName: 'Omotoyosi Ogunnubi', courseStatus: 'Done', studentCount: 2, startDate: '2026-05-01', dueDate: '', historicalStudentPaid: 90000, agreedAmountDue: 33300, amountDisbursed: 33300, notes: 'Mentor was blank in spreadsheet; assigned to Omotoyosi Ogunnubi (37% of ₦90,000 = ₦33,300, Completed)' },
-  { id: 'ledger-2026-react', cohortName: 'MENTORS PAYMENT FOR 2026', courseName: 'FRONTEND REACT', mentorName: 'Ifedora Patrick', courseStatus: 'In progress', studentCount: 3, startDate: '2026-10-02', dueDate: '2026-04-30', historicalStudentPaid: 420000, agreedAmountDue: 155800, amountDisbursed: 150000, notes: 'Spreadsheet listed Completed/0 outstanding; ₦5,800 variance flagged for review' },
-  { id: 'ledger-2026-cyber', cohortName: 'MENTORS PAYMENT FOR 2026', courseName: 'CYBERSECURITY', mentorName: 'Obasesam Usang', courseStatus: 'In progress', studentCount: 3, startDate: '2026-11-05', dueDate: '2026-11-08', historicalStudentPaid: 750000, agreedAmountDue: 277500, amountDisbursed: 75000, notes: 'Spreadsheet listed ₦202,000 outstanding; dynamic balance = ₦202,500' },
-  { id: 'ledger-2026-promise-fe', cohortName: 'MENTORS PAYMENT FOR 2026', courseName: 'BASIC FRONTEND', mentorName: 'Promise Oviawele', courseStatus: 'In progress', studentCount: 5, startDate: '2026-10-07', dueDate: '2026-10-11', historicalStudentPaid: 920000, agreedAmountDue: 310000, amountDisbursed: 150000, notes: 'Agreed due ₦310,000 vs 37% (₦340,400); -₦30,400 variance' },
-  { id: 'ledger-2026-python', cohortName: 'MENTORS PAYMENT FOR 2026', courseName: 'PYTHON', mentorName: 'Godsmiracle Ibitoye', courseStatus: 'In progress', studentCount: 2, startDate: '2026-10-03', dueDate: '2026-10-15', historicalStudentPaid: 200000, agreedAmountDue: 74000, amountDisbursed: 0, notes: 'Pending disbursement (₦74,000)' },
+  { id: 'ledger-2026-uiux', cohortName: 'MENTORS PAYMENT FOR 2026', courseName: 'UI/UX', mentorName: 'Damilola Ajuwon', courseStatus: 'In progress', studentCount: 2, startDate: '2026-02-10', dueDate: '2026-04-30', historicalStudentPaid: 370000, agreedAmountDue: 136900, amountDisbursed: 40000, notes: 'Partial disbursement; ₦96,900 remaining' },
+  { id: 'ledger-2026-da', cohortName: 'MENTORS PAYMENT FOR 2026', courseName: 'DATA ANALYSIS', mentorName: 'Godsmiracle Ibitoye', courseStatus: 'Done', studentCount: 2, startDate: '2026-01-05', dueDate: '2026-03-27', historicalStudentPaid: 370000, agreedAmountDue: 136900, amountDisbursed: 136900, notes: '2026 Cohort settlement' },
+  { id: 'ledger-2026-frontend', cohortName: 'MENTORS PAYMENT FOR 2026', courseName: 'BASIC FRONTEND', mentorName: 'Abdulgaffar Mohammad', courseStatus: 'Done', studentCount: 4, startDate: '2026-01-05', dueDate: '2026-04-30', historicalStudentPaid: 950000, agreedAmountDue: 351500, amountDisbursed: 351500, notes: '2026 Cohort settlement' },
+  { id: 'ledger-2026-dm', cohortName: 'MENTORS PAYMENT FOR 2026', courseName: 'DIGITAL MARKETING', mentorName: 'Omotoyosi Ogunnubi', courseStatus: 'Done', studentCount: 2, startDate: '2026-01-05', dueDate: '', historicalStudentPaid: 90000, agreedAmountDue: 33300, amountDisbursed: 33300, notes: 'Mentor was blank in spreadsheet; assigned to Omotoyosi Ogunnubi (37% of ₦90,000 = ₦33,300, Completed)' },
+  { id: 'ledger-2026-react', cohortName: 'MENTORS PAYMENT FOR 2026', courseName: 'FRONTEND REACT', mentorName: 'Ifedora Patrick', courseStatus: 'In progress', studentCount: 3, startDate: '2026-02-10', dueDate: '2026-04-30', historicalStudentPaid: 420000, agreedAmountDue: 155800, amountDisbursed: 150000, notes: 'Spreadsheet listed Completed/0 outstanding; ₦5,800 variance flagged for review' },
+  { id: 'ledger-2026-cyber', cohortName: 'MENTORS PAYMENT FOR 2026', courseName: 'CYBERSECURITY', mentorName: 'Obasesam Usang', courseStatus: 'In progress', studentCount: 3, startDate: '2026-05-11', dueDate: '2026-08-11', historicalStudentPaid: 750000, agreedAmountDue: 277500, amountDisbursed: 75000, notes: 'Partial disbursement; ₦202,500 remaining' },
+  { id: 'ledger-2026-promise-fe', cohortName: 'MENTORS PAYMENT FOR 2026', courseName: 'BASIC FRONTEND', mentorName: 'Promise Oviawele', courseStatus: 'In progress', studentCount: 5, startDate: '2026-07-10', dueDate: '2026-11-10', historicalStudentPaid: 960000, agreedAmountDue: 355200, amountDisbursed: 150000, notes: '37% of ₦960,000 = ₦355,200; ₦150,000 disbursed; ₦205,200 remaining' },
+  { id: 'ledger-2026-python', cohortName: 'MENTORS PAYMENT FOR 2026', courseName: 'PYTHON', mentorName: 'Godsmiracle Ibitoye', courseStatus: 'In progress', studentCount: 2, startDate: '2026-03-10', dueDate: '2026-10-15', historicalStudentPaid: 200000, agreedAmountDue: 74000, amountDisbursed: 0, notes: 'Pending disbursement (₦74,000)' },
 
   // COHORT SEPTEMBER 2026
-  { id: 'ledger-2026sep-da', cohortName: 'COHORT SEPTEMBER 2026', courseName: 'DATA ANALYSIS', mentorName: 'Godsmiracle Ibitoye', courseStatus: 'In progress', studentCount: 2, startDate: '2026-04-09', dueDate: '2026-01-15', historicalStudentPaid: 370000, agreedAmountDue: 136900, amountDisbursed: 0, notes: 'Pending disbursement (₦136,900)' },
-  { id: 'ledger-2026sep-fe', cohortName: 'COHORT SEPTEMBER 2026', courseName: 'BASIC FRONTEND', mentorName: 'Promise Oviawele', courseStatus: 'In progress', studentCount: 1, startDate: '2026-12-11', dueDate: '2026-12-03', historicalStudentPaid: 250000, agreedAmountDue: 92500, amountDisbursed: 0, notes: 'Pending disbursement (₦92,500)' }
+  { id: 'ledger-2026sep-da', cohortName: 'COHORT SEPTEMBER 2026', courseName: 'DATA ANALYSIS', mentorName: 'Godsmiracle Ibitoye', courseStatus: 'In progress', studentCount: 2, startDate: '2026-09-04', dueDate: '2026-01-15', historicalStudentPaid: 370000, agreedAmountDue: 136900, amountDisbursed: 0, notes: 'Pending disbursement (₦136,900)' },
+  { id: 'ledger-2026sep-fe', cohortName: 'COHORT SEPTEMBER 2026', courseName: 'BASIC FRONTEND', mentorName: 'Promise Oviawele', courseStatus: 'In progress', studentCount: 2, startDate: '2026-11-12', dueDate: '2026-03-12', historicalStudentPaid: 430000, agreedAmountDue: 159100, amountDisbursed: 0, notes: '37% of ₦430,000 = ₦159,100 pending disbursement' }
 ];
 
 function normalizeName(name) {
@@ -265,6 +265,7 @@ function run() {
       throw new Error(`Mentor not found for row ${row.id}: ${row.mentorName}`);
     }
 
+    const updateSeeded = process.argv.includes('--update-seeded');
     const existingLedger = db.mentorCohortLedgers.find(l => l.id === row.id);
     if (!existingLedger) {
       db.mentorCohortLedgers.push({
@@ -285,6 +286,15 @@ function run() {
         notes: row.notes,
         updatedAt: nowIso
       });
+      upsertedLedgers++;
+    } else if (updateSeeded) {
+      existingLedger.studentCount = row.studentCount;
+      existingLedger.startDate = row.startDate;
+      existingLedger.dueDate = row.dueDate;
+      existingLedger.historicalStudentPaid = row.historicalStudentPaid;
+      existingLedger.agreedAmountDue = row.agreedAmountDue;
+      existingLedger.notes = row.notes;
+      existingLedger.updatedAt = nowIso;
       upsertedLedgers++;
     }
 

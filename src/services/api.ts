@@ -752,6 +752,53 @@ class ApiService {
     return this.request<{ rows: MentorReconciliationRow[]; mentorSummaries: MentorReconciliationSummary[] }>('/mentor-reconciliation');
   }
 
+  async getMentorPayoutBreakdown(mentorId: string) {
+    return this.request<{
+      mentorId: string;
+      mentorName: string;
+      ledgers: MentorReconciliationRow[];
+      courses: Array<{
+        courseId: string;
+        courseCode: string;
+        courseTitle: string;
+        role: string;
+        sharePercentage: number;
+        enrolledStudentsCount: number;
+        totalFeesBilled: number;
+        totalTuitionPaid: number;
+        courseFacultyPool: number;
+        mentorCommission: number;
+        students: Array<{
+          id: string;
+          name: string;
+          email: string;
+          program: string;
+          cohort: string;
+          totalFees: number;
+          paidAmount: number;
+          outstandingBalance: number;
+          paymentType: 'Full Payment' | 'Part Payment' | 'Unpaid';
+          commission37: number;
+          expectedCommission37: number;
+        }>;
+      }>;
+      assignedStudents: Array<{
+        id: string;
+        name: string;
+        email: string;
+        program: string;
+        cohort: string;
+        totalFees: number;
+        paidAmount: number;
+        outstandingBalance: number;
+        paymentType: 'Full Payment' | 'Part Payment' | 'Unpaid';
+        commission37: number;
+        expectedCommission37: number;
+      }>;
+      summary: { totalEarned: number; paidPayout: number; pendingPayout: number };
+    }>(`/mentors/${encodeURIComponent(mentorId)}/payout-breakdown`);
+  }
+
   async createReconciliationLedger(
     payload: Partial<MentorCohortLedgerEntry> & { disbursementDate?: string; bankReference?: string }
   ) {

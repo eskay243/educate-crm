@@ -1698,7 +1698,7 @@ export const defaultRoleDefinitions: CustomRoleDefinition[] = [
     description: 'Complete unrestricted access across all institution modules, financial ledgers, and configurations.',
     isSystem: true,
     badgeColor: 'bg-primary/10 text-primary border border-primary/20',
-    allowedModules: ['reports', 'leads', 'courses', 'students', 'mentors', 'attendance', 'expenses', 'tickets', 'settings', 'lms'],
+    allowedModules: ['reports', 'leads', 'courses', 'students', 'mentors', 'attendance', 'expenses', 'tickets', 'settings', 'lms', 'chat', 'billing', 'financial-audit'],
     permissions: {
       canAddCourses: true,
       canAddCohorts: true,
@@ -1716,6 +1716,10 @@ export const defaultRoleDefinitions: CustomRoleDefinition[] = [
       canManageUsers: true,
       canDisburseApprovedFunds: true,
       canViewStandupReports: true,
+      canEditMentorPayouts: true,
+      canRejectMentorPayouts: true,
+      canApproveMentorPayouts: true,
+      canAssignRoles: true,
     }
   },
   {
@@ -1748,7 +1752,7 @@ export const defaultRoleDefinitions: CustomRoleDefinition[] = [
     description: 'Manages prospect intake, converts leads, adds academic programs/cohorts, and registers student scholars.',
     isSystem: true,
     badgeColor: 'bg-blue-500/10 text-blue-700 border border-blue-500/20',
-    allowedModules: ['reports', 'leads', 'courses', 'students', 'attendance', 'tickets'],
+    allowedModules: ['reports', 'leads', 'courses', 'students', 'mentors', 'attendance', 'tickets', 'chat'],
     permissions: {
       canAddCourses: true, // Specifically enabled per user request!
       canAddCohorts: true,
@@ -1761,6 +1765,9 @@ export const defaultRoleDefinitions: CustomRoleDefinition[] = [
       canManageSettings: false,
       canManageAttendance: true,
       canSubmitReports: false,
+      canEditMentorPayouts: true,
+      canRejectMentorPayouts: true,
+      canApproveMentorPayouts: false,
     }
   },
   {
@@ -1790,7 +1797,7 @@ export const defaultRoleDefinitions: CustomRoleDefinition[] = [
     description: 'Authorizes expense disbursements, verifies NIBSS/Paystack student tuition settlements, and tracks budgets.',
     isSystem: true,
     badgeColor: 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/20',
-    allowedModules: ['reports', 'expenses', 'students', 'attendance', 'tickets'],
+    allowedModules: ['reports', 'expenses', 'students', 'mentors', 'attendance', 'tickets', 'chat'],
     permissions: {
       canAddCourses: false,
       canAddCohorts: false,
@@ -1803,6 +1810,9 @@ export const defaultRoleDefinitions: CustomRoleDefinition[] = [
       canManageSettings: false,
       canManageAttendance: true,
       canSubmitReports: false,
+      canEditMentorPayouts: true,
+      canRejectMentorPayouts: true,
+      canApproveMentorPayouts: true,
     }
   },
   {

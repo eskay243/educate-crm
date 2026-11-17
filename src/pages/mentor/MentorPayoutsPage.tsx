@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useCRM, formatNaira } from '../../context/CRMContext';
-import { MentorPayoutRequest } from '../../types/crm';
+import { MentorPayoutRequest, MentorReconciliationRow } from '../../types/crm';
 import { PayoutVoucherModal } from '../../components/modals/PayoutVoucherModal';
 import { CrispStatusBadge } from '../../components/common/CrispStatusBadge';
+import { apiService } from '../../services/api';
 
 export const MentorPayoutsPage: React.FC = () => {
   const {
@@ -13,15 +14,9 @@ export const MentorPayoutsPage: React.FC = () => {
     deleteMentorPayoutRequest,
     openEditPayoutRequestModal,
     calculateMentorTuitionCommission,
-    reconciliationRows,
-    fetchMentorReconciliation,
     settings,
     showToast,
   } = useCRM();
-
-  useEffect(() => {
-    fetchMentorReconciliation();
-  }, [fetchMentorReconciliation]);
 
   // Find active mentor profile
   const myMentor = useMemo(() => {
@@ -32,10 +27,49 @@ export const MentorPayoutsPage: React.FC = () => {
     );
   }, [mentors, currentUser]);
 
-  const myLedgerRows = useMemo(() => {
-    if (!myMentor) return [];
-    return reconciliationRows.filter(r => r.mentorId === myMentor.id);
-  }, [reconciliationRows, myMentor]);
+  const [myLedgerRows, setMyLedgerRows] = useState<MentorReconciliationRow[]>([]);
+  const [courseBreakdowns, setCourseBreakdowns] = useState<Array<{
+    courseId: string;
+    courseCode: string;
+    courseTitle: string;
+    role: string;
+    sharePercentage: number;
+    enrolledStudentsCount: number;
+    totalFeesBilled: number;
+    totalTuitionPaid: number;
+    courseFacultyPool: number;
+    mentorCommission: number;
+    students: Array<{
+      id: string;
+      name: string;
+      email: string;
+      program: string;
+      cohort: string;
+      totalFees: number;
+      paidAmount: number;
+      outstandingBalance: number;
+      paymentType: 'Full Payment' | 'Part Payment' | 'Unpaid';
+      commission37: number;
+      expectedCommission37: number;
+    }>;
+  }>>([]);
+  const [expandedCourseIds, setExpandedCourseIds] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (!myMentor?.id) return;
+    apiService.getMentorPayoutBreakdown(myMentor.id)
+      .then(res => {
+        if (res) {
+          setMyLedgerRows(res.ledgers || []);
+          setCourseBreakdowns(res.courses || []);
+        }
+      })
+      .catch(err => console.error('Failed to load mentor payout breakdown:', err));
+  }, [myMentor?.id]);
+
+  const toggleCourseExpand = (courseId: string) => {
+    setExpandedCourseIds(prev => ({ ...prev, [courseId]: !prev[courseId] }));
+  };
 
   // Modal states
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
@@ -289,49 +323,130 @@ export const MentorPayoutsPage: React.FC = () => {
                 <th className="py-3 px-4">Your Role</th>
                 <th className="py-3 px-4 text-center">Your % Split</th>
                 <th className="py-3 px-4 text-center">Enrolled Learners</th>
+                <th className="py-3 px-4 text-right">Total Fees Billed</th>
                 <th className="py-3 px-4 text-right">Tuition Collected</th>
-                <th className="py-3 px-4 text-right">37% Course Pool</th>
-                <th className="py-3 px-4 text-right">Your Accrued Commission</th>
+                <th className="py-3 px-4 text-right">Your Accrued 37%</th>
+                <th className="py-3 px-4 text-center">Details</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant">
-              {courseCommissionBreakdown.length === 0 ? (
+              {(courseBreakdowns.length > 0 ? courseBreakdowns : courseCommissionBreakdown.map(c => ({ ...c, totalFeesBilled: c.totalTuitionPaid, students: [] }))).length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-secondary">
-                    No active course revenue pools currently assigned.
+                  <td colSpan={8} className="py-8 text-center text-secondary">
+                    No active course revenue pools currently assigned to your profile.
                   </td>
                 </tr>
               ) : (
-                courseCommissionBreakdown.map(item => (
-                  <tr key={item.courseId} className="hover:bg-surface-container-lowest/50 transition-colors">
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-2">
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-surface-container text-secondary">
-                          {item.courseCode}
-                        </span>
-                        <span className="font-bold text-on-surface">{item.courseTitle}</span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 font-semibold text-secondary">{item.role}</td>
-                    <td className="py-3.5 px-4 text-center">
-                      <span className="px-2 py-0.5 rounded-full font-bold bg-primary/10 text-primary">
-                        {item.sharePercentage}% of Pool
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-center font-semibold text-on-surface">
-                      {item.enrolledStudentsCount} Learners
-                    </td>
-                    <td className="py-3.5 px-4 text-right font-medium text-on-surface">
-                      {formatNaira(item.totalTuitionPaid)}
-                    </td>
-                    <td className="py-3.5 px-4 text-right font-medium text-secondary">
-                      {formatNaira(item.courseFacultyPool)}
-                    </td>
-                    <td className="py-3.5 px-4 text-right font-bold text-emerald-700 text-sm">
-                      {formatNaira(item.mentorCommission)}
-                    </td>
-                  </tr>
-                ))
+                (courseBreakdowns.length > 0
+                  ? courseBreakdowns
+                  : courseCommissionBreakdown.map(c => ({ ...c, totalFeesBilled: c.totalTuitionPaid, students: [] }))
+                ).map(item => {
+                  const isExpanded = Boolean(expandedCourseIds[item.courseId]);
+                  return (
+                    <React.Fragment key={item.courseId}>
+                      <tr
+                        onClick={() => toggleCourseExpand(item.courseId)}
+                        className="hover:bg-surface-container-lowest/50 transition-colors cursor-pointer"
+                      >
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-2">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-surface-container text-secondary">
+                              {item.courseCode}
+                            </span>
+                            <span className="font-bold text-on-surface">{item.courseTitle}</span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 font-semibold text-secondary">{item.role}</td>
+                        <td className="py-3.5 px-4 text-center">
+                          <span className="px-2 py-0.5 rounded-full font-bold bg-primary/10 text-primary">
+                            {item.sharePercentage}% of Pool
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-center font-semibold text-on-surface">
+                          {item.enrolledStudentsCount} Learners
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-medium text-secondary">
+                          {formatNaira(item.totalFeesBilled)}
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-medium text-on-surface">
+                          {formatNaira(item.totalTuitionPaid)}
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-bold text-emerald-700 text-sm">
+                          {formatNaira(item.mentorCommission)}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleCourseExpand(item.courseId);
+                            }}
+                            className="px-2 py-1 rounded-md text-[11px] font-bold text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
+                          >
+                            {isExpanded ? 'Hide Students' : `Students (${item.students.length})`}
+                          </button>
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr className="bg-surface-container-lowest/70">
+                          <td colSpan={8} className="px-6 py-4">
+                            {item.students.length === 0 ? (
+                              <p className="text-xs text-secondary italic">
+                                No individual CRM student records are linked to this course under your profile yet.
+                              </p>
+                            ) : (
+                              <div className="border border-outline-variant rounded-xl overflow-hidden bg-surface">
+                                <table className="w-full text-left text-[11px]">
+                                  <thead className="bg-surface-container-low text-secondary uppercase text-[10px] font-bold border-b border-outline-variant">
+                                    <tr>
+                                      <th className="py-2 px-3">Onboarded Student</th>
+                                      <th className="py-2 px-3">Cohort</th>
+                                      <th className="py-2 px-3 text-right">Course Fee</th>
+                                      <th className="py-2 px-3 text-right">Amount Paid</th>
+                                      <th className="py-2 px-3 text-right">Balance</th>
+                                      <th className="py-2 px-3 text-center">Payment Type</th>
+                                      <th className="py-2 px-3 text-right">Your 37% Share</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-outline-variant/60">
+                                    {item.students.map(st => (
+                                      <tr key={st.id}>
+                                        <td className="py-2 px-3 font-semibold text-on-surface">{st.name}</td>
+                                        <td className="py-2 px-3 text-secondary">{st.cohort || '—'}</td>
+                                        <td className="py-2 px-3 text-right">{formatNaira(st.totalFees)}</td>
+                                        <td className="py-2 px-3 text-right font-semibold text-emerald-700">{formatNaira(st.paidAmount)}</td>
+                                        <td className="py-2 px-3 text-right text-amber-700">{formatNaira(st.outstandingBalance)}</td>
+                                        <td className="py-2 px-3 text-center">
+                                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                            st.paymentType === 'Full Payment'
+                                              ? 'bg-emerald-100 text-emerald-800'
+                                              : st.paymentType === 'Part Payment'
+                                                ? 'bg-amber-100 text-amber-800'
+                                                : 'bg-slate-100 text-slate-600'
+                                          }`}>
+                                            {st.paymentType}
+                                          </span>
+                                        </td>
+                                        <td className="py-2 px-3 text-right font-bold text-primary">
+                                          {formatNaira(st.commission37)}
+                                          {st.expectedCommission37 > st.commission37 && (
+                                            <span className="block text-[9px] text-secondary font-normal">
+                                              of {formatNaira(st.expectedCommission37)} full
+                                            </span>
+                                          )}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })
               )}
             </tbody>
           </table>

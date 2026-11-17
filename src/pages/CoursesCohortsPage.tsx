@@ -1389,7 +1389,7 @@ export const CoursesCohortsPage: React.FC = () => {
                         </td>
                         <td className="p-3 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            {pendingReq && isEligible && (
+                            {pendingReq && isEligible && (isSuperAdmin || currentUser?.role === 'finance' || hasFeaturePermission('canApproveMentorPayouts')) && (
                               <button
                                 type="button"
                                 onClick={() => reviewMentorPayout(pendingReq.id, 'Approved')}

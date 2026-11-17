@@ -24,6 +24,9 @@ const ALL_SYSTEM_MODULES: { id: string; label: string; icon: string }[] = [
   { id: 'tickets', label: 'Support & Tickets', icon: 'confirmation_number' },
   { id: 'reports', label: 'Executive Reports', icon: 'monitoring' },
   { id: 'billing', label: 'Student Billing & Tuition', icon: 'receipt_long' },
+  { id: 'chat', label: 'Team Chat', icon: 'chat' },
+  { id: 'financial-audit', label: 'AI Financial Audit', icon: 'policy' },
+  { id: 'settings', label: 'System Settings & Roles', icon: 'settings' },
 ];
 
 export const SettingsPage: React.FC = () => {
@@ -5474,15 +5477,32 @@ export const SettingsPage: React.FC = () => {
                           <span className="text-xs text-secondary italic">No staff or faculty currently assigned to this role.</span>
                         ) : (
                           <div className="flex flex-wrap gap-1.5">
-                            {assignedUsersForRole.map(member => (
-                              <span
-                                key={member.id}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-surface border border-outline-variant text-[11px] font-semibold text-on-surface"
-                              >
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                <span>{member.name}</span>
-                              </span>
-                            ))}
+                            {assignedUsersForRole.map(member => {
+                              const canUnassign = !(role.id === 'super_admin' && member.id === currentUser?.id) && role.id !== 'program_officer';
+                              return (
+                                <span
+                                  key={member.id}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-surface border border-outline-variant text-[11px] font-semibold text-on-surface"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                  <span>{member.name}</span>
+                                  {canUnassign && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (window.confirm(`Remove ${member.name} from ${role.name} and reassign to Academic Program Officer?`)) {
+                                          updateUserRole(member.id, 'program_officer');
+                                        }
+                                      }}
+                                      className="ml-0.5 text-secondary hover:text-error transition-colors cursor-pointer flex items-center"
+                                      title={`Remove ${member.name} from ${role.name}`}
+                                    >
+                                      <span className="material-symbols-outlined text-[13px]">close</span>
+                                    </button>
+                                  )}
+                                </span>
+                              );
+                            })}
                           </div>
                         )}
                       </div>
@@ -5590,6 +5610,10 @@ export const SettingsPage: React.FC = () => {
                         { key: 'canModifyStudentBiodata' as const, label: 'Modify Student Biodata', icon: 'edit_square' },
                         { key: 'canModifyMentorBiodata' as const, label: 'Modify Mentor Biodata', icon: 'manage_accounts' },
                         { key: 'canDisburseApprovedFunds' as const, label: 'Disburse Approved Funds', icon: 'payments' },
+                        { key: 'canEditMentorPayouts' as const, label: 'Edit Mentor Payout Claims', icon: 'edit' },
+                        { key: 'canRejectMentorPayouts' as const, label: 'Reject Mentor Payout Claims', icon: 'block' },
+                        { key: 'canApproveMentorPayouts' as const, label: 'Approve Mentor Payout Claims', icon: 'verified' },
+                        { key: 'canAssignRoles' as const, label: 'Assign Staff Roles', icon: 'admin_panel_settings' },
                         { key: 'canViewStandupReports' as const, label: 'View Standup Management Reports', icon: 'monitoring' },
                       ].map(({ key, label, icon }) => {
                         const isGranted = role.id === 'super_admin' || Boolean((role.permissions as any)?.[key]);
@@ -5607,6 +5631,7 @@ export const SettingsPage: React.FC = () => {
                                 canLogExpenses: false, canApproveExpenses: false, canIssueCertificates: false, canViewBilling: false,
                                 canManageSettings: false, canManageAttendance: false, canSubmitReports: false,
                                 canViewBiodata: false, canModifyStudentBiodata: false, canModifyMentorBiodata: false, canDisburseApprovedFunds: false,
+                                canEditMentorPayouts: false, canRejectMentorPayouts: false, canApproveMentorPayouts: false, canAssignRoles: false,
                                 canViewStandupReports: false,
                               };
                               updateRolePermissions(role.id, {

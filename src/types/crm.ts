@@ -21,6 +21,10 @@ export interface RoleCapabilities {
   canModifyMentorBiodata?: boolean;
   canDisburseApprovedFunds?: boolean;
   canViewStandupReports?: boolean;
+  canEditMentorPayouts?: boolean;
+  canRejectMentorPayouts?: boolean;
+  canApproveMentorPayouts?: boolean;
+  canAssignRoles?: boolean;
 }
 
 export interface CustomRoleDefinition {

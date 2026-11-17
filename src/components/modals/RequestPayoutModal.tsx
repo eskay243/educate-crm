@@ -16,10 +16,11 @@ export const RequestPayoutModal: React.FC<RequestPayoutModalProps> = ({ isOpen, 
     setSelectedPayoutRequestForEdit,
     showToast,
     settings,
+    hasFeaturePermission,
   } = useCRM();
 
   const isEditMode = !!selectedPayoutRequestForEdit;
-  const isPrivileged = currentUser?.role === 'super_admin' || currentUser?.role === 'finance' || currentUser?.role === 'program_officer';
+  const isPrivileged = currentUser?.role === 'super_admin' || currentUser?.role === 'finance' || currentUser?.role === 'program_officer' || hasFeaturePermission('canEditMentorPayouts');
   const canSelectMentor = isPrivileged && !isEditMode;
 
   const [selectedMentorId, setSelectedMentorId] = useState<string>('');
