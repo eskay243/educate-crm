@@ -78,6 +78,8 @@ interface DatabaseSchema {
   timetables?: any[];
   payoutRequests?: any[];
   mentorCohortLedgers?: any[];
+  financialAuditFindings?: any[];
+  financialAuditScans?: any[];
   pushSubscriptions?: any[];
   chatConversations?: any[];
   chatMessages?: any[];
@@ -216,6 +218,8 @@ const getInitialDatabase = (): DatabaseSchema => ({
   timetables: initialTimetables,
   payoutRequests: [],
   mentorCohortLedgers: [],
+  financialAuditFindings: [],
+  financialAuditScans: [],
   pushSubscriptions: [],
   chatConversations: initialChatConversations,
   chatMessages: initialChatMessages,
@@ -250,6 +254,8 @@ const loadDatabase = (): DatabaseSchema => {
     if (!Array.isArray(parsed.timetables)) parsed.timetables = initialTimetables;
     if (!Array.isArray(parsed.payoutRequests)) parsed.payoutRequests = [];
     if (!Array.isArray(parsed.mentorCohortLedgers)) parsed.mentorCohortLedgers = [];
+    if (!Array.isArray(parsed.financialAuditFindings)) parsed.financialAuditFindings = [];
+    if (!Array.isArray(parsed.financialAuditScans)) parsed.financialAuditScans = [];
     if (!parsed.wallet) parsed.wallet = defaultWallet;
     if (!Array.isArray(parsed.chatConversations)) parsed.chatConversations = initialChatConversations;
     if (!Array.isArray(parsed.chatMessages)) parsed.chatMessages = initialChatMessages;
@@ -5403,6 +5409,11 @@ app.post('/api/paystack/disburse-mentor', async (req: Request, res: Response) =>
 // --------------------------------------------------------------------------
 const normalizeMatchText = (val: any) => String(val || '').trim().toLowerCase().replace(/\s+/g, ' ');
 
+const isSuperAdminOnly = (req: Request): boolean => {
+  const roleHeader = String(req.headers['x-user-role'] || req.body?.callerRole || '').trim().toLowerCase();
+  return roleHeader === 'super_admin' || roleHeader === 'super admin';
+};
+
 const recalculateMentorPayoutTotals = (mentorId: string) => {
   const mentor = db.mentors.find((m: any) => m.id === mentorId);
   if (!mentor) return null;
@@ -5421,8 +5432,11 @@ const recalculateMentorPayoutTotals = (mentorId: string) => {
   return mentor;
 };
 
-app.get('/api/mentor-reconciliation', (_req: Request, res: Response) => {
+app.get('/api/mentor-reconciliation', (req: Request, res: Response) => {
   try {
+    if (!isSuperAdminOnly(req)) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Financial Reconciliation & Auditing is restricted to Super Admin.' });
+    }
     if (!Array.isArray(db.mentorCohortLedgers)) db.mentorCohortLedgers = [];
     const realStudents = (db.students || []).filter((s: any) => !String(s.email || '').includes('.qa.'));
 
@@ -5524,40 +5538,118 @@ app.get('/api/mentor-reconciliation', (_req: Request, res: Response) => {
 
 app.post('/api/mentor-reconciliation/ledger', (req: Request, res: Response) => {
   try {
-    if (!isAuthorizedApprover(req)) {
-      return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin or Finance can add reconciliation entries.' });
+    if (!isSuperAdminOnly(req)) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin can add backdated or reconciled ledger entries.' });
     }
     if (!Array.isArray(db.mentorCohortLedgers)) db.mentorCohortLedgers = [];
 
-    const { cohortName, courseName, mentorId, courseStatus, studentCount, startDate, dueDate, historicalStudentPaid, agreedAmountDue, commissionRate, notes } = req.body;
+    const {
+      cohortName,
+      courseName,
+      mentorId,
+      courseStatus,
+      studentCount,
+      startDate,
+      dueDate,
+      historicalStudentPaid,
+      agreedAmountDue,
+      commissionRate,
+      amountDisbursed,
+      disbursementDate,
+      bankReference,
+      isHistoricalSeed,
+      notes
+    } = req.body;
     const mentor = db.mentors.find((m: any) => m.id === mentorId);
     if (!mentor) {
       return res.status(404).json({ success: false, message: 'Mentor not found' });
     }
     const rate = Number(commissionRate ?? 0.37);
     const paid = Number(historicalStudentPaid || 0);
-    const due = agreedAmountDue !== undefined ? Number(agreedAmountDue) : Math.round(paid * rate);
+    const due = agreedAmountDue !== undefined && agreedAmountDue !== '' ? Number(agreedAmountDue) : Math.round(paid * rate);
+    const prevDisbursed = Math.max(0, Number(amountDisbursed || 0));
+    const ledgerId = `ledger-${Date.now()}`;
+    const effectiveStart = startDate || new Date().toISOString().split('T')[0];
 
     const newEntry = {
-      id: `ledger-${Date.now()}`,
-      cohortName: String(cohortName || 'CURRENT COHORT').trim(),
+      id: ledgerId,
+      cohortName: String(cohortName || 'BACKDATED COHORT').trim(),
       courseName: String(courseName || 'GENERAL').trim(),
       mentorId: mentor.id,
       mentorName: mentor.name,
-      courseStatus: courseStatus || 'In progress',
+      courseStatus: courseStatus || 'Done',
       studentCount: Number(studentCount || 0),
-      startDate: startDate || new Date().toISOString().split('T')[0],
+      startDate: effectiveStart,
       dueDate: dueDate || '',
       historicalStudentPaid: paid,
       agreedAmountDue: due,
       commissionRate: rate,
-      amountDisbursed: 0,
-      isHistoricalSeed: false,
+      amountDisbursed: prevDisbursed,
+      isHistoricalSeed: Boolean(isHistoricalSeed ?? true),
       notes: notes || '',
       updatedAt: new Date().toISOString()
     };
 
     db.mentorCohortLedgers.unshift(newEntry);
+
+    if (prevDisbursed > 0) {
+      const disbDate = disbursementDate || dueDate || effectiveStart;
+      const ref = bankReference || `HIST-MAN-${ledgerId.slice(-6).toUpperCase()}`;
+      const voucherNo = `VCH-HIST-${ledgerId.slice(-6).toUpperCase()}`;
+      const payoutId = `req-hist-${ledgerId}`;
+      const expenseId = `exp-hist-${ledgerId}`;
+      if (!Array.isArray(db.payoutRequests)) db.payoutRequests = [];
+      db.payoutRequests.unshift({
+        id: payoutId,
+        mentorId: mentor.id,
+        mentorName: mentor.name,
+        mentorEmail: mentor.email,
+        amount: prevDisbursed,
+        lecturedHours: mentor.lecturedHours || 0,
+        minimumRequiredHours: mentor.minimumRequiredHours || 20,
+        bankName: mentor.bankName || 'Historical Manual Transfer',
+        accountNumber: mentor.accountNumber || 'N/A',
+        accountName: mentor.accountName || mentor.name,
+        bankCode: mentor.bankCode || '',
+        status: 'Disbursed',
+        netDisbursedAmount: prevDisbursed,
+        voucherNumber: voucherNo,
+        requestedAt: disbDate,
+        reviewedAt: disbDate,
+        reviewedBy: 'Super Admin (Backdated Migration)',
+        disbursedAt: disbDate,
+        disburseReference: ref,
+        notes: `${newEntry.cohortName} — ${newEntry.courseName}${notes ? `: ${notes}` : ''}`,
+        expenseId,
+        isHistorical: true,
+        cohortLedgerId: ledgerId,
+        paymentMethod: 'manual_bank'
+      });
+      db.expenses.unshift({
+        id: expenseId,
+        expenseCode: voucherNo,
+        title: `Backdated Mentor Payout: ${mentor.name} (${newEntry.courseName})`,
+        category: 'Faculty & Mentor Payouts',
+        amount: prevDisbursed,
+        date: disbDate,
+        createdAt: disbDate,
+        department: 'Academic Faculty',
+        paymentMethod: 'Manual Bank Transfer (Backdated)',
+        status: 'Paid',
+        vendor: mentor.name,
+        requestedBy: 'Super Admin',
+        description: `${newEntry.cohortName} • ${newEntry.courseName}`,
+        disbursedAt: disbDate,
+        transferReference: ref,
+        mentorId: mentor.id,
+        mentorName: mentor.name,
+        payoutRequestId: payoutId,
+        voucherNumber: voucherNo,
+        isHistorical: true,
+        walletDeducted: false
+      });
+    }
+
     recalculateMentorPayoutTotals(mentor.id);
     saveDatabase(db);
     res.json({ success: true, data: newEntry });
@@ -5568,8 +5660,8 @@ app.post('/api/mentor-reconciliation/ledger', (req: Request, res: Response) => {
 
 app.patch('/api/mentor-reconciliation/ledger/:id', (req: Request, res: Response) => {
   try {
-    if (!isAuthorizedApprover(req)) {
-      return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin or Finance can edit reconciliation entries.' });
+    if (!isSuperAdminOnly(req)) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin can edit reconciliation entries.' });
     }
     if (!Array.isArray(db.mentorCohortLedgers)) db.mentorCohortLedgers = [];
     const ledger = db.mentorCohortLedgers.find((l: any) => l.id === req.params.id);
@@ -5605,8 +5697,8 @@ app.patch('/api/mentor-reconciliation/ledger/:id', (req: Request, res: Response)
 
 app.post('/api/mentors/:id/record-student-deposit', (req: Request, res: Response) => {
   try {
-    if (!isAuthorizedApprover(req)) {
-      return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin or Finance can record student deposits.' });
+    if (!isSuperAdminOnly(req)) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin can record reconciled student deposits.' });
     }
     const { studentId, amount, paymentReference, cohortLedgerId } = req.body;
     const depositAmount = Number(amount || 0);
@@ -5658,8 +5750,8 @@ app.post('/api/mentors/:id/record-student-deposit', (req: Request, res: Response
 
 app.post('/api/mentors/:id/manual-payout', (req: Request, res: Response) => {
   try {
-    if (!isAuthorizedApprover(req)) {
-      return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin, Finance, and designated Approvers can record mentor payouts.' });
+    if (!isSuperAdminOnly(req)) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin can record reconciled manual mentor payouts.' });
     }
     const mentor = db.mentors.find((m: any) => m.id === req.params.id);
     if (!mentor) {
@@ -5777,6 +5869,338 @@ app.post('/api/mentors/:id/manual-payout', (req: Request, res: Response) => {
   }
 });
 
+// --------------------------------------------------------------------------
+// Super Admin AI Financial Audit Agent (Money Flow & Discrepancy Engine)
+// --------------------------------------------------------------------------
+const runFinancialAuditScan = (triggeredBy: string) => {
+  if (!Array.isArray(db.financialAuditFindings)) db.financialAuditFindings = [];
+  if (!Array.isArray(db.financialAuditScans)) db.financialAuditScans = [];
+  if (!Array.isArray(db.mentorCohortLedgers)) db.mentorCohortLedgers = [];
+
+  const nowIso = new Date().toISOString();
+  const realStudents = (db.students || []).filter((s: any) => !String(s.email || '').includes('.qa.'));
+  const ledgers = db.mentorCohortLedgers || [];
+  const invoices = db.invoices || [];
+  const payouts = db.payoutRequests || [];
+  const mentors = db.mentors || [];
+
+  const detected: any[] = [];
+  const pushFinding = (f: any) => {
+    detected.push({
+      ...f,
+      firstDetectedAt: nowIso,
+      lastDetectedAt: nowIso
+    });
+  };
+
+  // Rule 1: Tuition / Payment Outliers (> ₦1,500,000 or paid > totalFees)
+  for (const s of realStudents) {
+    const fees = Number(s.totalFees || 0);
+    const paid = Number(s.paidAmount || 0);
+    if (fees > 1500000 || paid > 1500000) {
+      pushFinding({
+        fingerprint: `TUITION_OUTLIER:${s.id}`,
+        ruleCode: 'TUITION_OUTLIER',
+        severity: 'Critical',
+        title: `Abnormal Tuition/Deposit Amount for ${s.name}`,
+        aiDiagnosis: `${s.name} (${s.program || 'Unknown Track'}) has totalFees ₦${fees.toLocaleString()} and paidAmount ₦${paid.toLocaleString()}, exceeding the ₦1.5M single-course threshold. This often indicates an extra-zero data entry typo.`,
+        recommendedAction: `Verify bank receipt for ${s.name} and correct totalFees / paidAmount in Students.`,
+        entityType: 'student',
+        entityId: s.id,
+        entityName: s.name,
+        expectedAmount: 450000,
+        actualAmount: Math.max(fees, paid),
+        deltaAmount: Math.max(fees, paid) - 450000
+      });
+    } else if (fees > 0 && paid > fees) {
+      pushFinding({
+        fingerprint: `OVERPAID_TUITION:${s.id}`,
+        ruleCode: 'TUITION_OUTLIER',
+        severity: 'Warning',
+        title: `Student Paid Exceeds Total Tuition (${s.name})`,
+        aiDiagnosis: `${s.name} shows paidAmount ₦${paid.toLocaleString()} > totalFees ₦${fees.toLocaleString()}.`,
+        recommendedAction: `Reconcile ${s.name}'s duplicate deposit or update totalFees.`,
+        entityType: 'student',
+        entityId: s.id,
+        entityName: s.name,
+        expectedAmount: fees,
+        actualAmount: paid,
+        deltaAmount: paid - fees
+      });
+    }
+
+    // Rule 2: Paid Student Without Mentor Assignment
+    if (paid > 0 && !s.mentorId && !String(s.mentorName || '').trim()) {
+      pushFinding({
+        fingerprint: `PAID_STUDENT_NO_MENTOR:${s.id}`,
+        ruleCode: 'PAID_STUDENT_NO_MENTOR',
+        severity: 'Warning',
+        title: `Paid Student Unassigned to Mentor (${s.name})`,
+        aiDiagnosis: `${s.name} has paid ₦${paid.toLocaleString()} for ${s.program || 'course'}, but has no assigned mentor. 37% commission (₦${Math.round(paid * 0.37).toLocaleString()}) cannot be attributed.`,
+        recommendedAction: `Assign the course mentor to ${s.name} in Students.`,
+        entityType: 'student',
+        entityId: s.id,
+        entityName: s.name,
+        expectedAmount: Math.round(paid * 0.37),
+        actualAmount: 0,
+        deltaAmount: Math.round(paid * 0.37)
+      });
+    }
+
+    // Rule 3: Student Paid vs Linked Invoices Mismatch
+    const stuInvoices = invoices.filter((inv: any) => inv.studentId === s.id);
+    if (stuInvoices.length > 0) {
+      const invPaid = stuInvoices.reduce((sum: number, inv: any) => sum + Number(inv.paidAmount || 0), 0);
+      if (Math.abs(paid - invPaid) > 100) {
+        pushFinding({
+          fingerprint: `INVOICE_STUDENT_MISMATCH:${s.id}`,
+          ruleCode: 'INVOICE_STUDENT_MISMATCH',
+          severity: 'Warning',
+          title: `Student Paid vs. Invoice Total Mismatch (${s.name})`,
+          aiDiagnosis: `${s.name} profile shows paidAmount ₦${paid.toLocaleString()}, whereas linked invoices sum to ₦${invPaid.toLocaleString()}.`,
+          recommendedAction: `Sync ${s.name}'s invoice payment records with student paidAmount.`,
+          entityType: 'student',
+          entityId: s.id,
+          entityName: s.name,
+          expectedAmount: invPaid,
+          actualAmount: paid,
+          deltaAmount: paid - invPaid
+        });
+      }
+    }
+  }
+
+  // Rule 4, 5, 6: Cohort Ledger Commission Variance, Over-Disbursement, and Unlinked Student Deposits
+  for (const ledger of ledgers) {
+    const targetCourse = normalizeMatchText(ledger.courseName);
+    const targetMentor = normalizeMatchText(ledger.mentorName);
+    const matchedStudents = realStudents.filter((s: any) => {
+      const mentorMatch = (s.mentorId && s.mentorId === ledger.mentorId) || normalizeMatchText(s.mentorName) === targetMentor;
+      if (!mentorMatch) return false;
+      const prog = normalizeMatchText(s.program);
+      return prog === targetCourse || prog.includes(targetCourse) || targetCourse.includes(prog);
+    });
+    const livePaid = matchedStudents.reduce((sum: number, s: any) => sum + Number(s.paidAmount || 0), 0);
+    const histPaid = Number(ledger.historicalStudentPaid || 0);
+    const effectivePaid = Math.max(histPaid, livePaid);
+    const calc37 = Math.round(effectivePaid * Number(ledger.commissionRate ?? 0.37));
+    const agreedDue = Number(ledger.agreedAmountDue ?? calc37);
+    const disbursed = Number(ledger.amountDisbursed || 0);
+
+    if (Math.abs(agreedDue - calc37) > 0) {
+      pushFinding({
+        fingerprint: `COMMISSION_VARIANCE:${ledger.id}`,
+        ruleCode: 'COMMISSION_VARIANCE',
+        severity: Math.abs(agreedDue - calc37) >= 5000 ? 'Warning' : 'Info',
+        title: `37% Commission Variance: ${ledger.mentorName} (${ledger.courseName})`,
+        aiDiagnosis: `For ${ledger.cohortName} • ${ledger.courseName}, 37% of ₦${effectivePaid.toLocaleString()} is ₦${calc37.toLocaleString()}, but agreed/recorded due is ₦${agreedDue.toLocaleString()} (delta ₦${(agreedDue - calc37).toLocaleString()}).`,
+        recommendedAction: `Confirm manual commission override or adjust Agreed Due in Commission & Reconciliation.`,
+        entityType: 'ledger',
+        entityId: ledger.id,
+        entityName: `${ledger.mentorName} — ${ledger.courseName}`,
+        expectedAmount: calc37,
+        actualAmount: agreedDue,
+        deltaAmount: agreedDue - calc37
+      });
+    }
+
+    if (disbursed > agreedDue) {
+      pushFinding({
+        fingerprint: `OVER_DISBURSEMENT:${ledger.id}`,
+        ruleCode: 'OVER_DISBURSEMENT',
+        severity: 'Critical',
+        title: `Over-Disbursement Detected: ${ledger.mentorName} (${ledger.courseName})`,
+        aiDiagnosis: `₦${disbursed.toLocaleString()} was disbursed against ₦${agreedDue.toLocaleString()} commission due (overpaid by ₦${(disbursed - agreedDue).toLocaleString()}).`,
+        recommendedAction: `Audit payout vouchers for ${ledger.mentorName} and offset overpayment against future cohorts.`,
+        entityType: 'ledger',
+        entityId: ledger.id,
+        entityName: `${ledger.mentorName} — ${ledger.courseName}`,
+        expectedAmount: agreedDue,
+        actualAmount: disbursed,
+        deltaAmount: disbursed - agreedDue
+      });
+    }
+
+    if (histPaid > 0 && livePaid === 0) {
+      pushFinding({
+        fingerprint: `UNLINKED_STUDENT_DEPOSITS:${ledger.id}`,
+        ruleCode: 'UNLINKED_STUDENT_DEPOSITS',
+        severity: 'Info',
+        title: `Historical Deposits Not Individually Linked (${ledger.cohortName} • ${ledger.courseName})`,
+        aiDiagnosis: `Ledger records ₦${histPaid.toLocaleString()} collected from ${ledger.studentCount} students, while individual CRM student records show ₦0 paid.`,
+        recommendedAction: `Onboard or record individual student deposits in Students to achieve 1:1 receipt traceability.`,
+        entityType: 'ledger',
+        entityId: ledger.id,
+        entityName: `${ledger.mentorName} — ${ledger.courseName}`,
+        expectedAmount: histPaid,
+        actualAmount: livePaid,
+        deltaAmount: histPaid - livePaid
+      });
+    }
+  }
+
+  // Rule 7: Mentor Paid Payout vs. Disbursed Payout Requests Mismatch
+  for (const m of mentors) {
+    const mPaid = Number(m.paidPayout || 0);
+    const reqDisbursed = payouts
+      .filter((r: any) => r.mentorId === m.id && r.status === 'Disbursed')
+      .reduce((sum: number, r: any) => sum + Number(r.amount || 0), 0);
+    if ((mPaid > 0 || reqDisbursed > 0) && Math.abs(mPaid - reqDisbursed) > 100) {
+      pushFinding({
+        fingerprint: `PAYOUT_LEDGER_MISMATCH:${m.id}`,
+        ruleCode: 'PAYOUT_LEDGER_MISMATCH',
+        severity: 'Critical',
+        title: `Mentor Paid Balance vs. Payout Vouchers Mismatch (${m.name})`,
+        aiDiagnosis: `${m.name}'s profile shows paidPayout ₦${mPaid.toLocaleString()}, while Disbursed payout vouchers total ₦${reqDisbursed.toLocaleString()}.`,
+        recommendedAction: `Reconcile ${m.name}'s payout history and sync ledger totals.`,
+        entityType: 'mentor',
+        entityId: m.id,
+        entityName: m.name,
+        expectedAmount: reqDisbursed,
+        actualAmount: mPaid,
+        deltaAmount: mPaid - reqDisbursed
+      });
+    }
+  }
+
+  // Merge detected findings with existing persistent findings (preserving Acknowledged/Resolved states)
+  const existingByFp = new Map<string, any>();
+  for (const ex of db.financialAuditFindings) {
+    existingByFp.set(ex.fingerprint, ex);
+  }
+
+  const nextFindings: any[] = [];
+  const seenFps = new Set<string>();
+  for (const d of detected) {
+    seenFps.add(d.fingerprint);
+    const prev = existingByFp.get(d.fingerprint);
+    if (prev) {
+      nextFindings.push({
+        ...prev,
+        ...d,
+        id: prev.id,
+        firstDetectedAt: prev.firstDetectedAt,
+        status: prev.status === 'Resolved' ? 'Open' : prev.status, // Re-open if still present
+        resolutionNote: prev.status === 'Resolved' ? undefined : prev.resolutionNote
+      });
+    } else {
+      nextFindings.push({
+        id: `audit-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
+        status: 'Open',
+        ...d
+      });
+    }
+  }
+  // Keep previously resolved findings for historical audit log
+  for (const ex of db.financialAuditFindings) {
+    if (!seenFps.has(ex.fingerprint)) {
+      nextFindings.push(ex.status === 'Open' ? { ...ex, status: 'Resolved', resolvedAt: nowIso, resolvedBy: 'AI Audit Agent (Auto-Cleared)' } : ex);
+    }
+  }
+
+  db.financialAuditFindings = nextFindings;
+
+  // Compute money flow summary
+  const totalTuitionBilled = realStudents.reduce((s: number, st: any) => s + Number(st.totalFees || 0), 0);
+  const liveStudentPaidSum = realStudents.reduce((s: number, st: any) => s + Number(st.paidAmount || 0), 0);
+  const ledgerHistPaidSum = ledgers.reduce((s: number, l: any) => s + Number(l.historicalStudentPaid || 0), 0);
+  const totalStudentPaymentsReceived = Math.max(liveStudentPaidSum, ledgerHistPaidSum);
+  const totalExpectedCommission37 = Math.round(totalStudentPaymentsReceived * 0.37);
+  const totalAgreedCommissionDue = ledgers.reduce((s: number, l: any) => s + Number(l.agreedAmountDue || 0), 0);
+  const totalDisbursedToMentors = ledgers.reduce((s: number, l: any) => s + Number(l.amountDisbursed || 0), 0);
+  const totalOutstandingPayable = Math.max(0, totalAgreedCommissionDue - totalDisbursedToMentors);
+
+  const openFindings = nextFindings.filter(f => f.status !== 'Resolved');
+  const criticalCount = openFindings.filter(f => f.severity === 'Critical').length;
+  const warningCount = openFindings.filter(f => f.severity === 'Warning').length;
+  const infoCount = openFindings.filter(f => f.severity === 'Info').length;
+  const netDiscrepancyExposure = openFindings
+    .filter(f => f.ruleCode !== 'UNLINKED_STUDENT_DEPOSITS')
+    .reduce((sum: number, f: any) => sum + Math.abs(Number(f.deltaAmount || 0)), 0);
+
+  const penalty = criticalCount * 15 + warningCount * 5 + infoCount * 1;
+  const healthScore = Math.max(0, Math.min(100, 100 - penalty));
+
+  const scanRecord = {
+    id: `scan-${Date.now()}`,
+    timestamp: nowIso,
+    triggeredBy,
+    healthScore,
+    totalFindings: openFindings.length,
+    criticalCount,
+    warningCount,
+    infoCount,
+    moneyFlow: {
+      totalTuitionBilled,
+      totalStudentPaymentsReceived,
+      totalExpectedCommission37,
+      totalAgreedCommissionDue,
+      totalDisbursedToMentors,
+      totalOutstandingPayable,
+      netDiscrepancyExposure
+    }
+  };
+
+  db.financialAuditScans.unshift(scanRecord);
+  if (db.financialAuditScans.length > 50) db.financialAuditScans = db.financialAuditScans.slice(0, 50);
+  saveDatabase(db);
+  return { scan: scanRecord, findings: nextFindings };
+};
+
+app.get('/api/financial-audit', (req: Request, res: Response) => {
+  if (!isSuperAdminOnly(req)) {
+    return res.status(403).json({ success: false, message: 'Forbidden: AI Financial Audit Agent is restricted strictly to Super Admin.' });
+  }
+  if (!Array.isArray(db.financialAuditScans) || db.financialAuditScans.length === 0) {
+    const result = runFinancialAuditScan('Auto-Initial Audit');
+    return res.json({ success: true, data: { latestScan: result.scan, scans: db.financialAuditScans, findings: result.findings } });
+  }
+  res.json({
+    success: true,
+    data: {
+      latestScan: db.financialAuditScans[0],
+      scans: db.financialAuditScans,
+      findings: db.financialAuditFindings || []
+    }
+  });
+});
+
+app.post('/api/financial-audit/scan', (req: Request, res: Response) => {
+  if (!isSuperAdminOnly(req)) {
+    return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin can trigger Financial Audit scans.' });
+  }
+  const triggeredBy = String(req.body?.triggeredBy || 'Super Admin');
+  const result = runFinancialAuditScan(triggeredBy);
+  res.json({
+    success: true,
+    data: {
+      latestScan: result.scan,
+      scans: db.financialAuditScans,
+      findings: result.findings
+    }
+  });
+});
+
+app.patch('/api/financial-audit/findings/:id', (req: Request, res: Response) => {
+  if (!isSuperAdminOnly(req)) {
+    return res.status(403).json({ success: false, message: 'Forbidden: Only Super Admin can update audit findings.' });
+  }
+  if (!Array.isArray(db.financialAuditFindings)) db.financialAuditFindings = [];
+  const finding = db.financialAuditFindings.find((f: any) => f.id === req.params.id);
+  if (!finding) {
+    return res.status(404).json({ success: false, message: 'Audit finding not found' });
+  }
+  const { status, resolutionNote, resolvedBy } = req.body;
+  if (status) finding.status = status;
+  if (resolutionNote !== undefined) finding.resolutionNote = resolutionNote;
+  if (status === 'Resolved') {
+    finding.resolvedAt = new Date().toISOString();
+    finding.resolvedBy = resolvedBy || 'Super Admin';
+  }
+  saveDatabase(db);
+  res.json({ success: true, data: finding });
+});
+
 // ----------------------------------------------------
 // Mentor Payout Request Endpoints
 // ----------------------------------------------------
@@ -5795,12 +6219,7 @@ app.post('/api/payout-requests', (req: Request, res: Response) => {
 
   const minRequired = mentor.minimumRequiredHours ?? db.settings?.mentorMinimumLecturedHours ?? 20;
   const actualHours = mentor.lecturedHours ?? 0;
-  if (actualHours < minRequired) {
-    return res.status(400).json({
-      success: false,
-      message: `Ineligible for payout request: You have logged ${actualHours}h of lecturing. A minimum threshold of ${minRequired}h is required.`
-    });
-  }
+  const requiresHoursOverride = actualHours < minRequired;
 
   const reqAmount = Number(amount) || mentor.pendingPayout || 0;
   if (reqAmount <= 0) {
@@ -5822,13 +6241,14 @@ app.post('/api/payout-requests', (req: Request, res: Response) => {
     netDisbursedAmount: netAmount,
     lecturedHours: actualHours,
     minimumRequiredHours: minRequired,
+    requiresHoursOverride,
     bankName: mentor.bankName || 'Guaranty Trust Bank (GTBank)',
     accountNumber: mentor.accountNumber || '0123456789',
     accountName: mentor.accountName || mentor.name,
     bankCode: mentor.bankCode || '058',
     status: 'Pending',
     requestedAt: new Date().toISOString(),
-    notes: notes || '',
+    notes: notes || (requiresHoursOverride ? 'Submitted with <20h logged (Legacy/Reconciled balance pending Super Admin override)' : ''),
   };
 
   db.payoutRequests.unshift(newRequest);

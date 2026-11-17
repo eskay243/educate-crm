@@ -1411,6 +1411,7 @@ export interface MentorPayoutRequest {
   isHistorical?: boolean;
   cohortLedgerId?: string;
   paymentMethod?: 'paystack' | 'manual_bank';
+  requiresHoursOverride?: boolean;
 }
 
 export interface MentorCohortLedgerEntry {
@@ -1466,6 +1467,58 @@ export interface MentorReconciliationSummary {
   totalOutstanding: number;
   rowCount: number;
   varianceCount: number;
+}
+
+export type AuditSeverity = 'Critical' | 'Warning' | 'Info';
+export type AuditFindingStatus = 'Open' | 'Acknowledged' | 'Resolved';
+
+export interface FinancialAuditFinding {
+  id: string;
+  fingerprint: string;
+  ruleCode:
+    | 'TUITION_OUTLIER'
+    | 'COMMISSION_VARIANCE'
+    | 'OVER_DISBURSEMENT'
+    | 'UNLINKED_STUDENT_DEPOSITS'
+    | 'INVOICE_STUDENT_MISMATCH'
+    | 'PAID_STUDENT_NO_MENTOR'
+    | 'PAYOUT_LEDGER_MISMATCH';
+  severity: AuditSeverity;
+  title: string;
+  aiDiagnosis: string;
+  recommendedAction: string;
+  entityType: 'mentor' | 'student' | 'ledger' | 'payout' | 'wallet';
+  entityId: string;
+  entityName: string;
+  expectedAmount: number;
+  actualAmount: number;
+  deltaAmount: number;
+  status: AuditFindingStatus;
+  resolutionNote?: string;
+  resolvedBy?: string;
+  resolvedAt?: string;
+  firstDetectedAt: string;
+  lastDetectedAt: string;
+}
+
+export interface FinancialAuditScan {
+  id: string;
+  timestamp: string;
+  triggeredBy: string;
+  healthScore: number;
+  totalFindings: number;
+  criticalCount: number;
+  warningCount: number;
+  infoCount: number;
+  moneyFlow: {
+    totalTuitionBilled: number;
+    totalStudentPaymentsReceived: number;
+    totalExpectedCommission37: number;
+    totalAgreedCommissionDue: number;
+    totalDisbursedToMentors: number;
+    totalOutstandingPayable: number;
+    netDiscrepancyExposure: number;
+  };
 }
 
 export interface PushSubscriptionItem {

@@ -26,7 +26,9 @@ import {
   WalletTransaction,
   MentorCohortLedgerEntry,
   MentorReconciliationRow,
-  MentorReconciliationSummary
+  MentorReconciliationSummary,
+  FinancialAuditFinding,
+  FinancialAuditScan
 } from '../types/crm';
 import {
   ChatConversation,
@@ -750,9 +752,40 @@ class ApiService {
     return this.request<{ rows: MentorReconciliationRow[]; mentorSummaries: MentorReconciliationSummary[] }>('/mentor-reconciliation');
   }
 
-  async createReconciliationLedger(payload: Partial<MentorCohortLedgerEntry>) {
+  async createReconciliationLedger(
+    payload: Partial<MentorCohortLedgerEntry> & { disbursementDate?: string; bankReference?: string }
+  ) {
     return this.request<MentorCohortLedgerEntry>('/mentor-reconciliation/ledger', {
       method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getFinancialAudit() {
+    return this.request<{
+      latestScan: FinancialAuditScan;
+      scans: FinancialAuditScan[];
+      findings: FinancialAuditFinding[];
+    }>('/financial-audit');
+  }
+
+  async runFinancialAuditScan(triggeredBy?: string) {
+    return this.request<{
+      latestScan: FinancialAuditScan;
+      scans: FinancialAuditScan[];
+      findings: FinancialAuditFinding[];
+    }>('/financial-audit/scan', {
+      method: 'POST',
+      body: JSON.stringify({ triggeredBy }),
+    });
+  }
+
+  async updateAuditFinding(
+    id: string,
+    payload: { status: string; resolutionNote?: string; resolvedBy?: string }
+  ) {
+    return this.request<FinancialAuditFinding>(`/financial-audit/findings/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
       body: JSON.stringify(payload),
     });
   }

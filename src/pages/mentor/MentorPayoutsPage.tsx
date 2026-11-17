@@ -78,12 +78,24 @@ export const MentorPayoutsPage: React.FC = () => {
       .reduce((sum, r) => sum + r.amount, 0);
   }, [myPayoutRequests]);
 
-  // Available balance for payout
+  // Available balance & totals: prefer reconciled ledger totals when present so historical payouts are deducted accurately
+  const hasReconciledLedger = myLedgerRows.length > 0 || (myMentor?.totalEarned || 0) > 0;
+  const effectiveTotalAccrued = hasReconciledLedger
+    ? (myLedgerRows.length > 0
+        ? myLedgerRows.reduce((sum, r) => sum + Number(r.agreedAmountDue || 0), 0)
+        : (myMentor?.totalEarned || totalAccruedFromCourses))
+    : totalAccruedFromCourses;
+
+  const effectiveDisbursedTotal = hasReconciledLedger
+    ? (myLedgerRows.length > 0
+        ? myLedgerRows.reduce((sum, r) => sum + Number(r.amountDisbursed || 0), 0)
+        : (myMentor?.paidPayout || disbursedTotal))
+    : disbursedTotal;
+
   const availableBalance = useMemo(() => {
-    const totalEarned = totalAccruedFromCourses > 0 ? totalAccruedFromCourses : (myMentor?.pendingPayout || 0);
-    const balance = totalEarned - disbursedTotal - pendingRequestsTotal;
+    const balance = effectiveTotalAccrued - effectiveDisbursedTotal - pendingRequestsTotal;
     return balance > 0 ? balance : 0;
-  }, [totalAccruedFromCourses, myMentor, disbursedTotal, pendingRequestsTotal]);
+  }, [effectiveTotalAccrued, effectiveDisbursedTotal, pendingRequestsTotal]);
 
   // Minimum required hours compliance
   const minRequiredHours = myMentor?.minimumRequiredHours ?? settings?.mentorMinimumLecturedHours ?? 20;
@@ -92,16 +104,16 @@ export const MentorPayoutsPage: React.FC = () => {
 
   // Handlers
   const handleOpenRequestModal = () => {
-    if (!isHoursEligible) {
-      showToast(
-        'Ineligible for Payout',
-        `You have logged ${actualLecturedHours.toFixed(1)}h of lecturing. A minimum threshold of ${minRequiredHours}h is required.`,
-        'warning'
-      );
+    if (availableBalance <= 0) {
+      showToast('No Available Balance', 'You have no pending commission available for withdrawal.', 'info');
       return;
     }
     setRequestAmount(String(availableBalance));
-    setRequestNotes('');
+    setRequestNotes(
+      !isHoursEligible
+        ? `Reconciled/Legacy payout request (${actualLecturedHours.toFixed(1)}h/${minRequiredHours}h logged — pending Super Admin override)`
+        : ''
+    );
     setIsRequestModalOpen(true);
   };
 
@@ -146,9 +158,9 @@ export const MentorPayoutsPage: React.FC = () => {
 
         <button
           onClick={handleOpenRequestModal}
-          disabled={availableBalance <= 0 || !isHoursEligible}
+          disabled={availableBalance <= 0}
           className={`h-10 px-4 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-xs ${
-            availableBalance > 0 && isHoursEligible
+            availableBalance > 0
               ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
               : 'bg-surface-container border border-outline-variant text-secondary cursor-not-allowed opacity-60'
           }`}
@@ -166,7 +178,7 @@ export const MentorPayoutsPage: React.FC = () => {
             <span>Total Accrued (37% Pool)</span>
             <span className="material-symbols-outlined text-primary text-[20px]">account_balance_wallet</span>
           </div>
-          <p className="text-2xl font-bold text-on-surface mt-2">{formatNaira(totalAccruedFromCourses)}</p>
+          <p className="text-2xl font-bold text-on-surface mt-2">{formatNaira(effectiveTotalAccrued)}</p>
           <p className="text-[11px] text-secondary mt-1">
             Across {courseCommissionBreakdown.length} assigned programs
           </p>
@@ -190,7 +202,7 @@ export const MentorPayoutsPage: React.FC = () => {
             <span>Disbursed to Date</span>
             <span className="material-symbols-outlined text-emerald-600 text-[20px]">check_circle</span>
           </div>
-          <p className="text-2xl font-bold text-emerald-700 mt-2">{formatNaira(disbursedTotal)}</p>
+          <p className="text-2xl font-bold text-emerald-700 mt-2">{formatNaira(effectiveDisbursedTotal)}</p>
           <p className="text-[11px] text-secondary mt-1">Net of 5% Withholding Tax (WHT)</p>
         </div>
 

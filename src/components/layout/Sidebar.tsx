@@ -99,6 +99,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     },
     { to: '/attendance', label: 'Staff Attendance', icon: 'schedule', allowedRoles: ['super_admin', 'admissions', 'finance', 'program_officer'], module: 'attendance' },
     { to: '/expenses', label: 'Expenses & Budget', icon: 'payments', allowedRoles: ['super_admin', 'admissions', 'finance'], module: 'expenses' },
+    { to: '/financial-audit', label: 'AI Financial Audit', icon: 'policy', allowedRoles: ['super_admin'] },
 
     // Universal Top-Level Profile & 3-Tier KYC Access for all roles
     { to: '/settings?section=profile', label: 'My Profile & KYC', icon: 'account_circle' },

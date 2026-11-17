@@ -31,6 +31,7 @@ export const MentorReconciliationTab: React.FC = () => {
     payoutRequests,
     reconciliationRows,
     fetchMentorReconciliation,
+    createReconciliationLedger,
     updateReconciliationLedger,
     recordMentorStudentDeposit,
     disburseMentorFromWallet,
@@ -70,6 +71,61 @@ export const MentorReconciliationTab: React.FC = () => {
 
   // Show mentor summary rollup toggle
   const [showMentorRollup, setShowMentorRollup] = useState(false);
+
+  // Backdate Cohort / Migrate Entry modal state
+  const [showBackdateModal, setShowBackdateModal] = useState(false);
+  const [bdCohortName, setBdCohortName] = useState('');
+  const [bdCourseName, setBdCourseName] = useState('');
+  const [bdMentorId, setBdMentorId] = useState('');
+  const [bdCourseStatus, setBdCourseStatus] = useState<'Done' | 'In progress'>('Done');
+  const [bdStudentCount, setBdStudentCount] = useState('1');
+  const [bdStartDate, setBdStartDate] = useState('');
+  const [bdDueDate, setBdDueDate] = useState('');
+  const [bdStudentPaid, setBdStudentPaid] = useState('');
+  const [bdAgreedDue, setBdAgreedDue] = useState('');
+  const [bdPrevDisbursed, setBdPrevDisbursed] = useState('0');
+  const [bdBankRef, setBdBankRef] = useState('');
+  const [bdNotes, setBdNotes] = useState('');
+  const [isSavingBackdate, setIsSavingBackdate] = useState(false);
+
+  const handleSaveBackdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bdCohortName.trim() || !bdCourseName.trim() || !bdMentorId) return;
+    setIsSavingBackdate(true);
+    try {
+      const paid = Number(bdStudentPaid || 0);
+      const agreed = bdAgreedDue.trim() ? Number(bdAgreedDue) : Math.round(paid * 0.37);
+      const ok = await createReconciliationLedger({
+        cohortName: bdCohortName.trim(),
+        courseName: bdCourseName.trim(),
+        mentorId: bdMentorId,
+        courseStatus: bdCourseStatus,
+        studentCount: Number(bdStudentCount || 1),
+        startDate: bdStartDate || new Date().toISOString().split('T')[0],
+        dueDate: bdDueDate || '',
+        historicalStudentPaid: paid,
+        agreedAmountDue: agreed,
+        commissionRate: 0.37,
+        amountDisbursed: Number(bdPrevDisbursed || 0),
+        disbursementDate: bdDueDate || bdStartDate || undefined,
+        bankReference: bdBankRef.trim() || undefined,
+        isHistoricalSeed: true,
+        notes: bdNotes.trim() || 'Backdated historical cohort entry'
+      });
+      if (ok) {
+        setShowBackdateModal(false);
+        setBdCohortName('');
+        setBdCourseName('');
+        setBdStudentPaid('');
+        setBdAgreedDue('');
+        setBdPrevDisbursed('0');
+        setBdBankRef('');
+        setBdNotes('');
+      }
+    } finally {
+      setIsSavingBackdate(false);
+    }
+  };
 
   useEffect(() => {
     setIsLoading(true);
@@ -388,6 +444,15 @@ export const MentorReconciliationTab: React.FC = () => {
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowBackdateModal(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            Backdate Cohort / Deduct Paid
           </button>
         </div>
       </div>
@@ -893,6 +958,189 @@ export const MentorReconciliationTab: React.FC = () => {
                   className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-50"
                 >
                   {isSavingEdit ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Backdate Cohort / Deduct Previous Payments Modal */}
+      {showBackdateModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Backdate Past Cohort &amp; Deduct Previous Payments</h3>
+                <p className="text-xs text-slate-500">
+                  Migrate locally recorded historical cohorts/courses for any mentor and deduct prior manual payouts.
+                </p>
+              </div>
+              <button type="button" onClick={() => setShowBackdateModal(false)} className="p-1.5 rounded-lg hover:bg-slate-100">
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+            <form onSubmit={handleSaveBackdate} className="p-6 space-y-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Cohort Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={bdCohortName}
+                    onChange={e => setBdCohortName(e.target.value)}
+                    placeholder="e.g. COHORT MARCH TO JUNE 2025"
+                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Course Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={bdCourseName}
+                    onChange={e => setBdCourseName(e.target.value)}
+                    placeholder="e.g. DATA ANALYSIS"
+                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Mentor</label>
+                  <select
+                    required
+                    value={bdMentorId}
+                    onChange={e => setBdMentorId(e.target.value)}
+                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2"
+                  >
+                    <option value="">Select Mentor...</option>
+                    {mentors.map(m => (
+                      <option key={m.id} value={m.id}>{m.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Students</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={bdStudentCount}
+                      onChange={e => setBdStudentCount(e.target.value)}
+                      className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
+                    <select
+                      value={bdCourseStatus}
+                      onChange={e => setBdCourseStatus(e.target.value as any)}
+                      className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2"
+                    >
+                      <option value="Done">Done</option>
+                      <option value="In progress">In progress</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Backdated Start Date</label>
+                  <input
+                    type="date"
+                    value={bdStartDate}
+                    onChange={e => setBdStartDate(e.target.value)}
+                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Backdated Due / Payout Date</label>
+                  <input
+                    type="date"
+                    value={bdDueDate}
+                    onChange={e => setBdDueDate(e.target.value)}
+                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Total Student Paid (₦)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={bdStudentPaid}
+                    onChange={e => setBdStudentPaid(e.target.value)}
+                    placeholder="e.g. 540000"
+                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Commission Due (₦)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={bdAgreedDue}
+                    onChange={e => setBdAgreedDue(e.target.value)}
+                    placeholder={bdStudentPaid ? String(Math.round(Number(bdStudentPaid) * 0.37)) : 'Auto 37%'}
+                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Previously Paid (₦)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={bdPrevDisbursed}
+                    onChange={e => setBdPrevDisbursed(e.target.value)}
+                    placeholder="Deducted from accrued"
+                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Prior Payment Reference</label>
+                  <input
+                    type="text"
+                    value={bdBankRef}
+                    onChange={e => setBdBankRef(e.target.value)}
+                    placeholder="Optional bank ref"
+                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Audit Notes</label>
+                  <input
+                    type="text"
+                    value={bdNotes}
+                    onChange={e => setBdNotes(e.target.value)}
+                    placeholder="e.g. Migrated from local sheet"
+                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowBackdateModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingBackdate}
+                  className="px-4 py-2 text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg disabled:opacity-50"
+                >
+                  {isSavingBackdate ? 'Migrating...' : 'Save & Deduct Previous Payments'}
                 </button>
               </div>
             </form>

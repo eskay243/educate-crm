@@ -22,6 +22,7 @@ const MentorAvailabilityPage = lazy(() => import('./pages/MentorAvailabilityPage
 const FacultyGradingPage = lazy(() => import('./pages/FacultyGradingPage').then(m => ({ default: m.FacultyGradingPage })));
 const CourseOutlinePage = lazy(() => import('./pages/CourseOutlinePage').then(m => ({ default: m.CourseOutlinePage })));
 const BusinessExpensesPage = lazy(() => import('./pages/BusinessExpensesPage').then(m => ({ default: m.BusinessExpensesPage })));
+const FinancialAuditPage = lazy(() => import('./pages/FinancialAuditPage').then(m => ({ default: m.FinancialAuditPage })));
 const CoursesCohortsPage = lazy(() => import('./pages/CoursesCohortsPage').then(m => ({ default: m.CoursesCohortsPage })));
 const StaffAttendancePage = lazy(() => import('./pages/StaffAttendancePage').then(m => ({ default: m.StaffAttendancePage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
@@ -154,8 +155,17 @@ export const App: React.FC = () => {
                 <Route
                   path="mentors"
                   element={
-                    <ProtectedRoute allowedRoles={['super_admin', 'mentor', 'program_officer', 'finance']} requiredModule="mentors">
+                    <ProtectedRoute allowedRoles={['super_admin', 'mentor', 'program_officer']} requiredModule="mentors">
                       <MentorManagementPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="financial-audit"
+                  element={
+                    <ProtectedRoute allowedRoles={['super_admin']}>
+                      <FinancialAuditPage />
                     </ProtectedRoute>
                   }
                 />

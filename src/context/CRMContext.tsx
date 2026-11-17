@@ -31,6 +31,8 @@ import {
   MentorCohortLedgerEntry,
   MentorReconciliationRow,
   MentorReconciliationSummary,
+  FinancialAuditFinding,
+  FinancialAuditScan,
   LMSModule,
   StudentAssignmentSubmission,
   EnabledModules,
@@ -207,10 +209,16 @@ interface CRMContextType {
   reconciliationRows: MentorReconciliationRow[];
   reconciliationSummaries: MentorReconciliationSummary[];
   fetchMentorReconciliation: () => Promise<void>;
-  createReconciliationLedger: (payload: Partial<MentorCohortLedgerEntry>) => Promise<boolean>;
+  createReconciliationLedger: (payload: Partial<MentorCohortLedgerEntry> & { disbursementDate?: string; bankReference?: string }) => Promise<boolean>;
   updateReconciliationLedger: (id: string, payload: Partial<MentorCohortLedgerEntry>) => Promise<boolean>;
   recordMentorStudentDeposit: (mentorId: string, payload: { studentId: string; amount: number; paymentReference?: string; cohortLedgerId?: string }) => Promise<boolean>;
   recordManualMentorPayout: (mentorId: string, payload: { amount: number; bankReference?: string; bankName?: string; notes?: string; cohortLedgerId?: string; bypassHoursCheck?: boolean }) => Promise<boolean>;
+  financialAuditScan: FinancialAuditScan | null;
+  financialAuditScans: FinancialAuditScan[];
+  financialAuditFindings: FinancialAuditFinding[];
+  fetchFinancialAudit: () => Promise<void>;
+  runFinancialAudit: () => Promise<void>;
+  updateFinancialAuditFinding: (id: string, payload: { status: string; resolutionNote?: string }) => Promise<boolean>;
   updateWalletBudgetLimit: (limit: number) => Promise<void>;
   refreshWalletSummary: () => Promise<void>;
   reconcileWalletWithPaystack: () => Promise<void>;
@@ -801,6 +809,9 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
   const [reconciliationRows, setReconciliationRows] = useState<MentorReconciliationRow[]>([]);
   const [reconciliationSummaries, setReconciliationSummaries] = useState<MentorReconciliationSummary[]>([]);
+  const [financialAuditScan, setFinancialAuditScan] = useState<FinancialAuditScan | null>(null);
+  const [financialAuditScans, setFinancialAuditScans] = useState<FinancialAuditScan[]>([]);
+  const [financialAuditFindings, setFinancialAuditFindings] = useState<FinancialAuditFinding[]>([]);
 
   // Chat message management state
   const [selectedMessageForForward, setSelectedMessageForForward] = useState<ChatMessage | null>(null);
@@ -5294,11 +5305,56 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  const createReconciliationLedger = async (payload: Partial<MentorCohortLedgerEntry>): Promise<boolean> => {
+  const fetchFinancialAudit = useCallback(async () => {
+    try {
+      const res = await apiService.getFinancialAudit();
+      if (res) {
+        setFinancialAuditScan(res.latestScan || null);
+        setFinancialAuditScans(res.scans || []);
+        setFinancialAuditFindings(res.findings || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch financial audit:', err);
+    }
+  }, []);
+
+  const runFinancialAudit = async () => {
+    try {
+      const res = await apiService.runFinancialAuditScan(currentUser?.name || 'Super Admin');
+      if (res) {
+        setFinancialAuditScan(res.latestScan || null);
+        setFinancialAuditScans(res.scans || []);
+        setFinancialAuditFindings(res.findings || []);
+        showToast('AI Audit Scan Complete', `Health Score: ${res.latestScan?.healthScore ?? 100}% • ${res.latestScan?.totalFindings ?? 0} open findings`, 'success');
+      }
+    } catch (err: any) {
+      showToast('Audit Scan Failed', err?.message || 'Unable to run audit scan', 'error');
+    }
+  };
+
+  const updateFinancialAuditFinding = async (id: string, payload: { status: string; resolutionNote?: string }): Promise<boolean> => {
+    try {
+      const updated = await apiService.updateAuditFinding(id, {
+        ...payload,
+        resolvedBy: currentUser?.name || 'Super Admin'
+      });
+      if (updated) {
+        setFinancialAuditFindings(prev => prev.map(f => f.id === id ? updated : f));
+        showToast('Finding Updated', `Audit finding marked as ${payload.status}.`, 'success');
+        return true;
+      }
+      return false;
+    } catch (err: any) {
+      showToast('Update Failed', err?.message || 'Unable to update finding', 'error');
+      return false;
+    }
+  };
+
+  const createReconciliationLedger = async (payload: Partial<MentorCohortLedgerEntry> & { disbursementDate?: string; bankReference?: string }): Promise<boolean> => {
     try {
       await apiService.createReconciliationLedger(payload);
       await fetchMentorReconciliation();
-      showToast('Ledger Entry Added', 'Cohort commission ledger entry saved.', 'success');
+      showToast('Ledger Entry Added', 'Backdated cohort commission ledger entry saved and previous payments deducted.', 'success');
       return true;
     } catch (err: any) {
       showToast('Failed to Add Entry', err?.message || 'Unable to add ledger entry', 'error');
@@ -5563,20 +5619,20 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const minRequired = myMentorProfile.minimumRequiredHours ?? settings.mentorMinimumLecturedHours ?? 20;
     const actualHours = myMentorProfile.lecturedHours ?? 0;
-    if (actualHours < minRequired) {
-      return {
-        success: false,
-        message: `Ineligible: You have logged ${actualHours.toFixed(1)}h of lecturing. A minimum threshold of ${minRequired}h is strictly required before payout eligibility.`
-      };
-    }
+    const requiresHoursOverride = actualHours < minRequired;
 
     const calcResult = calculateMentorTuitionCommission(myMentorProfile.id);
-    const effectiveAvailable = Math.max(calcResult.totalCommission, myMentorProfile.pendingPayout || 0);
+    const effectiveAvailable = myMentorProfile.pendingPayout !== undefined && myMentorProfile.pendingPayout > 0
+      ? myMentorProfile.pendingPayout
+      : Math.max(calcResult.totalCommission - (myMentorProfile.paidPayout || 0), 0);
 
     const reqAmount = Number(amount) || effectiveAvailable || 0;
     if (reqAmount <= 0) {
       return { success: false, message: 'Requested payout amount must be greater than ₦0.' };
     }
+    const effectiveNotes = requiresHoursOverride
+      ? `${notes ? notes + ' ' : ''}[Legacy/Reconciled <20h Override Required]`
+      : notes;
 
     if (reqAmount > effectiveAvailable) {
       return { 
@@ -5603,13 +5659,14 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       voucherNumber,
       lecturedHours: actualHours,
       minimumRequiredHours: minRequired,
+      requiresHoursOverride,
       bankName: myMentorProfile.bankName || 'Guaranty Trust Bank (GTBank)',
       accountNumber: myMentorProfile.accountNumber || '0123456789',
       accountName: myMentorProfile.accountName || myMentorProfile.name,
       bankCode: myMentorProfile.bankCode || '058',
       status: 'Pending',
       requestedAt: new Date().toISOString(),
-      notes: notes || '',
+      notes: effectiveNotes || '',
       expenseId,
     };
 
@@ -7228,6 +7285,12 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateReconciliationLedger,
         recordMentorStudentDeposit,
         recordManualMentorPayout,
+        financialAuditScan,
+        financialAuditScans,
+        financialAuditFindings,
+        fetchFinancialAudit,
+        runFinancialAudit,
+        updateFinancialAuditFinding,
         createAssignment,
         recalculateMentorLecturedHours,
         reviewMentorPayout,

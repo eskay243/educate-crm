@@ -535,7 +535,7 @@ export const MentorManagementPage: React.FC = () => {
                 </span>
               )}
             </button>
-            {!isMentor && (
+            {isSuperAdmin && (
               <button
                 onClick={() => setActiveTab('reconciliation')}
                 className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
@@ -1296,8 +1296,8 @@ export const MentorManagementPage: React.FC = () => {
           </div>
         )}
 
-        {/* Tab 6: Commission & Reconciliation */}
-        {activeTab === 'reconciliation' && !isMentor && (
+        {/* Tab 6: Commission & Reconciliation (Super Admin Only) */}
+        {activeTab === 'reconciliation' && isSuperAdmin && (
           <div className="p-stack-md">
             <MentorReconciliationTab />
           </div>
