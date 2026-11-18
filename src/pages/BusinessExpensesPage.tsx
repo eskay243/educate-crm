@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useCRM, formatNaira } from '../context/CRMContext';
 import { Expense, ExpenseStatus, WalletTransaction } from '../types/crm';
 import { RejectExpenseModal } from '../components/modals/RejectExpenseModal';
@@ -63,9 +64,15 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
     }
   };
 
+  const [searchParams] = useSearchParams();
   const [activeLedgerView, setActiveLedgerView] = useState<'expenses' | 'wallet_ledger'>('expenses');
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [selectedCategory, setSelectedCategory] = useState<string>(() => searchParams.get('category') || 'All');
+
+  useEffect(() => {
+    const cat = searchParams.get('category');
+    if (cat) setSelectedCategory(cat);
+  }, [searchParams]);
   const [tableSearch, setTableSearch] = useState('');
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   const [newBudgetValue, setNewBudgetValue] = useState<number>(settings.operatingBudget || 1500000);

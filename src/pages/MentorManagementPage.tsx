@@ -1,9 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useCRM, formatNaira } from '../context/CRMContext';
-import { MentorStatus, MentorPayoutRequest, Student, Mentor } from '../types/crm';
+import { MentorStatus, Student, Mentor } from '../types/crm';
 import { PerformanceMeter } from '../components/common/PerformanceMeter';
-import { PayoutVoucherModal } from '../components/modals/PayoutVoucherModal';
 import { StudentWelfareInterventionModal } from '../components/modals/StudentWelfareInterventionModal';
 import { CrispStatusBadge } from '../components/common/CrispStatusBadge';
 import { TransferTasksAndDeleteModal } from '../components/modals/TransferTasksAndDeleteModal';
@@ -29,9 +28,6 @@ export const MentorManagementPage: React.FC = () => {
     settings,
     setSelectedSlotForAttendance,
     payoutRequests,
-    deleteMentorPayoutRequest,
-    reviewMentorPayout,
-    openEditPayoutRequestModal,
     getUserTaskFootprint,
     deleteMentorUser,
     toggleUserActiveStatus,
@@ -42,12 +38,10 @@ export const MentorManagementPage: React.FC = () => {
 
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'roster' | 'sessions' | 'reports' | 'timetable' | 'payouts' | 'reconciliation'>('roster');
+  const [activeTab, setActiveTab] = useState<'roster' | 'sessions' | 'reports' | 'timetable' | 'reconciliation'>('roster');
   const [tableSearch, setTableSearch] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'deactivated'>('all');
-  const [selectedPayoutForVoucher, setSelectedPayoutForVoucher] = useState<MentorPayoutRequest | null>(null);
-  const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
   const [selectedStudentForWelfare, setSelectedStudentForWelfare] = useState<Student | null>(null);
   const [isWelfareModalOpen, setIsWelfareModalOpen] = useState(false);
   const [mentorToTransfer, setMentorToTransfer] = useState<Mentor | null>(null);
@@ -59,10 +53,6 @@ export const MentorManagementPage: React.FC = () => {
   const isSuperAdmin = currentUser?.role === 'super_admin';
   const isFinance = currentUser?.role === 'finance';
   const canModifyMentor = isSuperAdmin || hasFeaturePermission('canModifyMentorBiodata');
-  const canEditPayouts = isSuperAdmin || isFinance || hasFeaturePermission('canEditMentorPayouts');
-  const canRejectPayouts = isSuperAdmin || isFinance || hasFeaturePermission('canRejectMentorPayouts');
-  const canApprovePayouts = isSuperAdmin || isFinance || hasFeaturePermission('canApproveMentorPayouts');
-  const canDisbursePayouts = isSuperAdmin || isFinance || hasFeaturePermission('canDisburseApprovedFunds');
 
   // Find current mentor profile if logged in as mentor
   const myMentorProfile = isMentor
@@ -84,8 +74,12 @@ export const MentorManagementPage: React.FC = () => {
       navigate('/mentors/grading', { replace: true });
       return;
     }
+    if (tabParam === 'payouts') {
+      navigate(isMentor ? '/mentor/payouts' : '/expenses?category=Faculty%20%26%20Mentor%20Payouts', { replace: true });
+      return;
+    }
 
-    if (tabParam && ['roster', 'sessions', 'reports', 'timetable', 'payouts', 'reconciliation'].includes(tabParam)) {
+    if (tabParam && ['roster', 'sessions', 'reports', 'timetable', 'reconciliation'].includes(tabParam)) {
       setActiveTab(tabParam as any);
     }
 
@@ -108,14 +102,6 @@ export const MentorManagementPage: React.FC = () => {
       setSearchParams(nextParams, { replace: true });
     }
   }, [searchParams, isMentor, myMentorProfile, openModal, setSelectedMentorForBookingId, setSearchParams]);
-
-  const accessiblePayoutRequests = useMemo(() => {
-    if (!payoutRequests) return [];
-    if (!isMentor) return payoutRequests;
-    return payoutRequests.filter(
-      r => r.mentorId === myMentorProfile?.id || r.mentorEmail.toLowerCase() === currentUser?.email.toLowerCase()
-    );
-  }, [payoutRequests, isMentor, myMentorProfile, currentUser]);
 
   const pendingPayoutCount = useMemo(() => {
     return (payoutRequests || []).filter(r => r.status === 'Pending').length;
@@ -523,22 +509,18 @@ export const MentorManagementPage: React.FC = () => {
               <span className="material-symbols-outlined text-[16px]">calendar_today</span>
               <span>{isMentor ? 'My Class Timetable' : 'Class Timetable'} ({accessibleTimetables.length})</span>
             </button>
-            <button
-              onClick={() => setActiveTab('payouts')}
-              className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-                activeTab === 'payouts'
-                  ? 'bg-primary text-white'
-                  : 'text-secondary hover:text-crisp-black'
-              }`}
+            <Link
+              to={isMentor ? '/mentor/payouts' : '/expenses?category=Faculty%20%26%20Mentor%20Payouts'}
+              className="px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap text-secondary hover:text-crisp-black"
             >
               <span className="material-symbols-outlined text-[16px]">payments</span>
-              <span>{isMentor ? 'My Payout Requests' : 'Payout Requests'}</span>
+              <span>{isMentor ? 'My Payouts' : 'Payouts (Expense & Budget)'}</span>
               {pendingPayoutCount > 0 && (
                 <span className="px-1.5 py-0.2 rounded-full bg-lemon-curry text-white text-[10px] font-bold">
                   {pendingPayoutCount}
                 </span>
               )}
-            </button>
+            </Link>
             {isSuperAdmin && (
               <button
                 onClick={() => setActiveTab('reconciliation')}
@@ -1307,237 +1289,8 @@ export const MentorManagementPage: React.FC = () => {
           </div>
         )}
 
-        {/* Tab 5: Faculty Commission Payout Requests */}
-        {activeTab === 'payouts' && (
-          <div className="p-stack-md space-y-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-outline-variant/60 pb-3">
-              <div>
-                <h3 className="font-bold text-sm text-on-surface">
-                  {isMentor ? 'My Commission Payout Requests' : 'Faculty Commission Payout Requests & Disbursements'}
-                </h3>
-                <p className="text-xs text-secondary mt-0.5">
-                  {isMentor 
-                    ? 'Track review and disbursement status of your 37% faculty commission withdrawals.'
-                    : 'Review requests, verify minimum lecturing hours eligibility (20h), and disburse directly via Paystack.'}
-                </p>
-              </div>
-              {isMentor && (
-                <button
-                  onClick={() => openModal('request-payout')}
-                  className="h-8 px-3 rounded bg-primary text-on-primary hover:bg-primary/90 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <span className="material-symbols-outlined text-[16px]">add</span>
-                  <span>+ New Payout Request</span>
-                </button>
-              )}
-            </div>
-
-            {accessiblePayoutRequests.length === 0 ? (
-              <div className="p-12 text-center flex flex-col items-center justify-center space-y-3">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[28px]">payments</span>
-                </div>
-                <div className="max-w-sm space-y-1">
-                  <h3 className="font-bold text-sm text-on-surface">No Payout Requests</h3>
-                  <p className="text-xs text-secondary">
-                    {isMentor 
-                      ? 'You have not submitted any payout requests yet. Once you fulfill 20 lecturing hours, click Request Payout.'
-                      : 'No faculty payout requests have been submitted yet.'}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="overflow-x-auto border border-outline-variant/60 rounded-xl bg-surface">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-outline-variant bg-surface-container-low text-[11px] font-bold text-secondary uppercase tracking-wider">
-                      <th className="px-4 py-3">Voucher &amp; Date</th>
-                      <th className="px-4 py-3">Faculty Mentor</th>
-                      <th className="px-4 py-3">Lecturing Hours</th>
-                      <th className="px-4 py-3">Settlement Bank</th>
-                      <th className="px-4 py-3">Gross (₦)</th>
-                      <th className="px-4 py-3">WHT 5% (₦)</th>
-                      <th className="px-4 py-3">Net Disbursed (₦)</th>
-                      <th className="px-4 py-3">Status</th>
-                      <th className="px-4 py-3 text-right">Tax Slip &amp; Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-outline-variant/50 text-xs">
-                    {accessiblePayoutRequests.map((req) => {
-                      const isHoursEligible = req.lecturedHours >= req.minimumRequiredHours;
-                      const whtVal = req.whtDeductedAmount ?? Math.round(req.amount * 0.05);
-                      const netVal = req.netDisbursedAmount ?? (req.amount - whtVal);
-                      const voucherCode = req.voucherNumber || `VCHR-CDL-${req.id.slice(-4)}`;
-
-                      return (
-                        <tr key={req.id} className="hover:bg-surface-container/50 transition-colors">
-                          <td className="px-4 py-3 font-mono">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-primary">{voucherCode}</span>
-                              {req.isHistorical && (
-                                <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[9px] font-sans font-bold uppercase">
-                                  Historical
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-[10px] text-secondary block">
-                              {new Date(req.requestedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="font-bold text-on-surface block">{req.mentorName}</span>
-                            <span className="text-[11px] text-secondary">{req.mentorEmail}</span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
-                              isHoursEligible ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-800'
-                            }`}>
-                              {req.lecturedHours}h / {req.minimumRequiredHours}h
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="font-semibold text-on-surface block">{req.bankName}</span>
-                            <span className="font-mono text-secondary text-[11px]">{req.accountNumber} ({req.accountName})</span>
-                          </td>
-                          <td className="px-4 py-3 font-bold font-mono text-on-surface text-xs">
-                            {formatNaira(req.amount)}
-                          </td>
-                          <td className="px-4 py-3 font-bold font-mono text-rose-600 text-xs">
-                            - {formatNaira(whtVal)}
-                          </td>
-                          <td className="px-4 py-3 font-bold font-mono text-emerald-700 dark:text-emerald-300 text-xs">
-                            {formatNaira(netVal)}
-                          </td>
-                          <td className="px-4 py-3">
-                            <CrispStatusBadge status={req.status} />
-                            {req.disburseReference && (
-                              <span className="block text-[9px] font-mono text-secondary mt-0.5 truncate max-w-[120px]" title={req.disburseReference}>
-                                Ref: {req.disburseReference}
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                              {/* Download / View WHT Voucher Slip */}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedPayoutForVoucher(req);
-                                  setIsVoucherModalOpen(true);
-                                }}
-                                className="px-2.5 py-1 rounded bg-surface border border-outline-variant hover:border-primary text-on-surface text-[11px] font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
-                                title="View official remuneration voucher and WHT deduction slip"
-                              >
-                                <span className="material-symbols-outlined text-[14px] text-primary">receipt_long</span>
-                                <span>WHT Slip</span>
-                              </button>
-
-                              {req.status === 'Pending' && (canEditPayouts || req.mentorId === myMentorProfile?.id || req.mentorEmail.toLowerCase() === currentUser?.email.toLowerCase()) && (
-                                <button
-                                  type="button"
-                                  onClick={() => openEditPayoutRequestModal(req)}
-                                  className="px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[11px] font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
-                                  title="Edit pending payout request amount or memo"
-                                >
-                                  <span className="material-symbols-outlined text-[14px]">edit</span>
-                                  <span>Edit</span>
-                                </button>
-                              )}
-
-                              {req.status === 'Pending' && (isSuperAdmin || isFinance || req.mentorId === myMentorProfile?.id || req.mentorEmail.toLowerCase() === currentUser?.email.toLowerCase()) && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (window.confirm(`Are you sure you want to cancel and delete this payout request (${formatNaira(req.amount)})?`)) {
-                                      deleteMentorPayoutRequest(req.id);
-                                    }
-                                  }}
-                                  className="px-2.5 py-1 rounded bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 text-[11px] font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
-                                  title="Delete and cancel pending payout request"
-                                >
-                                  <span className="material-symbols-outlined text-[14px]">delete</span>
-                                  <span>Delete</span>
-                                </button>
-                              )}
-
-                              {canApprovePayouts && req.status === 'Pending' && (
-                                <button
-                                  type="button"
-                                  onClick={() => reviewMentorPayout(req.id, 'Approved')}
-                                  className="px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 text-[11px] font-bold transition-colors cursor-pointer"
-                                  title="Approve for payout"
-                                >
-                                  Approve
-                                </button>
-                              )}
-
-                              {canRejectPayouts && req.status === 'Pending' && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const reason = window.prompt('Enter reason for rejecting this payout request:');
-                                    if (reason !== null) {
-                                      reviewMentorPayout(req.id, 'Rejected', reason);
-                                    }
-                                  }}
-                                  className="px-2 py-1 rounded bg-rose-50 text-rose-700 hover:bg-rose-100 text-[11px] font-bold transition-colors cursor-pointer"
-                                  title="Reject payout request"
-                                >
-                                  Reject
-                                </button>
-                              )}
-
-                              {canDisbursePayouts && (req.status === 'Pending' || req.status === 'Approved') && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const mentorObj = mentors.find(m => m.id === req.mentorId) || {
-                                      id: req.mentorId,
-                                      name: req.mentorName,
-                                      email: req.mentorEmail,
-                                      bankName: req.bankName,
-                                      bankCode: req.bankCode,
-                                      accountNumber: req.accountNumber,
-                                      accountName: req.accountName,
-                                      pendingPayout: req.amount,
-                                      lecturedHours: req.lecturedHours,
-                                      minimumRequiredHours: req.minimumRequiredHours,
-                                      isAccountVerified: true,
-                                      role: 'Faculty Mentor',
-                                      department: 'Academics',
-                                    };
-                                    (mentorObj as any).payoutRequestId = req.id;
-                                    setSelectedMentorForDisburse(mentorObj as any);
-                                    openModal('disburse-mentor');
-                                  }}
-                                  className="px-2.5 py-1 rounded bg-primary text-on-primary hover:bg-primary/90 text-[11px] font-bold transition-colors shadow-xs cursor-pointer flex items-center gap-1"
-                                  title="Disburse directly from institutional wallet via Paystack"
-                                >
-                                  <span className="material-symbols-outlined text-[13px]">payments</span>
-                                  <span>Disburse</span>
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
         {/* End of tabs */}
       </div>
-
-      {/* Official Remuneration & WHT Tax Slip Modal */}
-      <PayoutVoucherModal
-        isOpen={isVoucherModalOpen}
-        onClose={() => setIsVoucherModalOpen(false)}
-        payoutRequest={selectedPayoutForVoucher}
-      />
 
       {/* Student Early-Warning & At-Risk Welfare Intervention Modal */}
       <StudentWelfareInterventionModal

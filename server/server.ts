@@ -3205,6 +3205,19 @@ app.patch('/api/expenses/:id', (req: Request, res: Response) => {
     updates.reviewedAt = new Date().toISOString();
   }
   db.expenses[index] = { ...db.expenses[index], ...updates };
+
+  // Sync decision back to linked MentorPayoutRequest if this expense is a mentor payout
+  const linkedPayoutId = db.expenses[index].payoutRequestId;
+  if (linkedPayoutId && Array.isArray(db.payoutRequests) && (updates.status === 'Approved' || updates.status === 'Rejected')) {
+    const pReq = db.payoutRequests.find((r: any) => r.id === linkedPayoutId);
+    if (pReq) {
+      pReq.status = updates.status;
+      pReq.reviewedAt = updates.reviewedAt || new Date().toISOString();
+      if (updates.reviewedBy) pReq.reviewedBy = updates.reviewedBy;
+      if (updates.rejectionReason) pReq.rejectionReason = updates.rejectionReason;
+    }
+  }
+
   saveDatabase(db);
 
   if (req.body.status && req.body.status !== oldStatus) {
@@ -7038,6 +7051,23 @@ app.post('/api/wallet/disburse-expense', async (req: Request, res: Response) => 
     expense.disbursedAt = new Date().toISOString();
     expense.disbursementMethod = isCorporateNip ? 'corporate_nip' : 'paystack_api';
     expense.nipSessionId = nipSessionId || (isCorporateNip ? transferRef : undefined);
+
+    // Sync disbursement back to linked MentorPayoutRequest & Mentor balances
+    if (expense.payoutRequestId && Array.isArray(db.payoutRequests)) {
+      const pReq = db.payoutRequests.find((r: any) => r.id === expense.payoutRequestId);
+      if (pReq && pReq.status !== 'Disbursed') {
+        pReq.status = 'Disbursed';
+        pReq.disbursedAt = expense.disbursedAt;
+        pReq.disburseReference = transferRef;
+        const mentor = (db.mentors || []).find((m: any) => m.id === (expense.mentorId || pReq.mentorId));
+        if (mentor) {
+          const grossAmt = Number(pReq.amount || disburseAmount);
+          mentor.paidPayout = Number(mentor.paidPayout || 0) + grossAmt;
+          mentor.pendingPayout = Math.max(0, Number(mentor.pendingPayout || 0) - grossAmt);
+          mentor.payoutStatus = mentor.pendingPayout === 0 ? 'Paid' : 'Partial';
+        }
+      }
+    }
 
     db.wallet.transactions.unshift({
       id: `wtx-${Date.now()}-exp`,

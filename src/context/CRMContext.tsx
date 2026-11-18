@@ -3704,6 +3704,15 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       reviewedAt: timestamp,
     } : e));
 
+    if (expense.payoutRequestId) {
+      setPayoutRequests(prev => prev.map(r => r.id === expense.payoutRequestId ? {
+        ...r,
+        status: 'Approved',
+        reviewedBy: reviewer,
+        reviewedAt: timestamp,
+      } : r));
+    }
+
     apiService.updateExpenseStatus(id, 'Approved', {
       reviewedBy: reviewer,
       reviewedAt: timestamp,
@@ -3755,6 +3764,16 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       reviewedBy: reviewer,
       reviewedAt: timestamp,
     } : e));
+
+    if (expense.payoutRequestId) {
+      setPayoutRequests(prev => prev.map(r => r.id === expense.payoutRequestId ? {
+        ...r,
+        status: 'Rejected',
+        rejectionReason: reason,
+        reviewedBy: reviewer,
+        reviewedAt: timestamp,
+      } : r));
+    }
 
     apiService.updateExpenseStatus(id, 'Rejected', {
       rejectionReason: reason,
@@ -5224,6 +5243,25 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const res = await apiService.disburseExpenseFromWallet(payload);
       if (res && res.expense) {
         setExpenses(prev => prev.map(e => e.id === payload.expenseId ? res.expense : e));
+        if (res.expense.payoutRequestId) {
+          const pReq = payoutRequests.find(r => r.id === res.expense.payoutRequestId);
+          setPayoutRequests(prev => prev.map(r => r.id === res.expense.payoutRequestId ? {
+            ...r,
+            status: 'Disbursed',
+            disbursedAt: res.expense.disbursedAt || new Date().toISOString(),
+            disburseReference: res.transferRef || res.expense.transferReference
+          } : r));
+          const targetMentorId = res.expense.mentorId || pReq?.mentorId;
+          if (targetMentorId) {
+            const grossAmt = Number(pReq?.amount || res.expense.amount || 0);
+            setMentors(prev => prev.map(m => m.id === targetMentorId ? {
+              ...m,
+              paidPayout: Number(m.paidPayout || 0) + grossAmt,
+              pendingPayout: Math.max(0, Number(m.pendingPayout || 0) - grossAmt),
+              payoutStatus: Math.max(0, Number(m.pendingPayout || 0) - grossAmt) === 0 ? ('Completed' as const) : ('Pending' as const)
+            } : m));
+          }
+        }
         if (res.walletBalance !== undefined) {
           const isCorporateNip = payload.disbursementMethod === 'corporate_nip';
           setWallet(prev => ({
