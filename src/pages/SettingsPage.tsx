@@ -6,6 +6,7 @@ import { emailService, EmailTemplatePayload, EmailDispatchLog } from '../service
 import { apiService } from '../services/api';
 import { NIGERIAN_BANKS } from '../data/nigerianBanks';
 import { BrandLogo } from '../components/common/BrandLogo';
+import { PageHeader } from '../components/common/KineticUI';
 import { initialCampuses } from '../data/mockData';
 import { getDeviceCoordinates } from '../utils/geo';
 import { usePWA } from '../context/PWAContext';
@@ -1766,18 +1767,19 @@ export const SettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-stack-lg animate-in fade-in duration-200 w-full max-w-[1600px] mx-auto">
+    <div className="space-y-6 animate-in fade-in duration-200 w-full max-w-[1600px] mx-auto">
       {/* Page Header */}
-      <div>
-        <h2 className="font-headline-lg text-headline-lg font-bold text-on-surface mb-unit">
-          {!isSuperAdmin ? 'Personal Profile & Account Settings' : 'Organization & System Operations'}
-        </h2>
-        <p className="font-body-md text-body-md text-secondary">
-          {!isSuperAdmin 
-            ? 'Manage your personal contact info, biography, and verify your Nigerian NUBAN bank account for automated disbursements.' 
-            : 'Configure corporate profiles, manage staff role security, customize and test transactional email dispatches, and perform data backups.'}
-        </p>
-      </div>
+      <PageHeader
+        title={!isSuperAdmin ? 'Personal Profile & Account Settings' : 'Organization & System Operations'}
+        subtitle={
+          !isSuperAdmin
+            ? 'Manage your personal contact info, biography, and verify your Nigerian NUBAN bank account for automated disbursements.'
+            : 'Configure corporate profiles, manage staff role security, customize and test transactional email dispatches, and perform data backups.'
+        }
+        badgeText={isSuperAdmin ? 'System Governance & RBAC' : 'Personal Profile & KYC'}
+        badgeIntent="purple"
+        badgePulse={isSuperAdmin}
+      />
 
       {savedSuccess && (
         <div className="p-4 rounded-lg bg-[#dcfce7] border border-[#86efac] text-[#166534] flex items-center gap-2 text-sm font-semibold animate-in fade-in">

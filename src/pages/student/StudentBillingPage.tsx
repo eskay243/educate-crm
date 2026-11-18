@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useCRM, formatNaira } from '../../context/CRMContext';
 import { BrandLogo } from '../../components/common/BrandLogo';
+import { PageHeader, SemanticMetricCard } from '../../components/common/KineticUI';
 import { Student, PaymentInstallment } from '../../types/crm';
 
 export const StudentBillingPage: React.FC = () => {
@@ -163,58 +164,50 @@ export const StudentBillingPage: React.FC = () => {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-200">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-outline-variant pb-5">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary mb-1">
-            <span className="material-symbols-outlined text-sm">receipt_long</span>
-            <span>Bursary & Accounts Center</span>
-          </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-on-surface">Tuition & Invoicing</h1>
-          <p className="text-xs md:text-sm text-on-surface-variant mt-0.5">
-            Manage fee schedules, instant Paystack settlements, and official institute receipts
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
+      <PageHeader
+        title="Tuition & Invoicing"
+        subtitle="Manage fee schedules, instant Paystack settlements, and official institute receipts."
+        badgeText="Bursary & Accounts Center"
+        badgeIntent="emerald"
+        actions={
           <button
             onClick={() => window.print()}
-            className="px-4 py-2.5 rounded-xl border border-outline-variant bg-surface-container hover:bg-surface-container-high text-xs font-bold text-on-surface flex items-center gap-1.5 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-outline-variant bg-surface hover:bg-surface-container-high text-xs font-semibold text-on-surface transition-colors shadow-xs cursor-pointer"
           >
-            <span className="material-symbols-outlined text-sm">print</span>
+            <span className="material-symbols-outlined text-[18px] text-secondary">print</span>
             <span>Print Statement</span>
           </button>
-        </div>
-      </div>
+        }
+      />
 
-      {/* Tuition Financial Summary Cards */}
+      {/* Tuition Financial Summary Cards - Color-Coded Semantic Borders */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-5 rounded-2xl border border-outline-variant bg-surface-container-low shadow-xs">
-          <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant block mb-1">Total Program Tuition</span>
-          <div className="text-2xl md:text-3xl font-extrabold text-on-surface">
-            {formatNaira(student.tuitionAmount || student.totalFees || 450000)}
-          </div>
-          <span className="text-xs text-on-surface-variant mt-1 block">{student.program}</span>
-        </div>
-
-        <div className="p-5 rounded-2xl border border-outline-variant bg-surface-container-low shadow-xs">
-          <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 block mb-1">Amount Settled</span>
-          <div className="text-2xl md:text-3xl font-extrabold text-emerald-600">
-            {formatNaira(student.paidAmount || 0)}
-          </div>
-          <span className="text-xs text-on-surface-variant mt-1 block">Verified through Paystack / NIBSS</span>
-        </div>
-
-        <div className="p-5 rounded-2xl border border-outline-variant bg-surface-container-low shadow-xs">
-          <span className="text-xs font-bold uppercase tracking-wider text-amber-600 block mb-1">Outstanding Balance</span>
-          <div className="text-2xl md:text-3xl font-extrabold text-amber-600">
-            {formatNaira(student.outstandingBalance || 0)}
-          </div>
-          <span className="text-xs text-on-surface-variant mt-1 block">
-            {(student.outstandingBalance || 0) === 0 ? 'No fees outstanding' : 'Due for second semester tranche'}
-          </span>
-        </div>
+        <SemanticMetricCard
+          label="Total Program Tuition"
+          value={formatNaira(student.tuitionAmount || student.totalFees || 450000)}
+          icon="school"
+          intent="blue"
+          badge="Enrolled"
+          subtitle={student.program}
+        />
+        <SemanticMetricCard
+          label="Amount Settled"
+          value={formatNaira(student.paidAmount || 0)}
+          icon="payments"
+          intent="emerald"
+          badge="Verified"
+          subtitle="Verified through Paystack / NIBSS"
+        />
+        <SemanticMetricCard
+          label="Outstanding Balance"
+          value={formatNaira(student.outstandingBalance || 0)}
+          icon="account_balance_wallet"
+          intent={(student.outstandingBalance || 0) > 0 ? 'amber' : 'emerald'}
+          badge={(student.outstandingBalance || 0) > 0 ? 'Due' : 'Cleared'}
+          subtitle={(student.outstandingBalance || 0) === 0 ? 'No fees outstanding' : 'Due for next installment tranche'}
+        />
       </div>
 
       {/* Visual Tuition Installment Milestone Roadmap */}

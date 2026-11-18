@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useCRM } from '../context/CRMContext';
 import { AttendanceRecord } from '../types/crm';
+import { PageHeader, SemanticMetricCard } from '../components/common/KineticUI';
 
 type AttendanceViewTab = 'my_shifts' | 'institutional_ledger' | 'today_roster' | 'verification_queue';
 type DateRangeFilter = 'today' | 'week' | 'month' | 'all' | 'custom';
@@ -324,197 +325,151 @@ export const StaffAttendancePage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-stack-lg animate-in fade-in duration-300">
+    <div className="space-y-6 animate-in fade-in duration-200">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-outline-variant pb-stack-md">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <span className="material-symbols-outlined text-primary text-[28px]">schedule</span>
-            <h1 className="font-headline-lg text-2xl font-bold text-on-surface">
-              Staff Attendance, Shifts &amp; Standup Sync
-            </h1>
-          </div>
-          <p className="font-body-md text-xs text-secondary mt-1">
-            Multi-Campus Geofence Audits • Two-Way AI Standup Alignment • Break &amp; Overtime Ledger
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <button
-            onClick={() => openModal('daily-standup')}
-            className="px-3.5 h-9 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-xs font-bold text-amber-800 transition-colors flex items-center gap-1.5 cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[16px]">psychology</span>
-            <span>AI Daily Standup</span>
-          </button>
-
-          <button
-            onClick={exportTimesheetCSV}
-            className="px-3.5 h-9 rounded-lg border border-outline-variant bg-surface hover:bg-surface-container text-xs font-bold text-secondary transition-colors flex items-center gap-1.5 cursor-pointer"
-            title="Download CSV for payroll & compliance audit"
-          >
-            <span className="material-symbols-outlined text-[16px]">download</span>
-            <span>Export Timesheet CSV</span>
-          </button>
-
-          {activeAttendanceSession ? (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() =>
-                  toggleShiftBreak(activeAttendanceSession.isOnBreak ? 'end' : 'start')
-                }
-                className={`px-3.5 h-9 rounded-lg border text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
-                  activeAttendanceSession.isOnBreak
-                    ? 'bg-[#DCFCE7] border-[#16A34A]/40 text-[#166534]'
-                    : 'bg-[#FEF3C7] border-[#D97706]/40 text-[#92400E]'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[16px]">
-                  {activeAttendanceSession.isOnBreak ? 'play_arrow' : 'coffee'}
-                </span>
-                <span>
-                  {activeAttendanceSession.isOnBreak ? 'End Break' : 'Pause for Break'}
-                </span>
-              </button>
-
-              <button
-                onClick={() => openModal('clock-out')}
-                className="px-4 h-9 rounded-lg bg-[#BA1A1A] text-white text-xs font-bold hover:bg-[#991B1B] transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[18px]">logout</span>
-                <span>Clock Out / End Shift</span>
-              </button>
-            </div>
-          ) : staleAttendanceSession ? (
+      <PageHeader
+        title="Staff Attendance, Shifts & Standup Sync"
+        subtitle="Multi-Campus Geofence Audits • Two-Way AI Standup Alignment • Break & Overtime Ledger"
+        badgeText="Attendance & Geofence Active"
+        badgeIntent="emerald"
+        badgePulse
+        actions={
+          <>
             <button
-              onClick={() => openModal('clock-in')}
-              className="px-4 h-9 rounded-lg bg-[#D97706] text-white text-xs font-bold hover:bg-[#B45309] transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+              onClick={() => openModal('daily-standup')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-xs font-bold text-amber-800 transition-colors shadow-xs cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[18px]">history_toggle_off</span>
-              <span>Reconcile {staleAttendanceSession.date} Shift &amp; Clock In</span>
+              <span className="material-symbols-outlined text-[16px]">psychology</span>
+              <span>AI Daily Standup</span>
             </button>
-          ) : (
-            <div className="flex items-center gap-2">
-              {todayCompletedSession && (
+
+            <button
+              onClick={exportTimesheetCSV}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-outline-variant bg-surface hover:bg-surface-container-high text-xs font-semibold text-on-surface transition-colors shadow-xs cursor-pointer"
+              title="Download CSV for payroll & compliance audit"
+            >
+              <span className="material-symbols-outlined text-[16px] text-secondary">download</span>
+              <span>Export CSV</span>
+            </button>
+
+            {activeAttendanceSession ? (
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={() => resumeTodayShift(todayCompletedSession.id)}
-                  className="px-3.5 h-9 rounded-lg bg-[#E0F2FE] border border-[#0284C7]/30 text-[#0284C7] text-xs font-bold hover:bg-[#BAE6FD] transition-colors flex items-center gap-1.5 cursor-pointer"
+                  onClick={() =>
+                    toggleShiftBreak(activeAttendanceSession.isOnBreak ? 'end' : 'start')
+                  }
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border text-xs font-bold transition-colors cursor-pointer ${
+                    activeAttendanceSession.isOnBreak
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                      : 'bg-amber-50 border-amber-300 text-amber-800'
+                  }`}
                 >
-                  <span className="material-symbols-outlined text-[16px]">replay</span>
-                  <span>Resume Today Shift</span>
+                  <span className="material-symbols-outlined text-[16px]">
+                    {activeAttendanceSession.isOnBreak ? 'play_arrow' : 'coffee'}
+                  </span>
+                  <span>
+                    {activeAttendanceSession.isOnBreak ? 'End Break' : 'Pause for Break'}
+                  </span>
                 </button>
-              )}
+
+                <button
+                  onClick={() => openModal('clock-out')}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-error text-white text-xs font-bold hover:bg-red-700 transition-colors shadow-xs cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">logout</span>
+                  <span>Clock Out</span>
+                </button>
+              </div>
+            ) : staleAttendanceSession ? (
               <button
                 onClick={() => openModal('clock-in')}
-                className="px-4 h-9 rounded-lg bg-[#1E3A8A] text-white text-xs font-bold hover:bg-[#00236F] transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 transition-colors shadow-xs cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[18px]">timer</span>
-                <span>Clock In for Work</span>
+                <span className="material-symbols-outlined text-[18px]">history_toggle_off</span>
+                <span>Reconcile {staleAttendanceSession.date} Shift</span>
               </button>
-            </div>
-          )}
-        </div>
-      </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                {todayCompletedSession && (
+                  <button
+                    onClick={() => resumeTodayShift(todayCompletedSession.id)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-sky-50 border border-sky-200 text-sky-700 text-xs font-bold hover:bg-sky-100 transition-colors cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">replay</span>
+                    <span>Resume Shift</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => openModal('clock-in')}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary-hover transition-colors shadow-xs cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">timer</span>
+                  <span>Clock In</span>
+                </button>
+              </div>
+            )}
+          </>
+        }
+      />
 
       {/* Stale Shift Alert Banner if user has an unclosed prior-day shift */}
       {staleAttendanceSession && (
-        <div className="p-4 rounded-xl bg-[#FEF3C7] border border-[#D97706]/40 flex items-center justify-between flex-wrap gap-3">
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-300 flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-[#D97706] text-[24px]">warning</span>
+            <span className="material-symbols-outlined text-amber-600 text-[24px]">warning</span>
             <div>
-              <p className="text-xs sm:text-sm font-bold text-[#92400E]">
+              <p className="text-xs sm:text-sm font-bold text-amber-900">
                 Action Required: Unclosed Shift from {staleAttendanceSession.date} (Clocked in at{' '}
                 {staleAttendanceSession.clockInTime})
               </p>
-              <p className="text-xs text-[#92400E]/90">
+              <p className="text-xs text-amber-800">
                 Please submit your retroactive departure time and deliverables summary to close this shift before starting today&apos;s attendance session.
               </p>
             </div>
           </div>
           <button
             onClick={() => openModal('clock-in')}
-            className="px-4 h-9 rounded-lg bg-[#D97706] hover:bg-[#B45309] text-white text-xs font-bold cursor-pointer shrink-0"
+            className="px-3.5 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold cursor-pointer shrink-0"
           >
             Reconcile Shift Now
           </button>
         </div>
       )}
 
-      {/* 4 Bento KPI Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
-        {/* On-Duty Staff */}
-        <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs">
-          <div className="flex justify-between items-start mb-2">
-            <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined">badge</span>
-            </div>
-            <span className="text-xs font-bold text-[#166534] bg-[#DCFCE7] px-2 py-0.5 rounded font-data-tabular">
-              {todayRecords.length} shifts today
-            </span>
-          </div>
-          <p className="font-body-sm text-xs text-secondary">Currently On-Duty</p>
-          <h3 className="font-headline-lg text-2xl font-bold text-on-surface font-data-tabular">
-            {activeNowCount}{' '}
-            <span className="text-xs font-normal text-secondary">
-              Active {onBreakNowCount > 0 ? `(${onBreakNowCount} on break)` : 'Now'}
-            </span>
-          </h3>
-        </div>
-
-        {/* Hub vs Remote Ratio */}
-        <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs">
-          <div className="flex justify-between items-start mb-2">
-            <div className="w-10 h-10 rounded bg-secondary-container flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined">domain</span>
-            </div>
-            <span className="text-xs font-bold text-secondary bg-surface-container px-2 py-0.5 rounded font-data-tabular">
-              Geofence: {officeRadius}m
-            </span>
-          </div>
-          <p className="font-body-sm text-xs text-secondary">On-Site Hub Ratio</p>
-          <h3 className="font-headline-lg text-2xl font-bold text-on-surface font-data-tabular">
-            {hubRatio}%{' '}
-            <span className="text-xs font-normal text-secondary">
-              ({onSiteCount} Hub shifts)
-            </span>
-          </h3>
-        </div>
-
-        {/* Punctuality Rate */}
-        <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs">
-          <div className="flex justify-between items-start mb-2">
-            <div className="w-10 h-10 rounded bg-surface-container flex items-center justify-center text-on-surface">
-              <span className="material-symbols-outlined">alarm_on</span>
-            </div>
-            <span className="text-xs font-bold text-secondary bg-surface-container-high px-2 py-0.5 rounded font-data-tabular">
-              Policy: {settings.workHoursPolicy?.expectedClockInTime || '09:00'} WAT
-            </span>
-          </div>
-          <p className="font-body-sm text-xs text-secondary">Punctuality Compliance</p>
-          <h3 className="font-headline-lg text-2xl font-bold text-on-surface font-data-tabular">
-            {punctualityRate}%{' '}
-            <span className="text-xs font-normal text-secondary">
-              ({punctualCount} compliant)
-            </span>
-          </h3>
-        </div>
-
-        {/* Net Work Hours & Overtime */}
-        <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs">
-          <div className="flex justify-between items-start mb-2">
-            <div className="w-10 h-10 rounded bg-primary-container flex items-center justify-center text-on-primary">
-              <span className="material-symbols-outlined">hourglass_top</span>
-            </div>
-            <span className="text-xs font-bold text-[#166534] bg-[#DCFCE7] px-2 py-0.5 rounded font-data-tabular">
-              +{totalOvertimeHours}h Overtime
-            </span>
-          </div>
-          <p className="font-body-sm text-xs text-secondary">Net Hours Logged</p>
-          <h3 className="font-headline-lg text-2xl font-bold text-on-surface font-data-tabular">
-            {totalHoursWorked}{' '}
-            <span className="text-xs font-normal text-secondary">Net Hours</span>
-          </h3>
-        </div>
+      {/* 4 Bento KPI Summary Cards - Color-Coded Semantic Borders */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <SemanticMetricCard
+          label="Currently On-Duty"
+          value={activeNowCount}
+          icon="badge"
+          intent="emerald"
+          badge={`${todayRecords.length} Shifts Today`}
+          subtitle={onBreakNowCount > 0 ? `Active (${onBreakNowCount} on break)` : 'Active right now'}
+        />
+        <SemanticMetricCard
+          label="On-Site Hub Ratio"
+          value={`${hubRatio}%`}
+          icon="domain"
+          intent="blue"
+          badge={`Geofence ${officeRadius}m`}
+          subtitle={`${onSiteCount} on-site hub shifts`}
+        />
+        <SemanticMetricCard
+          label="Punctuality Compliance"
+          value={`${punctualityRate}%`}
+          icon="alarm_on"
+          intent="sky"
+          badge={`${settings.workHoursPolicy?.expectedClockInTime || '09:00'} WAT`}
+          subtitle={`${punctualCount} compliant clock-ins`}
+        />
+        <SemanticMetricCard
+          label="Net Hours Logged"
+          value={totalHoursWorked}
+          icon="hourglass_top"
+          intent="purple"
+          badge={`+${totalOvertimeHours}h OT`}
+          subtitle="Verified net work hours"
+        />
       </div>
 
       {/* Role-Scoped Navigation Tabs & Date Period Bar */}

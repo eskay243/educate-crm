@@ -6,6 +6,7 @@ import { RejectExpenseModal } from '../components/modals/RejectExpenseModal';
 import { ViewExpenseModal } from '../components/modals/ViewExpenseModal';
 import { WalletTransactionDetailsModal } from '../components/modals/WalletTransactionDetailsModal';
 import { CrispStatusBadge } from '../components/common/CrispStatusBadge';
+import { PageHeader } from '../components/common/KineticUI';
 import { apiService } from '../services/api';
 
 export interface BusinessExpensesPageProps {}
@@ -344,53 +345,49 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
 
 
   return (
-    <div className="space-y-stack-lg animate-in fade-in duration-200">
+    <div className="space-y-6 animate-in fade-in duration-200">
       {/* Header */}
-      <div className="flex justify-between items-end flex-wrap gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h2 className="font-display text-display font-bold text-on-surface">Office Expenses (OpEx) &amp; Budgets</h2>
-            <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-label-md text-xs font-bold">
-              Requisition Workflow
-            </span>
-          </div>
-          <p className="font-body-md text-body-md text-secondary">
-            Request operational funds, track monthly budget deductions, and review pending approval requisitions.
-          </p>
-        </div>
-        <div className="flex gap-2 sm:gap-3 flex-wrap">
-          <button 
-            onClick={handleSyncWallet}
-            disabled={isSyncingWallet}
-            className="btn-secondary h-10 px-3.5 text-xs disabled:opacity-50 cursor-pointer"
-            title="Force real-time reconciliation with live Paystack account"
-          >
-            <span className={`material-symbols-outlined text-[18px] ${isSyncingWallet ? 'animate-spin' : ''}`}>sync</span>
-            <span>{isSyncingWallet ? 'Syncing...' : 'Sync with Paystack'}</span>
-          </button>
-          <button 
-            onClick={() => openModal('top-up-wallet')}
-            className="btn-primary h-10 px-4 text-xs"
-          >
-            <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span>
-            <span>+ Fund Expense Wallet</span>
-          </button>
-          <button 
-            onClick={() => openModal('export-report')}
-            className="btn-secondary h-10 px-3.5 text-xs"
-          >
-            <span className="material-symbols-outlined text-[18px]">download</span>
-            <span>Export CSV</span>
-          </button>
-          <button 
-            onClick={() => openModal('log-expense')}
-            className="btn-primary h-10 px-4 text-xs"
-          >
-            <span className="material-symbols-outlined text-[20px]">add_card</span>
-            <span>+ Request OpEx Requisition</span>
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Office Expenses (OpEx) & Budgets"
+        subtitle="Request operational funds, track monthly budget deductions, and review pending approval requisitions."
+        badgeText="Requisition Workflow"
+        badgeIntent="amber"
+        badgePulse
+        actions={
+          <>
+            <button 
+              onClick={handleSyncWallet}
+              disabled={isSyncingWallet}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg bg-surface border border-outline-variant text-on-surface hover:bg-surface-container-high transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
+              title="Force real-time reconciliation with live Paystack account"
+            >
+              <span className={`material-symbols-outlined text-[18px] text-primary ${isSyncingWallet ? 'animate-spin' : ''}`}>sync</span>
+              <span>{isSyncingWallet ? 'Syncing...' : 'Sync Paystack'}</span>
+            </button>
+            <button 
+              onClick={() => openModal('export-report')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg bg-surface border border-outline-variant text-on-surface hover:bg-surface-container-high transition-colors shadow-xs cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px] text-secondary">download</span>
+              <span>Export CSV</span>
+            </button>
+            <button 
+              onClick={() => openModal('top-up-wallet')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors shadow-xs cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span>
+              <span>Fund Wallet</span>
+            </button>
+            <button 
+              onClick={() => openModal('log-expense')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-lg bg-primary hover:bg-primary-hover text-white transition-colors shadow-xs cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">add_card</span>
+              <span>Request OpEx</span>
+            </button>
+          </>
+        }
+      />
 
       {/* Operational Expense & Budget Wallet Hero Card */}
       <div className="bg-crisp-black text-white rounded-xl p-6 border border-[#D9E6E8]/20 relative overflow-hidden">
@@ -569,23 +566,23 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
       </div>
 
       {/* Financial Overview Bento Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Card 1: Approved OpEx Spend (Deducted from Budget) */}
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md flex flex-col justify-between shadow-xs">
+        <div className="group bg-surface border border-outline-variant border-t-2 border-t-blue-500 hover:border-blue-500/60 hover:shadow-md rounded-xl p-4 flex flex-col justify-between transition-all duration-200">
           <div className="flex justify-between items-start mb-3">
-            <span className="font-label-md text-label-md text-secondary uppercase tracking-wider text-[11px]">
+            <span className="text-xs font-semibold text-secondary">
               Approved OpEx Spend (MTD)
             </span>
-            <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px]">payments</span>
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <span className="material-symbols-outlined text-[20px]">payments</span>
             </div>
           </div>
           <div>
-            <div className="font-display text-2xl font-bold text-on-surface font-data-tabular">
+            <div className="text-2xl font-black text-on-surface font-data-tabular tracking-tight">
               {formatNaira(monthlyApprovedSpend)}
             </div>
-            <div className="font-body-sm text-xs text-secondary mt-1 flex items-center gap-1">
-              <span className="material-symbols-outlined text-[14px] text-[#166534]">check_circle</span>
+            <div className="text-[11px] text-secondary mt-1 flex items-center gap-1">
+              <span className="material-symbols-outlined text-[14px] text-emerald-600">check_circle</span>
               <span className="font-bold text-on-surface">{approvedExpenses.length}</span> approved requisitions deducted from budget
             </div>
           </div>
@@ -602,33 +599,33 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
               setActiveLedgerView('expenses');
             }
           }}
-          className={`bg-surface-container-lowest border rounded-xl p-stack-md flex flex-col justify-between shadow-xs cursor-pointer transition-all hover:border-primary/50 ${
-            selectedStatus === 'Awaiting Approval' ? 'ring-2 ring-primary border-primary bg-primary/5' : 'border-outline-variant'
+          className={`group bg-surface border border-t-2 border-t-amber-500 hover:border-amber-500/60 hover:shadow-md rounded-xl p-4 flex flex-col justify-between cursor-pointer transition-all duration-200 ${
+            selectedStatus === 'Awaiting Approval' ? 'ring-2 ring-amber-500/40 border-amber-500 bg-amber-50/40' : 'border-outline-variant'
           }`}
           title="Click to filter table by pending approval requests"
         >
           <div className="flex justify-between items-start mb-3">
             <div className="flex items-center gap-1.5">
-              <span className="font-label-md text-label-md text-secondary uppercase tracking-wider text-[11px]">
+              <span className="text-xs font-semibold text-secondary">
                 Pending Verification
               </span>
               {pendingCount > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full bg-[#FEF9C3] text-[#854D0E] text-[10px] font-bold animate-pulse">
+                <span className="px-1.5 py-0.2 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20 text-[10px] font-bold animate-pulse">
                   {pendingCount}
                 </span>
               )}
             </div>
-            <div className="w-8 h-8 rounded-lg bg-[#FEF9C3] text-[#854D0E] flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px]">hourglass_top</span>
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <span className="material-symbols-outlined text-[20px]">hourglass_top</span>
             </div>
           </div>
           <div>
-            <div className="font-display text-2xl font-bold text-[#854D0E] font-data-tabular">
+            <div className="text-2xl font-black text-on-surface font-data-tabular tracking-tight">
               {formatNaira(pendingFunding)}
             </div>
-            <div className="font-body-sm text-xs text-secondary mt-1 flex items-center justify-between">
+            <div className="text-[11px] text-secondary mt-1 flex items-center justify-between">
               <span>{pendingCount} requisitions awaiting review</span>
-              <span className="text-primary text-[11px] font-bold hover:underline">
+              <span className="text-amber-600 text-[11px] font-bold group-hover:underline">
                 {selectedStatus === 'Awaiting Approval' ? 'Show All' : 'Filter View →'}
               </span>
             </div>
@@ -637,7 +634,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
 
         {/* Card 3: Approved Monthly Operating Budget with Auto-Renewal & Rollover */}
         {showBudgetCardToUser ? (
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md flex flex-col justify-between shadow-xs">
+          <div className="group bg-surface border border-outline-variant border-t-2 border-t-emerald-500 hover:border-emerald-500/60 hover:shadow-md rounded-xl p-4 flex flex-col justify-between transition-all duration-200">
             <div className="flex justify-between items-start mb-2">
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5 flex-wrap">

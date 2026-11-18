@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
 import { FacultyGradingInbox } from '../components/mentors/FacultyGradingInbox';
+import { PageHeader, SemanticMetricCard } from '../components/common/KineticUI';
 
 export const FacultyGradingPage: React.FC = () => {
   const { currentUser, assignments } = useCRM();
@@ -53,45 +54,33 @@ export const FacultyGradingPage: React.FC = () => {
       </div>
 
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-xs">
-              <span className="material-symbols-outlined text-[24px]">fact_check</span>
-            </div>
-            <div>
-              <h1 className="font-headline-md text-headline-md font-bold text-on-surface">
-                {isMentor ? 'Faculty Grading & Code Review Inbox' : 'Institutional Grading & Evaluation Queue'}
-              </h1>
-              <p className="text-secondary font-body-sm text-body-sm mt-0.5">
-                Review student project pull requests, test submissions, score rubrics, and disburse constructive feedback.
-              </p>
-            </div>
-          </div>
-        </div>
+      <PageHeader
+        title={isMentor ? 'Faculty Grading & Code Review Inbox' : 'Institutional Grading & Evaluation Queue'}
+        subtitle="Review student project pull requests, test submissions, score rubrics, and disburse constructive feedback."
+        badgeText="Academic Evaluation Queue"
+        badgeIntent="amber"
+        badgePulse={pendingSubmissions > 0}
+      />
 
-        {/* Quick KPI stats */}
-        <div className="flex items-center gap-3">
-          <div className="bg-surface border border-outline-variant rounded-xl p-3 shadow-xs flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px]">pending_actions</span>
-            </div>
-            <div>
-              <p className="text-[11px] text-secondary font-medium">Pending Review</p>
-              <p className="font-bold text-sm text-on-surface">{pendingSubmissions} Submissions</p>
-            </div>
-          </div>
-
-          <div className="bg-surface border border-outline-variant rounded-xl p-3 shadow-xs flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px]">task_alt</span>
-            </div>
-            <div>
-              <p className="text-[11px] text-secondary font-medium">Graded &amp; Passed</p>
-              <p className="font-bold text-sm text-on-surface">{reviewedSubmissions} Submissions</p>
-            </div>
-          </div>
-        </div>
+      {/* Quick KPI stats - Color-Coded Semantic Borders */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <SemanticMetricCard
+          label="Pending Review"
+          value={pendingSubmissions}
+          icon="pending_actions"
+          intent="amber"
+          badge="Awaiting Score"
+          badgePulse={pendingSubmissions > 0}
+          subtitle="Student lab & project submissions"
+        />
+        <SemanticMetricCard
+          label="Graded & Passed"
+          value={reviewedSubmissions}
+          icon="task_alt"
+          intent="emerald"
+          badge="Verified"
+          subtitle="Completed evaluations & feedback"
+        />
       </div>
 
       {/* Main Grading Inbox Container */}

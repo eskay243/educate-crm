@@ -17,3 +17,14 @@ When triggering modal pop-ups via URL query parameters or navigation links (e.g.
 ## 3. Deployment & Environment Guardrails
 - **Strictly Local Development**: Keep all execution strictly to `localhost:5173` (Vite) and `localhost:5001` (Express API backend).
 - **No Unsolicited VPS Deployment**: Never deploy builds, execute remote rsync, or push to production remote VPS (`72.61.106.87`) without explicit user sign-off.
+
+## 4. "Kinetic Command" UI/UX Design System (Canonical Standard)
+All pages, dashboards, cards, buttons, and modals MUST follow the **Kinetic Command** design language established in `src/pages/OperationalDashboardPage.tsx` and documented in `DESIGN.md`:
+- **Shared Primitives First**: Always use `PageHeader`, `SemanticMetricCard`, `ActionTile`, and `SectionCard` from `src/components/common/KineticUI.tsx` rather than hand-coding custom headers or metric cards.
+- **Color-Coded Semantic Card Borders**: Every KPI/metric card and shortcut tile must map to a semantic intent (`blue` Primary/Admissions, `amber` Expenses/Approvals, `sky` Faculty/Payouts, `emerald` Revenue/Success/Attendance, `red` Urgent/Tickets/Overdue, `purple` Governance/System) with a 2px semantic top accent border at rest (`border-t-2 border-t-{color}-500`), tinted icon wells (`bg-{color}-500/10 text-{color}-600`), and hover micro-interactions (`hover:border-{color}-500/60 hover:shadow-md` + `group-hover:scale-110`).
+- **Page Header Anatomy**: Use an open header (`pb-3 border-b border-outline-variant/60`) with a live status pill, `text-2xl sm:text-3xl font-extrabold tracking-tight` title, concise subtitle, and right-aligned `rounded-lg text-xs font-bold` primary/secondary buttons. Do not box page headers inside cards.
+- **Strict Surface & Icon Hygiene**:
+  - Surfaces: `#F4F7F8` (`bg-canvas`), `#FFFFFF` (`bg-surface`), `1px solid #D9E6E8` (`border-outline-variant`), `rounded-xl` for cards/sections, `rounded-lg` for buttons/inputs/tiles.
+  - Icons: Exclusively Google Material Symbols (`material-symbols-outlined`). Never import `lucide-react`.
+  - No `dark:` or hardcoded dark-slate (`bg-slate-900`) overrides on light CRM surfaces.
+  - Currency & Metrics: Always use `formatNaira` / `formatNairaCompact` with `font-data-tabular`.

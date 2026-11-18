@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useCRM } from '../../context/CRMContext';
+import { PageHeader } from '../../components/common/KineticUI';
 
 export const StudentMentorPage: React.FC = () => {
   const { 
@@ -119,26 +120,21 @@ export const StudentMentorPage: React.FC = () => {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-200">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-outline-variant pb-5">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary mb-1">
-            <span className="material-symbols-outlined text-sm">support_agent</span>
-            <span>Faculty Mentorship Hub</span>
-          </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-on-surface">1-on-1 Faculty Coaching</h1>
-          <p className="text-xs md:text-sm text-on-surface-variant mt-0.5">
-            Personalized guidance, lab code reviews, and career strategy from industry leaders
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="1-on-1 Faculty Coaching"
+        subtitle="Personalized guidance, lab code reviews, and career strategy from industry leaders."
+        badgeText="Faculty Mentorship Hub"
+        badgeIntent="sky"
+        badgePulse
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Assigned Mentor Card & Bio (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
           {mentor ? (
-            <div className="bg-surface-container-low border border-outline-variant rounded-2xl p-6 shadow-xs space-y-5">
+            <div className="bg-surface border border-outline-variant border-t-2 border-t-sky-500 rounded-xl p-5 shadow-xs space-y-5">
               <div className="flex items-start gap-4">
                 <div className="w-16 h-16 rounded-xl bg-primary text-white flex items-center justify-center font-extrabold text-2xl shrink-0">
                   {mentor.name.charAt(0)}

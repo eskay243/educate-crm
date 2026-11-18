@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useCRM, formatNaira, formatNairaCompact } from '../context/CRMContext';
+import { PageHeader, SemanticMetricCard, ActionTile } from '../components/common/KineticUI';
 
 export const OperationalDashboardPage: React.FC = () => {
   const { 
@@ -115,147 +116,79 @@ export const OperationalDashboardPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* 1. Header Banner & Operations Switcher */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-outline-variant/60">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Operational Pulse Active
-            </span>
-            <span className="text-xs text-secondary">{formattedDate}</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-on-surface tracking-tight">
-            Operational Command Center
-          </h1>
-          <p className="text-xs sm:text-sm text-secondary mt-0.5">
-            Welcome back, {currentUser?.name || 'Administrator'}. Real-time daily operations, pending authorizations, institutional triage, and active tasks.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          <Link
-            to="/reports"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg bg-surface border border-outline-variant text-on-surface hover:bg-surface-container-high transition-colors shadow-xs"
-            title="Switch to Financial and Cohort Performance Analytics"
-          >
-            <span className="material-symbols-outlined text-[18px] text-primary">monitoring</span>
-            <span>View Executive Analytics</span>
-          </Link>
-          <button
-            type="button"
-            onClick={() => setIsChatPopoutOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-lg bg-primary text-white hover:bg-primary-hover transition-colors shadow-xs cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[18px]">chat</span>
-            <span>Team Chat</span>
-            {unreadChatCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-red-500 text-white text-[10px] font-extrabold">
-                {unreadChatCount}
-              </span>
-            )}
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Operational Command Center"
+        subtitle={`Welcome back, ${currentUser?.name || 'Administrator'}. Real-time daily operations, pending authorizations, institutional triage, and active tasks.`}
+        badgeText="Operational Pulse Active"
+        badgeIntent="emerald"
+        badgePulse
+        metaText={formattedDate}
+        actions={
+          <>
+            <Link
+              to="/reports"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg bg-surface border border-outline-variant text-on-surface hover:bg-surface-container-high transition-colors shadow-xs"
+              title="Switch to Financial and Cohort Performance Analytics"
+            >
+              <span className="material-symbols-outlined text-[18px] text-primary">monitoring</span>
+              <span>View Executive Analytics</span>
+            </Link>
+            <button
+              type="button"
+              onClick={() => setIsChatPopoutOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-lg bg-primary text-white hover:bg-primary-hover transition-colors shadow-xs cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">chat</span>
+              <span>Team Chat</span>
+              {unreadChatCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-red-500 text-white text-[10px] font-extrabold">
+                  {unreadChatCount}
+                </span>
+              )}
+            </button>
+          </>
+        }
+      />
 
       {/* 2. Urgent Attention Strip: Pending Actions & Authorizations */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Pending Expense Requisitions */}
-        <Link
+        <SemanticMetricCard
           to="/expenses"
-          className="group p-4 rounded-xl bg-surface border border-outline-variant hover:border-amber-500/50 hover:shadow-md transition-all duration-200"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-secondary">Expense Requisitions</span>
-            <span className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <span className="material-symbols-outlined text-[20px]">payments</span>
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-on-surface font-data-tabular">
-              {pendingExpenses.length}
-            </span>
-            <span className="text-xs font-bold text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded">
-              Awaiting Approval
-            </span>
-          </div>
-          <p className="text-[11px] text-secondary mt-1 truncate">
-            {pendingExpensesTotal > 0 ? `${formatNaira(pendingExpensesTotal)} total queued` : 'All expenses cleared'}
-          </p>
-        </Link>
-
-        {/* Pending Mentor Payouts */}
-        <Link
+          label="Expense Requisitions"
+          value={pendingExpenses.length}
+          icon="payments"
+          intent="amber"
+          badge="Awaiting Approval"
+          subtitle={pendingExpensesTotal > 0 ? `${formatNaira(pendingExpensesTotal)} total queued` : 'All expenses cleared'}
+        />
+        <SemanticMetricCard
           to="/mentors"
-          className="group p-4 rounded-xl bg-surface border border-outline-variant hover:border-sky-500/50 hover:shadow-md transition-all duration-200"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-secondary">Faculty Payouts</span>
-            <span className="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <span className="material-symbols-outlined text-[20px]">account_balance_wallet</span>
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-on-surface font-data-tabular">
-              {pendingPayouts.length}
-            </span>
-            <span className="text-xs font-bold text-sky-600 bg-sky-500/10 px-1.5 py-0.5 rounded">
-              Pending Payouts
-            </span>
-          </div>
-          <p className="text-[11px] text-secondary mt-1 truncate">
-            {pendingPayoutsTotal > 0 ? `${formatNaira(pendingPayoutsTotal)} requested` : 'No outstanding claims'}
-          </p>
-        </Link>
-
-        {/* Unpaid / Pending Tuition Invoices */}
-        <Link
+          label="Faculty Payouts"
+          value={pendingPayouts.length}
+          icon="account_balance_wallet"
+          intent="sky"
+          badge="Pending Payouts"
+          subtitle={pendingPayoutsTotal > 0 ? `${formatNaira(pendingPayoutsTotal)} requested` : 'No outstanding claims'}
+        />
+        <SemanticMetricCard
           to="/students"
-          className="group p-4 rounded-xl bg-surface border border-outline-variant hover:border-blue-500/50 hover:shadow-md transition-all duration-200"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-secondary">Pending Invoices</span>
-            <span className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <span className="material-symbols-outlined text-[20px]">receipt_long</span>
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-on-surface font-data-tabular">
-              {pendingInvoices.length}
-            </span>
-            <span className="text-xs font-bold text-blue-600 bg-blue-500/10 px-1.5 py-0.5 rounded">
-              Awaiting Clearance
-            </span>
-          </div>
-          <p className="text-[11px] text-secondary mt-1 truncate">
-            Tuition transfers &amp; payment proofs
-          </p>
-        </Link>
-
-        {/* Support Tickets Needing Resolution */}
-        <Link
+          label="Pending Invoices"
+          value={pendingInvoices.length}
+          icon="receipt_long"
+          intent="blue"
+          badge="Awaiting Clearance"
+          subtitle="Tuition transfers & payment proofs"
+        />
+        <SemanticMetricCard
           to="/tickets"
-          className="group p-4 rounded-xl bg-surface border border-outline-variant hover:border-red-500/50 hover:shadow-md transition-all duration-200"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-secondary">Open Support Tickets</span>
-            <span className="w-8 h-8 rounded-lg bg-red-500/10 text-red-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <span className="material-symbols-outlined text-[20px]">confirmation_number</span>
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-on-surface font-data-tabular">
-              {openTickets.length}
-            </span>
-            {urgentTickets.length > 0 && (
-              <span className="text-xs font-bold text-red-600 bg-red-500/10 px-1.5 py-0.5 rounded animate-pulse">
-                {urgentTickets.length} Urgent
-              </span>
-            )}
-          </div>
-          <p className="text-[11px] text-secondary mt-1 truncate">
-            {openTickets.length === 0 ? 'All tickets resolved & archived' : 'Click to review active queue'}
-          </p>
-        </Link>
+          label="Open Support Tickets"
+          value={openTickets.length}
+          icon="confirmation_number"
+          intent="red"
+          badge={urgentTickets.length > 0 ? `${urgentTickets.length} Urgent` : undefined}
+          badgePulse={urgentTickets.length > 0}
+          subtitle={openTickets.length === 0 ? 'All tickets resolved & archived' : 'Click to review active queue'}
+        />
       </div>
 
       {/* 3. 1-Click Operations Launchpad */}
@@ -265,61 +198,34 @@ export const OperationalDashboardPage: React.FC = () => {
           <span>1-Click Institutional Shortcuts</span>
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <button
-            type="button"
+          <ActionTile
+            title="New Record"
+            subtitle="Hub Creator"
+            icon="add_circle"
+            intent="blue"
             onClick={() => openModal('create-hub')}
-            className="flex items-center gap-2 p-3 rounded-lg border border-outline-variant/80 hover:border-primary hover:bg-primary/5 transition-colors text-left cursor-pointer group"
-          >
-            <span className="material-symbols-outlined text-[20px] text-primary group-hover:scale-110 transition-transform">
-              add_circle
-            </span>
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-on-surface truncate">New Record</p>
-              <p className="text-[10px] text-secondary truncate">Hub Creator</p>
-            </div>
-          </button>
-
-          <button
-            type="button"
+          />
+          <ActionTile
+            title="Log Expense"
+            subtitle="OpEx Requisition"
+            icon="receipt"
+            intent="amber"
             onClick={() => openModal('log-expense')}
-            className="flex items-center gap-2 p-3 rounded-lg border border-outline-variant/80 hover:border-amber-500 hover:bg-amber-500/5 transition-colors text-left cursor-pointer group"
-          >
-            <span className="material-symbols-outlined text-[20px] text-amber-600 group-hover:scale-110 transition-transform">
-              receipt
-            </span>
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-on-surface truncate">Log Expense</p>
-              <p className="text-[10px] text-secondary truncate">OpEx Requisition</p>
-            </div>
-          </button>
-
-          <button
-            type="button"
+          />
+          <ActionTile
+            title="Add Lead"
+            subtitle="Admissions Intake"
+            icon="person_add"
+            intent="sky"
             onClick={() => openModal('add-lead')}
-            className="flex items-center gap-2 p-3 rounded-lg border border-outline-variant/80 hover:border-blue-500 hover:bg-blue-500/5 transition-colors text-left cursor-pointer group"
-          >
-            <span className="material-symbols-outlined text-[20px] text-blue-600 group-hover:scale-110 transition-transform">
-              person_add
-            </span>
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-on-surface truncate">Add Lead</p>
-              <p className="text-[10px] text-secondary truncate">Admissions Intake</p>
-            </div>
-          </button>
-
-          <button
-            type="button"
+          />
+          <ActionTile
+            title="Clock In / Out"
+            subtitle="Duty Log"
+            icon="timer"
+            intent="emerald"
             onClick={() => openModal('clock-in')}
-            className="flex items-center gap-2 p-3 rounded-lg border border-outline-variant/80 hover:border-emerald-500 hover:bg-emerald-500/5 transition-colors text-left cursor-pointer group"
-          >
-            <span className="material-symbols-outlined text-[20px] text-emerald-600 group-hover:scale-110 transition-transform">
-              timer
-            </span>
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-on-surface truncate">Clock In / Out</p>
-              <p className="text-[10px] text-secondary truncate">Duty Log</p>
-            </div>
-          </button>
+          />
         </div>
       </div>
 

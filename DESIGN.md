@@ -1,111 +1,73 @@
-# Design System: Edu-Business Operations CRM (Kinetic Enterprise)
-**Project ID:** 1004875458584841938  
-**Standard:** Google Stitch "Kinetic Enterprise" System  
-**Target Environments:** Web & Cross-Platform Mobile (React Native / Expo / NativeWind)
+# CODELAB EDUCARE — Unified Brand & Design Guide ("Kinetic Command")
+
+**Canonical Reference:** `src/pages/OperationalDashboardPage.tsx` & `src/components/common/KineticUI.tsx`  
+**Brand Archetype:** **The Sage × The Ruler** — Institutional authority, operational precision, and frictionless clarity for modern African technology education.  
+**Target Environments:** Web (React + Tailwind) & Cross-Platform Mobile
 
 ---
 
-## 1. Visual Atmosphere & Creative Direction
+## 1. Visual Atmosphere & Brand Voice
 
-The **Kinetic Enterprise** design system is engineered for high-density information management, professional CRM workflows, and academic administration. The aesthetic balances **institutional reliability**, **operational clarity**, and **frictionless efficiency**.
+The **Kinetic Command** design system evolves the Crisp Foundation architecture into a high-signal executive command center. It balances **institutional reliability**, **color-coded scannability**, and **tactile micro-interactions**.
 
-- **Atmosphere:** Clean, architectural, focused, and utilitarian.
-- **Mood:** Dignified corporate professionalism tailored for Nigerian technology institutes (Codelab Educare Ltd) and corporate accelerators.
-- **Visual Rhythm:** Structured 4px spatial baseline, high contrast, crisp 1px borders, and generous breathing room to counteract cognitive overload in financial and academic data views.
-
----
-
-## 2. Color Palette & Semantic Roles
-
-The color architecture enforces strict functional roles, ensuring high accessibility (WCAG AA/AAA) and immediate visual cognition across Web and Mobile viewports.
-
-### Primary Brand & Action Palette
-- **Deep Navy / Primary Dark (`#00236F`)**: High-contrast brand headers, primary call-to-action active states, and dark navigation accents.
-- **Kinetic Blue / Primary Container (`#1E3A8A`)**: Core interactive elements, active bottom navigation tabs, primary buttons, and link highlights.
-- **Primary Tint / Focus Glow (`#4059AA`)**: Active input outlines, focus indicators, and subtle touch ripple highlights.
-- **Fixed Accent Light (`#DCE1FF`)**: Soft chip backgrounds, selected list item highlights, and active filter tags.
-
-### Surface, Canvas & Background
-- **Base Canvas / Background (`#F7F9FB`)**: Paper-like, soft neutral workspace canvas that minimizes eye fatigue compared to harsh `#FFFFFF`.
-- **Surface Container Lowest (`#FFFFFF`)**: Pure white cards, elevated bottom sheets, modal dialogs, and table row canvases.
-- **Surface Container Low (`#F2F4F6`)**: Secondary panels, disabled input states, and zebra-striped table rows.
-- **Surface Container High (`#ECEEF0`)**: Subtle divider bars, card dividers, and inactive tab tracks.
-- **Outline & Border (`#E2E8F0` / `#C5C5D3`)**: Whisper-thin 1px bounding borders that define container edges without heavy drop shadows.
-
-### Functional Accents & Status Semantics
-- **Success Emerald (`#16A34A` / Container `#DCFCE7`)**: Verified NUBAN accounts, approved OpEx requisitions, cleared tuition payments, and passed student lab deliverables.
-- **Warning Amber (`#D97706` / Container `#FEF3C7`)**: Grace-period attendance clock-ins, pending expense approvals, overdue tuition reminders, and revisions requested.
-- **Critical Red / Error (`#BA1A1A` / Container `#FFDAD6`)**: Late clock-ins, rejected OpEx requests, NUBAN checksum failures, and unpaid tuition warnings.
-- **Info Cyan / Slate (`#0284C7` / Container `#E0F2FE`)**: Active cohort notifications, coaching calendar bookings, and syllabus progress markers.
-
-### Nigerian Financial & Banking Theme Tokens
-- **Naira Currency Accent (`#047857`)**: Display of `₦` currency figures, 37% faculty commission payouts, and Paystack settlement credit advice.
+- **Atmosphere:** Crisp, architectural, distraction-free, light-surface workspace (`#F4F7F8` canvas, `#FFFFFF` elevated surfaces).
+- **Color-Coded Framing:** Neutral 1px borders (`#D9E6E8`) paired with a **2px semantic top accent border** at rest and **full semantic border highlight + soft elevation on hover**, enabling instant visual triage across financial, academic, faculty, and support workflows.
+- **Voice:** Confident, executive, and Naira-native (`₦` with `font-data-tabular`).
 
 ---
 
-## 3. Typography & Text Hierarchy
+## 2. Color Palette & Semantic Border Architecture
 
-The typography standard relies exclusively on **Inter** for all UI copy and headings, with **JetBrains Mono** or tabular figures (`tabular-nums`) for currency figures, matriculation codes, and NUBAN account numbers.
+### Base Surface & Brand Tokens
+| Role | Tailwind Token | Hex | Usage |
+| :--- | :--- | :--- | :--- |
+| **Workspace Canvas** | `bg-canvas` / `bg-background` | `#F4F7F8` | Page background, nested list row surfaces (`bg-surface-container-low`) |
+| **Primary Card Surface** | `bg-surface` / `bg-surface-container-lowest` | `#FFFFFF` | All KPI cards, section panels, modals, tables |
+| **Structural Border** | `border-outline` / `border-outline-variant` | `#D9E6E8` | Crisp 1px container outline |
+| **Primary Text** | `text-on-surface` / `text-crisp-black` | `#1C293C` | Headings, hero metrics, primary table cells |
+| **Secondary Text** | `text-secondary` | `#414754` | Labels, timestamps, subtitles |
+| **Brand Action** | `bg-primary` / `hover:bg-primary-hover` | `#1872F5` / `#1464CC` | Primary CTAs, active tabs, focus rings |
+| **Institutional Header** | `bg-crisp-black` | `#1C293C` | Hero wallet banners, primary modal headers |
 
-| Level | Size | Weight | Line Height | Mobile Adaptation | Functional Role |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Display** | 36px | Bold (700) | 44px | 28px / 34px | Executive hero stats, high-level metrics |
-| **Headline-LG** | 28px | SemiBold (600) | 36px | 22px / 28px | Page titles, module headers, modal titles |
-| **Headline-MD** | 20px | SemiBold (600) | 28px | 18px / 24px | Card headers, section dividers, student names |
-| **Body-LG** | 16px | Regular (400) | 24px | 15px / 22px | Lead descriptions, syllabus lesson summaries |
-| **Body-MD** | 14px | Regular (400) | 20px | 14px / 20px | Standard data cells, input labels, form hints |
-| **Body-SM** | 12px | Regular (400) | 16px | 12px / 16px | Timestamps, secondary metadata, geofence radius |
-| **Label-MD** | 13px | SemiBold (600) | 18px | 12px / 16px | Table header columns, button labels, badge text |
-| **Data Tabular** | 14px | Regular / Med | 20px | 13px / 18px | `₦` Currency balances, NUBAN numbers, GPS coords |
-
----
-
-## 4. Geometry, Shapes & Spatial Rhythm
-
-The spatial model is strictly rooted in a **4px baseline grid**:
-- **Baseline Unit**: 4px
-- **Tight Stack (`stack-sm`)**: 8px (Inner badge padding, list item gaps)
-- **Standard Stack (`stack-md`)**: 16px (Card inner padding, form field spacing)
-- **Section Stack (`stack-lg`)**: 24px - 32px (Screen margins, header-to-content spacing)
-
-### Corner Radius System (Soft Architectural Logic)
-- **Sharp Small (`rounded-sm` / 2px)**: Data table cells, micro progress bars.
-- **Soft Standard (`rounded` / 4px)**: Buttons, text input fields, segmented control pills.
-- **Medium Card (`rounded-md` / 6px)**: Nested cards, coaching session cards, lab submission cards.
-- **Large Container (`rounded-lg` / 8px - 12px)**: Primary bento widgets, bottom sheets, mobile modal surfaces.
-- **Pill Shape (`rounded-full` / 9999px)**: Status badges (Active, Paid, Pending), user avatar frames, icon-button backdrops.
+### Color-Coded Semantic Intents (6-Color System)
+| Intent | Domain Examples | Top Accent Border | Hover Border | Icon Well & Badge |
+| :--- | :--- | :--- | :--- | :--- |
+| **`blue`** | Invoices, Leads, Admissions, General Actions | `border-t-2 border-t-blue-500` | `hover:border-blue-500/60` | `bg-blue-500/10 text-blue-600` |
+| **`amber`** | Pending Expenses, Budget Alerts, Grace Period | `border-t-2 border-t-amber-500` | `hover:border-amber-500/60` | `bg-amber-500/10 text-amber-600` |
+| **`sky`** | Faculty Payouts, Sessions, Office Hours | `border-t-2 border-t-sky-500` | `hover:border-sky-500/60` | `bg-sky-500/10 text-sky-600` |
+| **`emerald`** | Revenue, Cleared Payments, Attendance, Verified KYC | `border-t-2 border-t-emerald-500` | `hover:border-emerald-500/60` | `bg-emerald-500/10 text-emerald-600` |
+| **`red`** | Open/Urgent Tickets, Overdue Tuition, Rejections | `border-t-2 border-t-red-500` | `hover:border-red-500/60` | `bg-red-500/10 text-red-600` |
+| **`purple`** | Audit Logs, Roles, Governance, AI Scrum | `border-t-2 border-t-purple-500` | `hover:border-purple-500/60` | `bg-purple-500/10 text-purple-600` |
 
 ---
 
-## 5. Elevation, Depth & Tonal Layering
+## 3. Typography & Spatial Hierarchy
 
-Rather than relying on heavy, dark drop shadows that muddy data density, the Kinetic Enterprise system relies on **Tonal Layering** and **Crisp Low-Contrast Outlines**:
-
-- **Canvas (Layer 0)**: `#F7F9FB` — The foundational viewport backdrop.
-- **Card / Surface (Layer 1)**: `#FFFFFF` with `1px solid #E2E8F0` — Flat, stable containers for ledgers, attendance cards, and curricula.
-- **Floating / Interactive (Layer 2)**: `#FFFFFF` with `0 2px 8px -2px rgba(15, 23, 42, 0.06)` — Bottom navigation bar, floating action buttons, sticky attendance clock-in headers.
-- **Modal / Overlay (Layer 3)**: `#FFFFFF` with `0 12px 24px -4px rgba(15, 23, 42, 0.12)` + `#0F172A` backdrop at 45% opacity.
+- **Font Family:** `Figtree`, `'Proxima Nova'`, `Inter`, sans-serif.
+- **Page Header Title:** `text-2xl sm:text-3xl font-extrabold text-on-surface tracking-tight`
+- **Page Subtitle:** `text-xs sm:text-sm text-secondary mt-0.5`
+- **Card Hero Metric:** `text-2xl font-black text-on-surface font-data-tabular`
+- **Section Heading:** `text-sm sm:text-base font-bold text-on-surface` paired with a `20px` Material Symbol icon.
+- **Micro Labels & Eyebrows:** `text-xs font-bold uppercase tracking-wider text-secondary`
 
 ---
 
-## 6. Mobile Application Ergonomics & Component Patterns
+## 4. Geometry, Shapes & Component Primitives (`KineticUI.tsx`)
 
-### Bottom Navigation Architecture
-- Ergonomic 64px thumb-zone navigation bar with 4-5 core destinations:
-  - **Student Role**: Dashboard (`Home`), Syllabus (`LMS`), Mentorship (`1-on-1`), Billing (`Tuition`), Profile.
-  - **Mentor Role**: Dashboard (`Home`), Assigned Mentees (`Students`), Grading (`Labs`), Earnings (`37% Share`), Profile.
-  - **Staff / Admin Role**: Overview (`Stats`), Attendance (`GPS Clock-In`), Requisitions (`OpEx`), Leads (`Kanban`), Profile.
-- Active tab indicated by `#1E3A8A` tint with a 4px accent dot indicator.
+| Primitive | Radius | Sizing | Signature Pattern |
+| :--- | :--- | :--- | :--- |
+| **`PageHeader`** | Open (unboxed) | `pb-3 border-b border-outline-variant/60` | Top live status pill (`rounded-full`) + right-aligned action group |
+| **`SemanticMetricCard`** | `rounded-xl` (12px) | `p-4` | `border-t-2 border-t-{color}-500` + `hover:border-{color}-500/60 hover:shadow-md` + `group-hover:scale-110` icon well |
+| **`ActionTile`** | `rounded-lg` (8px) | `p-3` | `border-outline-variant/80 hover:border-{color}-500 hover:bg-{color}-500/5` |
+| **`SectionCard`** | `rounded-xl` (12px) | `p-4 sm:p-5` | Internal header bar with `pb-3 border-b border-outline-variant/60 mb-3` |
+| **Buttons** | `rounded-lg` (8px) | `px-3.5 py-2` / `h-9` | Primary (`bg-primary text-white text-xs font-bold`) & Secondary (`bg-surface border border-outline-variant text-on-surface text-xs font-semibold`) |
+| **Filter Pills** | `rounded-lg` (8px) | `px-2.5 py-1.5` | `bg-surface-container-low border border-outline-variant text-xs` with leading `16px` Material Symbol |
+| **Icons** | — | `16px`–`20px` | **Exclusively Google Material Symbols Outlined** (`material-symbols-outlined`) |
 
-### Touch Targets & Form Rhythm
-- Minimum touch target size: **48 × 48px** for all interactive buttons, checkboxes, and tabs.
-- Form inputs standardize on a **48px height** on mobile for smooth thumb typing.
-- Numeric inputs (NUBAN, tuition amount, phone number) automatically invoke the platform `number-pad` or `decimal-pad`.
+---
 
-### Mobile Proof of Payment & Document Capture
-- Clean dashed upload zones with direct camera capture and photo gallery picker.
-- Instant file preview thumbnail with file size and format validation (PNG, JPG, PDF up to 10MB).
-
-### Native Haptic Feedback & Transitions
-- Light haptic tap (`expo-haptics`) on tab switching, successful GPS attendance clock-in, and Paystack payment completion.
-- Smooth spring transitions between screen stacks using Expo Router layout animations.
+## 5. Motion, Modals & Accessibility
+- **Page Entrance:** `animate-in fade-in duration-200` on every root page container.
+- **Tactile Press:** `active:scale-[0.985]` on buttons and interactive cards.
+- **Modals:** Bounded dynamically via `max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-3rem)]` with `my-auto` safe centering and pinned `shrink-0` headers/footers.
+- **Reduced Motion:** Full `prefers-reduced-motion: reduce` support in `src/index.css`.

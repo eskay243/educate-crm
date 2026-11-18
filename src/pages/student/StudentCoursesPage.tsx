@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useCRM } from '../../context/CRMContext';
 import { LMSLesson, LMSModule } from '../../types/crm';
 import { getStudentEnrolledModules } from '../../utils/courseCurriculum';
+import { PageHeader } from '../../components/common/KineticUI';
 
 export const StudentCoursesPage: React.FC = () => {
   const { 
@@ -169,63 +170,57 @@ export const StudentCoursesPage: React.FC = () => {
   const nextItem = currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null;
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-200">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-outline-variant pb-5">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary mb-1">
-            <span className="material-symbols-outlined text-sm">local_library</span>
-            <span>Structured LMS Classroom</span>
-          </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-on-surface">
-            {activeModule?.courseTitle || 'Curriculum Syllabus'}
-          </h1>
-          <p className="text-xs md:text-sm text-on-surface-variant mt-0.5">
-            Module {activeModule?.order || 1}: {activeModule?.title}
-          </p>
-        </div>
+      <PageHeader
+        title={activeModule?.courseTitle || 'Curriculum Syllabus'}
+        subtitle={`Module ${activeModule?.order || 1}: ${activeModule?.title || ''}`}
+        badgeText="Structured LMS Classroom"
+        badgeIntent="blue"
+        badgePulse
+        actions={
+          <>
+            <button
+              onClick={() => setShowTimetableModal(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-bold text-xs transition-colors shadow-xs bg-primary text-white hover:bg-primary-hover cursor-pointer"
+              title="View Cohort Timetable & Scheduled Lectures"
+            >
+              <span className="material-symbols-outlined text-[18px]">calendar_month</span>
+              <span>Class Timetable ({cohortTimetable.length})</span>
+            </button>
 
-        <div className="flex items-center gap-3 flex-wrap">
-          <button
-            onClick={() => setShowTimetableModal(true)}
-            className="px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs bg-primary text-on-primary hover:bg-primary/90 cursor-pointer"
-            title="View Cohort Timetable & Scheduled Lectures"
-          >
-            <span className="material-symbols-outlined text-[18px]">calendar_month</span>
-            <span>Class Timetable ({cohortTimetable.length})</span>
-          </button>
+            <button
+              onClick={() => openModal('view-certificate')}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-bold text-xs transition-colors shadow-xs cursor-pointer ${
+                student.certificateIssued
+                  ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                  : (student.attendedLearningHours || 0) >= (student.minimumRequiredHours || settings.defaultMinimumLearningHours || 40) && (student.progressPercent || 0) >= 100
+                  ? 'bg-primary text-white hover:bg-primary-hover'
+                  : 'bg-surface border border-outline-variant text-secondary hover:text-on-surface hover:bg-surface-container-high'
+              }`}
+              title="Academic Certificate of Completion"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                {student.certificateIssued ? 'workspace_premium' : 'verified'}
+              </span>
+              <span>
+                {student.certificateIssued ? 'View Certificate' : (student.progressPercent || 0) >= 100 ? 'Claim Certificate' : 'Graduation Gate'}
+              </span>
+            </button>
 
-          <button
-            onClick={() => openModal('view-certificate')}
-            className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer ${
-              student.certificateIssued
-                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                : (student.attendedLearningHours || 0) >= (student.minimumRequiredHours || settings.defaultMinimumLearningHours || 40) && (student.progressPercent || 0) >= 100
-                ? 'bg-primary text-on-primary hover:bg-primary/90'
-                : 'bg-surface-container border border-outline-variant text-secondary hover:text-on-surface'
-            }`}
-            title="Academic Certificate of Completion"
-          >
-            <span className="material-symbols-outlined text-[18px]">
-              {student.certificateIssued ? 'workspace_premium' : 'verified'}
-            </span>
-            <span>
-              {student.certificateIssued ? 'View Certificate' : (student.progressPercent || 0) >= 100 ? 'Claim Certificate' : 'Graduation Gate'}
-            </span>
-          </button>
-
-          {/* Progress pill */}
-          <div className="flex items-center gap-3 bg-surface-container px-4 py-2.5 rounded-xl border border-outline-variant">
-            <div className="text-right">
-              <div className="text-xs text-on-surface-variant font-medium">Academic Track Progress</div>
-              <div className="text-sm font-extrabold text-on-surface">{student.progressPercent || 33}% Completed</div>
+            {/* Progress pill */}
+            <div className="flex items-center gap-2.5 bg-surface px-3 py-1.5 rounded-lg border border-outline-variant border-t-2 border-t-emerald-500 shadow-xs">
+              <div className="text-right">
+                <div className="text-[10px] text-secondary font-semibold">Track Progress</div>
+                <div className="text-xs font-extrabold text-on-surface font-data-tabular">{student.progressPercent || 33}% Done</div>
+              </div>
+              <div className="w-9 h-9 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-extrabold text-xs border border-emerald-500/30 font-data-tabular">
+                {student.progressPercent || 33}%
+              </div>
             </div>
-            <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-extrabold text-sm border-2 border-primary">
-              {student.progressPercent || 33}%
-            </div>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Main Classroom Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
 import { LMSLesson, CourseDurationTrack, CourseProgram } from '../types/crm';
 import { getStudentEnrolledModules } from '../utils/courseCurriculum';
+import { PageHeader } from '../components/common/KineticUI';
 
 export const CourseOutlinePage: React.FC = () => {
   const { 
@@ -372,42 +373,23 @@ export const CourseOutlinePage: React.FC = () => {
       </div>
 
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-xs">
-              <span className="material-symbols-outlined text-[26px]">account_tree</span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="font-headline-md text-headline-md font-bold text-on-surface">
-                  NBTE &amp; NITDA Course Outlines &amp; Learning Guidelines
-                </h1>
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                  NBTE / NSQF Aligned
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200">
-                  NITDA 3MTT Framework
-                </span>
-              </div>
-              <p className="text-secondary font-body-sm text-body-sm mt-0.5">
-                Curriculum syllabus breakdown, weekly learning guidelines, statutory teaching logbook, and Program Officer accreditation sign-off.
-              </p>
-            </div>
+      <PageHeader
+        title="NBTE & NITDA Course Outlines & Guidelines"
+        subtitle="Curriculum syllabus breakdown, weekly learning guidelines, statutory teaching logbook, and Program Officer accreditation sign-off."
+        badgeText="NBTE / NSQF & NITDA 3MTT Aligned"
+        badgeIntent="emerald"
+        badgePulse
+        actions={
+          <div className="hidden lg:flex items-center gap-2 bg-surface border border-outline-variant rounded-lg px-3 py-2 shadow-xs text-xs">
+            <span className="font-bold text-on-surface">Workflow:</span>
+            <span className="px-2 py-0.5 rounded bg-surface-container text-secondary font-medium">1. PO Guidelines</span>
+            <span className="material-symbols-outlined text-[12px] text-secondary">arrow_forward</span>
+            <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-700 font-bold border border-amber-500/20">2. Mentor Log</span>
+            <span className="material-symbols-outlined text-[12px] text-secondary">arrow_forward</span>
+            <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 font-bold border border-emerald-500/20">3. PO Accredit</span>
           </div>
-        </div>
-
-        {/* 3-Way Handshake Guide Pill */}
-        <div className="hidden lg:flex items-center gap-2 bg-surface border border-outline-variant rounded-xl p-2.5 shadow-xs text-xs">
-          <span className="font-bold text-on-surface">Workflow:</span>
-          <span className="px-2 py-0.5 rounded bg-surface-container text-secondary">1. PO Guidelines</span>
-          <span className="material-symbols-outlined text-[12px] text-secondary">arrow_forward</span>
-          <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 font-medium border border-amber-200">2. Mentor Log</span>
-          <span className="material-symbols-outlined text-[12px] text-secondary">arrow_forward</span>
-          <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-medium border border-emerald-200">3. PO Accredit &amp; Publish</span>
-        </div>
-      </div>
+        }
+      />
 
       {/* Mentor Multi-Course Quick Switcher */}
       {isMentor && (

@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useCRM, formatNaira } from '../context/CRMContext';
 import { CrispStatusBadge } from '../components/common/CrispStatusBadge';
+import { PageHeader, SemanticMetricCard } from '../components/common/KineticUI';
 import { Student360Dossier } from '../components/student/Student360Dossier';
 
 export interface StudentEnrollmentPageProps {}
@@ -184,147 +185,112 @@ export const StudentEnrollmentPage: React.FC<StudentEnrollmentPageProps> = () =>
       )}
 
       {/* Global Page Header & Mode Switcher */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface-container-lowest p-stack-md rounded-xl border border-outline-variant shadow-xs">
-        <div>
-          <h2 className="font-headline-lg text-headline-lg font-bold text-on-surface flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary text-[26px]">school</span>
-            <span>Student Directory &amp; Tuition Ledger</span>
-          </h2>
-          <p className="text-xs text-secondary mt-0.5">
-            Manage student registrations, academic progression, and tuition installment verification.
-          </p>
-        </div>
+      <PageHeader
+        title="Student Directory & Tuition Ledger"
+        subtitle="Manage student registrations, academic progression, and tuition installment verification."
+        badgeText="Admissions & Bursary Ledger"
+        badgeIntent="blue"
+        actions={
+          <>
+            {/* View Mode Toggle */}
+            <div className="inline-flex rounded-lg border border-outline-variant bg-surface p-0.5 shadow-xs">
+              <button
+                onClick={() => setViewMode('table')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                  viewMode === 'table'
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'text-secondary hover:text-on-surface'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">format_list_bulleted</span>
+                <span>List View ({displayedStudents.length})</span>
+              </button>
+              <button
+                onClick={() => setViewMode('detail')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                  viewMode === 'detail'
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'text-secondary hover:text-on-surface'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">person</span>
+                <span>Dossier View</span>
+              </button>
+            </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* View Mode Toggle */}
-          <div className="inline-flex rounded-lg border border-outline-variant bg-surface p-0.5">
-            <button
-              onClick={() => setViewMode('table')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                viewMode === 'table'
-                  ? 'bg-primary text-on-primary shadow-xs'
-                  : 'text-secondary hover:text-on-surface'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[16px]">format_list_bulleted</span>
-              <span>List View ({displayedStudents.length})</span>
-            </button>
-            <button
-              onClick={() => setViewMode('detail')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                viewMode === 'detail'
-                  ? 'bg-primary text-on-primary shadow-xs'
-                  : 'text-secondary hover:text-on-surface'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[16px]">person</span>
-              <span>Dossier View</span>
-            </button>
-          </div>
-
-          {canEnroll && (
-            <button 
-              onClick={() => openModal('enroll-student')}
-              className="h-9 px-4 bg-primary text-on-primary rounded-lg font-label-md text-xs font-bold hover:bg-primary/90 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[18px]">person_add</span>
-              <span>+ Enroll Student</span>
-            </button>
-          )}
-        </div>
-      </div>
+            {canEnroll && (
+              <button 
+                onClick={() => openModal('enroll-student')}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary-hover transition-colors shadow-xs cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">person_add</span>
+                <span>Enroll Student</span>
+              </button>
+            )}
+          </>
+        }
+      />
 
       {/* ========================================================================= */}
       {/* LIST / TABLE VIEW                                                         */}
       {/* ========================================================================= */}
       {viewMode === 'table' && (
-        <div className="space-y-stack-md animate-in fade-in duration-150">
-          {/* Summary Metric Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-stack-md">
-            <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md shadow-xs flex items-center justify-between">
-              <div>
-                <span className="text-xs text-secondary font-semibold">Total Students</span>
-                <div className="text-headline-md font-bold text-on-surface font-data-tabular mt-0.5">
-                  {displayedStudents.length}
-                </div>
-                <span className="text-[11px] text-emerald-600 font-semibold flex items-center gap-0.5 mt-0.5">
-                  <span className="material-symbols-outlined text-[13px]">check_circle</span>
-                  <span>{activeCount} Active Enrolled</span>
-                </span>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                <span className="material-symbols-outlined text-[22px]">group</span>
-              </div>
-            </div>
-
-            <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md shadow-xs flex items-center justify-between">
-              <div>
-                <span className="text-xs text-secondary font-semibold">Avg. Academic Progress</span>
-                <div className="text-headline-md font-bold text-primary font-data-tabular mt-0.5">
-                  {avgProgress}%
-                </div>
-                <span className="text-[11px] text-secondary font-medium">Curriculum completion</span>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-secondary-container text-primary flex items-center justify-center">
-                <span className="material-symbols-outlined text-[22px]">trending_up</span>
-              </div>
-            </div>
-
+        <div className="space-y-4 animate-in fade-in duration-150">
+          {/* Summary Metric Cards - Color-Coded Semantic Borders */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <SemanticMetricCard
+              label="Total Students"
+              value={displayedStudents.length}
+              icon="group"
+              intent="blue"
+              badge={`${activeCount} Active`}
+              subtitle="Enrolled across cohorts"
+            />
+            <SemanticMetricCard
+              label="Avg. Academic Progress"
+              value={`${avgProgress}%`}
+              icon="trending_up"
+              intent="sky"
+              badge="Curriculum"
+              subtitle="Average syllabus completion"
+            />
             {!isMentor ? (
               <>
-                <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md shadow-xs flex items-center justify-between">
-                  <div>
-                    <span className="text-xs text-secondary font-semibold">Tuition Collected</span>
-                    <div className="text-headline-md font-bold text-emerald-600 font-data-tabular mt-0.5">
-                      {formatNaira(totalPaid)}
-                    </div>
-                    <span className="text-[11px] text-secondary font-medium">Settled to Institute</span>
-                  </div>
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[22px]">payments</span>
-                  </div>
-                </div>
-
-                <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md shadow-xs flex items-center justify-between">
-                  <div>
-                    <span className="text-xs text-secondary font-semibold">Outstanding Balance</span>
-                    <div className="text-headline-md font-bold text-amber-600 font-data-tabular mt-0.5">
-                      {formatNaira(totalBalance)}
-                    </div>
-                    <span className="text-[11px] text-amber-700 font-semibold">Pending installments</span>
-                  </div>
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[22px]">account_balance_wallet</span>
-                  </div>
-                </div>
+                <SemanticMetricCard
+                  label="Tuition Collected"
+                  value={formatNaira(totalPaid)}
+                  icon="payments"
+                  intent="emerald"
+                  badge="Settled"
+                  subtitle="Settled to Institute"
+                />
+                <SemanticMetricCard
+                  label="Outstanding Balance"
+                  value={formatNaira(totalBalance)}
+                  icon="account_balance_wallet"
+                  intent="amber"
+                  badge="Pending"
+                  subtitle="Pending installments"
+                />
               </>
             ) : (
               <>
-                <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md shadow-xs flex items-center justify-between">
-                  <div>
-                    <span className="text-xs text-secondary font-semibold">Assigned Cohorts</span>
-                    <div className="text-headline-md font-bold text-on-surface font-data-tabular mt-0.5">
-                      {new Set(displayedStudents.map(s => s.cohort)).size}
-                    </div>
-                    <span className="text-[11px] text-secondary font-medium">Active tracks</span>
-                  </div>
-                  <div className="w-10 h-10 rounded-xl bg-tertiary-container text-tertiary flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[22px]">diversity_3</span>
-                  </div>
-                </div>
-
-                <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md shadow-xs flex items-center justify-between">
-                  <div>
-                    <span className="text-xs text-secondary font-semibold">Completed Certificates</span>
-                    <div className="text-headline-md font-bold text-emerald-600 font-data-tabular mt-0.5">
-                      {displayedStudents.filter(s => s.certificateIssued).length}
-                    </div>
-                    <span className="text-[11px] text-secondary font-medium">Graduates verified</span>
-                  </div>
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[22px]">workspace_premium</span>
-                  </div>
-                </div>
+                <SemanticMetricCard
+                  label="Assigned Cohorts"
+                  value={new Set(displayedStudents.map(s => s.cohort)).size}
+                  icon="diversity_3"
+                  intent="purple"
+                  badge="Active Tracks"
+                  subtitle="Assigned mentoring groups"
+                />
+                <SemanticMetricCard
+                  label="Completed Certificates"
+                  value={displayedStudents.filter(s => s.certificateIssued).length}
+                  icon="workspace_premium"
+                  intent="emerald"
+                  badge="Verified"
+                  subtitle="Graduates verified"
+                />
               </>
             )}
           </div>

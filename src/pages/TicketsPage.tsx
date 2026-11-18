@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
 import { TicketCategory, TicketPriority, TicketStatus, TicketAttachment, SupportTicket } from '../types/crm';
 import { CrispStatusBadge } from '../components/common/CrispStatusBadge';
+import { PageHeader, SemanticMetricCard } from '../components/common/KineticUI';
 
 const formatTicketDateTime = (isoDate?: string) => {
   if (!isoDate) return 'Just now';
@@ -315,107 +316,70 @@ export const TicketsPage: React.FC = () => {
 
 
   return (
-    <div className="space-y-stack-lg animate-in fade-in duration-200">
+    <div className="space-y-6 animate-in fade-in duration-200">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface-container-lowest p-stack-md rounded-xl border border-outline-variant shadow-xs">
-        <div>
-          <h2 className="font-headline-lg text-headline-lg font-bold text-on-surface flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary text-[28px]">confirmation_number</span>
-            <span>Support &amp; Feedback Hub</span>
-          </h2>
-          <p className="text-xs text-secondary mt-0.5">
-            Log complaints, submit bug reports, raise observations, and suggest features for app improvement.
-          </p>
-        </div>
+      <PageHeader
+        title="Support & Feedback Hub"
+        subtitle="Log complaints, submit bug reports, raise observations, and suggest features for app improvement."
+        badgeText="Institutional Support Desk"
+        badgeIntent="red"
+        badgePulse={stats.open > 0 || stats.userReplied > 0}
+        actions={
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary-hover transition-colors shadow-xs cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[18px]">add_circle</span>
+            <span>Raise Support Ticket</span>
+          </button>
+        }
+      />
 
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="h-10 px-5 bg-primary text-on-primary rounded-lg font-label-md text-xs font-bold hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-xs cursor-pointer"
-        >
-          <span className="material-symbols-outlined text-[18px]">add_circle</span>
-          <span>Raise Support Ticket</span>
-        </button>
-      </div>
-
-      {/* Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-stack-md">
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-xs text-secondary font-semibold">Total Tickets</span>
-            <div className="text-headline-md font-bold text-on-surface font-data-tabular mt-0.5">
-              {stats.total}
-            </div>
-            <span className="text-[11px] text-secondary font-medium">All recorded items</span>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-            <span className="material-symbols-outlined text-[22px]">confirmation_number</span>
-          </div>
-        </div>
-
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-xs text-secondary font-semibold">Open Issues</span>
-            <div className="text-headline-md font-bold text-amber-600 font-data-tabular mt-0.5">
-              {stats.open}
-            </div>
-            <span className="text-[11px] text-amber-700 font-semibold">Awaiting triage</span>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
-            <span className="material-symbols-outlined text-[22px]">pending_actions</span>
-          </div>
-        </div>
-
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-xs text-secondary font-semibold">In Progress</span>
-            <div className="text-headline-md font-bold text-blue-600 font-data-tabular mt-0.5">
-              {stats.inProgress}
-            </div>
-            <span className="text-[11px] text-blue-700 font-semibold">Under active resolution</span>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
-            <span className="material-symbols-outlined text-[22px]">published_with_changes</span>
-          </div>
-        </div>
-
-        <div
+      {/* Metric Cards - Color-Coded Semantic Borders */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <SemanticMetricCard
+          label="Total Tickets"
+          value={stats.total}
+          icon="confirmation_number"
+          intent="purple"
+          badge="All Logged"
+          subtitle="All recorded items"
+        />
+        <SemanticMetricCard
+          label="Open Issues"
+          value={stats.open}
+          icon="pending_actions"
+          intent="amber"
+          badge="Awaiting Triage"
+          subtitle="Queued for review"
+        />
+        <SemanticMetricCard
+          label="In Progress"
+          value={stats.inProgress}
+          icon="published_with_changes"
+          intent="blue"
+          badge="Active"
+          subtitle="Under active resolution"
+        />
+        <SemanticMetricCard
+          label="User Replied"
+          value={stats.userReplied}
+          icon="mark_chat_unread"
+          intent="red"
+          badge={stats.userReplied > 0 ? 'Needs Reply' : 'All Read'}
+          badgePulse={stats.userReplied > 0}
+          subtitle={stats.userReplied > 0 ? 'Click to filter replies' : 'All replies read'}
           onClick={() => { setViewMode('active'); setActiveTab(activeTab === 'needs_reply' ? 'all' : 'needs_reply'); setCurrentPage(1); }}
-          className={`rounded-xl p-stack-md shadow-xs flex items-center justify-between cursor-pointer transition-all border ${
-            stats.userReplied > 0
-              ? 'bg-rose-50/70 border-rose-300 hover:border-rose-500 ring-1 ring-rose-500/20'
-              : 'bg-surface-container-lowest border-outline-variant hover:border-primary/40'
-          }`}
-          title="Click to filter tickets where a user has replied and needs your attention"
-        >
-          <div>
-            <span className="text-xs text-rose-700 font-bold flex items-center gap-1">
-              {stats.userReplied > 0 && <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping" />}
-              <span>User Replied</span>
-            </span>
-            <div className="text-headline-md font-bold text-rose-600 font-data-tabular mt-0.5">
-              {stats.userReplied}
-            </div>
-            <span className="text-[11px] text-rose-700 font-semibold">
-              {stats.userReplied > 0 ? 'Needs staff response' : 'All replies read'}
-            </span>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-rose-500/15 text-rose-600 flex items-center justify-center">
-            <span className="material-symbols-outlined text-[22px]">mark_chat_unread</span>
-          </div>
-        </div>
-
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-xs text-secondary font-semibold">Resolved</span>
-            <div className="text-headline-md font-bold text-emerald-600 font-data-tabular mt-0.5">
-              {stats.resolved}
-            </div>
-            <span className="text-[11px] text-emerald-700 font-semibold">Completed &amp; closed</span>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
-            <span className="material-symbols-outlined text-[22px]">task_alt</span>
-          </div>
-        </div>
+          className={stats.userReplied > 0 ? 'ring-1 ring-red-500/20 bg-red-50/30' : ''}
+        />
+        <SemanticMetricCard
+          label="Resolved"
+          value={stats.resolved}
+          icon="task_alt"
+          intent="emerald"
+          badge="Closed"
+          subtitle="Completed & archived"
+        />
       </div>
 
       {/* Top View Toggle: Active Desk vs Archived Declutter */}

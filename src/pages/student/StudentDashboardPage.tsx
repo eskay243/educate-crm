@@ -209,19 +209,19 @@ export const StudentDashboardPage: React.FC = () => {
 
       {/* Recommended Password Reset Banner */}
       {(student.mustResetPassword || (currentUser as any)?.mustResetPassword) && (
-        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-950 dark:text-amber-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shadow-xs animate-in fade-in">
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 border-t-2 border-t-amber-500 text-amber-950 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shadow-xs animate-in fade-in">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-amber-500/15 text-amber-700 flex items-center justify-center shrink-0">
               <span className="material-symbols-outlined text-[24px]">lock_reset</span>
             </div>
             <div>
-              <h4 className="font-bold text-sm text-amber-950 dark:text-amber-100 flex items-center gap-2">
+              <h4 className="font-bold text-sm text-amber-950 flex items-center gap-2">
                 <span>Action Recommended: Update Your Default Password</span>
-                <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300 text-[10px] font-bold">
+                <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-800 text-[10px] font-bold">
                   Security Advisory
                 </span>
               </h4>
-              <p className="text-secondary dark:text-secondary text-xs leading-relaxed">
+              <p className="text-secondary text-xs leading-relaxed">
                 You are currently using your temporary admission password. For your account security, we recommend setting a personal password.
               </p>
             </div>

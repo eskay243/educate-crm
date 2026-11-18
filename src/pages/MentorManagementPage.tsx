@@ -5,6 +5,7 @@ import { MentorStatus, Student, Mentor } from '../types/crm';
 import { PerformanceMeter } from '../components/common/PerformanceMeter';
 import { StudentWelfareInterventionModal } from '../components/modals/StudentWelfareInterventionModal';
 import { CrispStatusBadge } from '../components/common/CrispStatusBadge';
+import { PageHeader, SemanticMetricCard } from '../components/common/KineticUI';
 import { TransferTasksAndDeleteModal } from '../components/modals/TransferTasksAndDeleteModal';
 import { MentorReconciliationTab } from '../components/mentors/MentorReconciliationTab';
 
@@ -262,202 +263,169 @@ export const MentorManagementPage: React.FC = () => {
       </div>
 
       {/* Page Header */}
-      <div className="flex justify-between items-end flex-wrap gap-4">
-        <div>
-          <h2 className="font-headline-lg text-headline-lg font-bold text-on-surface mb-unit">
-            {isMentor ? 'Faculty Mentorship & Sessions' : 'Faculty Mentors & 1-on-1 Sessions'}
-          </h2>
-          <p className="font-body-md text-body-md text-secondary">
-            {isMentor 
-              ? 'Log 1-on-1 student coaching hours, view assigned student mentees, and track 37% enrollment commission payouts in ₦.'
-              : 'Manage faculty assignments, 37% student enrollment commissions, and tuition share payouts.'}
-          </p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <Link
-            to="/mentors/course-outlines"
-            className="btn-secondary h-10 px-3.5 text-xs"
-            title="Review Course Outlines and Mark Completed Syllabus Topics"
-          >
-            <span className="material-symbols-outlined text-primary text-[18px]">account_tree</span>
-            <span>Course Outlines</span>
-          </Link>
-          <button
-            onClick={() => {
-              setSelectedMentorForBookingId(isMentor ? (myMentorProfile?.id || null) : null);
-              openModal('book-session');
-            }}
-            className="btn-secondary h-10 px-3.5 text-xs"
-          >
-            <span className="material-symbols-outlined text-primary text-[18px]">calendar_month</span>
-            <span>+ Log 1-on-1 Session</span>
-          </button>
-          <button
-            onClick={() => openModal('submit-performance-report')}
-            className="btn-secondary h-10 px-3.5 text-xs"
-          >
-            <span className="material-symbols-outlined text-sea-green text-[18px]">assessment</span>
-            <span>+ File Evaluation Report</span>
-          </button>
-          <Link
-            to="/mentors/office-hours"
-            className="btn-secondary h-10 px-3 text-xs"
-            title="Configure weekly office hours and self-booking slots"
-          >
-            <span className="material-symbols-outlined text-[18px]">schedule</span>
-            <span>Office Hours</span>
-          </Link>
-          <Link
-            to="/mentors/grading"
-            className="btn-secondary h-10 px-3 text-xs"
-            title="Review student assignments and score rubrics"
-          >
-            <span className="material-symbols-outlined text-[18px]">fact_check</span>
-            <span>Grading Inbox</span>
-          </Link>
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedStudentForWelfare(null);
-              setIsWelfareModalOpen(true);
-            }}
-            className="btn-danger h-10 px-3.5 text-xs"
-            title="Flag an at-risk student mentee for immediate academic & welfare intervention"
-          >
-            <span className="material-symbols-outlined text-[18px]">emergency_home</span>
-            <span>🚨 Flag At-Risk</span>
-          </button>
-          {isMentor && myMentorProfile && (
-            <button
-              onClick={() => openMentorProfileModal(myMentorProfile)}
-              className="btn-secondary h-10 px-3.5 text-xs font-bold"
-              title="View my complete Faculty 360° Academic Dossier"
+      <PageHeader
+        title={isMentor ? 'Faculty Mentorship & Sessions' : 'Faculty Mentors & 1-on-1 Sessions'}
+        subtitle={
+          isMentor
+            ? 'Log 1-on-1 student coaching hours, view assigned student mentees, and track 37% enrollment commission payouts in ₦.'
+            : 'Manage faculty assignments, 37% student enrollment commissions, and tuition share payouts.'
+        }
+        badgeText="Faculty Operations"
+        badgeIntent="sky"
+        badgePulse
+        actions={
+          <>
+            <Link
+              to="/mentors/course-outlines"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-surface border border-outline-variant text-on-surface hover:bg-surface-container-high transition-colors shadow-xs"
+              title="Review Course Outlines and Mark Completed Syllabus Topics"
             >
-              <span className="material-symbols-outlined text-primary text-[18px]">assignment_ind</span>
-              <span>My 360° Profile</span>
-            </button>
-          )}
-          {isMentor && (
+              <span className="material-symbols-outlined text-primary text-[18px]">account_tree</span>
+              <span>Outlines</span>
+            </Link>
             <button
-              onClick={() => openModal('request-payout')}
-              className="btn-primary h-10 px-3.5 text-xs"
-              title="Request withdrawal of your accrued 37% commission"
+              onClick={() => {
+                setSelectedMentorForBookingId(isMentor ? (myMentorProfile?.id || null) : null);
+                openModal('book-session');
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-surface border border-outline-variant text-on-surface hover:bg-surface-container-high transition-colors shadow-xs cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[18px]">payments</span>
-              <span>Request Payout</span>
+              <span className="material-symbols-outlined text-sky-600 text-[18px]">calendar_month</span>
+              <span>Log 1-on-1</span>
             </button>
-          )}
-          {isSuperAdmin && (
-            <>
-              <Link
-                to="/mentor/dashboard"
-                className="btn-secondary h-10 px-3.5 text-xs flex items-center gap-1.5"
-                title="Open the dedicated Faculty Mentor Portal as Super Admin"
-              >
-                <span className="material-symbols-outlined text-[18px] text-primary">space_dashboard</span>
-                <span>Preview Faculty Portal</span>
-              </Link>
+            <button
+              onClick={() => openModal('submit-performance-report')}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-surface border border-outline-variant text-on-surface hover:bg-surface-container-high transition-colors shadow-xs cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-emerald-600 text-[18px]">assessment</span>
+              <span>Evaluation</span>
+            </button>
+            <Link
+              to="/mentors/office-hours"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-surface border border-outline-variant text-on-surface hover:bg-surface-container-high transition-colors shadow-xs"
+              title="Configure weekly office hours and self-booking slots"
+            >
+              <span className="material-symbols-outlined text-secondary text-[18px]">schedule</span>
+              <span>Office Hours</span>
+            </Link>
+            <Link
+              to="/mentors/grading"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-surface border border-outline-variant text-on-surface hover:bg-surface-container-high transition-colors shadow-xs"
+              title="Review student assignments and score rubrics"
+            >
+              <span className="material-symbols-outlined text-secondary text-[18px]">fact_check</span>
+              <span>Grading</span>
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedStudentForWelfare(null);
+                setIsWelfareModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg bg-error hover:bg-red-700 text-white transition-colors shadow-xs cursor-pointer"
+              title="Flag an at-risk student mentee for immediate academic & welfare intervention"
+            >
+              <span className="material-symbols-outlined text-[18px]">emergency_home</span>
+              <span>Flag At-Risk</span>
+            </button>
+            {isMentor && myMentorProfile && (
               <button
-                onClick={() => openModal('recruit-mentor')}
-                className="btn-primary h-10 px-3.5 text-xs"
+                onClick={() => openMentorProfileModal(myMentorProfile)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg bg-surface border border-outline-variant text-on-surface hover:bg-surface-container-high transition-colors shadow-xs cursor-pointer"
+                title="View my complete Faculty 360° Academic Dossier"
               >
-                <span className="material-symbols-outlined text-[18px]">person_add</span>
-                <span>Recruit Faculty Mentor</span>
+                <span className="material-symbols-outlined text-primary text-[18px]">assignment_ind</span>
+                <span>My 360°</span>
               </button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* 4 Bento Summary Widgets */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
-        <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs">
-          <div className="flex justify-between items-start mb-stack-md">
-            <div className="w-10 h-10 rounded bg-secondary-container flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined">supervisor_account</span>
-            </div>
-            <span className="text-xs font-bold text-[#166534] bg-[#dcfce7] px-2 py-1 rounded">Active</span>
-          </div>
-          <p className="font-body-sm text-body-sm text-secondary mb-unit">
-            {isMentor ? 'My Faculty Status' : 'Total Faculty Pool'}
-          </p>
-          <h3 className="font-display text-display font-bold text-on-surface">
-            {isMentor ? (myMentorProfile?.status || 'Active') : `${filteredMentors.length} Mentors`}
-          </h3>
-        </div>
-
-        <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs">
-          <div className="flex justify-between items-start mb-stack-md">
-            <div className="w-10 h-10 rounded bg-primary-container flex items-center justify-center text-on-primary">
-              <span className="material-symbols-outlined">forum</span>
-            </div>
-            <span className="text-xs font-bold text-primary bg-secondary-container px-2 py-1 rounded font-data-tabular">
-              {totalHoursLogged} Hours Logged
-            </span>
-          </div>
-          <p className="font-body-sm text-body-sm text-secondary mb-unit">
-            {isMentor ? 'My 1-on-1 Coaching Sessions' : 'Total Sessions Conducted'}
-          </p>
-          <h3 className="font-display text-display font-bold text-on-surface">{totalSessionsLogged} Sessions</h3>
-        </div>
-
-        <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs">
-          <div className="flex justify-between items-start mb-stack-md">
-            <div className="w-10 h-10 rounded bg-emerald-100 text-emerald-800 flex items-center justify-center">
-              <span className="material-symbols-outlined">timer</span>
-            </div>
-            {isMentor ? (
-              (myMentorProfile?.lecturedHours || 0) >= (myMentorProfile?.minimumRequiredHours || settings.mentorMinimumLecturedHours || 20) ? (
-                <span className="text-[10px] font-bold text-[#166534] bg-[#dcfce7] px-2 py-0.5 rounded">Eligible</span>
-              ) : (
-                <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">Under Hours</span>
-              )
-            ) : (
-              <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-1 rounded font-data-tabular">
-                {settings.mentorMinimumLecturedHours || 20}h Target
-              </span>
             )}
-          </div>
-          <p className="font-body-sm text-body-sm text-secondary mb-unit">
-            {isMentor ? 'Class Lecturing Hours' : 'Faculty Lecturing Hours'}
-          </p>
-          <div className="flex items-baseline gap-1">
-            <h3 className="font-display text-display font-bold text-on-surface font-data-tabular">
-              {isMentor
-                ? `${(myMentorProfile?.lecturedHours || 0).toFixed(1)} / ${(myMentorProfile?.minimumRequiredHours || settings.mentorMinimumLecturedHours || 20).toFixed(0)}h`
-                : `${mentors.reduce((acc, m) => acc + (m.lecturedHours || 0), 0).toFixed(1)}h Total`}
-            </h3>
-          </div>
-        </div>
+            {isMentor && (
+              <button
+                onClick={() => openModal('request-payout')}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-lg bg-primary hover:bg-primary-hover text-white transition-colors shadow-xs cursor-pointer"
+                title="Request withdrawal of your accrued 37% commission"
+              >
+                <span className="material-symbols-outlined text-[18px]">payments</span>
+                <span>Request Payout</span>
+              </button>
+            )}
+            {isSuperAdmin && (
+              <>
+                <Link
+                  to="/mentor/dashboard"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-surface border border-outline-variant text-on-surface hover:bg-surface-container-high transition-colors shadow-xs"
+                  title="Open the dedicated Faculty Mentor Portal as Super Admin"
+                >
+                  <span className="material-symbols-outlined text-[18px] text-primary">space_dashboard</span>
+                  <span>Faculty Portal</span>
+                </Link>
+                <button
+                  onClick={() => openModal('recruit-mentor')}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-lg bg-primary hover:bg-primary-hover text-white transition-colors shadow-xs cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">person_add</span>
+                  <span>Recruit Mentor</span>
+                </button>
+              </>
+            )}
+          </>
+        }
+      />
 
-        <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs">
-          <div className="flex justify-between items-start mb-stack-md">
-            <div className="w-10 h-10 rounded bg-surface-container flex items-center justify-center text-on-surface">
-              <span className="material-symbols-outlined">account_balance_wallet</span>
-            </div>
-            <span className="text-xs font-bold text-secondary bg-surface-container-high px-2 py-1 rounded">37% Share (₦)</span>
-          </div>
-          <p className="font-body-sm text-body-sm text-secondary mb-unit">
-            {isMentor ? 'My Pending Tuition Share' : 'Pending Tuition Share (37%)'}
-          </p>
-          <div className="flex justify-between items-baseline flex-wrap gap-1">
-            <h3 className="font-display text-display font-bold text-on-surface">
-              {formatNaira(pendingTuitionShareTotal)}
-            </h3>
-            <span className="text-[11px] font-medium text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-              Wallet: {formatNaira(wallet?.balance || 0)}
-            </span>
-          </div>
-          {isMentor && (
-            <button
-              onClick={() => openModal('request-payout')}
-              className="mt-3 w-full py-2 px-3 bg-primary text-on-primary rounded-lg text-xs font-bold hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[16px]">payments</span>
-              <span>Request Commission Payout</span>
-            </button>
-          )}
-        </div>
+      {/* 4 Bento Summary Widgets - Color-Coded Semantic Borders */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <SemanticMetricCard
+          label={isMentor ? 'My Faculty Status' : 'Total Faculty Pool'}
+          value={isMentor ? (myMentorProfile?.status || 'Active') : `${filteredMentors.length} Mentors`}
+          icon="supervisor_account"
+          intent="blue"
+          badge="Active"
+          subtitle="Accredited academic faculty"
+        />
+        <SemanticMetricCard
+          label={isMentor ? 'My 1-on-1 Coaching Sessions' : 'Total Sessions Conducted'}
+          value={`${totalSessionsLogged} Sessions`}
+          icon="forum"
+          intent="sky"
+          badge={`${totalHoursLogged}h Logged`}
+          subtitle="Mentorship & lab reviews"
+        />
+        <SemanticMetricCard
+          label={isMentor ? 'Class Lecturing Hours' : 'Faculty Lecturing Hours'}
+          value={
+            isMentor
+              ? `${(myMentorProfile?.lecturedHours || 0).toFixed(1)} / ${(myMentorProfile?.minimumRequiredHours || settings.mentorMinimumLecturedHours || 20).toFixed(0)}h`
+              : `${mentors.reduce((acc, m) => acc + (m.lecturedHours || 0), 0).toFixed(1)}h`
+          }
+          icon="timer"
+          intent="emerald"
+          badge={
+            isMentor
+              ? (myMentorProfile?.lecturedHours || 0) >= (myMentorProfile?.minimumRequiredHours || settings.mentorMinimumLecturedHours || 20)
+                ? 'Eligible'
+                : 'Under Hours'
+              : `${settings.mentorMinimumLecturedHours || 20}h Target`
+          }
+          subtitle="Verified classroom lecturing"
+        />
+        <SemanticMetricCard
+          label={isMentor ? 'My Pending Tuition Share' : 'Pending Tuition Share (37%)'}
+          value={formatNaira(pendingTuitionShareTotal)}
+          icon="account_balance_wallet"
+          intent="amber"
+          badge="37% Share"
+          subtitle={`Wallet: ${formatNaira(wallet?.balance || 0)}`}
+          footer={
+            isMentor ? (
+              <button
+                onClick={() => openModal('request-payout')}
+                className="w-full py-2 px-3 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary-hover transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">payments</span>
+                <span>Request Commission Payout</span>
+              </button>
+            ) : undefined
+          }
+        />
       </div>
 
       {/* Main Container with Tabs */}

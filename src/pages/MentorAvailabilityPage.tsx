@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
 import { MentorAvailabilityManager } from '../components/mentors/MentorAvailabilityManager';
+import { PageHeader, SemanticMetricCard } from '../components/common/KineticUI';
 
 export const MentorAvailabilityPage: React.FC = () => {
   const { 
@@ -66,47 +67,36 @@ export const MentorAvailabilityPage: React.FC = () => {
       </div>
 
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-xs">
-              <span className="material-symbols-outlined text-[24px]">schedule</span>
-            </div>
-            <div>
-              <h1 className="font-headline-md text-headline-md font-bold text-on-surface">
-                {isMentor ? 'My Office Hours & Booking Windows' : 'Faculty Office Hours & Availability'}
-              </h1>
-              <p className="text-secondary font-body-sm text-body-sm mt-0.5">
-                {isMentor 
-                  ? 'Manage your available coaching days, timeslots, and meeting links for student 1-on-1 bookings.'
-                  : 'Manage weekly office hours, video links, and booking availability across academic faculty.'}
-              </p>
-            </div>
-          </div>
-        </div>
+      <PageHeader
+        title={isMentor ? 'My Office Hours & Booking Windows' : 'Faculty Office Hours & Availability'}
+        subtitle={
+          isMentor
+            ? 'Manage your available coaching days, timeslots, and meeting links for student 1-on-1 bookings.'
+            : 'Manage weekly office hours, video links, and booking availability across academic faculty.'
+        }
+        badgeText="1-on-1 Coaching Windows"
+        badgeIntent="sky"
+        badgePulse
+      />
 
-        {/* Quick KPI stats pill */}
-        <div className="flex items-center gap-3">
-          <div className="bg-surface border border-outline-variant rounded-xl p-3 shadow-xs flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px]">verified</span>
-            </div>
-            <div>
-              <p className="text-[11px] text-secondary font-medium">Active Weekly Slots</p>
-              <p className="font-bold text-sm text-on-surface">{totalActiveSlots} Slots Live</p>
-            </div>
-          </div>
-
-          <div className="bg-surface border border-outline-variant rounded-xl p-3 shadow-xs flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-primary-container/40 text-primary flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px]">person_check</span>
-            </div>
-            <div>
-              <p className="text-[11px] text-secondary font-medium">Faculty Configured</p>
-              <p className="font-bold text-sm text-on-surface">{configuredMentorsCount} of {accessibleMentors.length}</p>
-            </div>
-          </div>
-        </div>
+      {/* Quick KPI stats - Color-Coded Semantic Borders */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <SemanticMetricCard
+          label="Active Weekly Slots"
+          value={totalActiveSlots}
+          icon="verified"
+          intent="emerald"
+          badge="Slots Live"
+          subtitle="Open booking windows for mentees"
+        />
+        <SemanticMetricCard
+          label="Faculty Configured"
+          value={`${configuredMentorsCount} / ${accessibleMentors.length}`}
+          icon="person_check"
+          intent="sky"
+          badge="Roster Ready"
+          subtitle="Mentors with active office hours"
+        />
       </div>
 
       {/* Main Availability Workspace Container */}

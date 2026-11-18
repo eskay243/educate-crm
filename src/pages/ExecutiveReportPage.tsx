@@ -5,6 +5,7 @@ import { RevenueCostChart } from '../components/analytics/RevenueCostChart';
 import { LeadSourceDonutChart } from '../components/analytics/LeadSourceDonutChart';
 import { CohortProgressionAreaChart } from '../components/analytics/CohortProgressionAreaChart';
 import { DepartmentMarginChart } from '../components/analytics/DepartmentMarginChart';
+import { PageHeader, SemanticMetricCard } from '../components/common/KineticUI';
 
 export interface ExecutiveReportPageProps {}
 
@@ -88,63 +89,57 @@ export const ExecutiveReportPage: React.FC<ExecutiveReportPageProps> = () => {
   };
 
   return (
-    <div className="space-y-stack-lg animate-in fade-in duration-200">
+    <div className="space-y-6 animate-in fade-in duration-200">
       {/* Page Header */}
-      <div className="flex justify-between items-end flex-wrap gap-4 print:hidden">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300">
-              Executive Briefing Mode
-            </span>
-            <span className="text-xs text-secondary">• {timeframeMetrics.label}</span>
-          </div>
-          <h2 className="font-headline-lg text-headline-lg font-bold text-on-surface">
-            Executive Financial &amp; Operational Intelligence
-          </h2>
-          <p className="font-body-md text-body-md text-secondary">
-            Cross-departmental audit: Tuition collections, admissions conversion velocity, mentor honorariums, and unit economics.
-          </p>
-        </div>
+      <PageHeader
+        className="print:hidden"
+        title="Executive Financial & Operational Intelligence"
+        subtitle="Cross-departmental audit: Tuition collections, admissions conversion velocity, mentor honorariums, and unit economics."
+        badgeText="Executive Briefing Mode"
+        badgeIntent="purple"
+        badgePulse
+        metaText={timeframeMetrics.label}
+        actions={
+          <>
+            {/* Time Range Selector */}
+            <div className="flex border border-outline-variant rounded-lg p-0.5 bg-surface text-xs font-bold shadow-xs">
+              {([
+                { id: 'MONTH', label: 'Oct 2026' },
+                { id: 'Q3', label: 'Fiscal Q3' },
+                { id: 'Q4', label: 'Fiscal Q4' },
+                { id: 'YTD', label: 'Full Year' }
+              ] as const).map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => setTimeRange(r.id)}
+                  className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
+                    timeRange === r.id ? 'bg-primary text-white shadow-xs' : 'text-secondary hover:text-on-surface'
+                  }`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Time Range Selector */}
-          <div className="flex border border-outline-variant rounded-lg p-1 bg-surface-container-lowest text-xs font-bold shadow-xs">
-            {([
-              { id: 'MONTH', label: 'Oct 2026' },
-              { id: 'Q3', label: 'Fiscal Q3' },
-              { id: 'Q4', label: 'Fiscal Q4' },
-              { id: 'YTD', label: 'Full Year' }
-            ] as const).map((r) => (
-              <button
-                key={r.id}
-                onClick={() => setTimeRange(r.id)}
-                className={`px-3 py-1.5 rounded transition-colors ${
-                  timeRange === r.id ? 'bg-primary text-on-primary shadow-xs' : 'text-secondary hover:text-on-surface'
-                }`}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
+            <button 
+              onClick={handlePrintBriefing}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg bg-surface border border-outline-variant text-on-surface hover:bg-surface-container-high transition-colors shadow-xs cursor-pointer"
+              title="Print Executive Briefing"
+            >
+              <span className="material-symbols-outlined text-[18px] text-secondary">print</span>
+              <span>Print Brief</span>
+            </button>
 
-          <button 
-            onClick={handlePrintBriefing}
-            className="h-10 px-3.5 flex items-center gap-1.5 border border-outline-variant rounded-lg bg-surface hover:bg-surface-container text-on-surface font-label-md text-xs font-semibold transition-colors shadow-xs cursor-pointer"
-            title="Print Executive Briefing"
-          >
-            <span className="material-symbols-outlined text-[18px]">print</span>
-            <span>Print Brief</span>
-          </button>
-
-          <button 
-            onClick={() => openModal('export-report')}
-            className="h-10 px-4 flex items-center gap-2 bg-primary text-on-primary rounded-lg font-label-md text-label-md font-bold hover:bg-primary/90 transition-colors shadow-xs cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[18px]">download</span>
-            <span>Export Report (PDF / XLSX)</span>
-          </button>
-        </div>
-      </div>
+            <button 
+              onClick={() => openModal('export-report')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-lg bg-primary text-white hover:bg-primary-hover transition-colors shadow-xs cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">download</span>
+              <span>Export Report</span>
+            </button>
+          </>
+        }
+      />
 
       {/* Printable Briefing Header (Visible only on print) */}
       <div className="hidden print:block border-b-2 border-slate-900 pb-4 mb-4">
@@ -154,84 +149,40 @@ export const ExecutiveReportPage: React.FC<ExecutiveReportPageProps> = () => {
         </p>
       </div>
 
-      {/* 4 KPIs Bento Grid in Naira - Dynamically Scaled */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
-        {/* Student Revenue */}
-        <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs hover:border-primary/50 transition-colors">
-          <div className="flex justify-between items-start mb-stack-md">
-            <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-700 dark:text-emerald-300">
-              <span className="material-symbols-outlined">payments</span>
-            </div>
-            <span className="flex items-center text-[12px] font-bold text-[#166534] bg-[#dcfce7] px-2 py-0.5 rounded-full">
-              <span className="material-symbols-outlined text-[14px] mr-1">school</span>
-              {students.length} Students
-            </span>
-          </div>
-          <p className="font-body-sm text-body-sm text-secondary mb-unit">Gross Tuition Collected</p>
-          <h3 className="font-display text-display font-bold text-on-surface font-data-tabular">
-            {formatNaira(timeframeMetrics.revenue)}
-          </h3>
-          <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-1 font-medium">
-            Active billing pipeline
-          </p>
-        </div>
-
-        {/* Operating Costs */}
-        <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs hover:border-primary/50 transition-colors">
-          <div className="flex justify-between items-start mb-stack-md">
-            <div className="w-10 h-10 rounded-lg bg-rose-100 dark:bg-rose-950/50 flex items-center justify-center text-rose-700 dark:text-rose-300">
-              <span className="material-symbols-outlined">receipt_long</span>
-            </div>
-            <span className="flex items-center text-[12px] font-bold text-rose-800 bg-rose-100 dark:bg-rose-950/60 px-2 py-0.5 rounded-full">
-              {expenses.length} Vouchers
-            </span>
-          </div>
-          <p className="font-body-sm text-body-sm text-secondary mb-unit">Total Operating Costs (OpEx)</p>
-          <h3 className="font-display text-display font-bold text-on-surface font-data-tabular">
-            {formatNaira(timeframeMetrics.expenses)}
-          </h3>
-          <p className="text-[11px] text-secondary mt-1">
-            Overhead, cloud, and facilities
-          </p>
-        </div>
-
-        {/* Mentor Payouts */}
-        <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs hover:border-primary/50 transition-colors">
-          <div className="flex justify-between items-start mb-stack-md">
-            <div className="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-950/50 flex items-center justify-center text-indigo-700 dark:text-indigo-300">
-              <span className="material-symbols-outlined">account_balance_wallet</span>
-            </div>
-            <span className="flex items-center text-[12px] font-bold text-indigo-800 bg-indigo-100 dark:bg-indigo-950/60 px-2 py-0.5 rounded-full">
-              {mentors.length} Mentors
-            </span>
-          </div>
-          <p className="font-body-sm text-body-sm text-secondary mb-unit">Faculty Honorariums (₦)</p>
-          <h3 className="font-display text-display font-bold text-on-surface font-data-tabular">
-            {formatNaira(timeframeMetrics.mentorPayouts)}
-          </h3>
-          <p className="text-[11px] text-secondary mt-1">
-            Verified NUBAN settlements
-          </p>
-        </div>
-
-        {/* Net Operating Surplus */}
-        <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs hover:border-primary/50 transition-colors">
-          <div className="flex justify-between items-start mb-stack-md">
-            <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center text-amber-700 dark:text-amber-300">
-              <span className="material-symbols-outlined">query_stats</span>
-            </div>
-            <span className="flex items-center text-[12px] font-bold text-[#166534] bg-[#dcfce7] px-2 py-0.5 rounded-full">
-              {timeframeMetrics.margin}% Margin
-            </span>
-          </div>
-          <p className="font-body-sm text-body-sm text-secondary mb-unit">Net Institutional Surplus</p>
-          <h3 className="font-display text-display font-bold text-primary font-data-tabular">
-            {formatNaira(timeframeMetrics.surplus)}
-          </h3>
-          <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-1 font-medium">
-            Positive unit economics
-          </p>
-        </div>
+      {/* 4 KPIs Bento Grid in Naira - Color-Coded Semantic Borders */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <SemanticMetricCard
+          label="Gross Tuition Collected"
+          value={formatNaira(timeframeMetrics.revenue)}
+          icon="payments"
+          intent="emerald"
+          badge={`${students.length} Students`}
+          subtitle="Active billing pipeline"
+        />
+        <SemanticMetricCard
+          label="Total Operating Costs (OpEx)"
+          value={formatNaira(timeframeMetrics.expenses)}
+          icon="receipt_long"
+          intent="red"
+          badge={`${expenses.length} Vouchers`}
+          subtitle="Overhead, cloud, and facilities"
+        />
+        <SemanticMetricCard
+          label="Faculty Honorariums (₦)"
+          value={formatNaira(timeframeMetrics.mentorPayouts)}
+          icon="account_balance_wallet"
+          intent="sky"
+          badge={`${mentors.length} Mentors`}
+          subtitle="Verified NUBAN settlements"
+        />
+        <SemanticMetricCard
+          label="Net Institutional Surplus"
+          value={formatNaira(timeframeMetrics.surplus)}
+          icon="query_stats"
+          intent="blue"
+          badge={`${timeframeMetrics.margin}% Margin`}
+          subtitle="Positive unit economics"
+        />
       </div>
 
       {/* Strategic Intelligence Tabs */}

@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCRM, formatNaira } from '../../context/CRMContext';
 import { CrispStatusBadge } from '../../components/common/CrispStatusBadge';
+import { SemanticMetricCard } from '../../components/common/KineticUI';
 
 export const MentorDashboardPage: React.FC = () => {
   const {
@@ -100,20 +101,20 @@ export const MentorDashboardPage: React.FC = () => {
     <div className="space-y-6 max-w-7xl mx-auto pb-16">
       {/* Super Admin Faculty Inspector & Switching Bar */}
       {isSuperAdmin && (
-        <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+        <div className="bg-amber-50 border border-amber-200 border-t-2 border-t-amber-500 rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
           <div className="flex items-center gap-2.5">
-            <span className="material-symbols-outlined text-amber-700 dark:text-amber-400 text-[20px]">admin_panel_settings</span>
+            <span className="material-symbols-outlined text-amber-700 text-[20px]">admin_panel_settings</span>
             <div>
-              <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
+              <p className="text-xs font-bold text-amber-900">
                 Super Admin Faculty Inspector Mode
               </p>
-              <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80">
+              <p className="text-[11px] text-amber-800/80">
                 You are previewing the dedicated Faculty Portal. Toggle between instructors to inspect their active sessions, syllabus, and 37% payouts.
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <span className="text-[11px] font-semibold text-amber-900 dark:text-amber-200 whitespace-nowrap">Switch Mentor:</span>
+            <span className="text-[11px] font-semibold text-amber-900 whitespace-nowrap">Switch Mentor:</span>
             <select
               value={myMentor?.id || ''}
               onChange={(e) => {
@@ -122,7 +123,7 @@ export const MentorDashboardPage: React.FC = () => {
                   switchRole('mentor', targetId);
                 }
               }}
-              className="w-full sm:w-auto text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none shadow-xs cursor-pointer"
+              className="w-full sm:w-auto text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-amber-300 bg-surface text-on-surface outline-none shadow-xs cursor-pointer"
             >
               {mentors.map(m => (
                 <option key={m.id} value={m.id}>
@@ -194,73 +195,46 @@ export const MentorDashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* KPI Overview Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Link
+      {/* KPI Overview Grid - Color-Coded Semantic Borders */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <SemanticMetricCard
           to="/mentor/students"
-          className="bg-surface border border-outline-variant hover:border-primary rounded-xl p-4 transition-all shadow-xs group"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-secondary">Assigned Learners</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <span className="material-symbols-outlined text-[18px]">school</span>
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-on-surface mt-2">{assignedStudents.length}</p>
-          <div className="flex items-center gap-1.5 mt-1 text-[11px] text-secondary">
-            <span className={`font-semibold ${atRiskStudents.length > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
-              {atRiskStudents.length} {atRiskStudents.length === 1 ? 'needs attention' : 'need attention'}
-            </span>
-          </div>
-        </Link>
-
-        <Link
+          label="Assigned Learners"
+          value={assignedStudents.length}
+          icon="school"
+          intent="blue"
+          badge={atRiskStudents.length > 0 ? `${atRiskStudents.length} At-Risk` : 'On Track'}
+          badgePulse={atRiskStudents.length > 0}
+          subtitle={`${atRiskStudents.length} ${atRiskStudents.length === 1 ? 'needs attention' : 'need attention'}`}
+        />
+        <SemanticMetricCard
           to="/mentor/schedule"
-          className="bg-surface border border-outline-variant hover:border-primary rounded-xl p-4 transition-all shadow-xs group"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-secondary">Today's Engagements</span>
-            <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <span className="material-symbols-outlined text-[18px]">event</span>
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-on-surface mt-2">{todayClasses.length + upcomingSessions.length}</p>
-          <div className="flex items-center gap-1.5 mt-1 text-[11px] text-secondary">
-            <span>{todayClasses.length} Cohort Classes, {upcomingSessions.length} 1-on-1s</span>
-          </div>
-        </Link>
-
-        <Link
+          label="Today's Engagements"
+          value={todayClasses.length + upcomingSessions.length}
+          icon="event"
+          intent="purple"
+          badge="Scheduled"
+          subtitle={`${todayClasses.length} Cohort Classes, ${upcomingSessions.length} 1-on-1s`}
+        />
+        <SemanticMetricCard
           to="/mentor/grading"
-          className="bg-surface border border-outline-variant hover:border-primary rounded-xl p-4 transition-all shadow-xs group"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-secondary">Grading Inbox</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <span className="material-symbols-outlined text-[18px]">rule</span>
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-on-surface mt-2">{pendingGradingCount}</p>
-          <div className="flex items-center gap-1.5 mt-1 text-[11px] text-secondary">
-            <span className="text-amber-600 font-semibold">Submissions awaiting review</span>
-          </div>
-        </Link>
-
-        <Link
+          label="Grading Inbox"
+          value={pendingGradingCount}
+          icon="rule"
+          intent="amber"
+          badge={pendingGradingCount > 0 ? 'Pending' : 'Cleared'}
+          badgePulse={pendingGradingCount > 0}
+          subtitle="Submissions awaiting review"
+        />
+        <SemanticMetricCard
           to="/mentor/payouts"
-          className="bg-surface border border-outline-variant hover:border-primary rounded-xl p-4 transition-all shadow-xs group"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-secondary">37% Rev-Share Accrued</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span>
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-emerald-700 mt-2">{formatNaira(earningsMetrics.myAccruedCommission)}</p>
-          <div className="flex items-center gap-1.5 mt-1 text-[11px] text-secondary">
-            <span>Disbursed: {formatNaira(earningsMetrics.disbursedPayout)}</span>
-          </div>
-        </Link>
+          label="37% Rev-Share Accrued"
+          value={formatNaira(earningsMetrics.myAccruedCommission)}
+          icon="account_balance_wallet"
+          intent="emerald"
+          badge="37% Share"
+          subtitle={`Disbursed: ${formatNaira(earningsMetrics.disbursedPayout)}`}
+        />
       </div>
 
       {/* Main Two-Column Hub: Teaching Agenda & Learner Care */}

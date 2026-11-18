@@ -4,6 +4,7 @@ import { useCRM, formatNaira } from '../context/CRMContext';
 import { LMSLesson, MentorPayoutRequest, Student, Mentor } from '../types/crm';
 import { PayoutVoucherModal } from '../components/modals/PayoutVoucherModal';
 import { StudentWelfareInterventionModal } from '../components/modals/StudentWelfareInterventionModal';
+import { PageHeader, SemanticMetricCard } from '../components/common/KineticUI';
 
 export const CoursesCohortsPage: React.FC = () => {
   const {
@@ -315,141 +316,114 @@ export const CoursesCohortsPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-stack-lg animate-in fade-in duration-200">
+    <div className="space-y-6 animate-in fade-in duration-200">
       {/* Page Header */}
-      <div className="flex justify-between items-end flex-wrap gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h2 className="font-headline-lg text-headline-lg font-bold text-on-surface">Programs, Timetables &amp; Governance</h2>
-            {currentUser?.role === 'program_officer' && (
-              <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-xs font-bold border border-blue-200">
-                Program Officer Workspace
-              </span>
+      <PageHeader
+        title="Programs, Timetables & Governance"
+        subtitle="Coordinate curriculum tracks, schedule course timetables, oversee faculty lecturing hours, and approve syllabus milestones."
+        badgeText={currentUser?.role === 'program_officer' ? 'Program Officer Workspace' : 'Academic Governance'}
+        badgeIntent="blue"
+        badgePulse
+        actions={
+          <>
+            <Link
+              to="/mentors/course-outlines"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-surface border border-outline-variant text-on-surface hover:bg-surface-container-high transition-colors shadow-xs"
+              title="Review Course Outlines & Topic Modules"
+            >
+              <span className="material-symbols-outlined text-primary text-[18px]">account_tree</span>
+              <span>Course Outlines</span>
+            </Link>
+
+            <a
+              href="/Program_Officer_Module_QA_Checklist.xlsx"
+              download="Program_Officer_Module_QA_Checklist.xlsx"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-surface border border-outline-variant text-on-surface hover:border-emerald-500 hover:text-emerald-700 transition-colors shadow-xs"
+              title="Download Program Officer QA Checklist Spreadsheet (.xlsx)"
+            >
+              <span className="material-symbols-outlined text-emerald-600 text-[18px]">table_view</span>
+              <span>QA Checklist</span>
+            </a>
+
+            {canManageCourses && (
+              <>
+                <button
+                  onClick={() => openModal('bulk-upload-courses')}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-surface border border-outline-variant text-on-surface hover:bg-surface-container-high transition-colors shadow-xs cursor-pointer"
+                  title="Bulk Upload Academic Courses via CSV or JSON"
+                >
+                  <span className="material-symbols-outlined text-primary text-[18px]">upload_file</span>
+                  <span>Bulk Upload</span>
+                </button>
+
+                <button
+                  onClick={() => openModal('create-course')}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-surface border border-outline-variant text-on-surface hover:bg-surface-container-high transition-colors shadow-xs cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-primary text-[18px]">library_add</span>
+                  <span>New Track</span>
+                </button>
+              </>
             )}
-          </div>
-          <p className="font-body-md text-body-md text-secondary">
-            Coordinate curriculum tracks, schedule course timetables, oversee faculty lecturing hours, and approve syllabus milestones.
-          </p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {/* Course Outline Dedicated Page Trigger */}
-          <Link
-            to="/mentors/course-outlines"
-            className="btn-secondary text-xs h-10 px-3.5"
-            title="Review Course Outlines & Topic Modules"
-          >
-            <span className="material-symbols-outlined text-primary text-[18px]">account_tree</span>
-            <span>Course Outlines</span>
-          </Link>
 
-          {/* Download QA Checklist Excel */}
-          <a
-            href="/Program_Officer_Module_QA_Checklist.xlsx"
-            download="Program_Officer_Module_QA_Checklist.xlsx"
-            className="btn-secondary text-xs h-10 px-3.5 flex items-center gap-1.5 hover:border-emerald-500 hover:text-emerald-700 transition-all"
-            title="Download Program Officer QA Checklist Spreadsheet (.xlsx)"
-          >
-            <span className="material-symbols-outlined text-emerald-600 text-[18px]">table_view</span>
-            <span>QA Checklist (.xlsx)</span>
-          </a>
-
-          {/* Schedule Class Modal Trigger */}
-          {canScheduleClasses && (
-            <button
-              onClick={() => openModal('schedule-class')}
-              className="btn-primary text-xs h-10 px-4"
-            >
-              <span className="material-symbols-outlined text-[18px]">calendar_add_on</span>
-              <span>+ Schedule Class</span>
-            </button>
-          )}
-
-          {canManageCourses && (
-            <>
+            {canManageCohorts && (
               <button
-                onClick={() => openModal('bulk-upload-courses')}
-                className="btn-secondary text-xs h-10 px-3.5 flex items-center gap-1.5 hover:border-primary transition-colors cursor-pointer"
-                title="Bulk Upload Academic Courses via CSV or JSON"
+                onClick={() => openModal('create-cohort')}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-surface border border-outline-variant text-on-surface hover:bg-surface-container-high transition-colors shadow-xs cursor-pointer"
               >
-                <span className="material-symbols-outlined text-primary text-[18px]">upload_file</span>
-                <span>+ Bulk Upload</span>
+                <span className="material-symbols-outlined text-primary text-[18px]">add_circle</span>
+                <span>Launch Cohort</span>
               </button>
+            )}
 
+            {canScheduleClasses && (
               <button
-                onClick={() => openModal('create-course')}
-                className="btn-secondary text-xs h-10 px-3.5"
+                onClick={() => openModal('schedule-class')}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-lg bg-primary hover:bg-primary-hover text-white transition-colors shadow-xs cursor-pointer"
               >
-                <span className="material-symbols-outlined text-primary text-[18px]">library_add</span>
-                <span>+ Academic Track</span>
+                <span className="material-symbols-outlined text-[18px]">calendar_add_on</span>
+                <span>Schedule Class</span>
               </button>
-            </>
-          )}
+            )}
+          </>
+        }
+      />
 
-          {canManageCohorts && (
-            <button
-              onClick={() => openModal('create-cohort')}
-              className="btn-secondary text-xs h-10 px-3.5"
-            >
-              <span className="material-symbols-outlined text-primary text-[18px]">add_circle</span>
-              <span>+ Launch Cohort</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* 4 Academic Summary Bento Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
-        <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs">
-          <div className="flex justify-between items-start mb-stack-md">
-            <div className="w-10 h-10 rounded bg-primary-container flex items-center justify-center text-on-primary">
-              <span className="material-symbols-outlined">menu_book</span>
-            </div>
-            <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-1 rounded">Catalog</span>
-          </div>
-          <p className="font-body-sm text-body-sm text-secondary mb-unit">Academic Programs</p>
-          <h3 className="font-display text-display font-bold text-on-surface">{courses.length} Tracks</h3>
-        </div>
-
-        <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs">
-          <div className="flex justify-between items-start mb-stack-md">
-            <div className="w-10 h-10 rounded bg-secondary-container flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined">calendar_month</span>
-            </div>
-            <span className="text-xs font-bold text-primary bg-secondary-container px-2 py-1 rounded">Live</span>
-          </div>
-          <p className="font-body-sm text-body-sm text-secondary mb-unit">Timetable Slots</p>
-          <h3 className="font-display text-display font-bold text-on-surface">{(timetables || []).length} Scheduled</h3>
-        </div>
-
-        <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs">
-          <div className="flex justify-between items-start mb-stack-md">
-            <div className="w-10 h-10 rounded bg-amber-100 text-amber-800 flex items-center justify-center">
-              <span className="material-symbols-outlined">verified</span>
-            </div>
-            <span className={`text-xs font-bold px-2 py-1 rounded ${
-              pendingApprovalLessons.length > 0 ? 'bg-amber-100 text-amber-800 animate-pulse' : 'bg-slate-100 text-slate-600'
-            }`}>
-              {pendingApprovalLessons.length > 0 ? 'Action Needed' : 'Up to Date'}
-            </span>
-          </div>
-          <p className="font-body-sm text-body-sm text-secondary mb-unit">Topics Pending PO Approval</p>
-          <h3 className="font-display text-display font-bold text-on-surface">{pendingApprovalLessons.length} Awaiting</h3>
-        </div>
-
-        <div className="bg-surface-container-lowest p-stack-md border border-outline-variant rounded-lg shadow-xs">
-          <div className="flex justify-between items-start mb-stack-md">
-            <div className="w-10 h-10 rounded bg-emerald-100 text-emerald-800 flex items-center justify-center">
-              <span className="material-symbols-outlined">payments</span>
-            </div>
-            <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-1 rounded font-data-tabular">
-              {minRequiredHours}h Min
-            </span>
-          </div>
-          <p className="font-body-sm text-body-sm text-secondary mb-unit">Faculty Payout Eligible</p>
-          <h3 className="font-display text-display font-bold text-on-surface">
-            {eligibleFacultyCount} / {mentors.length} Faculty
-          </h3>
-        </div>
+      {/* 4 Academic Summary Bento Cards - Color-Coded Semantic Borders */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <SemanticMetricCard
+          label="Academic Programs"
+          value={`${courses.length} Tracks`}
+          icon="menu_book"
+          intent="blue"
+          badge="Catalog"
+          subtitle="Accredited curriculum tracks"
+        />
+        <SemanticMetricCard
+          label="Timetable Slots"
+          value={`${(timetables || []).length} Scheduled`}
+          icon="calendar_month"
+          intent="sky"
+          badge="Live"
+          subtitle="Active classroom sessions"
+        />
+        <SemanticMetricCard
+          label="Topics Pending PO Approval"
+          value={`${pendingApprovalLessons.length} Awaiting`}
+          icon="verified"
+          intent="amber"
+          badge={pendingApprovalLessons.length > 0 ? 'Action Needed' : 'Up to Date'}
+          badgePulse={pendingApprovalLessons.length > 0}
+          subtitle="Syllabus accreditation queue"
+        />
+        <SemanticMetricCard
+          label="Faculty Payout Eligible"
+          value={`${eligibleFacultyCount} / ${mentors.length}`}
+          icon="payments"
+          intent="emerald"
+          badge={`${minRequiredHours}h Min`}
+          subtitle="Faculty meeting hour threshold"
+        />
       </div>
 
       {/* Main Container */}

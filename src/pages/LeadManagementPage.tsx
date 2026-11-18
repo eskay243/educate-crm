@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useCRM, formatNaira } from '../context/CRMContext';
 import { LeadStatus } from '../types/crm';
 import { CrispStatusBadge } from '../components/common/CrispStatusBadge';
+import { PageHeader, SemanticMetricCard } from '../components/common/KineticUI';
 
 export const LeadManagementPage: React.FC = () => {
   const { leads, updateLeadStatus, updateLeadNotes, convertLeadToStudent, openModal, openFollowUpModal, globalSearch } = useCRM();
@@ -126,125 +127,114 @@ export const LeadManagementPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-stack-lg animate-in fade-in duration-200">
+    <div className="space-y-6 animate-in fade-in duration-200">
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-stack-md">
-        <div>
-          <h1 className="font-display text-display text-on-surface">Lead Pipeline &amp; Admissions</h1>
-          <p className="font-body-lg text-body-lg text-secondary mt-unit">Manage prospective student inquiries, corporate deals, and drag-and-drop conversion stages.</p>
-        </div>
-        <div className="flex items-center gap-stack-sm flex-wrap">
-          {/* View Mode Toggle */}
-          <div className="flex border border-outline-variant rounded p-1 bg-surface shadow-xs">
-            <button
-              onClick={() => setViewMode('kanban')}
-              className={`px-3 py-1 rounded text-xs font-bold transition-all flex items-center gap-1.5 ${
-                viewMode === 'kanban' ? 'bg-primary text-on-primary shadow-xs' : 'text-secondary hover:text-on-surface'
+      <PageHeader
+        title="Lead Pipeline & Admissions"
+        subtitle="Manage prospective student inquiries, corporate deals, and drag-and-drop conversion stages."
+        badgeText="Admissions Funnel Active"
+        badgeIntent="blue"
+        badgePulse
+        actions={
+          <>
+            {/* View Mode Toggle */}
+            <div className="inline-flex border border-outline-variant rounded-lg p-0.5 bg-surface shadow-xs">
+              <button
+                onClick={() => setViewMode('kanban')}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  viewMode === 'kanban' ? 'bg-primary text-white shadow-xs' : 'text-secondary hover:text-on-surface'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">view_kanban</span>
+                <span>Kanban</span>
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  viewMode === 'table' ? 'bg-primary text-white shadow-xs' : 'text-secondary hover:text-on-surface'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">view_list</span>
+                <span>Roster</span>
+              </button>
+            </div>
+
+            <Link
+              to="/contacts"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg bg-surface border border-outline-variant text-on-surface hover:bg-surface-container-high transition-colors shadow-xs"
+            >
+              <span className="material-symbols-outlined text-[18px] text-primary">contact_phone</span>
+              <span>Contacts</span>
+            </Link>
+
+            <div className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg border border-outline-variant bg-surface-container-low text-secondary">
+              <span className="material-symbols-outlined text-[16px] text-primary">campaign</span>
+              <select
+                value={selectedSource}
+                onChange={e => setSelectedSource(e.target.value)}
+                className="bg-transparent text-xs font-semibold text-on-surface outline-none cursor-pointer"
+                title="Filter leads by marketing attribution source"
+              >
+                <option value="All">All Sources</option>
+                <option value="IG campaign">IG campaign</option>
+                <option value="FB advert">FB advert</option>
+                <option value="Tiktok Advert">Tiktok Advert</option>
+                <option value="Organic Search">Organic Search</option>
+                <option value="LinkedIn Campaign">LinkedIn Campaign</option>
+                <option value="Google Ads">Google Ads</option>
+                <option value="Webinar Referral">Webinar Referral</option>
+                <option value="Community Discord">Community Discord</option>
+                <option value="Direct Referral">Direct Referral</option>
+              </select>
+            </div>
+
+            <button 
+              onClick={() => setActiveTab(activeTab === 'All' ? 'Qualified' : 'All')}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-semibold transition-colors shadow-xs cursor-pointer ${
+                activeTab !== 'All' ? 'bg-primary/10 border-primary/30 text-primary font-bold' : 'bg-surface border-outline-variant text-secondary hover:bg-surface-container-high'
               }`}
             >
-              <span className="material-symbols-outlined text-[16px]">view_kanban</span>
-              <span>Kanban Board</span>
+              <span className="material-symbols-outlined text-[16px]">filter_list</span>
+              <span>Filter ({activeTab})</span>
             </button>
-            <button
-              onClick={() => setViewMode('table')}
-              className={`px-3 py-1 rounded text-xs font-bold transition-all flex items-center gap-1.5 ${
-                viewMode === 'table' ? 'bg-primary text-on-primary shadow-xs' : 'text-secondary hover:text-on-surface'
-              }`}
+            <button 
+              onClick={() => openModal('add-lead')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary text-white hover:bg-primary-hover text-xs font-bold transition-colors shadow-xs cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[16px]">view_list</span>
-              <span>Table Roster</span>
+              <span className="material-symbols-outlined text-[18px]">person_add</span>
+              <span>Add Lead</span>
             </button>
-          </div>
+          </>
+        }
+      />
 
-          <Link
-            to="/contacts"
-            className="h-10 px-4 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 font-label-md text-label-md font-bold transition-colors flex items-center gap-unit shadow-xs"
-          >
-            <span className="material-symbols-outlined text-[18px]">contact_phone</span>
-            <span>Contacts &amp; Follow-ups</span>
-          </Link>
-
-          <div className="flex items-center gap-1.5 h-10 px-2.5 rounded-lg border border-outline-variant bg-surface text-secondary">
-            <span className="material-symbols-outlined text-[17px] text-primary">campaign</span>
-            <select
-              value={selectedSource}
-              onChange={e => setSelectedSource(e.target.value)}
-              className="bg-transparent text-xs font-semibold text-on-surface outline-none cursor-pointer"
-              title="Filter leads by marketing attribution source"
-            >
-              <option value="All">All Sources</option>
-              <option value="IG campaign">IG campaign</option>
-              <option value="FB advert">FB advert</option>
-              <option value="Tiktok Advert">Tiktok Advert</option>
-              <option value="Organic Search">Organic Search</option>
-              <option value="LinkedIn Campaign">LinkedIn Campaign</option>
-              <option value="Google Ads">Google Ads</option>
-              <option value="Webinar Referral">Webinar Referral</option>
-              <option value="Community Discord">Community Discord</option>
-              <option value="Direct Referral">Direct Referral</option>
-            </select>
-          </div>
-
-          <button 
-            onClick={() => setActiveTab(activeTab === 'All' ? 'Qualified' : 'All')}
-            className={`h-10 px-4 rounded border border-outline-variant font-label-md text-label-md transition-colors flex items-center gap-unit shadow-xs ${
-              activeTab !== 'All' ? 'bg-secondary-container text-primary font-bold' : 'bg-surface text-secondary hover:bg-surface-container-low'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[18px]">filter_list</span>
-            <span>Filter ({activeTab})</span>
-          </button>
-          <button 
-            onClick={() => openModal('add-lead')}
-            className="h-10 px-4 rounded bg-primary text-on-primary hover:bg-surface-tint font-label-md text-label-md font-bold transition-colors flex items-center gap-unit shadow-xs"
-          >
-            <span className="material-symbols-outlined text-[18px]">person_add</span>
-            <span>Add Lead</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Stats Overview Bento Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter">
-        <div className="bg-surface rounded-xl border border-outline-variant p-stack-md shadow-xs">
-          <div className="flex justify-between items-start mb-stack-sm">
-            <span className="text-secondary font-label-md text-label-md">Total Active Leads</span>
-            <span className="material-symbols-outlined text-primary-container">groups</span>
-          </div>
-          <div className="font-headline-lg text-headline-lg font-bold text-on-surface font-data-tabular">{leads.length}</div>
-          <div className="mt-2 flex items-center gap-1 text-xs text-secondary">
-            <span className="material-symbols-outlined text-[14px] text-[#006A60]">trending_up</span>
-            <span className="text-[#006A60] font-medium">{leads.filter(l => l.status === 'New' || l.status === 'Discovery').length} new</span> intake prospects
-          </div>
-        </div>
-
-        <div className="bg-surface rounded-xl border border-outline-variant p-stack-md shadow-xs">
-          <div className="flex justify-between items-start mb-stack-sm">
-            <span className="text-secondary font-label-md text-label-md">Active Pipeline Value</span>
-            <span className="material-symbols-outlined text-primary-container">payments</span>
-          </div>
-          <div className="font-headline-lg text-headline-lg font-bold text-on-surface font-data-tabular">
-            {formatNaira(activePipelineValue)}
-          </div>
-          <div className="mt-2 flex items-center gap-1 text-xs text-secondary">
-            <span className="material-symbols-outlined text-[14px] text-[#006A60]">trending_up</span>
-            <span className="text-[#006A60] font-medium">{formatNaira(qualifiedDealsValue)}</span> in qualified negotiations
-          </div>
-        </div>
-
-        <div className="bg-surface rounded-xl border border-outline-variant p-stack-md shadow-xs">
-          <div className="flex justify-between items-start mb-stack-sm">
-            <span className="text-secondary font-label-md text-label-md">Needs Action &amp; Follow-up</span>
-            <span className="material-symbols-outlined text-error">notification_important</span>
-          </div>
-          <div className="font-headline-lg text-headline-lg font-bold text-on-surface font-data-tabular">
-            {leads.filter(l => l.status === 'Overdue' || l.status === 'New').length}
-          </div>
-          <div className="mt-2 flex items-center gap-1 text-xs text-secondary">
-            <span className="material-symbols-outlined text-[14px] text-error">priority_high</span>
-            <span className="text-error font-medium">Pending intake response</span>
-          </div>
-        </div>
+      {/* Stats Overview Bento Grid - Color-Coded Semantic Borders */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <SemanticMetricCard
+          label="Total Active Leads"
+          value={leads.length}
+          icon="groups"
+          intent="blue"
+          badge={`${leads.filter(l => l.status === 'New' || l.status === 'Discovery').length} New`}
+          subtitle="Active intake prospects"
+        />
+        <SemanticMetricCard
+          label="Active Pipeline Value"
+          value={formatNaira(activePipelineValue)}
+          icon="payments"
+          intent="emerald"
+          badge="Qualified"
+          subtitle={`${formatNaira(qualifiedDealsValue)} in qualified negotiations`}
+        />
+        <SemanticMetricCard
+          label="Needs Action & Follow-up"
+          value={leads.filter(l => l.status === 'Overdue' || l.status === 'New').length}
+          icon="notification_important"
+          intent="red"
+          badge="Pending Intake"
+          badgePulse={leads.filter(l => l.status === 'Overdue' || l.status === 'New').length > 0}
+          subtitle="Awaiting admissions response"
+        />
       </div>
 
       {/* View 1: Drag-and-Drop Kanban Board */}

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useCRM, formatNaira } from '../context/CRMContext';
 import { Lead } from '../types/crm';
 import { CrispStatusBadge } from '../components/common/CrispStatusBadge';
+import { PageHeader, SemanticMetricCard } from '../components/common/KineticUI';
 
 export const ContactsPage: React.FC = () => {
   const { 
@@ -118,121 +119,66 @@ export const ContactsPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* 1. Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-outline-variant/60">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary/10 text-primary border border-primary/20">
-              <span className="material-symbols-outlined text-[14px]">contact_phone</span>
-              Admissions Contacts &amp; Follow-Up CRM
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-on-surface tracking-tight">
-            Prospective Leads &amp; Contact Follow-Ups
-          </h1>
-          <p className="text-xs sm:text-sm text-secondary mt-0.5">
-            Collated prospective student directory with scheduled follow-up dates &amp; times, call outcomes, and 1-click WhatsApp reach-out.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
+      <PageHeader
+        title="Prospective Leads & Contact Follow-Ups"
+        subtitle="Collated prospective student directory with scheduled follow-up dates & times, call outcomes, and 1-click WhatsApp reach-out."
+        badgeText="Admissions Contacts & Follow-Up CRM"
+        badgeIntent="blue"
+        actions={
           <button
             type="button"
             onClick={() => openModal('add-lead')}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary-hover transition-colors shadow-xs cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary-hover transition-colors shadow-xs cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">person_add</span>
-            <span>Add New Prospective Lead</span>
+            <span>Add New Lead</span>
           </button>
-        </div>
-      </div>
+        }
+      />
 
-      {/* 2. Four Operational Metric Cards */}
+      {/* 2. Four Operational Metric Cards - Color-Coded Semantic Borders */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Collated Contacts */}
-        <div 
+        <SemanticMetricCard
+          label="Total Inquiries"
+          value={metrics.total}
+          icon="contacts"
+          intent="blue"
+          badge="Active Contacts"
+          subtitle="Prospective students in pipeline"
           onClick={() => setActiveTab('All')}
-          className={`p-4 rounded-xl border transition-all cursor-pointer ${
-            activeTab === 'All' ? 'bg-primary/5 border-primary shadow-sm' : 'bg-surface border-outline-variant hover:border-outline'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-secondary">Total Inquiries</span>
-            <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-              <span className="material-symbols-outlined text-[20px]">contacts</span>
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-on-surface font-data-tabular">{metrics.total}</span>
-            <span className="text-xs font-bold text-secondary">Active Contacts</span>
-          </div>
-          <p className="text-[11px] text-secondary mt-1">Prospective students in pipeline</p>
-        </div>
-
-        {/* Follow-ups Due Today */}
-        <div 
+          className={activeTab === 'All' ? 'ring-2 ring-blue-500/30 bg-blue-50/30' : ''}
+        />
+        <SemanticMetricCard
+          label="Due Today"
+          value={metrics.dueToday}
+          icon="today"
+          intent="amber"
+          badge="Requires Call"
+          subtitle="Scheduled for follow-up today"
           onClick={() => setActiveTab('Due Today')}
-          className={`p-4 rounded-xl border transition-all cursor-pointer ${
-            activeTab === 'Due Today' ? 'bg-amber-500/10 border-amber-500 shadow-sm' : 'bg-surface border-outline-variant hover:border-amber-500/40'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-amber-600">Due Today</span>
-            <span className="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-600 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[20px]">today</span>
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-amber-700 font-data-tabular">{metrics.dueToday}</span>
-            <span className="text-xs font-bold text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded">
-              Requires Call
-            </span>
-          </div>
-          <p className="text-[11px] text-secondary mt-1">Scheduled for follow-up today</p>
-        </div>
-
-        {/* Overdue Follow-ups */}
-        <div 
+          className={activeTab === 'Due Today' ? 'ring-2 ring-amber-500/30 bg-amber-50/30' : ''}
+        />
+        <SemanticMetricCard
+          label="Overdue Follow-ups"
+          value={metrics.overdue}
+          icon="warning"
+          intent="red"
+          badge={metrics.overdue > 0 ? 'Needs Attention' : 'Clear'}
+          badgePulse={metrics.overdue > 0}
+          subtitle="Missed follow-up dates"
           onClick={() => setActiveTab('Overdue')}
-          className={`p-4 rounded-xl border transition-all cursor-pointer ${
-            activeTab === 'Overdue' ? 'bg-red-500/10 border-red-500 shadow-sm' : 'bg-surface border-outline-variant hover:border-red-500/40'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-red-600">Overdue Follow-ups</span>
-            <span className="w-8 h-8 rounded-lg bg-red-500/15 text-red-600 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[20px]">warning</span>
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-red-600 font-data-tabular">{metrics.overdue}</span>
-            {metrics.overdue > 0 && (
-              <span className="text-xs font-bold text-red-600 bg-red-500/10 px-1.5 py-0.5 rounded animate-pulse">
-                Needs Attention
-              </span>
-            )}
-          </div>
-          <p className="text-[11px] text-secondary mt-1">Missed follow-up dates</p>
-        </div>
-
-        {/* Scheduled This Week */}
-        <div 
+          className={activeTab === 'Overdue' ? 'ring-2 ring-red-500/30 bg-red-50/30' : ''}
+        />
+        <SemanticMetricCard
+          label="This Week"
+          value={metrics.thisWeek}
+          icon="calendar_month"
+          intent="sky"
+          badge="Upcoming Slots"
+          subtitle="Next 7 days scheduled"
           onClick={() => setActiveTab('This Week')}
-          className={`p-4 rounded-xl border transition-all cursor-pointer ${
-            activeTab === 'This Week' ? 'bg-blue-500/10 border-blue-500 shadow-sm' : 'bg-surface border-outline-variant hover:border-blue-500/40'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-blue-600">This Week</span>
-            <span className="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-600 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[20px]">calendar_month</span>
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-blue-700 font-data-tabular">{metrics.thisWeek}</span>
-            <span className="text-xs font-bold text-blue-600">Upcoming Slots</span>
-          </div>
-          <p className="text-[11px] text-secondary mt-1">Next 7 days scheduled</p>
-        </div>
+          className={activeTab === 'This Week' ? 'ring-2 ring-sky-500/30 bg-sky-50/30' : ''}
+        />
       </div>
 
       {/* 3. Search and Multi-filter Controls Bar */}
