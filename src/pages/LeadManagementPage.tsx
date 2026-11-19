@@ -405,8 +405,8 @@ export const LeadManagementPage: React.FC = () => {
         <div className="bg-surface rounded-xl border border-outline-variant overflow-hidden shadow-xs">
           <div className="p-stack-md border-b border-outline-variant flex flex-col sm:flex-row sm:items-center justify-between gap-stack-sm bg-surface-container-low/40">
             <div className="flex items-center gap-stack-sm">
-              <span className="font-headline-md text-headline-md font-bold text-on-surface">Prospect Roster</span>
-              <span className="text-body-sm text-secondary">({filteredLeads.length} total)</span>
+              <span className="text-sm sm:text-base font-bold text-on-surface">Prospect Roster</span>
+              <span className="text-xs text-secondary">({filteredLeads.length} total)</span>
             </div>
             <div className="relative w-full sm:w-72">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">
@@ -444,7 +444,7 @@ export const LeadManagementPage: React.FC = () => {
                   <th className="p-stack-md text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-outline-variant/60 font-body-md text-body-md text-on-surface">
+              <tbody className="divide-y divide-outline-variant/60 text-xs text-on-surface">
                 {filteredLeads.map((lead) => (
                   <tr key={lead.id} className="hover:bg-surface-container-low/50 transition-colors">
                     <td className="p-stack-md">

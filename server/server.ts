@@ -6,6 +6,13 @@ import { fileURLToPath } from 'url';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import webpush from 'web-push';
+import { hashPassword, verifyPassword, signAuthToken } from './utils/security.js';
+import { securityHeaders, authRateLimiter, attachAuthContext } from './middleware/security.js';
+import { SQLiteStorageEngine } from './utils/database.js';
+import { ensureUploadsDir } from './utils/mediaStorage.js';
+import { RealtimeEventBus } from './utils/realtime.js';
+import { createSystemRouter } from './routes/systemRoutes.js';
+import { createNotificationRouter } from './routes/notificationRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,10 +28,37 @@ try {
 const app = express();
 const PORT = process.env.PORT || 5001;
 const DB_FILE = path.join(__dirname, 'data', 'db.json');
+const SQLITE_FILE = path.join(__dirname, 'data', 'educate.sqlite');
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
 const APP_BASE_URL = process.env.APP_URL || process.env.FRONTEND_URL || 'https://growpot.cloud';
 
+ensureUploadsDir(UPLOADS_DIR);
+const storageEngine = new SQLiteStorageEngine(SQLITE_FILE, UPLOADS_DIR);
+const realtimeBus = new RealtimeEventBus();
+
+app.use(securityHeaders);
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
+app.use(attachAuthContext);
+
+// Serve offloaded media assets (avatars, KYC documents, receipts, ticket/chat attachments)
+app.use('/api/uploads', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  next();
+}, express.static(UPLOADS_DIR));
+
+// Modular System, Uploads, Real-Time SSE & Dev Sync Router
+app.use('/api', createSystemRouter({
+  storageEngine,
+  realtimeBus,
+  uploadsDir: UPLOADS_DIR,
+  dbJsonFile: DB_FILE,
+  dataDir: path.join(__dirname, 'data'),
+  reloadDatabase: () => {
+    db = loadDatabase();
+  },
+}));
 
 // Logger middleware
 app.use((req, res, next) => {
@@ -227,20 +261,27 @@ const getInitialDatabase = (): DatabaseSchema => ({
 
 const loadDatabase = (): DatabaseSchema => {
   try {
-    if (!fs.existsSync(DB_FILE)) {
-      const initial = getInitialDatabase();
-      fs.writeFileSync(DB_FILE, JSON.stringify(initial, null, 2), 'utf-8');
-      return initial;
+    if (storageEngine.isEmpty()) {
+      if (fs.existsSync(DB_FILE)) {
+        const migrated = storageEngine.importFromJsonFile<DatabaseSchema>(DB_FILE);
+        console.log(
+          `✅ [SQLite Migration] Imported ${migrated.collectionsWritten} collections from db.json, offloaded ${migrated.mediaExtracted} base64 media files (saved ${(migrated.bytesSaved / 1024 / 1024).toFixed(2)} MB).`
+        );
+      } else {
+        const initial = getInitialDatabase();
+        storageEngine.saveAll(initial, { forceFullWrite: true, offloadMedia: true });
+        return initial;
+      }
     }
-    const data = fs.readFileSync(DB_FILE, 'utf-8');
-    const parsed = JSON.parse(data);
-    if (!Array.isArray(parsed.courses)) parsed.courses = [];
-    if (!Array.isArray(parsed.tickets)) parsed.tickets = initialTickets;
-    if (!Array.isArray(parsed.pushSubscriptions)) parsed.pushSubscriptions = [];
+    const parsed = storageEngine.loadAll<DatabaseSchema>() || getInitialDatabase();
+    let modified = false;
+    if (!Array.isArray(parsed.courses)) { parsed.courses = []; modified = true; }
+    if (!Array.isArray(parsed.tickets)) { parsed.tickets = initialTickets; modified = true; }
+    if (!Array.isArray(parsed.pushSubscriptions)) { parsed.pushSubscriptions = []; modified = true; }
     if (!Array.isArray(parsed.customRoles)) {
       parsed.customRoles = [...defaultRoleDefinitions];
+      modified = true;
     } else {
-      let modified = false;
       for (const defRole of defaultRoleDefinitions) {
         const existingRole = parsed.customRoles.find((r: any) => r.id === defRole.id);
         if (!existingRole) {
@@ -262,18 +303,18 @@ const loadDatabase = (): DatabaseSchema => {
           }
         }
       }
-      if (modified) {
-        fs.writeFileSync(DB_FILE, JSON.stringify(parsed, null, 2), 'utf-8');
-      }
     }
-    if (!Array.isArray(parsed.timetables)) parsed.timetables = initialTimetables;
-    if (!Array.isArray(parsed.payoutRequests)) parsed.payoutRequests = [];
-    if (!Array.isArray(parsed.mentorCohortLedgers)) parsed.mentorCohortLedgers = [];
-    if (!Array.isArray(parsed.financialAuditFindings)) parsed.financialAuditFindings = [];
-    if (!Array.isArray(parsed.financialAuditScans)) parsed.financialAuditScans = [];
-    if (!parsed.wallet) parsed.wallet = defaultWallet;
-    if (!Array.isArray(parsed.chatConversations)) parsed.chatConversations = initialChatConversations;
-    if (!Array.isArray(parsed.chatMessages)) parsed.chatMessages = initialChatMessages;
+    if (!Array.isArray(parsed.timetables)) { parsed.timetables = initialTimetables; modified = true; }
+    if (!Array.isArray(parsed.payoutRequests)) { parsed.payoutRequests = []; modified = true; }
+    if (!Array.isArray(parsed.mentorCohortLedgers)) { parsed.mentorCohortLedgers = []; modified = true; }
+    if (!Array.isArray(parsed.financialAuditFindings)) { parsed.financialAuditFindings = []; modified = true; }
+    if (!Array.isArray(parsed.financialAuditScans)) { parsed.financialAuditScans = []; modified = true; }
+    if (!parsed.wallet) { parsed.wallet = defaultWallet; modified = true; }
+    if (!Array.isArray(parsed.chatConversations)) { parsed.chatConversations = initialChatConversations; modified = true; }
+    if (!Array.isArray(parsed.chatMessages)) { parsed.chatMessages = initialChatMessages; modified = true; }
+    if (modified) {
+      storageEngine.saveAll(parsed);
+    }
     return parsed;
   } catch (err) {
     console.error('Error loading database, returning default seed:', err);
@@ -287,7 +328,7 @@ const saveDatabase = (db: DatabaseSchema) => {
     if (toSave.settings?.paystackSecretKey && toSave.settings.paystackSecretKey.startsWith('sk_live_')) {
       toSave.settings = { ...toSave.settings, paystackSecretKey: '' };
     }
-    fs.writeFileSync(DB_FILE, JSON.stringify(toSave, null, 2), 'utf-8');
+    storageEngine.saveAll(toSave);
   } catch (err) {
     console.error('Error saving database:', err);
   }
@@ -635,7 +676,7 @@ app.get('/api/health', (req: Request, res: Response) => {
 // ----------------------------------------------------
 // Authentication Endpoints
 // ----------------------------------------------------
-app.post('/api/auth/login', (req: Request, res: Response) => {
+app.post('/api/auth/login', authRateLimiter, (req: Request, res: Response) => {
   const { email, password, role } = req.body;
   if (!password || typeof password !== 'string' || !password.trim()) {
     return res.status(400).json({ success: false, message: 'Password is required' });
@@ -712,8 +753,31 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
   }
 
   const expectedPassword = user.password || 'password123';
-  if (password.trim() !== expectedPassword.trim()) {
+  const pwCheck = verifyPassword(password.trim(), expectedPassword);
+  if (!pwCheck.valid) {
     return res.status(401).json({ success: false, message: 'Invalid password. Please check your credentials.' });
+  }
+
+  // Transparently upgrade legacy plaintext passwords to bcrypt on successful login
+  if (pwCheck.needsRehash) {
+    const hashed = hashPassword(password.trim());
+    const staffRec = db.staffUsers?.find((u: any) => u.id === user.id);
+    if (staffRec) {
+      staffRec.password = hashed;
+      saveDatabase(db);
+    } else {
+      const mentorRec = db.mentors?.find((m: any) => m.id === user.id);
+      if (mentorRec) {
+        mentorRec.password = hashed;
+        saveDatabase(db);
+      } else {
+        const studentRec = db.students?.find((s: any) => s.id === user.id);
+        if (studentRec) {
+          studentRec.password = hashed;
+          saveDatabase(db);
+        }
+      }
+    }
   }
 
   if (user.isActive === false || user.status === 'Deactivated') {
@@ -724,16 +788,24 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
     });
   }
 
-  // Sanitize user (strip password)
+  // Sanitize user (strip password) and issue signed HS256 JWT
   const { password: _, ...sanitizedUser } = user;
+  const token = signAuthToken({
+    id: sanitizedUser.id,
+    email: sanitizedUser.email || '',
+    role: sanitizedUser.role || 'student',
+    name: sanitizedUser.name,
+  });
+
   res.json({
     success: true,
+    token,
     user: sanitizedUser,
     message: 'Authentication successful',
   });
 });
 
-app.post('/api/auth/reset-password', (req: Request, res: Response) => {
+app.post('/api/auth/reset-password', authRateLimiter, (req: Request, res: Response) => {
   const { email, password, newPassword } = req.body;
   const cleanEmail = (email || '').trim().toLowerCase();
   const cleanPassword = (newPassword || password || '').trim();
@@ -746,6 +818,7 @@ app.post('/api/auth/reset-password', (req: Request, res: Response) => {
     return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long.' });
   }
 
+  const hashedNewPassword = hashPassword(cleanPassword);
   let found = false;
 
   // 1. Staff users (including secondary email and aliases)
@@ -755,7 +828,7 @@ app.post('/api/auth/reset-password', (req: Request, res: Response) => {
     (u.name?.toLowerCase().includes('oyinkonsola') && (cleanEmail === 'oyinojobo@gmail.com' || cleanEmail === 'oyinojobor@gmail.com'))
   );
   if (staff) {
-    staff.password = cleanPassword;
+    staff.password = hashedNewPassword;
     staff.mustResetPassword = false;
     found = true;
   }
@@ -767,7 +840,7 @@ app.post('/api/auth/reset-password', (req: Request, res: Response) => {
       m.secondaryEmail?.trim().toLowerCase() === cleanEmail
     );
     if (mentor) {
-      mentor.password = cleanPassword;
+      mentor.password = hashedNewPassword;
       found = true;
     }
   }
@@ -779,7 +852,7 @@ app.post('/api/auth/reset-password', (req: Request, res: Response) => {
       s.secondaryEmail?.trim().toLowerCase() === cleanEmail
     );
     if (student) {
-      student.password = cleanPassword;
+      student.password = hashedNewPassword;
       student.mustResetPassword = false;
       found = true;
     }
@@ -4742,31 +4815,14 @@ app.put('/api/settings/campuses', (req: Request, res: Response) => {
 });
 
 // ----------------------------------------------------
-// Notifications Endpoints
+// Notifications Endpoints (Modular Router + Live SSE)
 // ----------------------------------------------------
-app.get('/api/notifications', (req: Request, res: Response) => {
-  res.json({ success: true, data: db.notifications });
-});
-
-app.patch('/api/notifications/:id/read', (req: Request, res: Response) => {
-  const { id } = req.params;
-  const notif = db.notifications.find(n => n.id === id);
-  if (notif) notif.read = true;
-  saveDatabase(db);
-  res.json({ success: true, data: notif });
-});
-
-app.post('/api/notifications/mark-all-read', (req: Request, res: Response) => {
-  db.notifications.forEach(n => { n.read = true; });
-  saveDatabase(db);
-  res.json({ success: true, message: 'All notifications marked as read' });
-});
-
-app.delete('/api/notifications', (req: Request, res: Response) => {
-  db.notifications = [];
-  saveDatabase(db);
-  res.json({ success: true, message: 'All notifications cleared' });
-});
+app.use('/api/notifications', createNotificationRouter({
+  getNotifications: () => db.notifications,
+  setNotifications: (next) => { db.notifications = next; },
+  saveDb: () => saveDatabase(db),
+  realtimeBus,
+}));
 
 // ----------------------------------------------------
 // Employee Attendance & Hours Tracking Endpoints
@@ -5460,6 +5516,79 @@ const recalculateMentorPayoutTotals = (mentorId: string) => {
   return mentor;
 };
 
+const computeMentorVerifiedInflow = (mentorId: string) => {
+  const mentor = db.mentors.find((m: any) => m.id === mentorId);
+  if (!mentor) return null;
+  const targetMentorNorm = normalizeMatchText(mentor.name);
+  const realStudents = (db.students || []).filter((s: any) => !String(s.email || '').includes('.qa.'));
+  const mentorStudents = realStudents.filter(
+    (s: any) => (s.mentorId && s.mentorId === mentor.id) || normalizeMatchText(s.mentorName) === targetMentorNorm
+  );
+  const ledgers = (db.mentorCohortLedgers || []).filter((l: any) => l.mentorId === mentor.id);
+  const coveredStudentIds = new Set<string>();
+
+  let ledgerInflow = 0;
+  let ledgerCommission = 0;
+  let ledgerDisbursed = 0;
+
+  for (const ledger of ledgers) {
+    const targetCourse = normalizeMatchText(ledger.courseName);
+    const matched = mentorStudents.filter((s: any) => {
+      const prog = normalizeMatchText(s.program);
+      const hit = Array.isArray(s.courses) && s.courses.some((c: any) => {
+        const cn = normalizeMatchText(c.name || c.title);
+        return cn === targetCourse || cn.includes(targetCourse) || targetCourse.includes(cn);
+      });
+      return prog === targetCourse || prog.includes(targetCourse) || targetCourse.includes(prog) || hit;
+    });
+    matched.forEach((s: any) => coveredStudentIds.add(s.id));
+    const livePaid = matched.reduce((sum: number, s: any) => sum + Number(s.paidAmount || 0), 0);
+    const effectivePaid = Math.max(Number(ledger.historicalStudentPaid || 0), livePaid);
+    const rawLedgerRate = Number(ledger.commissionRate ?? 0.37);
+    const rate = rawLedgerRate > 1 ? rawLedgerRate / 100 : rawLedgerRate;
+    const due = Number(ledger.agreedAmountDue ?? Math.round(effectivePaid * rate));
+    ledgerInflow += effectivePaid;
+    ledgerCommission += due;
+    ledgerDisbursed += Number(ledger.amountDisbursed || 0);
+  }
+
+  let extraLivePaid = 0;
+  let lockedUnpaidTuition = 0;
+  for (const s of mentorStudents) {
+    const paid = Number(s.paidAmount || 0);
+    const fees = Number(s.totalFees || 0);
+    lockedUnpaidTuition += Math.max(0, fees - paid);
+    if (!coveredStudentIds.has(s.id)) {
+      extraLivePaid += paid;
+    }
+  }
+
+  const rawMentorRate = Number(mentor.commissionRate ?? 0.37);
+  const rate = rawMentorRate > 1 ? rawMentorRate / 100 : rawMentorRate;
+  const totalCollectedInflow = ledgerInflow + extraLivePaid;
+  const earnedFromInflow37 = ledgerCommission + Math.round(extraLivePaid * rate);
+  const extraDisbursed = (db.payoutRequests || [])
+    .filter((r: any) => r.mentorId === mentor.id && r.status === 'Disbursed' && !r.isHistorical && !r.cohortLedgerId)
+    .reduce((sum: number, r: any) => sum + Number(r.amount || 0), 0);
+  const disbursedToDate = ledgerDisbursed + extraDisbursed;
+  const pendingInFlight = (db.payoutRequests || [])
+    .filter((r: any) => r.mentorId === mentor.id && (r.status === 'Pending' || r.status === 'Approved'))
+    .reduce((sum: number, r: any) => sum + Number(r.amount || 0), 0);
+
+  const verifiedInflowAvailable = Math.max(0, earnedFromInflow37 - disbursedToDate - pendingInFlight);
+  const lockedUnpaidCommission37 = Math.round(lockedUnpaidTuition * rate);
+
+  return {
+    totalCollectedInflow,
+    earnedFromInflow37,
+    disbursedToDate,
+    pendingInFlight,
+    verifiedInflowAvailable,
+    lockedUnpaidTuition,
+    lockedUnpaidCommission37
+  };
+};
+
 app.get('/api/mentors/:id/payout-breakdown', (req: Request, res: Response) => {
   try {
     const mentor = db.mentors.find((m: any) => m.id === req.params.id);
@@ -5516,7 +5645,8 @@ app.get('/api/mentors/:id/payout-breakdown', (req: Request, res: Response) => {
         const liveStudentPaid = matchedStudents.reduce((sum: number, s: any) => sum + s.paidAmount, 0);
         const historicalStudentPaid = Number(ledger.historicalStudentPaid || 0);
         const effectiveStudentPaid = Math.max(historicalStudentPaid, liveStudentPaid);
-        const rate = Number(ledger.commissionRate ?? 0.37);
+        const rawLedgerRate = Number(ledger.commissionRate ?? 0.37);
+    const rate = rawLedgerRate > 1 ? rawLedgerRate / 100 : rawLedgerRate;
         const calculatedCommission37 = Math.round(effectiveStudentPaid * rate);
         const agreedAmountDue = Number(ledger.agreedAmountDue ?? calculatedCommission37);
         const amountDisbursed = Number(ledger.amountDisbursed || 0);
@@ -5585,6 +5715,8 @@ app.get('/api/mentors/:id/payout-breakdown', (req: Request, res: Response) => {
         };
       });
 
+    const inflowSummary = computeMentorVerifiedInflow(mentor.id);
+
     res.json({
       success: true,
       data: {
@@ -5593,10 +5725,11 @@ app.get('/api/mentors/:id/payout-breakdown', (req: Request, res: Response) => {
         ledgers,
         courses,
         assignedStudents: mentorStudents.map(mapStudentPayment),
+        inflowSummary,
         summary: {
-          totalEarned: Number(mentor.totalEarned || 0),
-          paidPayout: Number(mentor.paidPayout || 0),
-          pendingPayout: Number(mentor.pendingPayout || 0)
+          totalEarned: inflowSummary?.earnedFromInflow37 ?? Number(mentor.totalEarned || 0),
+          paidPayout: inflowSummary?.disbursedToDate ?? Number(mentor.paidPayout || 0),
+          pendingPayout: inflowSummary?.verifiedInflowAvailable ?? Number(mentor.pendingPayout || 0)
         }
       }
     });
@@ -5641,7 +5774,8 @@ app.get('/api/mentor-reconciliation', (req: Request, res: Response) => {
       const liveStudentPaid = matchedStudents.reduce((sum: number, s: any) => sum + s.paidAmount, 0);
       const historicalStudentPaid = Number(ledger.historicalStudentPaid || 0);
       const effectiveStudentPaid = Math.max(historicalStudentPaid, liveStudentPaid);
-      const rate = Number(ledger.commissionRate ?? 0.37);
+      const rawLedgerRate = Number(ledger.commissionRate ?? 0.37);
+    const rate = rawLedgerRate > 1 ? rawLedgerRate / 100 : rawLedgerRate;
       const calculatedCommission37 = Math.round(effectiveStudentPaid * rate);
       const agreedAmountDue = Number(ledger.agreedAmountDue ?? calculatedCommission37);
       const varianceAmount = agreedAmountDue - calculatedCommission37;
@@ -6394,9 +6528,24 @@ app.post('/api/payout-requests', (req: Request, res: Response) => {
   const actualHours = mentor.lecturedHours ?? 0;
   const requiresHoursOverride = actualHours < minRequired;
 
-  const reqAmount = Number(amount) || mentor.pendingPayout || 0;
+  const inflow = computeMentorVerifiedInflow(mentor.id);
+  const maxEligible = inflow ? inflow.verifiedInflowAvailable : 0;
+  if (maxEligible <= 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'No verified student payment inflow available. Mentors can only request payouts from collected student tuition (37% of paid inflow).'
+    });
+  }
+
+  const reqAmount = Number(amount) || maxEligible;
   if (reqAmount <= 0) {
     return res.status(400).json({ success: false, message: 'Requested amount must be greater than ₦0.' });
+  }
+  if (reqAmount > maxEligible) {
+    return res.status(400).json({
+      success: false,
+      message: `Requested amount (₦${reqAmount.toLocaleString()}) exceeds your verified inflow-eligible balance of ₦${maxEligible.toLocaleString()}.`
+    });
   }
 
   const whtRate = req.body.whtRatePercent !== undefined ? Number(req.body.whtRatePercent) : 5;
@@ -7732,6 +7881,8 @@ app.post('/api/tickets', async (req: Request, res: Response) => {
   });
 
   saveDatabase(db);
+  realtimeBus.broadcast('ticket:updated', { ticketId: newTicket.id, action: 'created' });
+  realtimeBus.broadcast('notification:created', { type: 'ticket', ticketId: newTicket.id });
   console.log(`[API] Ticket logged: ${newTicket.ticketNumber} - ${newTicket.title} (Assigned: ${newTicket.assignedToRole})`);
 
   // Asynchronously dispatch confirmation to creator & alert to super admin / assigned role
@@ -8434,6 +8585,13 @@ app.post('/api/chat/conversations/:id/messages', async (req: Request, res: Respo
   db.chatConversations[convIndex].updatedAt = newMessage.timestamp;
 
   saveDatabase(db);
+  realtimeBus.broadcast('chat:message', {
+    conversationId: id,
+    messageId: newMessage.id,
+    senderId,
+    senderName: senderName || 'User',
+    timestamp: newMessage.timestamp,
+  });
 
   // Handle @mentions: in-app notifications and email dispatch
   if (Array.isArray(mentions) && mentions.length > 0) {
@@ -8668,7 +8826,10 @@ app.post('/api/chat/conversations/:id/read', (req: Request, res: Response) => {
         }
       }
     });
-    if (updated) saveDatabase(db);
+    if (updated) {
+      saveDatabase(db);
+      realtimeBus.broadcast('chat:read', { conversationId: id, userId });
+    }
   }
 
   res.json({ success: true, message: 'Messages marked as read' });
@@ -9096,7 +9257,10 @@ app.post('/api/scrum/trigger-standup-reminders', (_req: Request, res: Response) 
 });
 
 app.listen(PORT, () => {
+  const stats = storageEngine.getStats();
   console.log(`🚀 Nexus CRM Backend Server running at http://localhost:${PORT}`);
   console.log(`📡 REST API Health: http://localhost:${PORT}/api/health`);
-  console.log(`📦 Database loaded from: ${DB_FILE}`);
+  console.log(`⚡ Real-Time SSE Stream: http://localhost:${PORT}/api/events/stream`);
+  console.log(`🗄️  Storage Engine: SQLite WAL (${SQLITE_FILE}, ${(stats.sqliteBytes / 1024).toFixed(1)} KB, ${stats.collectionCount} collections)`);
+  console.log(`🖼️  Offloaded Media: ${stats.media.fileCount} files (${(stats.media.totalBytes / 1024 / 1024).toFixed(2)} MB) served at /api/uploads`);
 });

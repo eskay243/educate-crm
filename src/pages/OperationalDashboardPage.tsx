@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCRM, formatNaira, formatNairaCompact } from '../context/CRMContext';
 import { PageHeader, SemanticMetricCard, ActionTile } from '../components/common/KineticUI';
 
 export const OperationalDashboardPage: React.FC = () => {
+  const navigate = useNavigate();
   const { 
     currentUser,
     expenses, 
@@ -15,10 +16,15 @@ export const OperationalDashboardPage: React.FC = () => {
     payoutRequests,
     staffUsers,
     mentors,
+    courses,
+    cohorts,
+    lmsModules,
     openModal,
     setIsChatPopoutOpen,
     unreadChatCount,
   } = useCRM();
+
+  const isProgramOfficer = currentUser?.role === 'program_officer';
 
   // Audit Log Filtering & Pagination State
   const [auditUserFilter, setAuditUserFilter] = useState<string>('all');
@@ -99,6 +105,16 @@ export const OperationalDashboardPage: React.FC = () => {
   const openTickets = tickets.filter(t => t.status === 'open');
   const urgentTickets = openTickets.filter(t => t.priority === 'urgent' || t.priority === 'high');
 
+  const pendingPOTopicsCount = useMemo(() => {
+    return (lmsModules || []).reduce((acc, mod) => {
+      return acc + (mod.lessons || []).filter(
+        l => l.approvalStatus === 'Taught (Pending PO Approval)' || (l.completedByMentor && !l.approvedByProgramOfficer)
+      ).length;
+    }, 0);
+  }, [lmsModules]);
+  const activeCohortsCount = cohorts.filter(c => c.status === 'In Progress' || c.status === 'Upcoming').length;
+  const activeMentorsCount = mentors.filter(m => m.isActive !== false && m.status !== 'Deactivated').length;
+
   // 2. Today's Attendance Pulse
   const todayStr = new Date().toISOString().split('T')[0];
   const todayClockIns = attendanceRecords.filter(r => r.date === todayStr);
@@ -117,9 +133,13 @@ export const OperationalDashboardPage: React.FC = () => {
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* 1. Header Banner & Operations Switcher */}
       <PageHeader
-        title="Operational Command Center"
-        subtitle={`Welcome back, ${currentUser?.name || 'Administrator'}. Real-time daily operations, pending authorizations, institutional triage, and active tasks.`}
-        badgeText="Operational Pulse Active"
+        title={isProgramOfficer ? 'Program Officer Command Center' : 'Operational Command Center'}
+        subtitle={
+          isProgramOfficer
+            ? `Welcome back, ${currentUser?.name || 'Program Officer'}. Curriculum governance, syllabus topic sign-offs, faculty coordination, and cohort operations.`
+            : `Welcome back, ${currentUser?.name || 'Administrator'}. Real-time daily operations, pending authorizations, institutional triage, and active tasks.`
+        }
+        badgeText={isProgramOfficer ? 'Academic Operations Live' : 'Operational Pulse Active'}
         badgeIntent="emerald"
         badgePulse
         metaText={formattedDate}
@@ -151,88 +171,164 @@ export const OperationalDashboardPage: React.FC = () => {
       />
 
       {/* 2. Urgent Attention Strip: Pending Actions & Authorizations */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <SemanticMetricCard
-          to="/expenses"
-          label="Expense Requisitions"
-          value={pendingExpenses.length}
-          icon="payments"
-          intent="amber"
-          badge="Awaiting Approval"
-          subtitle={pendingExpensesTotal > 0 ? `${formatNaira(pendingExpensesTotal)} total queued` : 'All expenses cleared'}
-        />
-        <SemanticMetricCard
-          to="/mentors"
-          label="Faculty Payouts"
-          value={pendingPayouts.length}
-          icon="account_balance_wallet"
-          intent="sky"
-          badge="Pending Payouts"
-          subtitle={pendingPayoutsTotal > 0 ? `${formatNaira(pendingPayoutsTotal)} requested` : 'No outstanding claims'}
-        />
-        <SemanticMetricCard
-          to="/students"
-          label="Pending Invoices"
-          value={pendingInvoices.length}
-          icon="receipt_long"
-          intent="blue"
-          badge="Awaiting Clearance"
-          subtitle="Tuition transfers & payment proofs"
-        />
-        <SemanticMetricCard
-          to="/tickets"
-          label="Open Support Tickets"
-          value={openTickets.length}
-          icon="confirmation_number"
-          intent="red"
-          badge={urgentTickets.length > 0 ? `${urgentTickets.length} Urgent` : undefined}
-          badgePulse={urgentTickets.length > 0}
-          subtitle={openTickets.length === 0 ? 'All tickets resolved & archived' : 'Click to review active queue'}
-        />
-      </div>
-
-      {/* 3. 1-Click Operations Launchpad */}
-      <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant shadow-xs">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-secondary mb-3 flex items-center gap-1.5">
-          <span className="material-symbols-outlined text-[16px] text-primary">bolt</span>
-          <span>1-Click Institutional Shortcuts</span>
-        </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <ActionTile
-            title="New Record"
-            subtitle="Hub Creator"
-            icon="add_circle"
-            intent="blue"
-            onClick={() => openModal('create-hub')}
-          />
-          <ActionTile
-            title="Log Expense"
-            subtitle="OpEx Requisition"
-            icon="receipt"
+      {isProgramOfficer ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <SemanticMetricCard
+            to="/mentors/course-outlines"
+            label="Topic Approvals"
+            value={pendingPOTopicsCount}
+            icon="fact_check"
             intent="amber"
-            onClick={() => openModal('log-expense')}
+            badge={pendingPOTopicsCount > 0 ? 'Awaiting Sign-off' : 'All Cleared'}
+            badgePulse={pendingPOTopicsCount > 0}
+            subtitle={pendingPOTopicsCount > 0 ? 'Syllabus lessons taught & pending review' : 'All taught topics approved'}
           />
-          <ActionTile
-            title="Add Lead"
-            subtitle="Admissions Intake"
-            icon="person_add"
+          <SemanticMetricCard
+            to="/courses"
+            label="Programs & Cohorts"
+            value={activeCohortsCount}
+            icon="menu_book"
+            intent="blue"
+            badge={`${courses.length} Tracks`}
+            subtitle={`${students.length} enrolled scholars across cohorts`}
+          />
+          <SemanticMetricCard
+            to="/mentors"
+            label="Faculty Mentors"
+            value={activeMentorsCount}
+            icon="groups"
             intent="sky"
-            onClick={() => openModal('add-lead')}
+            badge="Active Roster"
+            subtitle="Timetables, office hours & grading"
           />
-          <ActionTile
-            title="Clock In / Out"
-            subtitle="Duty Log"
-            icon="timer"
-            intent="emerald"
-            onClick={() => openModal('clock-in')}
+          <SemanticMetricCard
+            to="/tickets"
+            label="Open Support Tickets"
+            value={openTickets.length}
+            icon="confirmation_number"
+            intent="red"
+            badge={urgentTickets.length > 0 ? `${urgentTickets.length} Urgent` : undefined}
+            badgePulse={urgentTickets.length > 0}
+            subtitle={openTickets.length === 0 ? 'All tickets resolved & archived' : 'Click to review active queue'}
           />
         </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <SemanticMetricCard
+            to="/expenses"
+            label="Expense Requisitions"
+            value={pendingExpenses.length}
+            icon="payments"
+            intent="amber"
+            badge="Awaiting Approval"
+            subtitle={pendingExpensesTotal > 0 ? `${formatNaira(pendingExpensesTotal)} total queued` : 'All expenses cleared'}
+          />
+          <SemanticMetricCard
+            to="/mentors"
+            label="Faculty Payouts"
+            value={pendingPayouts.length}
+            icon="account_balance_wallet"
+            intent="sky"
+            badge="Pending Payouts"
+            subtitle={pendingPayoutsTotal > 0 ? `${formatNaira(pendingPayoutsTotal)} requested` : 'No outstanding claims'}
+          />
+          <SemanticMetricCard
+            to="/students"
+            label="Pending Invoices"
+            value={pendingInvoices.length}
+            icon="receipt_long"
+            intent="blue"
+            badge="Awaiting Clearance"
+            subtitle="Tuition transfers & payment proofs"
+          />
+          <SemanticMetricCard
+            to="/tickets"
+            label="Open Support Tickets"
+            value={openTickets.length}
+            icon="confirmation_number"
+            intent="red"
+            badge={urgentTickets.length > 0 ? `${urgentTickets.length} Urgent` : undefined}
+            badgePulse={urgentTickets.length > 0}
+            subtitle={openTickets.length === 0 ? 'All tickets resolved & archived' : 'Click to review active queue'}
+          />
+        </div>
+      )}
+
+      {/* 3. 1-Click Operations Launchpad */}
+      <div className="p-4 rounded-xl glass-card">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-secondary mb-3 flex items-center gap-1.5">
+          <span className="material-symbols-outlined text-[16px] text-primary">bolt</span>
+          <span>{isProgramOfficer ? '1-Click Academic Shortcuts' : '1-Click Institutional Shortcuts'}</span>
+        </h3>
+        {isProgramOfficer ? (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <ActionTile
+              title="Course Outlines"
+              subtitle="Topic Approvals"
+              icon="account_tree"
+              intent="blue"
+              onClick={() => navigate('/mentors/course-outlines')}
+            />
+            <ActionTile
+              title="Programs & Cohorts"
+              subtitle="Tracks & Schedules"
+              icon="menu_book"
+              intent="amber"
+              onClick={() => navigate('/courses')}
+            />
+            <ActionTile
+              title="Grading Inbox"
+              subtitle="Student Submissions"
+              icon="fact_check"
+              intent="sky"
+              onClick={() => navigate('/mentors/grading')}
+            />
+            <ActionTile
+              title="Clock In / Out"
+              subtitle="Duty Log"
+              icon="timer"
+              intent="emerald"
+              onClick={() => openModal('clock-in')}
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <ActionTile
+              title="New Record"
+              subtitle="Hub Creator"
+              icon="add_circle"
+              intent="blue"
+              onClick={() => openModal('create-hub')}
+            />
+            <ActionTile
+              title="Log Expense"
+              subtitle="OpEx Requisition"
+              icon="receipt"
+              intent="amber"
+              onClick={() => openModal('log-expense')}
+            />
+            <ActionTile
+              title="Add Lead"
+              subtitle="Admissions Intake"
+              icon="person_add"
+              intent="sky"
+              onClick={() => openModal('add-lead')}
+            />
+            <ActionTile
+              title="Clock In / Out"
+              subtitle="Duty Log"
+              icon="timer"
+              intent="emerald"
+              onClick={() => openModal('clock-in')}
+            />
+          </div>
+        )}
       </div>
 
       {/* 4. Dual Operational Grid: Today's On-Duty Staff & Admissions Intake */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* On-Duty Attendance Today */}
-        <div className="p-4 rounded-xl bg-surface border border-outline-variant shadow-xs flex flex-col">
+        <div className="p-4 rounded-xl glass-card flex flex-col">
           <div className="flex items-center justify-between pb-3 border-b border-outline-variant/60 mb-3">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-[20px] text-primary">badge</span>
@@ -284,7 +380,7 @@ export const OperationalDashboardPage: React.FC = () => {
         </div>
 
         {/* Recent Admissions Pipeline Activity */}
-        <div className="p-4 rounded-xl bg-surface border border-outline-variant shadow-xs flex flex-col">
+        <div className="p-4 rounded-xl glass-card flex flex-col">
           <div className="flex items-center justify-between pb-3 border-b border-outline-variant/60 mb-3">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-[20px] text-primary">school</span>
@@ -336,7 +432,7 @@ export const OperationalDashboardPage: React.FC = () => {
       </div>
 
       {/* 5. Live Institutional Activity Audit Trail & Multi-User Governance */}
-      <div className="p-4 sm:p-5 rounded-xl bg-surface border border-outline-variant shadow-xs space-y-4">
+      <div className="p-4 sm:p-5 rounded-xl glass-card space-y-4">
         {/* Header & Controls */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-outline-variant/60">
           <div className="flex items-center gap-2.5">

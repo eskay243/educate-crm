@@ -36,10 +36,10 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenMenu }) 
     }
     if (role === 'program_officer') {
       return [
+        { label: 'Dashboard', to: '/', icon: 'dashboard' },
         { label: 'Programs', to: '/courses', icon: 'menu_book' },
         { label: 'Outlines', to: '/mentors/course-outlines', icon: 'account_tree' },
         { label: 'Scholars', to: '/students', icon: 'school' },
-        { label: 'Faculty', to: '/mentors', icon: 'groups' },
       ];
     }
     if (role === 'admissions') {

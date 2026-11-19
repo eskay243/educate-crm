@@ -209,7 +209,7 @@ export const StudentDashboardPage: React.FC = () => {
 
       {/* Recommended Password Reset Banner */}
       {(student.mustResetPassword || (currentUser as any)?.mustResetPassword) && (
-        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 border-t-2 border-t-amber-500 text-amber-950 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shadow-xs animate-in fade-in">
+        <div className="p-4 rounded-xl bg-amber-50/85 backdrop-blur-md border border-amber-200/80 ring-1 ring-inset ring-white/70 text-amber-950 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shadow-[0_4px_16px_-4px_rgba(217,119,6,0.12)] animate-in fade-in">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-amber-500/15 text-amber-700 flex items-center justify-center shrink-0">
               <span className="material-symbols-outlined text-[24px]">lock_reset</span>

@@ -195,7 +195,7 @@ export const LoginPage: React.FC = () => {
       let target = from === '/' ? '/' : from;
       if (from === '/') {
         if (authenticatedRole === 'student') target = '/student/dashboard';
-        else if (authenticatedRole === 'program_officer' || authenticatedRole.includes('program_officer')) target = '/courses';
+        else if (authenticatedRole === 'program_officer' || authenticatedRole.includes('program_officer')) target = '/';
         else if (authenticatedRole === 'admissions') target = '/leads';
         else if (authenticatedRole === 'finance') target = '/expenses';
         else if (authenticatedRole === 'mentor') target = '/mentors';

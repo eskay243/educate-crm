@@ -1090,6 +1090,17 @@ export const SettingsPage: React.FC = () => {
 
   // Production Flush Confirmation Modal
   const [showFlushConfirm, setShowFlushConfirm] = useState(false);
+  const [isSyncingFromProd, setIsSyncingFromProd] = useState(false);
+  const [lastProdSyncSummary, setLastProdSyncSummary] = useState<{
+    students: number;
+    mentors: number;
+    expenses: number;
+    syncedAt: string;
+    backupFile: string;
+  } | null>(null);
+  const isLocalhostEnv =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
   // Campus Geofencing Handlers
   const handleUpdateCampus = (id: string, field: keyof CampusLocation, value: any) => {
@@ -1512,6 +1523,32 @@ export const SettingsPage: React.FC = () => {
   const handleExecuteFlush = async () => {
     await flushProductionData();
     setShowFlushConfirm(false);
+  };
+
+  const handleSyncFromProduction = async () => {
+    if (!isLocalhostEnv) return;
+    setIsSyncingFromProd(true);
+    try {
+      const res = await fetch('/api/dev/sync-from-production', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showToast('Production Sync Failed', data.message || 'Could not pull live database from production VPS.', 'error');
+        return;
+      }
+      setLastProdSyncSummary(data.data);
+      showToast(
+        'Live Data Synced!',
+        `${data.message} Reloading workspace...`,
+        'success'
+      );
+      setTimeout(() => {
+        window.location.reload();
+      }, 1200);
+    } catch (err: any) {
+      showToast('Sync Error', err?.message || 'Unable to reach local backend server.', 'error');
+    } finally {
+      setIsSyncingFromProd(false);
+    }
   };
 
   const handleVerifyProfileBank = async () => {
@@ -6581,9 +6618,9 @@ export const SettingsPage: React.FC = () => {
               </div>
 
               {/* Restore from File */}
-              <div className="p-5 rounded-xl bg-surface border border-outline-variant flex flex-col justify-between space-y-4">
+              <div className="group p-5 rounded-xl glass-card hover:-translate-y-1 hover:border-amber-500/45 hover:shadow-[0_14px_30px_-8px_rgba(217,119,6,0.22)] flex flex-col justify-between space-y-4">
                 <div className="space-y-2">
-                  <div className="w-10 h-10 rounded-lg bg-[#ca8a04]/10 text-[#ca8a04] flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-lg bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                     <span className="material-symbols-outlined text-[24px]">settings_backup_restore</span>
                   </div>
                   <h4 className="font-headline-sm text-sm font-bold text-on-surface">Restore System from Backup</h4>
@@ -6604,6 +6641,49 @@ export const SettingsPage: React.FC = () => {
                 </label>
               </div>
             </div>
+
+            {/* Local-Only 1-Click Sync Live Data from Production VPS */}
+            {isLocalhostEnv && (
+              <div className="group p-5 rounded-xl glass-card hover:-translate-y-1 hover:border-sky-500/45 hover:shadow-[0_14px_30px_-8px_rgba(2,132,199,0.22)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-lg bg-sky-500/10 text-sky-600 flex items-center justify-center shrink-0">
+                    <span className={`material-symbols-outlined text-[24px] ${isSyncingFromProd ? 'animate-spin' : ''}`}>
+                      cloud_sync
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-headline-sm text-sm font-bold text-on-surface">
+                        Sync Live Data from Production Server
+                      </h4>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/10 text-sky-600 border border-sky-500/20">
+                        Local Dev Only
+                      </span>
+                    </div>
+                    <p className="text-xs text-secondary leading-relaxed max-w-2xl">
+                      Pull a fresh snapshot of the live database from <strong className="text-on-surface">growpot.cloud</strong> into your local server. Automatically creates a timestamped backup of your current local data first.
+                    </p>
+                    {lastProdSyncSummary && (
+                      <p className="text-[11px] text-emerald-600 font-semibold font-data-tabular">
+                        ✓ Last synced: {lastProdSyncSummary.students} students, {lastProdSyncSummary.mentors} mentors, {lastProdSyncSummary.expenses} expenses (backup: {lastProdSyncSummary.backupFile})
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleSyncFromProduction}
+                  disabled={isSyncingFromProd}
+                  className="h-10 px-4 rounded-lg bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-xs transition-colors flex items-center justify-center gap-2 shrink-0 disabled:opacity-50 cursor-pointer"
+                >
+                  <span className={`material-symbols-outlined text-[18px] ${isSyncingFromProd ? 'animate-spin' : ''}`}>
+                    sync
+                  </span>
+                  <span>{isSyncingFromProd ? 'Syncing Live Data...' : 'Sync from Production'}</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Production Launch & Data Flush */}

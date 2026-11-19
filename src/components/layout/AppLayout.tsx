@@ -1,5 +1,5 @@
 import React, { useState, Suspense } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopNavbar } from './TopNavbar';
 import { useCRM } from '../../context/CRMContext';
@@ -46,11 +46,12 @@ import { MobileBottomNav } from './MobileBottomNav';
 import { FloatingChatWidget } from '../chat/FloatingChatWidget';
 
 export const AppLayout: React.FC = () => {
+  const location = useLocation();
   const { activeModal, closeModal, sessionWarningSeconds, resetActivityTimer } = useCRM();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background text-on-background font-body-md">
+    <div className="flex h-screen w-screen overflow-hidden bg-transparent text-on-background text-sm">
       {/* Desktop Sidebar (Fixed) */}
       <div className="hidden md:flex md:w-64 md:shrink-0">
         <Sidebar />
@@ -73,7 +74,7 @@ export const AppLayout: React.FC = () => {
       <div className="flex flex-1 flex-col min-w-0 h-screen overflow-hidden">
         <TopNavbar onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)} />
         
-        <main className="flex-1 overflow-y-auto bg-background">
+        <main className="flex-1 overflow-y-auto bg-transparent">
           <div className="max-w-container-max mx-auto p-4 sm:p-gutter md:p-margin-page pb-24 md:pb-16">
             <RouteErrorBoundary>
               <Suspense
@@ -86,7 +87,9 @@ export const AppLayout: React.FC = () => {
                   </div>
                 }
               >
-                <Outlet />
+                <div key={location.pathname} className="kinetic-page-enter">
+                  <Outlet />
+                </div>
               </Suspense>
             </RouteErrorBoundary>
           </div>

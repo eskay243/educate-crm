@@ -342,8 +342,8 @@ export const ExecutiveReportPage: React.FC<ExecutiveReportPageProps> = () => {
         <div className="bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden shadow-xs">
           <div className="p-stack-md border-b border-outline-variant flex justify-between items-center bg-surface-bright flex-wrap gap-3">
             <div>
-              <h3 className="font-headline-md text-headline-md font-bold text-on-surface">Faculty Honorarium Disbursements Ledger</h3>
-              <p className="font-body-sm text-body-sm text-secondary">Verified Nigerian banking settlement records via NIBSS electronic transfers.</p>
+              <h3 className="text-sm sm:text-base font-bold text-on-surface">Faculty Honorarium Disbursements Ledger</h3>
+              <p className="text-xs text-secondary">Verified Nigerian banking settlement records via NIBSS electronic transfers.</p>
             </div>
             <div className="flex gap-2">
               <div className="relative w-48 sm:w-64">
@@ -353,7 +353,7 @@ export const ExecutiveReportPage: React.FC<ExecutiveReportPageProps> = () => {
                   value={filterQuery}
                   onChange={(e) => setFilterQuery(e.target.value)}
                   placeholder="Filter payouts or mentor..."
-                  className="w-full h-8 pl-8 pr-2 rounded bg-surface border border-outline-variant text-body-sm focus:border-primary outline-none text-xs"
+                  className="w-full h-8 pl-8 pr-2 rounded-lg bg-surface border border-outline-variant focus:border-primary outline-none text-xs"
                 />
               </div>
             </div>

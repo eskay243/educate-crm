@@ -43,6 +43,10 @@ class ApiService {
     try {
       const authHeaders: Record<string, string> = {};
       try {
+        const jwtToken = safeLocalStorage.getItem('nexus_crm_jwt_v1');
+        if (jwtToken) {
+          authHeaders['Authorization'] = `Bearer ${jwtToken}`;
+        }
         const authUserStr = safeLocalStorage.getItem('nexus_clean_prod_auth_v1') || safeLocalStorage.getItem('nexus_auth');
         if (authUserStr) {
           const authUser = JSON.parse(authUserStr);
@@ -386,7 +390,7 @@ class ApiService {
   }
 
   // User Authentication
-  async login(credentials: { email?: string; password: string; role?: string }): Promise<{ success: boolean; user?: AuthUser; message?: string; error?: string }> {
+  async login(credentials: { email?: string; password: string; role?: string }): Promise<{ success: boolean; token?: string; user?: AuthUser; message?: string; error?: string }> {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
@@ -394,6 +398,9 @@ class ApiService {
         body: JSON.stringify(credentials),
       });
       const data = await response.json();
+      if (data?.success && data?.token) {
+        safeLocalStorage.setItem('nexus_crm_jwt_v1', data.token);
+      }
       return data;
     } catch (err: any) {
       console.warn('[API Auth Fallback]:', err);
@@ -795,6 +802,15 @@ class ApiService {
         commission37: number;
         expectedCommission37: number;
       }>;
+      inflowSummary?: {
+        totalCollectedInflow: number;
+        earnedFromInflow37: number;
+        disbursedToDate: number;
+        pendingInFlight: number;
+        verifiedInflowAvailable: number;
+        lockedUnpaidTuition: number;
+        lockedUnpaidCommission37: number;
+      } | null;
       summary: { totalEarned: number; paidPayout: number; pendingPayout: number };
     }>(`/mentors/${encodeURIComponent(mentorId)}/payout-breakdown`);
   }

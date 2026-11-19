@@ -209,7 +209,7 @@ export const StudentCoursesPage: React.FC = () => {
             </button>
 
             {/* Progress pill */}
-            <div className="flex items-center gap-2.5 bg-surface px-3 py-1.5 rounded-lg border border-outline-variant border-t-2 border-t-emerald-500 shadow-xs">
+            <div className="flex items-center gap-2.5 glass-card px-3 py-1.5 rounded-xl hover:border-emerald-500/45 hover:shadow-[0_8px_20px_-6px_rgba(22,163,74,0.2)]">
               <div className="text-right">
                 <div className="text-[10px] text-secondary font-semibold">Track Progress</div>
                 <div className="text-xs font-extrabold text-on-surface font-data-tabular">{student.progressPercent || 33}% Done</div>

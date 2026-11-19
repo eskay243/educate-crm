@@ -134,7 +134,7 @@ export const StudentMentorPage: React.FC = () => {
         {/* Left Column: Assigned Mentor Card & Bio (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
           {mentor ? (
-            <div className="bg-surface border border-outline-variant border-t-2 border-t-sky-500 rounded-xl p-5 shadow-xs space-y-5">
+            <div className="glass-card rounded-xl p-5 space-y-5 hover:border-sky-500/40 hover:shadow-[0_12px_28px_-8px_rgba(2,132,199,0.16)]">
               <div className="flex items-start gap-4">
                 <div className="w-16 h-16 rounded-xl bg-primary text-white flex items-center justify-center font-extrabold text-2xl shrink-0">
                   {mentor.name.charAt(0)}

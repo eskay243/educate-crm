@@ -87,7 +87,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
         </div>
       )}
 
-      <header className="bg-surface flex justify-between items-center h-16 px-gutter w-full sticky top-0 z-30 border-b border-border-subtle shadow-xs transition-colors">
+      <header className="glass-surface flex justify-between items-center h-16 px-gutter w-full sticky top-0 z-30 border-b border-outline-variant/60 transition-colors">
         {/* Mobile Menu Toggle & Brand */}
         <div className="flex items-center gap-stack-md md:hidden">
           <button

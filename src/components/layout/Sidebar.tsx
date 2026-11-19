@@ -81,7 +81,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
 
   const allNavItems: NavItemConfig[] = [
     // Staff & Admin Links
-    { to: '/', label: 'Dashboard', icon: 'dashboard', exact: true, allowedRoles: ['super_admin', 'admissions', 'finance'] },
+    { to: '/', label: 'Dashboard', icon: 'dashboard', exact: true, allowedRoles: ['super_admin', 'admissions', 'finance', 'program_officer'] },
     { to: '/chat', label: 'Team Chat', icon: 'chat', allowedRoles: ['super_admin', 'admissions', 'finance', 'program_officer', 'mentor'] },
     { to: '/courses', label: 'Programs & Cohorts', icon: 'menu_book', allowedRoles: ['super_admin', 'admissions', 'program_officer'], module: 'courses' },
     { to: '/mentors/course-outlines', label: 'Course Outlines', icon: 'account_tree', allowedRoles: ['program_officer'], module: 'courses' },
@@ -167,7 +167,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     } else if (isSuperAdmin) {
       roleAllowed = Boolean((!item.allowedRoles?.includes('student') && !item.allowedRoles?.includes('mentor') && item.to !== '/mentors/course-outlines') || item.allowedRoles?.includes('super_admin'));
     } else {
-      if (item.to === '/' && !isStudent && !isMentor && !isProgramOfficer) {
+      if (item.to === '/' && !isStudent && !isMentor) {
         roleAllowed = true;
       } else {
         const allowedByRole = item.allowedRoles ? hasPermission(item.allowedRoles, item.module) : true;

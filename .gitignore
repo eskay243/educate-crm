@@ -19,8 +19,14 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
-# Backups
+# Backups, Local Secrets & Runtime Storage
 server/backups/*.json
+server/data/backups/
+server/data/.jwt_secret
+server/data/*.sqlite
+server/data/*.sqlite-wal
+server/data/*.sqlite-shm
+server/uploads/
 backups/
 
 # Editor & OS

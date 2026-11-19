@@ -64,12 +64,8 @@ const HomeRoute: React.FC = () => {
   if (currentUser.role === 'mentor') {
     return <Navigate to="/mentor/dashboard" replace />;
   }
-  if (currentUser.role === 'program_officer') {
-    return <Navigate to="/courses" replace />;
-  }
-  
-  // Super Admin, Admissions, and Finance land on the Operational Command Center
-  if (['super_admin', 'admissions', 'finance'].includes(currentUser.role)) {
+  // Super Admin, Admissions, Finance, and Program Officer land on the Operational Command Center
+  if (['super_admin', 'admissions', 'finance', 'program_officer'].includes(currentUser.role)) {
     return <OperationalDashboardPage />;
   }
 

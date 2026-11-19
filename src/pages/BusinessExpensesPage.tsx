@@ -568,12 +568,12 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
       {/* Financial Overview Bento Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Card 1: Approved OpEx Spend (Deducted from Budget) */}
-        <div className="group bg-surface border border-outline-variant border-t-2 border-t-blue-500 hover:border-blue-500/60 hover:shadow-md rounded-xl p-4 flex flex-col justify-between transition-all duration-200">
+        <div className="group glass-card hover:-translate-y-1 hover:border-blue-500/45 hover:shadow-[0_14px_30px_-8px_rgba(24,114,245,0.22)] rounded-xl p-4 flex flex-col justify-between">
           <div className="flex justify-between items-start mb-3">
             <span className="text-xs font-semibold text-secondary">
               Approved OpEx Spend (MTD)
             </span>
-            <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 ring-1 ring-blue-500/20 flex items-center justify-center group-hover:scale-110 group-hover:shadow-[0_0_16px_rgba(24,114,245,0.28)] transition-all duration-300">
               <span className="material-symbols-outlined text-[20px]">payments</span>
             </div>
           </div>
@@ -599,8 +599,8 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
               setActiveLedgerView('expenses');
             }
           }}
-          className={`group bg-surface border border-t-2 border-t-amber-500 hover:border-amber-500/60 hover:shadow-md rounded-xl p-4 flex flex-col justify-between cursor-pointer transition-all duration-200 ${
-            selectedStatus === 'Awaiting Approval' ? 'ring-2 ring-amber-500/40 border-amber-500 bg-amber-50/40' : 'border-outline-variant'
+          className={`group glass-card hover:-translate-y-1 hover:border-amber-500/45 hover:shadow-[0_14px_30px_-8px_rgba(217,119,6,0.22)] rounded-xl p-4 flex flex-col justify-between cursor-pointer ${
+            selectedStatus === 'Awaiting Approval' ? 'ring-2 ring-amber-500/40 border-amber-500/60 bg-amber-50/50' : ''
           }`}
           title="Click to filter table by pending approval requests"
         >
@@ -615,7 +615,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                 </span>
               )}
             </div>
-            <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20 flex items-center justify-center group-hover:scale-110 group-hover:shadow-[0_0_16px_rgba(217,119,6,0.28)] transition-all duration-300">
               <span className="material-symbols-outlined text-[20px]">hourglass_top</span>
             </div>
           </div>
@@ -634,7 +634,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
 
         {/* Card 3: Approved Monthly Operating Budget with Auto-Renewal & Rollover */}
         {showBudgetCardToUser ? (
-          <div className="group bg-surface border border-outline-variant border-t-2 border-t-emerald-500 hover:border-emerald-500/60 hover:shadow-md rounded-xl p-4 flex flex-col justify-between transition-all duration-200">
+          <div className="group glass-card hover:-translate-y-1 hover:border-emerald-500/45 hover:shadow-[0_14px_30px_-8px_rgba(22,163,74,0.22)] rounded-xl p-4 flex flex-col justify-between">
             <div className="flex justify-between items-start mb-2">
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -908,7 +908,7 @@ export const BusinessExpensesPage: React.FC<BusinessExpensesPageProps> = () => {
                   value={tableSearch}
                   onChange={(e) => setTableSearch(e.target.value)}
                   placeholder="Search requisitions, items, notes..."
-                  className="w-full h-8 pl-8 pr-3 rounded-lg bg-surface border border-outline-variant text-body-sm focus:border-primary outline-none text-xs"
+                  className="w-full h-8 pl-8 pr-3 rounded-lg bg-surface border border-outline-variant focus:border-primary outline-none text-xs"
                 />
               </div>
             </div>

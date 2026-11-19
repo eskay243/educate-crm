@@ -101,7 +101,7 @@ export const MentorDashboardPage: React.FC = () => {
     <div className="space-y-6 max-w-7xl mx-auto pb-16">
       {/* Super Admin Faculty Inspector & Switching Bar */}
       {isSuperAdmin && (
-        <div className="bg-amber-50 border border-amber-200 border-t-2 border-t-amber-500 rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+        <div className="bg-amber-50/85 backdrop-blur-md border border-amber-200/80 ring-1 ring-inset ring-white/70 rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-[0_4px_16px_-4px_rgba(217,119,6,0.12)]">
           <div className="flex items-center gap-2.5">
             <span className="material-symbols-outlined text-amber-700 text-[20px]">admin_panel_settings</span>
             <div>

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { realtimeClient } from '../services/realtime';
 import { 
   Lead, 
   LeadFollowUpActivity, 
@@ -869,9 +870,23 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     refreshUnreadChatCount();
-    const interval = setInterval(refreshUnreadChatCount, 4000);
-    return () => clearInterval(interval);
-  }, [refreshUnreadChatCount]);
+    realtimeClient.connect(currentUser);
+
+    const unsubMessage = realtimeClient.subscribe('chat:message', () => {
+      refreshUnreadChatCount();
+    });
+    const unsubRead = realtimeClient.subscribe('chat:read', () => {
+      refreshUnreadChatCount();
+    });
+
+    // Low-frequency fallback sync (30s) — primary updates arrive instantaneously over SSE
+    const interval = setInterval(refreshUnreadChatCount, 30000);
+    return () => {
+      clearInterval(interval);
+      unsubMessage();
+      unsubRead();
+    };
+  }, [currentUser, refreshUnreadChatCount]);
 
   // Bootstrap from backend on mount
   useEffect(() => {
@@ -1533,6 +1548,8 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     safeLocalStorage.removeItem(STORAGE_KEYS.ORIGIN_SUPER_ADMIN);
     setIsSuperAdminSession(false);
     safeLocalStorage.removeItem(STORAGE_KEYS.AUTH);
+    safeLocalStorage.removeItem('nexus_crm_jwt_v1');
+    realtimeClient.disconnect();
     safeLocalStorage.setItem('nexus_logged_out', 'true');
     showToast('Signed Out', 'You have been signed out of the portal.', 'info');
     logActivity({
@@ -5671,11 +5688,24 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const requiresHoursOverride = actualHours < minRequired;
 
     const calcResult = calculateMentorTuitionCommission(myMentorProfile.id);
-    const effectiveAvailable = myMentorProfile.pendingPayout !== undefined && myMentorProfile.pendingPayout > 0
-      ? myMentorProfile.pendingPayout
-      : Math.max(calcResult.totalCommission - (myMentorProfile.paidPayout || 0), 0);
+    const inFlightPending = payoutRequests
+      .filter(r => r.mentorId === myMentorProfile.id && (r.status === 'Pending' || r.status === 'Approved'))
+      .reduce((sum, r) => sum + Number(r.amount || 0), 0);
 
-    const reqAmount = Number(amount) || effectiveAvailable || 0;
+    // Strictly cap at verified student inflow commission (never allow payout requests when no student inflow exists)
+    const serverBreakdown = await apiService.getMentorPayoutBreakdown(myMentorProfile.id).catch(() => null);
+    const effectiveAvailable = serverBreakdown?.inflowSummary
+      ? serverBreakdown.inflowSummary.verifiedInflowAvailable
+      : Math.max(0, Math.max(myMentorProfile.pendingPayout || 0, calcResult.totalCommission - (myMentorProfile.paidPayout || 0)) - inFlightPending);
+
+    if (effectiveAvailable <= 0) {
+      return {
+        success: false,
+        message: 'No verified student payment inflow available. Mentors can only request payouts from collected student tuition (37% of paid inflow).'
+      };
+    }
+
+    const reqAmount = Number(amount) || effectiveAvailable;
     if (reqAmount <= 0) {
       return { success: false, message: 'Requested payout amount must be greater than ₦0.' };
     }

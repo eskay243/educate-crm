@@ -11,7 +11,7 @@
 The **Kinetic Command** design system evolves the Crisp Foundation architecture into a high-signal executive command center. It balances **institutional reliability**, **color-coded scannability**, and **tactile micro-interactions**.
 
 - **Atmosphere:** Crisp, architectural, distraction-free, light-surface workspace (`#F4F7F8` canvas, `#FFFFFF` elevated surfaces).
-- **Color-Coded Framing:** Neutral 1px borders (`#D9E6E8`) paired with a **2px semantic top accent border** at rest and **full semantic border highlight + soft elevation on hover**, enabling instant visual triage across financial, academic, faculty, and support workflows.
+- **Glassmorphism & Ambient Glows:** Frosted translucent cards (`bg-white/80 backdrop-blur-md ring-1 ring-inset ring-white/80`) floating over a subtle radial light-washed `#F4F7F8` canvas — **zero hard `border-t-2` top stripes**. On hover, cards smoothly lift (`-translate-y-1`) with a spring cubic-bezier transition (`300ms cubic-bezier(0.16, 1, 0.3, 1)`), semantic border highlight, soft corner ambient bloom, and luminous outer glow.
 - **Voice:** Confident, executive, and Naira-native (`₦` with `font-data-tabular`).
 
 ---

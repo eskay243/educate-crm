@@ -3,6 +3,7 @@ import { useCRM } from '../context/CRMContext';
 import { ChatConversation, ChatMessage, ChatAttachment, ChatUserTarget, ChatMessageReplyTo } from '../types/chat';
 import { MentionSuggestions } from '../components/chat/MentionSuggestions';
 import { VoiceMessageRecorder } from '../components/chat/VoiceMessageRecorder';
+import { realtimeClient } from '../services/realtime';
 
 interface SwipeState {
   messageId: string;
@@ -142,15 +143,30 @@ export const ChatPage: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
-  // 3. Polling interval for real-time responsiveness (every 4 seconds)
+  // 3. Real-time SSE subscription for instant chat delivery + 30s fallback safety sync
   useEffect(() => {
+    const handleLiveChatEvent = (payload: any) => {
+      if (activeConvId && (!payload?.conversationId || payload.conversationId === activeConvId)) {
+        fetchActiveMessages(activeConvId);
+      }
+      fetchConversations();
+    };
+
+    const unsubMsg = realtimeClient.subscribe('chat:message', handleLiveChatEvent);
+    const unsubRead = realtimeClient.subscribe('chat:read', handleLiveChatEvent);
+
     const timer = setInterval(() => {
       if (activeConvId) {
         fetchActiveMessages(activeConvId);
       }
       fetchConversations();
-    }, 4000);
-    return () => clearInterval(timer);
+    }, 30000);
+
+    return () => {
+      clearInterval(timer);
+      unsubMsg();
+      unsubRead();
+    };
   }, [activeConvId]);
 
   // Reset scroll and new messages pill on channel/conversation switch
