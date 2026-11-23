@@ -34,6 +34,13 @@ import {
   MentorReconciliationSummary,
   FinancialAuditFinding,
   FinancialAuditScan,
+  FinancialAuditConfig,
+  CompanyBankAccountSnapshot,
+  BankStatementTransaction,
+  AuditInvestigationCase,
+  AuditUserQuery,
+  FinancialAuditReport,
+  FinancialAuditAskResponse,
   LMSModule,
   StudentAssignmentSubmission,
   EnabledModules,
@@ -217,9 +224,51 @@ interface CRMContextType {
   financialAuditScan: FinancialAuditScan | null;
   financialAuditScans: FinancialAuditScan[];
   financialAuditFindings: FinancialAuditFinding[];
+  financialAuditConfig: FinancialAuditConfig;
+  companyBankSnapshots: CompanyBankAccountSnapshot[];
+  bankStatementTransactions: BankStatementTransaction[];
+  auditInvestigations: AuditInvestigationCase[];
+  financialAuditReports: FinancialAuditReport[];
+  myAuditQueries: AuditUserQuery[];
   fetchFinancialAudit: () => Promise<void>;
   runFinancialAudit: () => Promise<void>;
-  updateFinancialAuditFinding: (id: string, payload: { status: string; resolutionNote?: string }) => Promise<boolean>;
+  updateFinancialAuditFinding: (
+    id: string,
+    payload: { status?: string; resolutionNote?: string; approveDiscount?: boolean; discountReason?: string }
+  ) => Promise<boolean>;
+  updateFinancialAuditConfig: (payload: { varianceToleranceNaira?: number; removeDiscountId?: string }) => Promise<boolean>;
+  saveCompanyBankSnapshot: (payload: Partial<CompanyBankAccountSnapshot>) => Promise<boolean>;
+  deleteCompanyBankSnapshot: (id: string) => Promise<boolean>;
+  importBankStatementCsv: (payload: { bankAccountId: string; csvText: string; updateClosingBalance?: boolean }) => Promise<any>;
+  importBankStatementPdf: (payload: {
+    pdfBase64: string;
+    fileName?: string;
+    bankAccountId?: string;
+    autoCreateAccount?: boolean;
+    updateClosingBalance?: boolean;
+  }) => Promise<any>;
+  matchBankStatementTransaction: (txId: string, payload: { studentId?: string; clearMatch?: boolean }) => Promise<boolean>;
+  createAuditInvestigation: (payload: { title: string; summary?: string; severity?: string; findingIds: string[] }) => Promise<AuditInvestigationCase | null>;
+  updateAuditInvestigation: (id: string, payload: { status?: string; note?: string; resolveLinkedFindings?: boolean }) => Promise<boolean>;
+  queryUserOnInvestigation: (
+    caseId: string,
+    payload: {
+      targetUserId: string;
+      targetUserName: string;
+      targetUserRole: string;
+      targetUserEmail?: string;
+      question: string;
+      transactionContext?: string;
+      expectedAmount?: number;
+      actualAmount?: number;
+      deltaAmount?: number;
+    }
+  ) => Promise<boolean>;
+  generateFinancialAuditReport: (payload: { title?: string; periodLabel?: string; includeResolved?: boolean; includedCaseIds?: string[] }) => Promise<FinancialAuditReport | null>;
+  deleteFinancialAuditReport: (id: string) => Promise<boolean>;
+  askFinancialAuditor: (question: string) => Promise<FinancialAuditAskResponse | null>;
+  fetchMyAuditQueries: () => Promise<void>;
+  respondToAuditQuery: (queryId: string, payload: { responseText: string; evidenceUrls?: string[] }) => Promise<boolean>;
   updateWalletBudgetLimit: (limit: number) => Promise<void>;
   refreshWalletSummary: () => Promise<void>;
   reconcileWalletWithPaystack: () => Promise<void>;
@@ -815,6 +864,15 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [financialAuditScan, setFinancialAuditScan] = useState<FinancialAuditScan | null>(null);
   const [financialAuditScans, setFinancialAuditScans] = useState<FinancialAuditScan[]>([]);
   const [financialAuditFindings, setFinancialAuditFindings] = useState<FinancialAuditFinding[]>([]);
+  const [financialAuditConfig, setFinancialAuditConfig] = useState<FinancialAuditConfig>({
+    varianceToleranceNaira: 100,
+    approvedDiscounts: [],
+  });
+  const [companyBankSnapshots, setCompanyBankSnapshots] = useState<CompanyBankAccountSnapshot[]>([]);
+  const [bankStatementTransactions, setBankStatementTransactions] = useState<BankStatementTransaction[]>([]);
+  const [auditInvestigations, setAuditInvestigations] = useState<AuditInvestigationCase[]>([]);
+  const [financialAuditReports, setFinancialAuditReports] = useState<FinancialAuditReport[]>([]);
+  const [myAuditQueries, setMyAuditQueries] = useState<AuditUserQuery[]>([]);
 
   // Chat message management state
   const [selectedMessageForForward, setSelectedMessageForForward] = useState<ChatMessage | null>(null);
@@ -5394,47 +5452,344 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
+  const applyAuditOverview = useCallback((overview: any) => {
+    if (!overview) return;
+    if ('latestScan' in overview) setFinancialAuditScan(overview.latestScan || null);
+    if (Array.isArray(overview.scans)) setFinancialAuditScans(overview.scans);
+    if (Array.isArray(overview.findings)) setFinancialAuditFindings(overview.findings);
+    if (overview.config) setFinancialAuditConfig(overview.config);
+    if (Array.isArray(overview.bankSnapshots)) setCompanyBankSnapshots(overview.bankSnapshots);
+    if (Array.isArray(overview.bankTransactions)) setBankStatementTransactions(overview.bankTransactions);
+    if (Array.isArray(overview.investigations)) setAuditInvestigations(overview.investigations);
+    if (Array.isArray(overview.reports)) setFinancialAuditReports(overview.reports);
+  }, []);
+
   const fetchFinancialAudit = useCallback(async () => {
     try {
       const res = await apiService.getFinancialAudit();
       if (res) {
-        setFinancialAuditScan(res.latestScan || null);
-        setFinancialAuditScans(res.scans || []);
-        setFinancialAuditFindings(res.findings || []);
+        applyAuditOverview(res);
       }
     } catch (err) {
       console.error('Failed to fetch financial audit:', err);
     }
+  }, [applyAuditOverview]);
+
+  const fetchMyAuditQueries = useCallback(async () => {
+    try {
+      const res = await apiService.getMyAuditQueries();
+      if (Array.isArray(res)) {
+        setMyAuditQueries(res);
+      }
+    } catch {
+      // Ignore if unauthenticated
+    }
   }, []);
+
+  useEffect(() => {
+    if (currentUser?.id || currentUser?.email) {
+      fetchMyAuditQueries();
+    } else {
+      setMyAuditQueries([]);
+    }
+  }, [currentUser?.id, currentUser?.email, fetchMyAuditQueries]);
 
   const runFinancialAudit = async () => {
     try {
       const res = await apiService.runFinancialAuditScan(currentUser?.name || 'Super Admin');
       if (res) {
-        setFinancialAuditScan(res.latestScan || null);
-        setFinancialAuditScans(res.scans || []);
-        setFinancialAuditFindings(res.findings || []);
-        showToast('AI Audit Scan Complete', `Health Score: ${res.latestScan?.healthScore ?? 100}% • ${res.latestScan?.totalFindings ?? 0} open findings`, 'success');
+        applyAuditOverview(res);
+        showToast('5-Layer AI Audit Complete', `Health Score: ${res.latestScan?.healthScore ?? 100}% • ${res.latestScan?.totalFindings ?? 0} open findings`, 'success');
       }
     } catch (err: any) {
       showToast('Audit Scan Failed', err?.message || 'Unable to run audit scan', 'error');
     }
   };
 
-  const updateFinancialAuditFinding = async (id: string, payload: { status: string; resolutionNote?: string }): Promise<boolean> => {
+  const updateFinancialAuditFinding = async (
+    id: string,
+    payload: { status?: string; resolutionNote?: string; approveDiscount?: boolean; discountReason?: string }
+  ): Promise<boolean> => {
     try {
-      const updated = await apiService.updateAuditFinding(id, {
+      const res = await apiService.updateAuditFinding(id, {
         ...payload,
-        resolvedBy: currentUser?.name || 'Super Admin'
+        resolvedBy: currentUser?.name || 'Super Admin',
       });
-      if (updated) {
-        setFinancialAuditFindings(prev => prev.map(f => f.id === id ? updated : f));
-        showToast('Finding Updated', `Audit finding marked as ${payload.status}.`, 'success');
+      if (res?.overview) {
+        applyAuditOverview(res.overview);
+        showToast('Discount Exempted', 'Approved discount saved and audit re-scanned.', 'success');
+        return true;
+      }
+      if (res) {
+        setFinancialAuditFindings(prev => prev.map(f => (f.id === id ? res : f)));
+        showToast('Finding Updated', `Audit finding marked as ${payload.status || 'updated'}.`, 'success');
         return true;
       }
       return false;
     } catch (err: any) {
       showToast('Update Failed', err?.message || 'Unable to update finding', 'error');
+      return false;
+    }
+  };
+
+  const updateFinancialAuditConfig = async (payload: { varianceToleranceNaira?: number; removeDiscountId?: string }): Promise<boolean> => {
+    try {
+      const res = await apiService.updateFinancialAuditConfig(payload);
+      if (res) {
+        applyAuditOverview(res);
+        showToast('Audit Settings Updated', 'Tolerance/exemptions updated and 5-layer audit re-scanned.', 'success');
+        return true;
+      }
+      return false;
+    } catch (err: any) {
+      showToast('Config Update Failed', err?.message || 'Unable to update audit config', 'error');
+      return false;
+    }
+  };
+
+  const saveCompanyBankSnapshot = async (payload: Partial<CompanyBankAccountSnapshot>): Promise<boolean> => {
+    try {
+      const res = await apiService.saveCompanyBankSnapshot({
+        ...payload,
+        recordedBy: currentUser?.name || 'Super Admin',
+      });
+      if (res?.overview) {
+        applyAuditOverview(res.overview);
+        showToast('Bank Account Saved', 'External company bank balance updated and reconciled.', 'success');
+        return true;
+      }
+      if (res?.success === false) {
+        showToast('Validation Error', res.message || 'Invalid bank details', 'error');
+      }
+      return false;
+    } catch (err: any) {
+      showToast('Save Failed', err?.message || 'Unable to save bank snapshot', 'error');
+      return false;
+    }
+  };
+
+  const deleteCompanyBankSnapshot = async (id: string): Promise<boolean> => {
+    try {
+      const res = await apiService.deleteCompanyBankSnapshot(id);
+      if (res) {
+        applyAuditOverview(res);
+        showToast('Bank Account Removed', 'Snapshot removed and audit recalculated.', 'info');
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
+  const importBankStatementCsv = async (payload: { bankAccountId: string; csvText: string; updateClosingBalance?: boolean }) => {
+    try {
+      const res = await apiService.importBankStatementCsv(payload);
+      if (res?.overview) {
+        applyAuditOverview(res.overview);
+        showToast(
+          'Bank Statement Imported',
+          `Imported ${res.importedCount} transaction(s)${res.skippedDuplicates ? ` (${res.skippedDuplicates} duplicates skipped)` : ''}.`,
+          'success'
+        );
+        return res;
+      }
+      return null;
+    } catch (err: any) {
+      showToast('Import Failed', err?.message || 'Unable to import bank CSV', 'error');
+      return null;
+    }
+  };
+
+  const importBankStatementPdf = async (payload: {
+    pdfBase64: string;
+    fileName?: string;
+    bankAccountId?: string;
+    autoCreateAccount?: boolean;
+    updateClosingBalance?: boolean;
+  }) => {
+    try {
+      const res = await apiService.importBankStatementPdf({
+        ...payload,
+        recordedBy: currentUser?.name || 'Super Admin',
+      });
+      if (res?.overview) {
+        applyAuditOverview(res.overview);
+        showToast(
+          'PDF Bank Statement Reconciled',
+          `Imported ${res.importedCount} transaction(s) from ${res.account?.bankName || 'Bank PDF'} (${res.bankChargesCount || 0} bank fees auto-classified).`,
+          'success'
+        );
+        return res;
+      }
+      if (res?.success === false) {
+        showToast('PDF Import Issue', res.message || 'Could not parse PDF bank statement', 'error');
+      }
+      return null;
+    } catch (err: any) {
+      showToast('PDF Import Failed', err?.message || 'Unable to import bank PDF', 'error');
+      return null;
+    }
+  };
+
+  const matchBankStatementTransaction = async (
+    txId: string,
+    payload: { studentId?: string; clearMatch?: boolean }
+  ): Promise<boolean> => {
+    try {
+      const res = await apiService.matchBankStatementTransaction(txId, payload);
+      if (res?.overview) {
+        applyAuditOverview(res.overview);
+        showToast(
+          payload.clearMatch ? 'Match Cleared' : 'Student Payment Linked',
+          payload.clearMatch
+            ? 'Bank entry unlinked and audit re-scanned.'
+            : `Linked to ${res.transaction?.matchedEntityName || 'Student'} and audit re-scanned.`,
+          'success'
+        );
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
+  const createAuditInvestigation = async (payload: {
+    title: string;
+    summary?: string;
+    severity?: string;
+    findingIds: string[];
+  }): Promise<AuditInvestigationCase | null> => {
+    try {
+      const res = await apiService.createAuditInvestigation({
+        ...payload,
+        assignedInvestigator: currentUser?.name || 'Super Admin',
+      });
+      if (res?.overview) {
+        applyAuditOverview(res.overview);
+        showToast('Investigation Opened', `Case ${res.investigation?.caseNumber || ''} created.`, 'success');
+        return res.investigation || null;
+      }
+      return null;
+    } catch (err: any) {
+      showToast('Failed to Open Case', err?.message || 'Unable to create investigation', 'error');
+      return null;
+    }
+  };
+
+  const updateAuditInvestigation = async (
+    id: string,
+    payload: { status?: string; note?: string; resolveLinkedFindings?: boolean }
+  ): Promise<boolean> => {
+    try {
+      const res = await apiService.updateAuditInvestigation(id, {
+        ...payload,
+        actor: currentUser?.name || 'Super Admin',
+      });
+      if (res?.overview) {
+        applyAuditOverview(res.overview);
+        showToast('Investigation Updated', payload.status ? `Status updated to ${payload.status}` : 'Timeline note recorded.', 'success');
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
+  const queryUserOnInvestigation = async (
+    caseId: string,
+    payload: {
+      targetUserId: string;
+      targetUserName: string;
+      targetUserRole: string;
+      targetUserEmail?: string;
+      question: string;
+      transactionContext?: string;
+      expectedAmount?: number;
+      actualAmount?: number;
+      deltaAmount?: number;
+    }
+  ): Promise<boolean> => {
+    try {
+      const res = await apiService.queryUserOnInvestigation(caseId, {
+        ...payload,
+        senderId: currentUser?.id,
+        senderName: currentUser?.name || 'Super Admin',
+        senderEmail: currentUser?.email,
+      });
+      if (res?.overview) {
+        applyAuditOverview(res.overview);
+        showToast('Audit Query Sent', `Dispatched to ${payload.targetUserName} via Chat DM & Notification Bell.`, 'success');
+        return true;
+      }
+      return false;
+    } catch (err: any) {
+      showToast('Query Failed', err?.message || 'Unable to send audit query', 'error');
+      return false;
+    }
+  };
+
+  const generateFinancialAuditReport = async (payload: {
+    title?: string;
+    periodLabel?: string;
+    includeResolved?: boolean;
+    includedCaseIds?: string[];
+  }): Promise<FinancialAuditReport | null> => {
+    try {
+      const res = await apiService.generateFinancialAuditReport({
+        ...payload,
+        generatedBy: currentUser?.name || 'Super Admin',
+      });
+      if (res?.overview) {
+        applyAuditOverview(res.overview);
+        showToast('Forensic Report Saved', `Report ${res.report?.reportCode || ''} added to Archive.`, 'success');
+        return res.report || null;
+      }
+      return null;
+    } catch (err: any) {
+      showToast('Report Failed', err?.message || 'Unable to generate report', 'error');
+      return null;
+    }
+  };
+
+  const deleteFinancialAuditReport = async (id: string): Promise<boolean> => {
+    try {
+      const res = await apiService.deleteFinancialAuditReport(id);
+      if (res) {
+        applyAuditOverview(res);
+        showToast('Report Deleted', 'Forensic report removed from archive.', 'info');
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
+  const askFinancialAuditor = async (question: string): Promise<FinancialAuditAskResponse | null> => {
+    try {
+      return await apiService.askFinancialAuditor(question);
+    } catch {
+      return null;
+    }
+  };
+
+  const respondToAuditQuery = async (
+    queryId: string,
+    payload: { responseText: string; evidenceUrls?: string[] }
+  ): Promise<boolean> => {
+    try {
+      const updated = await apiService.respondToAuditQuery(queryId, payload);
+      if (updated && updated.id) {
+        setMyAuditQueries(prev => prev.map(q => (q.id === queryId ? { ...q, ...updated } : q)));
+        showToast('Response Submitted', 'Your explanation and proof have been logged to the Audit Investigation.', 'success');
+        return true;
+      }
+      return false;
+    } catch (err: any) {
+      showToast('Submission Failed', err?.message || 'Unable to submit response', 'error');
       return false;
     }
   };
@@ -7441,9 +7796,29 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         financialAuditScan,
         financialAuditScans,
         financialAuditFindings,
+        financialAuditConfig,
+        companyBankSnapshots,
+        bankStatementTransactions,
+        auditInvestigations,
+        financialAuditReports,
+        myAuditQueries,
         fetchFinancialAudit,
         runFinancialAudit,
         updateFinancialAuditFinding,
+        updateFinancialAuditConfig,
+        saveCompanyBankSnapshot,
+        deleteCompanyBankSnapshot,
+        importBankStatementCsv,
+        importBankStatementPdf,
+        matchBankStatementTransaction,
+        createAuditInvestigation,
+        updateAuditInvestigation,
+        queryUserOnInvestigation,
+        generateFinancialAuditReport,
+        deleteFinancialAuditReport,
+        askFinancialAuditor,
+        fetchMyAuditQueries,
+        respondToAuditQuery,
         createAssignment,
         recalculateMentorLecturedHours,
         startTimetableSession,

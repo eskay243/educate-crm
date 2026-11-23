@@ -369,3 +369,26 @@
     transform: none !important;
   }
 }
+
+/* Clean multi-page Print Support for Forensic Reports & Executive Views */
+@media print {
+  html,
+  body,
+  #root,
+  main,
+  .h-screen,
+  .overflow-hidden,
+  .overflow-y-auto {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+
+  aside,
+  nav,
+  header,
+  .print\:hidden {
+    display: none !important;
+  }
+}

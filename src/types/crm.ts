@@ -1475,34 +1475,69 @@ export interface MentorReconciliationSummary {
 
 export type AuditSeverity = 'Critical' | 'Warning' | 'Info';
 export type AuditFindingStatus = 'Open' | 'Acknowledged' | 'Resolved';
+export type AuditLayer = 1 | 2 | 3 | 4 | 5;
+
+export type FinancialAuditRuleCode =
+  | 'TUITION_OUTLIER'
+  | 'COURSE_PRICE_VARIANCE'
+  | 'COMMISSION_VARIANCE'
+  | 'OVER_DISBURSEMENT'
+  | 'UNLINKED_STUDENT_DEPOSITS'
+  | 'INVOICE_STUDENT_MISMATCH'
+  | 'PAID_STUDENT_NO_MENTOR'
+  | 'PAYOUT_LEDGER_MISMATCH'
+  | 'UNMATCHED_CRM_DEPOSIT'
+  | 'UNATTRIBUTED_BANK_CREDIT'
+  | 'DOUBLE_COUNTED_MENTOR_PAYOUT'
+  | 'EXPENSE_WITHOUT_OUTFLOW'
+  | 'UNVOUCHERED_WALLET_DEBIT'
+  | 'COMPANY_CASH_DISCREPANCY';
 
 export interface FinancialAuditFinding {
   id: string;
   fingerprint: string;
-  ruleCode:
-    | 'TUITION_OUTLIER'
-    | 'COMMISSION_VARIANCE'
-    | 'OVER_DISBURSEMENT'
-    | 'UNLINKED_STUDENT_DEPOSITS'
-    | 'INVOICE_STUDENT_MISMATCH'
-    | 'PAID_STUDENT_NO_MENTOR'
-    | 'PAYOUT_LEDGER_MISMATCH';
+  ruleCode: FinancialAuditRuleCode;
+  layer?: AuditLayer;
   severity: AuditSeverity;
   title: string;
   aiDiagnosis: string;
   recommendedAction: string;
-  entityType: 'mentor' | 'student' | 'ledger' | 'payout' | 'wallet';
+  entityType: 'mentor' | 'student' | 'ledger' | 'payout' | 'wallet' | 'expense' | 'bank' | 'system';
   entityId: string;
   entityName: string;
   expectedAmount: number;
   actualAmount: number;
   deltaAmount: number;
   status: AuditFindingStatus;
+  isExempted?: boolean;
+  exemptionReason?: string;
+  investigationCaseId?: string;
   resolutionNote?: string;
   resolvedBy?: string;
   resolvedAt?: string;
   firstDetectedAt: string;
   lastDetectedAt: string;
+}
+
+export interface FinancialAuditMoneyFlow {
+  totalTuitionBilled: number;
+  totalCatalogTuitionValue?: number;
+  coursePriceVarianceTotal?: number;
+  totalStudentPaymentsReceived: number;
+  totalExpectedCommission37: number;
+  totalAgreedCommissionDue: number;
+  totalDisbursedToMentors: number;
+  totalOutstandingPayable: number;
+  totalBusinessExpensesPaid?: number;
+  totalNonMentorExpensesPaid?: number;
+  totalWalletInflow?: number;
+  totalWalletOutflow?: number;
+  paystackLiveBalance?: number;
+  externalBankBalancesTotal?: number;
+  actualCompanyCashTotal?: number;
+  expectedNetCashPosition?: number;
+  cashReconciliationGap?: number;
+  netDiscrepancyExposure: number;
 }
 
 export interface FinancialAuditScan {
@@ -1514,15 +1549,145 @@ export interface FinancialAuditScan {
   criticalCount: number;
   warningCount: number;
   infoCount: number;
-  moneyFlow: {
-    totalTuitionBilled: number;
-    totalStudentPaymentsReceived: number;
-    totalExpectedCommission37: number;
-    totalAgreedCommissionDue: number;
-    totalDisbursedToMentors: number;
-    totalOutstandingPayable: number;
-    netDiscrepancyExposure: number;
-  };
+  moneyFlow: FinancialAuditMoneyFlow;
+}
+
+export interface CompanyBankAccountSnapshot {
+  id: string;
+  bankName: string;
+  bankCode?: string;
+  accountNumber: string; // 10-digit NUBAN
+  accountName: string;
+  closingBalance: number;
+  asOfDate: string;
+  notes?: string;
+  recordedBy: string;
+  updatedAt: string;
+}
+
+export interface BankStatementTransaction {
+  id: string;
+  bankAccountId: string;
+  bankName: string;
+  date: string;
+  description: string;
+  reference: string;
+  type: 'credit' | 'debit';
+  amount: number;
+  balanceAfter?: number;
+  matchedEntityType?: 'student' | 'expense' | 'payout' | 'wallet_funding' | 'bank_charge' | null;
+  matchedEntityId?: string | null;
+  matchedEntityName?: string | null;
+  matchedCourseName?: string | null;
+  matchConfidence?: 'High' | 'Medium' | 'Manual' | null;
+  matchReason?: string | null;
+  importedAt: string;
+}
+
+export interface ApprovedTuitionDiscount {
+  id: string;
+  studentId: string;
+  studentName: string;
+  courseTitle: string;
+  catalogFee: number;
+  approvedFee: number;
+  reason: string;
+  approvedBy: string;
+  approvedAt: string;
+}
+
+export interface FinancialAuditConfig {
+  varianceToleranceNaira: number;
+  approvedDiscounts: ApprovedTuitionDiscount[];
+}
+
+export type AuditInvestigationStatus =
+  | 'Open'
+  | 'Awaiting Response'
+  | 'Under Review'
+  | 'Resolved'
+  | 'Escalated';
+
+export interface AuditUserQuery {
+  id: string;
+  caseId: string;
+  caseNumber?: string;
+  caseTitle?: string;
+  targetUserId: string;
+  targetUserName: string;
+  targetUserRole: string;
+  targetUserEmail?: string;
+  question: string;
+  transactionContext: string;
+  expectedAmount?: number;
+  actualAmount?: number;
+  deltaAmount?: number;
+  chatConversationId?: string;
+  status: 'Pending' | 'Responded';
+  responseText?: string;
+  evidenceUrls?: string[];
+  createdAt: string;
+  createdBy: string;
+  respondedAt?: string;
+}
+
+export interface AuditTimelineEntry {
+  id: string;
+  timestamp: string;
+  actor: string;
+  action: string;
+  note: string;
+}
+
+export interface AuditInvestigationCase {
+  id: string;
+  caseNumber: string;
+  title: string;
+  summary: string;
+  severity: AuditSeverity;
+  status: AuditInvestigationStatus;
+  findingIds: string[];
+  totalExposureNaira: number;
+  assignedInvestigator: string;
+  queries: AuditUserQuery[];
+  timeline: AuditTimelineEntry[];
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt?: string;
+}
+
+export interface FinancialAuditReport {
+  id: string;
+  reportCode: string;
+  title: string;
+  periodLabel: string;
+  generatedBy: string;
+  generatedAt: string;
+  scanSnapshot: FinancialAuditScan;
+  executiveSummary: string;
+  aiNarrative?: string;
+  findingCount: number;
+  criticalCount: number;
+  warningCount: number;
+  totalExposureNaira: number;
+  findingsSnapshot: FinancialAuditFinding[];
+  includedCaseIds: string[];
+  casesSnapshot: AuditInvestigationCase[];
+  bankSnapshots: CompanyBankAccountSnapshot[];
+}
+
+export interface FinancialAuditAskResponse {
+  answer: string;
+  verdict?: string;
+  mode: 'deterministic' | 'gemini_enhanced';
+  sections?: Array<{
+    title: string;
+    icon?: string;
+    bullets: string[];
+  }>;
+  highlights: Array<{ label: string; value: string; intent?: 'blue' | 'emerald' | 'amber' | 'red' | 'sky' }>;
+  relatedFindings: FinancialAuditFinding[];
+  followUpPrompts?: string[];
 }
 
 export interface PushSubscriptionItem {

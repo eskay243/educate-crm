@@ -28,7 +28,14 @@ import {
   MentorReconciliationRow,
   MentorReconciliationSummary,
   FinancialAuditFinding,
-  FinancialAuditScan
+  FinancialAuditScan,
+  FinancialAuditConfig,
+  CompanyBankAccountSnapshot,
+  BankStatementTransaction,
+  AuditInvestigationCase,
+  AuditUserQuery,
+  FinancialAuditReport,
+  FinancialAuditAskResponse
 } from '../types/crm';
 import {
   ChatConversation,
@@ -838,17 +845,27 @@ class ApiService {
 
   async getFinancialAudit() {
     return this.request<{
-      latestScan: FinancialAuditScan;
+      latestScan: FinancialAuditScan | null;
       scans: FinancialAuditScan[];
       findings: FinancialAuditFinding[];
+      config: FinancialAuditConfig;
+      bankSnapshots: CompanyBankAccountSnapshot[];
+      bankTransactions: BankStatementTransaction[];
+      investigations: AuditInvestigationCase[];
+      reports: FinancialAuditReport[];
     }>('/financial-audit');
   }
 
   async runFinancialAuditScan(triggeredBy?: string) {
     return this.request<{
-      latestScan: FinancialAuditScan;
+      latestScan: FinancialAuditScan | null;
       scans: FinancialAuditScan[];
       findings: FinancialAuditFinding[];
+      config: FinancialAuditConfig;
+      bankSnapshots: CompanyBankAccountSnapshot[];
+      bankTransactions: BankStatementTransaction[];
+      investigations: AuditInvestigationCase[];
+      reports: FinancialAuditReport[];
     }>('/financial-audit/scan', {
       method: 'POST',
       body: JSON.stringify({ triggeredBy }),
@@ -857,10 +874,167 @@ class ApiService {
 
   async updateAuditFinding(
     id: string,
-    payload: { status: string; resolutionNote?: string; resolvedBy?: string }
+    payload: {
+      status?: string;
+      resolutionNote?: string;
+      resolvedBy?: string;
+      approveDiscount?: boolean;
+      discountReason?: string;
+    }
   ) {
-    return this.request<FinancialAuditFinding>(`/financial-audit/findings/${encodeURIComponent(id)}`, {
+    return this.request<any>(`/financial-audit/findings/${encodeURIComponent(id)}`, {
       method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateFinancialAuditConfig(payload: { varianceToleranceNaira?: number; removeDiscountId?: string }) {
+    return this.request<any>('/financial-audit/config', {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async saveCompanyBankSnapshot(payload: Partial<CompanyBankAccountSnapshot>) {
+    return this.request<any>('/financial-audit/bank-accounts', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteCompanyBankSnapshot(id: string) {
+    return this.request<any>(`/financial-audit/bank-accounts/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async importBankStatementCsv(payload: { bankAccountId: string; csvText: string; updateClosingBalance?: boolean }) {
+    return this.request<{
+      importedCount: number;
+      skippedDuplicates: number;
+      totalCredits: number;
+      totalDebits: number;
+      detectedClosingBalance?: number;
+      overview: any;
+    }>('/financial-audit/bank-statements/import', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async importBankStatementPdf(payload: {
+    pdfBase64: string;
+    fileName?: string;
+    bankAccountId?: string;
+    autoCreateAccount?: boolean;
+    updateClosingBalance?: boolean;
+    recordedBy?: string;
+  }) {
+    return this.request<{
+      account?: CompanyBankAccountSnapshot;
+      importedCount: number;
+      skippedDuplicates: number;
+      totalCredits: number;
+      totalDebits: number;
+      bankChargesTotal: number;
+      bankChargesCount: number;
+      detectedClosingBalance?: number;
+      detectedMetadata?: any;
+      overview: any;
+      success?: boolean;
+      message?: string;
+    }>('/financial-audit/bank-statements/import-pdf', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async matchBankStatementTransaction(txId: string, payload: { studentId?: string; clearMatch?: boolean }) {
+    return this.request<any>(`/financial-audit/bank-statements/${encodeURIComponent(txId)}/match`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async createAuditInvestigation(payload: {
+    title: string;
+    summary?: string;
+    severity?: string;
+    findingIds: string[];
+    assignedInvestigator?: string;
+  }) {
+    return this.request<any>('/financial-audit/investigations', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateAuditInvestigation(
+    id: string,
+    payload: { status?: string; note?: string; actor?: string; resolveLinkedFindings?: boolean }
+  ) {
+    return this.request<any>(`/financial-audit/investigations/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async queryUserOnInvestigation(
+    caseId: string,
+    payload: {
+      targetUserId: string;
+      targetUserName: string;
+      targetUserRole: string;
+      targetUserEmail?: string;
+      question: string;
+      transactionContext?: string;
+      expectedAmount?: number;
+      actualAmount?: number;
+      deltaAmount?: number;
+      senderId?: string;
+      senderName?: string;
+      senderEmail?: string;
+    }
+  ) {
+    return this.request<any>(`/financial-audit/investigations/${encodeURIComponent(caseId)}/query-user`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async generateFinancialAuditReport(payload: {
+    title?: string;
+    periodLabel?: string;
+    generatedBy?: string;
+    includeResolved?: boolean;
+    includedCaseIds?: string[];
+  }) {
+    return this.request<{ report: FinancialAuditReport; overview: any }>('/financial-audit/reports', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteFinancialAuditReport(id: string) {
+    return this.request<any>(`/financial-audit/reports/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async askFinancialAuditor(question: string) {
+    return this.request<FinancialAuditAskResponse>('/financial-audit/ask', {
+      method: 'POST',
+      body: JSON.stringify({ question }),
+    });
+  }
+
+  async getMyAuditQueries() {
+    return this.request<AuditUserQuery[]>('/audit-queries/my');
+  }
+
+  async respondToAuditQuery(queryId: string, payload: { responseText: string; evidenceUrls?: string[] }) {
+    return this.request<AuditUserQuery>(`/audit-queries/${encodeURIComponent(queryId)}/respond`, {
+      method: 'POST',
       body: JSON.stringify(payload),
     });
   }

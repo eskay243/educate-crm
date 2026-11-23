@@ -1,48 +1,49 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { CRMProvider } from './context/CRMContext';
 import { PWAProvider } from './context/PWAContext';
 import { AppLayout } from './components/layout/AppLayout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { useCRM } from './context/CRMContext';
+import { lazyWithRetry } from './utils/lazyWithRetry';
 
 import { ToastContainer } from './components/notifications/ToastContainer';
 import { PWAInstallPrompt } from './components/common/PWAInstallPrompt';
 import { OfflineIndicator } from './components/common/OfflineIndicator';
 
-// Code-split page components for high-speed initial bundle download
-const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
-const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
-const ExecutiveReportPage = lazy(() => import('./pages/ExecutiveReportPage').then(m => ({ default: m.ExecutiveReportPage })));
-const LeadManagementPage = lazy(() => import('./pages/LeadManagementPage').then(m => ({ default: m.LeadManagementPage })));
-const ContactsPage = lazy(() => import('./pages/ContactsPage').then(m => ({ default: m.ContactsPage })));
-const StudentEnrollmentPage = lazy(() => import('./pages/StudentEnrollmentPage').then(m => ({ default: m.StudentEnrollmentPage })));
-const MentorManagementPage = lazy(() => import('./pages/MentorManagementPage').then(m => ({ default: m.MentorManagementPage })));
-const MentorAvailabilityPage = lazy(() => import('./pages/MentorAvailabilityPage').then(m => ({ default: m.MentorAvailabilityPage })));
-const FacultyGradingPage = lazy(() => import('./pages/FacultyGradingPage').then(m => ({ default: m.FacultyGradingPage })));
-const CourseOutlinePage = lazy(() => import('./pages/CourseOutlinePage').then(m => ({ default: m.CourseOutlinePage })));
-const BusinessExpensesPage = lazy(() => import('./pages/BusinessExpensesPage').then(m => ({ default: m.BusinessExpensesPage })));
-const FinancialAuditPage = lazy(() => import('./pages/FinancialAuditPage').then(m => ({ default: m.FinancialAuditPage })));
-const CoursesCohortsPage = lazy(() => import('./pages/CoursesCohortsPage').then(m => ({ default: m.CoursesCohortsPage })));
-const StaffAttendancePage = lazy(() => import('./pages/StaffAttendancePage').then(m => ({ default: m.StaffAttendancePage })));
-const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
-const StudentDashboardPage = lazy(() => import('./pages/student/StudentDashboardPage').then(m => ({ default: m.StudentDashboardPage })));
-const StudentCoursesPage = lazy(() => import('./pages/student/StudentCoursesPage').then(m => ({ default: m.StudentCoursesPage })));
-const StudentMentorPage = lazy(() => import('./pages/student/StudentMentorPage').then(m => ({ default: m.StudentMentorPage })));
-const StudentBillingPage = lazy(() => import('./pages/student/StudentBillingPage').then(m => ({ default: m.StudentBillingPage })));
-const StudentProfilePage = lazy(() => import('./pages/student/StudentProfilePage').then(m => ({ default: m.StudentProfilePage })));
+// Code-split page components with automatic stale-chunk recovery
+const LoginPage = lazyWithRetry(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })), 'LoginPage');
+const ResetPasswordPage = lazyWithRetry(() => import('./pages/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })), 'ResetPasswordPage');
+const ExecutiveReportPage = lazyWithRetry(() => import('./pages/ExecutiveReportPage').then(m => ({ default: m.ExecutiveReportPage })), 'ExecutiveReportPage');
+const LeadManagementPage = lazyWithRetry(() => import('./pages/LeadManagementPage').then(m => ({ default: m.LeadManagementPage })), 'LeadManagementPage');
+const ContactsPage = lazyWithRetry(() => import('./pages/ContactsPage').then(m => ({ default: m.ContactsPage })), 'ContactsPage');
+const StudentEnrollmentPage = lazyWithRetry(() => import('./pages/StudentEnrollmentPage').then(m => ({ default: m.StudentEnrollmentPage })), 'StudentEnrollmentPage');
+const MentorManagementPage = lazyWithRetry(() => import('./pages/MentorManagementPage').then(m => ({ default: m.MentorManagementPage })), 'MentorManagementPage');
+const MentorAvailabilityPage = lazyWithRetry(() => import('./pages/MentorAvailabilityPage').then(m => ({ default: m.MentorAvailabilityPage })), 'MentorAvailabilityPage');
+const FacultyGradingPage = lazyWithRetry(() => import('./pages/FacultyGradingPage').then(m => ({ default: m.FacultyGradingPage })), 'FacultyGradingPage');
+const CourseOutlinePage = lazyWithRetry(() => import('./pages/CourseOutlinePage').then(m => ({ default: m.CourseOutlinePage })), 'CourseOutlinePage');
+const BusinessExpensesPage = lazyWithRetry(() => import('./pages/BusinessExpensesPage').then(m => ({ default: m.BusinessExpensesPage })), 'BusinessExpensesPage');
+const FinancialAuditPage = lazyWithRetry(() => import('./pages/FinancialAuditPage').then(m => ({ default: m.FinancialAuditPage })), 'FinancialAuditPage');
+const CoursesCohortsPage = lazyWithRetry(() => import('./pages/CoursesCohortsPage').then(m => ({ default: m.CoursesCohortsPage })), 'CoursesCohortsPage');
+const StaffAttendancePage = lazyWithRetry(() => import('./pages/StaffAttendancePage').then(m => ({ default: m.StaffAttendancePage })), 'StaffAttendancePage');
+const SettingsPage = lazyWithRetry(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })), 'SettingsPage');
+const StudentDashboardPage = lazyWithRetry(() => import('./pages/student/StudentDashboardPage').then(m => ({ default: m.StudentDashboardPage })), 'StudentDashboardPage');
+const StudentCoursesPage = lazyWithRetry(() => import('./pages/student/StudentCoursesPage').then(m => ({ default: m.StudentCoursesPage })), 'StudentCoursesPage');
+const StudentMentorPage = lazyWithRetry(() => import('./pages/student/StudentMentorPage').then(m => ({ default: m.StudentMentorPage })), 'StudentMentorPage');
+const StudentBillingPage = lazyWithRetry(() => import('./pages/student/StudentBillingPage').then(m => ({ default: m.StudentBillingPage })), 'StudentBillingPage');
+const StudentProfilePage = lazyWithRetry(() => import('./pages/student/StudentProfilePage').then(m => ({ default: m.StudentProfilePage })), 'StudentProfilePage');
 
 // Dedicated Mentor / Faculty Portal Pages
-const MentorDashboardPage = lazy(() => import('./pages/mentor/MentorDashboardPage').then(m => ({ default: m.MentorDashboardPage })));
-const MentorStudentsPage = lazy(() => import('./pages/mentor/MentorStudentsPage').then(m => ({ default: m.MentorStudentsPage })));
-const MentorSchedulePage = lazy(() => import('./pages/mentor/MentorSchedulePage').then(m => ({ default: m.MentorSchedulePage })));
-const MentorCurriculumPage = lazy(() => import('./pages/mentor/MentorCurriculumPage').then(m => ({ default: m.MentorCurriculumPage })));
-const MentorPayoutsPage = lazy(() => import('./pages/mentor/MentorPayoutsPage').then(m => ({ default: m.MentorPayoutsPage })));
-const MentorProfilePage = lazy(() => import('./pages/mentor/MentorProfilePage').then(m => ({ default: m.MentorProfilePage })));
+const MentorDashboardPage = lazyWithRetry(() => import('./pages/mentor/MentorDashboardPage').then(m => ({ default: m.MentorDashboardPage })), 'MentorDashboardPage');
+const MentorStudentsPage = lazyWithRetry(() => import('./pages/mentor/MentorStudentsPage').then(m => ({ default: m.MentorStudentsPage })), 'MentorStudentsPage');
+const MentorSchedulePage = lazyWithRetry(() => import('./pages/mentor/MentorSchedulePage').then(m => ({ default: m.MentorSchedulePage })), 'MentorSchedulePage');
+const MentorCurriculumPage = lazyWithRetry(() => import('./pages/mentor/MentorCurriculumPage').then(m => ({ default: m.MentorCurriculumPage })), 'MentorCurriculumPage');
+const MentorPayoutsPage = lazyWithRetry(() => import('./pages/mentor/MentorPayoutsPage').then(m => ({ default: m.MentorPayoutsPage })), 'MentorPayoutsPage');
+const MentorProfilePage = lazyWithRetry(() => import('./pages/mentor/MentorProfilePage').then(m => ({ default: m.MentorProfilePage })), 'MentorProfilePage');
 
-const TicketsPage = lazy(() => import('./pages/TicketsPage').then(m => ({ default: m.TicketsPage })));
-const ChatPage = lazy(() => import('./pages/ChatPage').then(m => ({ default: m.ChatPage })));
-const OperationalDashboardPage = lazy(() => import('./pages/OperationalDashboardPage').then(m => ({ default: m.OperationalDashboardPage })));
+const TicketsPage = lazyWithRetry(() => import('./pages/TicketsPage').then(m => ({ default: m.TicketsPage })), 'TicketsPage');
+const ChatPage = lazyWithRetry(() => import('./pages/ChatPage').then(m => ({ default: m.ChatPage })), 'ChatPage');
+const OperationalDashboardPage = lazyWithRetry(() => import('./pages/OperationalDashboardPage').then(m => ({ default: m.OperationalDashboardPage })), 'OperationalDashboardPage');
 
 const PageLoadingFallback: React.FC = () => (
   <div className="flex min-h-[60vh] w-full flex-col items-center justify-center p-8">

@@ -44,6 +44,7 @@ import { InstantMeetingModal } from '../modals/InstantMeetingModal';
 import { AttachRecordingModal } from '../modals/AttachRecordingModal';
 import { MobileBottomNav } from './MobileBottomNav';
 import { FloatingChatWidget } from '../chat/FloatingChatWidget';
+import { UserAuditQueryBannerAndModal } from '../audit/UserAuditQueryModal';
 
 export const AppLayout: React.FC = () => {
   const location = useLocation();
@@ -73,6 +74,7 @@ export const AppLayout: React.FC = () => {
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col min-w-0 h-screen overflow-hidden">
         <TopNavbar onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)} />
+        <UserAuditQueryBannerAndModal />
         
         <main className="flex-1 overflow-y-auto bg-transparent">
           <div className="max-w-container-max mx-auto p-4 sm:p-gutter md:p-margin-page pb-24 md:pb-16">

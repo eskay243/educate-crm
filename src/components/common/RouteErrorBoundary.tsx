@@ -34,29 +34,35 @@ export class RouteErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
+      const rawMsg = this.state.error?.message || '';
+      const isModuleScriptError =
+        /importing a module script failed|dynamically imported module|loading chunk|chunkloaderror/i.test(rawMsg);
+
       return (
         <div className="min-h-[50vh] flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-200">
-          <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 flex items-center justify-center mb-4 border border-amber-300/40 shadow-xs">
+          <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-700 flex items-center justify-center mb-4 border border-amber-500/25 shadow-xs">
             <span className="material-symbols-outlined text-[28px]">warning</span>
           </div>
 
           <h3 className="font-headline-md text-lg font-bold text-on-surface mb-1">
-            Module Encountered a Temporary Error
+            {isModuleScriptError ? 'Workspace Update Available' : 'Module Encountered a Temporary Error'}
           </h3>
           <p className="text-secondary text-xs max-w-md mb-5 leading-relaxed">
-            {this.state.error?.message || 'An unexpected rendering issue occurred while loading this view.'}
+            {isModuleScriptError
+              ? 'This page module was updated or the local dev server restarted. Click "Refresh Workspace" to load the latest version.'
+              : rawMsg || 'An unexpected rendering issue occurred while loading this view.'}
           </p>
 
           <div className="flex items-center gap-3">
             <button
               onClick={this.handleReset}
-              className="px-4 py-2 rounded-lg bg-surface border border-outline-variant text-xs font-semibold text-on-surface hover:bg-surface-container transition-colors shadow-xs"
+              className="px-4 py-2 rounded-lg bg-surface border border-outline-variant text-xs font-semibold text-on-surface hover:bg-surface-container transition-colors shadow-xs cursor-pointer"
             >
               Retry View
             </button>
             <button
               onClick={this.handleReload}
-              className="px-4 py-2 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary-container transition-colors shadow-xs"
+              className="px-4 py-2 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary-container transition-colors shadow-xs cursor-pointer"
             >
               Refresh Workspace
             </button>
