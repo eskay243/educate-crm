@@ -45,11 +45,9 @@
 @keyframes kineticFadeIn {
   0% {
     opacity: 0;
-    transform: translateY(8px);
   }
   100% {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -65,19 +63,19 @@
 }
 
 @layer components {
-  /* Route-level smooth page entrance */
+  /* Route-level smooth page entrance — uses `backwards` (never `forwards`/`will-change: transform`)
+     so transform & filter release cleanly to `none` after 400ms and never trap `position: fixed` modals */
   .kinetic-page-enter {
-    animation: kineticPageEnter 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
-    will-change: transform, opacity;
+    animation: kineticPageEnter 400ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
   }
 
   /* Wire up existing animate-in / fade-in / zoom-in-95 classes across all pages & modals */
   .animate-in.fade-in {
-    animation: kineticFadeIn 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: kineticFadeIn 240ms ease-out backwards;
   }
 
   .animate-in.zoom-in-95 {
-    animation: kineticZoomIn 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: kineticZoomIn 280ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
   }
 
   /* Global Unmistakable Button Micro-Motion (covers inline Tailwind buttons too!) */

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Expense } from '../../types/crm';
 import { formatNaira } from '../../context/CRMContext';
 
@@ -59,12 +60,14 @@ export const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({
   const isImageAttachment = 
     Boolean(expense.receiptUrl && (
       expense.receiptUrl.startsWith('data:image/') ||
+      /\.(png|jpe?g|webp|gif|svg)$/i.test(expense.receiptUrl) ||
       /\.(png|jpe?g|webp|gif|svg)$/i.test(expense.receiptName || '')
     ));
 
   const isPdfAttachment = 
     Boolean(expense.receiptUrl && (
       expense.receiptUrl.startsWith('data:application/pdf') ||
+      /\.pdf$/i.test(expense.receiptUrl) ||
       /\.pdf$/i.test(expense.receiptName || '')
     ));
 
@@ -72,11 +75,11 @@ export const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({
     window.print();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-inverse-surface/50 backdrop-blur-xs p-2 sm:p-4 md:p-6 flex flex-col justify-start items-center animate-in fade-in duration-200">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] overflow-y-auto overscroll-contain bg-inverse-surface/55 backdrop-blur-xs p-3 sm:p-4 md:p-6 flex items-center justify-center animate-in fade-in duration-200">
       <div className="fixed inset-0" onClick={onClose} />
 
-      <div className="my-auto relative w-full max-w-4xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-3rem)] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden bg-surface-container-lowest border border-outline-variant z-10 animate-in zoom-in-95 duration-150">
+      <div className="my-auto relative w-full max-w-4xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-3rem)] rounded-2xl shadow-2xl flex flex-col overflow-hidden bg-surface-container-lowest border border-outline-variant z-10 animate-in zoom-in-95 duration-150">
         {/* Modal Header */}
         <div className="shrink-0 flex items-center justify-between p-4 sm:p-5 border-b border-outline-variant bg-surface-bright">
           <div className="flex items-center gap-3">
@@ -519,6 +522,7 @@ export const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

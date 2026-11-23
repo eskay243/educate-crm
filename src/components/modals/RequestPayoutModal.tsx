@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useCRM, formatNaira } from '../../context/CRMContext';
+import { apiService } from '../../services/api';
 
 interface RequestPayoutModalProps {
   isOpen: boolean;
@@ -47,8 +48,28 @@ export const RequestPayoutModal: React.FC<RequestPayoutModalProps> = ({ isOpen, 
 
   const minRequiredHours = settings.mentorMinimumLecturedHours || 20;
   const currentLecturedHours = mentor?.lecturedHours || 0;
-  const pendingBalance = mentor?.pendingPayout || 0;
-  const isEligible = isEditMode || currentLecturedHours >= minRequiredHours;
+  const [inflowAvailable, setInflowAvailable] = useState<number>(mentor?.pendingPayout || 0);
+  const [lockedUnpaid37, setLockedUnpaid37] = useState<number>(0);
+
+  useEffect(() => {
+    if (!isOpen || !mentor?.id) return;
+    apiService.getMentorPayoutBreakdown(mentor.id)
+      .then(res => {
+        if (res?.inflowSummary) {
+          setInflowAvailable(res.inflowSummary.verifiedInflowAvailable);
+          setLockedUnpaid37(res.inflowSummary.lockedUnpaidCommission37);
+        } else {
+          setInflowAvailable(mentor.pendingPayout || 0);
+          setLockedUnpaid37(0);
+        }
+      })
+      .catch(() => {
+        setInflowAvailable(mentor.pendingPayout || 0);
+      });
+  }, [isOpen, mentor?.id, mentor?.pendingPayout]);
+
+  const pendingBalance = inflowAvailable;
+  const isEligible = isEditMode || pendingBalance > 0;
 
   const [requestedAmount, setRequestedAmount] = useState<number>(pendingBalance);
   const [notes, setNotes] = useState<string>('');
@@ -60,10 +81,10 @@ export const RequestPayoutModal: React.FC<RequestPayoutModalProps> = ({ isOpen, 
       setRequestedAmount(selectedPayoutRequestForEdit.amount);
       setNotes(selectedPayoutRequestForEdit.notes || '');
     } else if (mentor) {
-      setRequestedAmount(mentor.pendingPayout || 0);
+      setRequestedAmount(inflowAvailable || 0);
       setNotes('');
     }
-  }, [selectedPayoutRequestForEdit, mentor, isOpen]);
+  }, [selectedPayoutRequestForEdit, mentor, isOpen, inflowAvailable]);
 
   const handleClose = () => {
     if (setSelectedPayoutRequestForEdit) {
@@ -79,8 +100,8 @@ export const RequestPayoutModal: React.FC<RequestPayoutModalProps> = ({ isOpen, 
 
     if (!isEligible) {
       showToast(
-        'Ineligible for Payout',
-        `You have completed ${currentLecturedHours}h of lecturing. A minimum of ${minRequiredHours}h is required to request payout.`,
+        'No Verified Student Inflow',
+        'Mentors can only request payouts from verified student payments received (37% of collected inflow).',
         'error'
       );
       return;
@@ -187,14 +208,22 @@ export const RequestPayoutModal: React.FC<RequestPayoutModalProps> = ({ isOpen, 
                 <div className="flex items-center justify-between text-xs font-bold">
                   <span className="flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-[18px]">
-                      {isEligible ? 'check_circle' : 'schedule'}
+                      {isEligible ? 'check_circle' : 'lock'}
                     </span>
-                    <span>Minimum Lecturing Requirement</span>
+                    <span>Verified Student Inflow Eligibility</span>
                   </span>
                   <span className="px-2 py-0.5 rounded-full bg-surface text-on-surface font-mono font-bold shadow-xs">
-                    {currentLecturedHours}h / {minRequiredHours}h
+                    Eligible: {formatNaira(pendingBalance)}
                   </span>
                 </div>
+                {lockedUnpaid37 > 0 && (
+                  <p className="text-[11px] opacity-85">
+                    Locked from unpaid student tuition: <strong>{formatNaira(lockedUnpaid37)}</strong> (unlocks automatically as students pay).
+                  </p>
+                )}
+                <p className="text-[11px] opacity-80">
+                  Teaching Hours Logged: {currentLecturedHours}h / {minRequiredHours}h
+                </p>
 
                 <div className="w-full bg-surface rounded-full h-2 overflow-hidden border border-outline-variant/40">
                   <div

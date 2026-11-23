@@ -54,6 +54,15 @@ export const MentorPayoutsPage: React.FC = () => {
     }>;
   }>>([]);
   const [expandedCourseIds, setExpandedCourseIds] = useState<Record<string, boolean>>({});
+  const [inflowSummary, setInflowSummary] = useState<{
+    totalCollectedInflow: number;
+    earnedFromInflow37: number;
+    disbursedToDate: number;
+    pendingInFlight: number;
+    verifiedInflowAvailable: number;
+    lockedUnpaidTuition: number;
+    lockedUnpaidCommission37: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!myMentor?.id) return;
@@ -62,6 +71,7 @@ export const MentorPayoutsPage: React.FC = () => {
         if (res) {
           setMyLedgerRows(res.ledgers || []);
           setCourseBreakdowns(res.courses || []);
+          setInflowSummary(res.inflowSummary || null);
         }
       })
       .catch(err => console.error('Failed to load mentor payout breakdown:', err));
@@ -112,24 +122,29 @@ export const MentorPayoutsPage: React.FC = () => {
       .reduce((sum, r) => sum + r.amount, 0);
   }, [myPayoutRequests]);
 
-  // Available balance & totals: prefer reconciled ledger totals when present so historical payouts are deducted accurately
+  // Available balance & totals: strictly gated by verified student payment inflows
   const hasReconciledLedger = myLedgerRows.length > 0 || (myMentor?.totalEarned || 0) > 0;
-  const effectiveTotalAccrued = hasReconciledLedger
-    ? (myLedgerRows.length > 0
-        ? myLedgerRows.reduce((sum, r) => sum + Number(r.agreedAmountDue || 0), 0)
-        : (myMentor?.totalEarned || totalAccruedFromCourses))
-    : totalAccruedFromCourses;
+  const effectiveTotalAccrued = inflowSummary
+    ? inflowSummary.earnedFromInflow37
+    : hasReconciledLedger
+      ? (myLedgerRows.length > 0
+          ? myLedgerRows.reduce((sum, r) => sum + Number(r.agreedAmountDue || 0), 0)
+          : (myMentor?.totalEarned || totalAccruedFromCourses))
+      : totalAccruedFromCourses;
 
-  const effectiveDisbursedTotal = hasReconciledLedger
-    ? (myLedgerRows.length > 0
-        ? myLedgerRows.reduce((sum, r) => sum + Number(r.amountDisbursed || 0), 0)
-        : (myMentor?.paidPayout || disbursedTotal))
-    : disbursedTotal;
+  const effectiveDisbursedTotal = inflowSummary
+    ? inflowSummary.disbursedToDate
+    : hasReconciledLedger
+      ? (myLedgerRows.length > 0
+          ? myLedgerRows.reduce((sum, r) => sum + Number(r.amountDisbursed || 0), 0)
+          : (myMentor?.paidPayout || disbursedTotal))
+      : disbursedTotal;
 
   const availableBalance = useMemo(() => {
+    if (inflowSummary) return inflowSummary.verifiedInflowAvailable;
     const balance = effectiveTotalAccrued - effectiveDisbursedTotal - pendingRequestsTotal;
     return balance > 0 ? balance : 0;
-  }, [effectiveTotalAccrued, effectiveDisbursedTotal, pendingRequestsTotal]);
+  }, [inflowSummary, effectiveTotalAccrued, effectiveDisbursedTotal, pendingRequestsTotal]);
 
   // Minimum required hours compliance
   const minRequiredHours = myMentor?.minimumRequiredHours ?? settings?.mentorMinimumLecturedHours ?? 20;
@@ -226,8 +241,17 @@ export const MentorPayoutsPage: React.FC = () => {
           </div>
           <p className="text-2xl font-bold text-emerald-700 mt-2">{formatNaira(availableBalance)}</p>
           <p className="text-[11px] text-emerald-800 mt-1">
-            {pendingRequestsTotal > 0 ? `(${formatNaira(pendingRequestsTotal)} currently in pending review)` : 'Ready for disbursement request'}
+            {pendingRequestsTotal > 0
+              ? `(${formatNaira(pendingRequestsTotal)} currently in pending review)`
+              : availableBalance > 0
+                ? 'From verified student inflows only'
+                : 'Awaiting verified student tuition inflow'}
           </p>
+          {inflowSummary && inflowSummary.lockedUnpaidCommission37 > 0 && (
+            <p className="text-[10px] text-amber-700 font-semibold mt-1">
+              Locked (unpaid tuition): {formatNaira(inflowSummary.lockedUnpaidCommission37)}
+            </p>
+          )}
         </div>
 
         {/* Total Disbursed */}
