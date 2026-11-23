@@ -1,14 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useCRM } from '../context/CRMContext';
-import { AttendanceRecord } from '../types/crm';
+import { AttendanceRecord, DailyStandupReport } from '../types/crm';
 import { PageHeader, SemanticMetricCard } from '../components/common/KineticUI';
+import { realtimeClient } from '../services/realtime';
 
 type AttendanceViewTab = 'my_shifts' | 'institutional_ledger' | 'today_roster' | 'verification_queue';
 type DateRangeFilter = 'today' | 'week' | 'month' | 'all' | 'custom';
 
 export const StaffAttendancePage: React.FC = () => {
   const {
-    attendanceRecords,
+    attendanceRecords: ctxAttendanceRecords,
+    dailyStandups: ctxDailyStandups,
     activeAttendanceSession,
     staleAttendanceSession,
     todayCompletedSession,
@@ -22,6 +24,41 @@ export const StaffAttendancePage: React.FC = () => {
     settings,
     isSuperAdmin,
   } = useCRM();
+
+  const [fetchedAttendance, setFetchedAttendance] = useState<AttendanceRecord[] | null>(null);
+  const [fetchedStandups, setFetchedStandups] = useState<DailyStandupReport[] | null>(null);
+
+  const refreshAttendanceAndStandups = useCallback(async () => {
+    try {
+      const [attRes, dsuRes] = await Promise.all([
+        fetch('/api/attendance'),
+        fetch('/api/scrum/standups'),
+      ]);
+      const attJson = await attRes.json();
+      const dsuJson = await dsuRes.json();
+      if (attJson?.success && Array.isArray(attJson.data)) {
+        setFetchedAttendance(attJson.data);
+      }
+      if (dsuJson?.success && Array.isArray(dsuJson.data)) {
+        setFetchedStandups(dsuJson.data);
+      }
+    } catch {
+      // Fallback gracefully to context state
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshAttendanceAndStandups();
+    const unsubAtt = realtimeClient.subscribe('attendance:update', refreshAttendanceAndStandups);
+    const unsubDsu = realtimeClient.subscribe('scrum:standup', refreshAttendanceAndStandups);
+    return () => {
+      unsubAtt();
+      unsubDsu();
+    };
+  }, [refreshAttendanceAndStandups]);
+
+  const attendanceRecords = fetchedAttendance ?? ctxAttendanceRecords;
+  const allStandups = fetchedStandups ?? ctxDailyStandups;
 
   const canManageAttendance =
     isSuperAdmin ||
@@ -175,12 +212,19 @@ export const StaffAttendancePage: React.FC = () => {
         }
       });
 
+    const normStr = (s?: string) => (s || '').toLowerCase().replace(/['`]/g, '').trim();
+
+    const matchedRecordIds = new Set<string>();
     const rosterItems = Array.from(directoryMap.values()).map(person => {
-      const todayRecord = todayRecs.find(
-        r =>
-          (r.staffId || r.userId) === person.id ||
-          (r.staffEmail || r.userEmail)?.toLowerCase() === person.email.toLowerCase()
-      );
+      const pEmail = person.email.toLowerCase().trim();
+      const pName = normStr(person.name);
+      const todayRecord = todayRecs.find(r => {
+        const rId = r.staffId || r.userId;
+        const rEmail = (r.staffEmail || r.userEmail || '').toLowerCase().trim();
+        const rName = normStr(r.staffName || r.userName);
+        return rId === person.id || (pEmail && rEmail === pEmail) || (pName && rName === pName);
+      });
+      if (todayRecord?.id) matchedRecordIds.add(todayRecord.id);
       let rosterStatus: 'On-Duty' | 'On Break' | 'Completed' | 'Not Clocked In' =
         'Not Clocked In';
       if (todayRecord) {
@@ -197,6 +241,27 @@ export const StaffAttendancePage: React.FC = () => {
         todayRecord,
         rosterStatus,
       };
+    });
+
+    // Ensure any clocked-in record not in directoryMap still appears in On-Duty / Completed
+    todayRecs.forEach(r => {
+      if (r.id && matchedRecordIds.has(r.id)) return;
+      const rEmail = (r.staffEmail || r.userEmail || r.id || '').toLowerCase();
+      if (!rEmail) return;
+      const rosterStatus: 'On-Duty' | 'On Break' | 'Completed' = r.clockOutTime
+        ? 'Completed'
+        : r.isOnBreak || r.status === 'On Break'
+        ? 'On Break'
+        : 'On-Duty';
+      rosterItems.push({
+        id: r.staffId || r.userId || r.id,
+        name: r.staffName || r.userName || 'Staff Member',
+        email: rEmail,
+        roleTitle: r.roleTitle || r.userRole || 'Staff',
+        department: 'Operations',
+        todayRecord: r,
+        rosterStatus,
+      });
     });
 
     return {
@@ -963,24 +1028,63 @@ export const StaffAttendancePage: React.FC = () => {
 
                           {/* Standup Focus & EOD Output */}
                           <td className="px-stack-md py-3">
-                            <div className="space-y-1 max-w-sm">
-                              {tasksFocus && (
-                                <p className="text-[11px] text-on-surface line-clamp-2" title={tasksFocus}>
-                                  <span className="font-semibold text-secondary">
-                                    Standup Focus:
-                                  </span>{' '}
-                                  {tasksFocus}
-                                </p>
-                              )}
-                              {record.workSummary && (
-                                <div className="text-[11px] text-[#166534] bg-[#F0FDF4] p-1.5 rounded border border-[#BBF7D0]">
-                                  <span className="font-semibold">EOD Output:</span>{' '}
-                                  <span className="line-clamp-2" title={record.workSummary}>
-                                    {record.workSummary}
-                                  </span>
+                            {(() => {
+                              const normName = (s?: string) => (s || '').toLowerCase().replace(/['`]/g, '').trim();
+                              const rEmail = (record.staffEmail || record.userEmail || '').toLowerCase().trim();
+                              const rId = record.staffId || record.userId;
+                              const rName = normName(staffDisplayName);
+                              const matchedDsu = allStandups.find(
+                                d =>
+                                  d.date === record.date &&
+                                  (d.userId === rId ||
+                                    (rEmail && (d as any).userEmail?.toLowerCase().trim() === rEmail) ||
+                                    (rName && normName(d.userName) === rName))
+                              );
+                              const mainTasks = [
+                                ...(matchedDsu?.tasksToday || []).map(t => t.description),
+                                ...(matchedDsu?.tasksYesterday || []).filter(t => t.status === 'completed').map(t => `✓ ${t.description}`),
+                              ].filter(Boolean);
+                              const mainBlockers = (matchedDsu?.blockers || []).filter(b => b && b.trim());
+
+                              return (
+                                <div className="space-y-1.5 max-w-sm">
+                                  {mainTasks.length > 0 ? (
+                                    <div className="text-[11px] text-on-surface space-y-0.5">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="font-semibold text-secondary">
+                                          {matchedDsu?.updateCount ? `Main DSU (Updated ×${matchedDsu.updateCount}):` : 'Main DSU:'}
+                                        </span>
+                                      </div>
+                                      <p className="line-clamp-3" title={mainTasks.join(' • ')}>
+                                        {mainTasks.join(' • ')}
+                                      </p>
+                                      {mainBlockers.length > 0 && (
+                                        <p className="text-[10px] text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 line-clamp-1" title={mainBlockers.join('; ')}>
+                                          ⚠ Blocker: {mainBlockers.join('; ')}
+                                        </p>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    tasksFocus && (
+                                      <p className="text-[11px] text-on-surface line-clamp-2" title={tasksFocus}>
+                                        <span className="font-semibold text-secondary">
+                                          Standup Focus:
+                                        </span>{' '}
+                                        {tasksFocus}
+                                      </p>
+                                    )
+                                  )}
+                                  {record.workSummary && (
+                                    <div className="text-[11px] text-[#166534] bg-[#F0FDF4] p-1.5 rounded border border-[#BBF7D0]">
+                                      <span className="font-semibold">EOD Output:</span>{' '}
+                                      <span className="line-clamp-2" title={record.workSummary}>
+                                        {record.workSummary}
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                            </div>
+                              );
+                            })()}
                           </td>
 
                           {/* Status & Admin Actions */}

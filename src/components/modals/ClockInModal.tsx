@@ -75,6 +75,8 @@ export const ClockInModal: React.FC<ClockInModalProps> = ({ isOpen, onClose }) =
     timetables,
     sessions,
     settings,
+    saveCampusLocations,
+    showToast,
   } = useCRM();
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -188,13 +190,14 @@ export const ClockInModal: React.FC<ClockInModalProps> = ({ isOpen, onClose }) =
     }
   }, [isOpen, todayStandup, todayScheduledClasses.length]);
 
-  const evaluateCampusDistances = (lat: number, lng: number, forcedCampusId?: string) => {
+  const evaluateCampusDistances = (lat: number, lng: number, forcedCampusId?: string, accuracyMeters?: number) => {
     if (activeCampuses.length === 0) {
       setGeoStatus('GPS Unavailable');
       setGeoMessage('No active institutional campuses configured.');
       return;
     }
 
+    const accuracyBuffer = Math.min(accuracyMeters || coords.accuracy || 0, 350);
     const distances = activeCampuses.map(campus => {
       const dist = calculateDistanceMeters(lat, lng, campus.latitude, campus.longitude);
       return { campus, dist: Math.round(dist) };
@@ -205,7 +208,7 @@ export const ClockInModal: React.FC<ClockInModalProps> = ({ isOpen, onClose }) =
       const { campus, dist } = target;
       setSelectedCampusId(campus.id);
       setDistanceMeters(dist);
-      if (dist <= campus.radiusMeters) {
+      if (dist <= campus.radiusMeters + accuracyBuffer) {
         setGeoStatus('Verified On-Site');
         setGeoMessage(
           `GPS Match Verified: Device is ${dist}m from ${campus.name} (within ${campus.radiusMeters}m perimeter).`
@@ -221,7 +224,7 @@ export const ClockInModal: React.FC<ClockInModalProps> = ({ isOpen, onClose }) =
     }
 
     // Auto-detect: check if within perimeter of ANY campus
-    const withinPerimeter = distances.find(d => d.dist <= d.campus.radiusMeters);
+    const withinPerimeter = distances.find(d => d.dist <= d.campus.radiusMeters + accuracyBuffer);
     if (withinPerimeter) {
       const { campus, dist } = withinPerimeter;
       setSelectedCampusId(campus.id);
@@ -250,12 +253,13 @@ export const ClockInModal: React.FC<ClockInModalProps> = ({ isOpen, onClose }) =
     setGeoMessage('Acquiring high-accuracy GPS telemetry from device...');
     try {
       const deviceCoords = await getDeviceCoordinates();
+      const acc = Math.round(deviceCoords.accuracy);
       setCoords({
         lat: deviceCoords.latitude,
         lng: deviceCoords.longitude,
-        accuracy: Math.round(deviceCoords.accuracy),
+        accuracy: acc,
       });
-      evaluateCampusDistances(deviceCoords.latitude, deviceCoords.longitude, forcedCampusId);
+      evaluateCampusDistances(deviceCoords.latitude, deviceCoords.longitude, forcedCampusId, acc);
     } catch {
       setGeoStatus('GPS Unavailable');
       setGeoMessage(
@@ -269,8 +273,32 @@ export const ClockInModal: React.FC<ClockInModalProps> = ({ isOpen, onClose }) =
   const handleSelectCampus = (campusId: string) => {
     setSelectedCampusId(campusId);
     if (coords.lat !== undefined && coords.lng !== undefined) {
-      evaluateCampusDistances(coords.lat, coords.lng, campusId);
+      evaluateCampusDistances(coords.lat, coords.lng, campusId, coords.accuracy);
     }
+  };
+
+  const handleCalibrateCampusToCurrentGps = async () => {
+    if (coords.lat === undefined || coords.lng === undefined) return;
+    const baseList =
+      settings.campusLocationsList && settings.campusLocationsList.length > 0
+        ? settings.campusLocationsList
+        : initialCampuses;
+    const targetId = selectedCampusId || activeCampuses[0]?.id;
+    const updatedList = baseList.map(c =>
+      c.id === targetId
+        ? {
+            ...c,
+            latitude: Number(coords.lat!.toFixed(6)),
+            longitude: Number(coords.lng!.toFixed(6)),
+            radiusMeters: Math.max(c.radiusMeters || 400, 400),
+          }
+        : c
+    );
+    await saveCampusLocations(updatedList);
+    setDistanceMeters(0);
+    setGeoStatus('Verified On-Site');
+    setGeoMessage('Hub coordinates calibrated to your current office GPS location.');
+    showToast('Office GPS Calibrated', 'Campus hub coordinates updated to your current location.', 'success');
   };
 
   useEffect(() => {
@@ -774,19 +802,40 @@ export const ClockInModal: React.FC<ClockInModalProps> = ({ isOpen, onClose }) =
                     {distanceMeters !== null && (
                       <span
                         className={
-                          distanceMeters <= currentCampus.radiusMeters
+                          distanceMeters <= currentCampus.radiusMeters + Math.min(coords.accuracy || 0, 350)
                             ? 'text-[#16A34A] font-bold'
                             : 'text-[#D97706] font-bold'
                         }
                       >
                         Distance: {distanceMeters}m{' '}
-                        {distanceMeters <= currentCampus.radiusMeters
+                        {distanceMeters <= currentCampus.radiusMeters + Math.min(coords.accuracy || 0, 350)
                           ? '(Inside Perimeter ✓)'
                           : '(Outside Perimeter ⚠️)'}
                       </span>
                     )}
                   </div>
                 )}
+
+                {/* Super Admin One-Click Hub GPS Calibration when at the office */}
+                {currentUser?.role === 'super_admin' &&
+                  workMode === 'On-Site / Hub' &&
+                  geoStatus === 'Location Mismatch' &&
+                  coords.lat !== undefined &&
+                  coords.lng !== undefined && (
+                    <div className="p-2.5 rounded-lg bg-primary/5 border border-primary/25 flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-[11px] text-on-surface">
+                        At the office right now? Update <strong>{currentCampus?.name}</strong> coordinates to your current GPS.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleCalibrateCampusToCurrentGps}
+                        className="px-2.5 py-1 rounded bg-primary text-white text-[11px] font-bold hover:bg-primary/90 transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">my_location</span>
+                        <span>Calibrate Hub to My GPS</span>
+                      </button>
+                    </div>
+                  )}
 
                 {/* Mandatory Exception Note when On-Site GPS mismatches or is unavailable */}
                 {needsGeoException && (

@@ -18,7 +18,7 @@ export const FacultyGradingInbox: React.FC<FacultyGradingInboxProps> = ({ isMent
       m => m.id === currentUser?.mentorId || 
            norm(m.name) === norm(currentUser?.name) || 
            (currentUser?.email && m.email.toLowerCase() === currentUser.email.toLowerCase())
-    ) || mentors[0];
+    ) || null;
   }, [isMentor, mentors, currentUser]);
 
   // Mentor's assigned students & courses
@@ -59,10 +59,9 @@ export const FacultyGradingInbox: React.FC<FacultyGradingInboxProps> = ({ isMent
       const matchesMentorDirect = a.mentorId === myMentorProfile.id || 
         (a.reviewedBy && norm(a.reviewedBy) === myName);
       const matchesStudent = a.studentId ? myStudentIds.has(a.studentId) : (a.studentName ? myStudentNames.has(norm(a.studentName)) : false);
-      const matchesCourse = a.courseTitle ? myCourseTitles.has(norm(a.courseTitle)) : false;
 
-      // Strictly return submissions that belong to this mentor's students or their assigned courses
-      return matchesMentorDirect || matchesStudent || (matchesCourse && (!a.mentorId || a.mentorId === myMentorProfile.id));
+      // Strictly return submissions that belong to this mentor's students or directly to this mentor
+      return matchesMentorDirect || matchesStudent;
     });
   }, [assignments, isMentor, myMentorProfile, myStudentIds, myStudentNames, myCourseTitles]);
 
@@ -198,7 +197,7 @@ export const FacultyGradingInbox: React.FC<FacultyGradingInboxProps> = ({ isMent
                 : 'text-secondary hover:text-on-surface'
             }`}
           >
-            All Submissions ({assignments.length})
+            All Submissions ({accessibleAssignments.length})
           </button>
           <button
             type="button"
@@ -248,7 +247,7 @@ export const FacultyGradingInbox: React.FC<FacultyGradingInboxProps> = ({ isMent
             className="h-9 px-3 bg-surface border border-outline-variant rounded-lg text-xs font-medium text-on-surface outline-none cursor-pointer focus:border-primary"
           >
             <option value="All">All Programs</option>
-            {courses.map(c => (
+            {(isMentor ? courses.filter(c => myCourseTitles.has(c.title.trim().toLowerCase())) : courses).map(c => (
               <option key={c.id} value={c.title}>{c.title}</option>
             ))}
           </select>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useCRM } from '../../context/CRMContext';
 
 interface CreateAssignmentModalProps {
@@ -28,7 +28,7 @@ export const CreateAssignmentModal: React.FC<CreateAssignmentModalProps> = ({
     return (
       mentors.find(
         m => m.id === currentUser?.mentorId || norm(m.name) === norm(currentUser?.name) || m.email?.toLowerCase() === currentUser?.email?.toLowerCase()
-      ) || (isMentor ? mentors[0] : null)
+      ) || null
     );
   }, [mentors, currentUser, isMentor]);
 
@@ -44,7 +44,7 @@ export const CreateAssignmentModal: React.FC<CreateAssignmentModalProps> = ({
       );
       return isLead || isAssigned;
     });
-    return filtered.length > 0 ? filtered : courses;
+    return filtered;
   }, [courses, isMentor, myMentorProfile]);
 
   // Mentor's students
@@ -56,6 +56,15 @@ export const CreateAssignmentModal: React.FC<CreateAssignmentModalProps> = ({
   }, [students, isMentor, myMentorProfile]);
 
   const [courseTitle, setCourseTitle] = useState<string>(defaultCourseTitle || accessibleCourses[0]?.title || '');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (defaultCourseTitle) {
+      setCourseTitle(defaultCourseTitle);
+    } else if (accessibleCourses.length > 0 && !accessibleCourses.some(c => c.title === courseTitle)) {
+      setCourseTitle(accessibleCourses[0].title);
+    }
+  }, [isOpen, defaultCourseTitle, accessibleCourses, courseTitle]);
   const [taskTitle, setTaskTitle] = useState('');
   const [moduleTitle, setModuleTitle] = useState('Module 1: Applied Project Deliverable');
   const [assignmentType, setAssignmentType] = useState<'assignment' | 'capstone_project' | 'lab'>('assignment');

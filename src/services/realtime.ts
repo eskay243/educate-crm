@@ -7,6 +7,8 @@ const KNOWN_EVENTS = [
   'notification:created',
   'notification:updated',
   'ticket:updated',
+  'attendance:update',
+  'scrum:standup',
   'db:sync',
 ] as const;
 

@@ -4322,6 +4322,56 @@ app.delete('/api/timetables/:id', (req: Request, res: Response) => {
   res.json({ success: true, message: 'Timetable slot deleted successfully' });
 });
 
+app.post('/api/timetables/:id/start-session', (req: Request, res: Response) => {
+  if (!db.timetables) db.timetables = initialTimetables;
+  const slot = db.timetables.find((s: any) => s.id === req.params.id);
+  if (!slot) return res.status(404).json({ success: false, message: 'Timetable slot not found' });
+
+  slot.startedAt = slot.startedAt || new Date().toISOString();
+  slot.sessionStatus = 'In Progress';
+  saveDatabase(db);
+  res.json({ success: true, data: slot });
+});
+
+app.post('/api/timetables/:id/end-session', (req: Request, res: Response) => {
+  if (!db.timetables) db.timetables = initialTimetables;
+  const slot = db.timetables.find((s: any) => s.id === req.params.id);
+  if (!slot) return res.status(404).json({ success: false, message: 'Timetable slot not found' });
+
+  const nowIso = new Date().toISOString();
+  slot.endedAt = nowIso;
+  slot.status = 'Held';
+  slot.sessionStatus = 'Completed';
+  slot.attendanceMarked = true;
+
+  let creditedHours = 0;
+  let updatedMentor: any = null;
+  if (!slot.hoursCredited) {
+    creditedHours = Number(slot.durationHours || 2);
+    const norm = (v?: string) => String(v || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const mentor = db.mentors.find(
+      (m: any) => (slot.mentorId && m.id === slot.mentorId) || norm(m.name) === norm(slot.mentorName)
+    );
+    if (mentor) {
+      mentor.lecturedHours = Number(mentor.lecturedHours || 0) + creditedHours;
+      mentor.sessionsCount = Number(mentor.sessionsCount || 0) + 1;
+      updatedMentor = mentor;
+      db.activityLogs.unshift({
+        id: `act-${Date.now()}-sessend`,
+        timestamp: nowIso,
+        title: `SIPCore Class Completed (+${creditedHours}h)`,
+        description: `${mentor.name} ended "${slot.topic || slot.courseTitle}" and logged ${creditedHours} lecturing hours.`,
+        type: 'mentor',
+        user: mentor.name
+      });
+    }
+    slot.hoursCredited = true;
+  }
+
+  saveDatabase(db);
+  res.json({ success: true, data: { slot, mentor: updatedMentor, creditedHours } });
+});
+
 app.post('/api/timetables/:id/attendance', (req: Request, res: Response) => {
   if (!db.timetables) db.timetables = initialTimetables;
   const { id } = req.params;
@@ -7735,9 +7785,9 @@ app.post('/api/lms/assignments/create', (req: Request, res: Response) => {
     return res.status(400).json({ success: false, message: 'Task title and course title are required.' });
   }
 
-  // Create submission / assignment entry
+  // Create submission / assignment entry (preserve client-supplied id for immediate grading sync)
   const newAssignment: any = {
-    id: `sub-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    id: req.body.id || `sub-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     studentId: studentId || '',
     studentName: studentName || 'Assigned Cohort Student',
     courseTitle,
@@ -7786,11 +7836,18 @@ app.post('/api/lms/assignments/:id/grade', (req: Request, res: Response) => {
   assignment.reviewedBy = reviewedBy || 'Faculty Mentor';
   assignment.reviewedAt = new Date().toISOString();
 
-  const student = db.students.find(s => s.id === assignment.studentId);
-  if (student && student.assignmentSubmissions) {
+  const norm = (v?: string) => String(v || '').trim().toLowerCase();
+  const student = db.students.find(
+    (s: any) => (assignment.studentId && s.id === assignment.studentId) ||
+                (assignment.studentName && norm(s.name) === norm(assignment.studentName))
+  );
+  if (student) {
+    if (!Array.isArray(student.assignmentSubmissions)) student.assignmentSubmissions = [];
     const sIndex = student.assignmentSubmissions.findIndex((a: any) => a.id === id);
     if (sIndex !== -1) {
       student.assignmentSubmissions[sIndex] = assignment;
+    } else {
+      student.assignmentSubmissions.unshift(assignment);
     }
   }
 
@@ -8307,6 +8364,45 @@ const sendChatMentionEmail = async (params: {
   }
 };
 
+const isStudentMentorPair = (studentObj: any, mentorObj: any): boolean => {
+  if (!studentObj || !mentorObj) return false;
+  if (studentObj.mentorId && studentObj.mentorId === mentorObj.id) return true;
+  if (
+    studentObj.mentorName &&
+    mentorObj.name &&
+    studentObj.mentorName.trim().toLowerCase() === mentorObj.name.trim().toLowerCase()
+  ) {
+    return true;
+  }
+  if (Array.isArray(mentorObj.mentees) && mentorObj.mentees.includes(studentObj.id)) return true;
+
+  const studentCourseNames = [
+    studentObj.program,
+    studentObj.courseEnrolled,
+    ...(Array.isArray(studentObj.courses) ? studentObj.courses.map((c: any) => c?.name) : []),
+  ]
+    .filter(Boolean)
+    .map((s: string) => s.trim().toLowerCase());
+
+  const studentCourseInstructors = (Array.isArray(studentObj.courses) ? studentObj.courses : [])
+    .map((c: any) => c?.instructor?.trim().toLowerCase())
+    .filter(Boolean);
+  if (mentorObj.name && studentCourseInstructors.includes(mentorObj.name.trim().toLowerCase())) {
+    return true;
+  }
+
+  const mentorCourseNames = [
+    mentorObj.assignedCourse,
+    mentorObj.department,
+    ...(Array.isArray(mentorObj.assignedCourses) ? mentorObj.assignedCourses : []),
+    ...(Array.isArray(mentorObj.courses) ? mentorObj.courses.map((c: any) => (typeof c === 'string' ? c : c?.name || c?.title)) : []),
+  ]
+    .filter(Boolean)
+    .map((s: string) => s.trim().toLowerCase());
+
+  return studentCourseNames.some(sc => mentorCourseNames.includes(sc));
+};
+
 const canUserMessageTarget = (
   sender: { id?: string; email?: string; role?: string },
   target: { id?: string; email?: string; role?: string }
@@ -8314,40 +8410,30 @@ const canUserMessageTarget = (
   if (!sender.role || !target.role) return false;
   if (sender.role === 'super_admin') return true;
 
-  const isStaffSender = ['admissions', 'finance', 'program_officer', 'it_support'].includes(sender.role);
+  const isStaffSender = ['admissions', 'finance', 'program_officer', 'it_support', 'approver'].includes(sender.role);
   if (isStaffSender) return true; // Selected staff can message other staff, mentors, and students
+
+  const normSenderEmail = (sender.email || '').toLowerCase().trim();
+  const normTargetEmail = (target.email || '').toLowerCase().trim();
 
   if (sender.role === 'mentor') {
     // Mentor can message all staff & other mentors
-    if (['super_admin', 'admissions', 'finance', 'program_officer', 'it_support', 'mentor'].includes(target.role)) {
+    if (['super_admin', 'admissions', 'finance', 'program_officer', 'it_support', 'approver', 'mentor'].includes(target.role)) {
       return true;
     }
     // Mentor can message students enrolled in their course or assigned as mentees
     if (target.role === 'student') {
-      const mentorObj = (db.mentors || []).find((m: any) => m.id === sender.id || m.email === sender.email);
-      const studentObj = (db.students || []).find((s: any) => s.id === target.id || s.email === target.email);
-      if (!mentorObj || !studentObj) return false;
-      const isCourseMatch = mentorObj.assignedCourse && studentObj.courseEnrolled && mentorObj.assignedCourse.toLowerCase() === studentObj.courseEnrolled.toLowerCase();
-      const isMenteeMatch = Array.isArray(mentorObj.mentees) && mentorObj.mentees.includes(studentObj.id);
-      const isDirectMentor = studentObj.mentorId === mentorObj.id;
-      return Boolean(isCourseMatch || isMenteeMatch || isDirectMentor);
+      const mentorObj = (db.mentors || []).find((m: any) => m.id === sender.id || (normSenderEmail && m.email?.toLowerCase().trim() === normSenderEmail));
+      const studentObj = (db.students || []).find((s: any) => s.id === target.id || (normTargetEmail && s.email?.toLowerCase().trim() === normTargetEmail));
+      return isStudentMentorPair(studentObj, mentorObj);
     }
     return false;
   }
 
   if (sender.role === 'student') {
-    // Student can message all staff & super admin
-    if (['super_admin', 'admissions', 'finance', 'program_officer', 'it_support'].includes(target.role)) {
+    // Student can message all staff, super admin, and active faculty mentors
+    if (['super_admin', 'admissions', 'finance', 'program_officer', 'it_support', 'approver', 'mentor'].includes(target.role)) {
       return true;
-    }
-    // Student can message their assigned mentor
-    if (target.role === 'mentor') {
-      const studentObj = (db.students || []).find((s: any) => s.id === sender.id || s.email === sender.email);
-      const mentorObj = (db.mentors || []).find((m: any) => m.id === target.id || m.email === target.email);
-      if (!studentObj || !mentorObj) return false;
-      const isCourseMatch = mentorObj.assignedCourse && studentObj.courseEnrolled && mentorObj.assignedCourse.toLowerCase() === studentObj.courseEnrolled.toLowerCase();
-      const isDirectMentor = studentObj.mentorId === mentorObj.id;
-      return Boolean(isCourseMatch || isDirectMentor);
     }
     return false;
   }
@@ -8359,53 +8445,65 @@ app.get('/api/chat/users', (req: Request, res: Response) => {
   const userId = String(req.query.userId || '');
   const role = String(req.query.role || '');
   const email = String(req.query.email || '');
+  const normCallerEmail = email.toLowerCase().trim();
 
   const sender = { id: userId, role, email };
-  const allUsers: any[] = [];
+  const userMap = new Map<string, any>();
 
-  // Add staff
+  // Add mentors first so their mentor metadata & courseName are preserved if they also exist in staffUsers
+  (db.mentors || []).forEach((m: any) => {
+    const mEmail = (m.email || '').toLowerCase().trim();
+    if (m.id !== userId && (!normCallerEmail || mEmail !== normCallerEmail) && m.status !== 'Inactive' && m.status !== 'Deactivated') {
+      const key = mEmail || m.id;
+      userMap.set(key, {
+        id: m.id,
+        name: m.name,
+        email: m.email,
+        role: 'mentor',
+        roleTitle: `Faculty Mentor (${m.assignedCourse || m.department || m.specialization || 'General'})`,
+        avatar: m.avatarUrl || m.avatar,
+        courseName: m.assignedCourse || m.department
+      });
+    }
+  });
+
+  // Add staff (skipping duplicates already added as mentors unless they hold a non-mentor staff role)
   (db.staffUsers || []).forEach((u: any) => {
-    if (u.id !== userId && u.email !== email && u.status !== 'inactive') {
-      allUsers.push({
+    const uEmail = (u.email || '').toLowerCase().trim();
+    if (u.id !== userId && (!normCallerEmail || uEmail !== normCallerEmail) && u.status !== 'inactive' && u.status !== 'Deactivated' && u.isActive !== false) {
+      const key = uEmail || u.id;
+      if (userMap.has(key) && u.role === 'mentor') return;
+      userMap.set(key, {
         id: u.id,
         name: u.name,
         email: u.email,
         role: u.role,
         roleTitle: u.roleTitle || u.role,
-        avatar: u.avatar
-      });
-    }
-  });
-
-  // Add mentors
-  (db.mentors || []).forEach((m: any) => {
-    if (m.id !== userId && m.email !== email && m.status !== 'Inactive') {
-      allUsers.push({
-        id: m.id,
-        name: m.name,
-        email: m.email,
-        role: 'mentor',
-        roleTitle: `Faculty Mentor (${m.assignedCourse || m.specialization || 'General'})`,
-        avatar: m.avatar,
-        courseName: m.assignedCourse
+        avatar: u.avatarUrl || u.avatar
       });
     }
   });
 
   // Add students
   (db.students || []).forEach((s: any) => {
-    if (s.id !== userId && s.email !== email && s.status !== 'Dropped') {
-      allUsers.push({
-        id: s.id,
-        name: s.name,
-        email: s.email,
-        role: 'student',
-        roleTitle: `Student Scholar (${s.courseEnrolled || 'Active'})`,
-        avatar: s.avatar,
-        courseName: s.courseEnrolled
-      });
+    const sEmail = (s.email || '').toLowerCase().trim();
+    if (s.id !== userId && (!normCallerEmail || sEmail !== normCallerEmail) && s.status !== 'Dropped') {
+      const key = sEmail || s.id;
+      if (!userMap.has(key)) {
+        userMap.set(key, {
+          id: s.id,
+          name: s.name,
+          email: s.email,
+          role: 'student',
+          roleTitle: `Student Scholar (${s.program || s.courseEnrolled || 'Active'})`,
+          avatar: s.avatarUrl || s.avatar,
+          courseName: s.program || s.courseEnrolled
+        });
+      }
     }
   });
+
+  const allUsers = Array.from(userMap.values());
 
   // Filter based on communication permissions
   const authorizedUsers = allUsers.filter(target => canUserMessageTarget(sender, target));
@@ -8416,6 +8514,7 @@ app.get('/api/chat/conversations', (req: Request, res: Response) => {
   const userId = String(req.query.userId || '');
   const role = String(req.query.role || '');
   const email = String(req.query.email || '');
+  const normEmail = email.toLowerCase().trim();
 
   if (!Array.isArray(db.chatConversations)) db.chatConversations = [...initialChatConversations];
 
@@ -8428,8 +8527,9 @@ app.get('/api/chat/conversations', (req: Request, res: Response) => {
       return true;
     }
     if (c.type === 'subgroup') {
-      if (Array.isArray(c.participants) && (c.participants.includes(userId) || c.participants.includes(email))) return true;
-      if (role === 'super_admin') return true;
+      if (Array.isArray(c.participants) && c.participants.length > 0) {
+        return c.participants.some((p: string) => p === userId || (normEmail && p?.toLowerCase().trim() === normEmail));
+      }
       if (Array.isArray(c.allowedRoles)) return c.allowedRoles.includes(role);
       return false;
     }
@@ -8437,7 +8537,7 @@ app.get('/api/chat/conversations', (req: Request, res: Response) => {
       // Direct message privacy: Strictly accessible ONLY by the two participants
       return Array.isArray(c.participants) && (
         (Boolean(userId) && c.participants.includes(userId)) ||
-        (Boolean(email) && c.participants.includes(email))
+        (Boolean(normEmail) && c.participants.some((p: string) => p?.toLowerCase().trim() === normEmail))
       );
     }
     return false;
@@ -8585,8 +8685,12 @@ app.post('/api/chat/conversations/:id/messages', async (req: Request, res: Respo
   db.chatConversations[convIndex].updatedAt = newMessage.timestamp;
 
   saveDatabase(db);
+  const convObj = db.chatConversations[convIndex];
   realtimeBus.broadcast('chat:message', {
     conversationId: id,
+    conversationType: convObj?.type,
+    participants: Array.isArray(convObj?.participants) ? convObj.participants : [],
+    allowedRoles: Array.isArray(convObj?.allowedRoles) ? convObj.allowedRoles : undefined,
     messageId: newMessage.id,
     senderId,
     senderName: senderName || 'User',
@@ -8913,7 +9017,37 @@ app.post('/api/scrum/standup', (req: Request, res: Response) => {
     (db as any).dailyStandups.unshift(newStandup);
   }
 
+  // Sync latest main DSU tasks into today's matching attendance record so Attendance Report reflects DSU updates
+  if (Array.isArray(db.attendance)) {
+    const reqUserEmail = String(req.body.userEmail || req.headers['x-user-email'] || '').toLowerCase().trim();
+    const normUserName = String(userName || '').toLowerCase().trim();
+    const todayFocusText = [
+      ...cleanToday.map((t: any) => t.description),
+      ...cleanYesterday.filter((t: any) => t.status === 'completed').map((t: any) => `✓ ${t.description}`),
+    ]
+      .filter(Boolean)
+      .join('; ');
+    if (todayFocusText) {
+      db.attendance.forEach((att: any) => {
+        if (att.date !== today) return;
+        const attEmail = (att.staffEmail || att.userEmail || '').toLowerCase().trim();
+        const attName = (att.staffName || att.userName || '').toLowerCase().trim();
+        const matchesUser =
+          (att.staffId || att.userId) === userId ||
+          (reqUserEmail && attEmail === reqUserEmail) ||
+          (normUserName && attName === normUserName);
+        if (matchesUser) {
+          att.dailyTasksFocus = todayFocusText;
+          att.shiftFocus = todayFocusText;
+          att.standupSyncedAt = new Date().toISOString();
+        }
+      });
+    }
+  }
+
   saveDatabase(db);
+  realtimeBus.broadcast('scrum:standup', { userId, userName, date: today });
+  realtimeBus.broadcast('attendance:update', { userId, date: today });
   res.status(201).json({ 
     success: true, 
     updated: existingIndex !== -1, 
@@ -8992,22 +9126,52 @@ app.get('/api/scrum/management-report', (req: Request, res: Response) => {
   });
 });
 
-app.post('/api/scrum/weekly-evaluation', (req: Request, res: Response) => {
-  const { userId, weekStartDate, weekEndDate } = req.body;
-  if (!userId) return res.status(400).json({ success: false, message: 'userId is required' });
-
+const buildWeeklyEvaluationForUser = (userId: string, effectiveStartDate: string, effectiveEndDate: string) => {
   if (!Array.isArray((db as any).dailyStandups)) (db as any).dailyStandups = [];
   if (!Array.isArray((db as any).weeklyScrumReports)) (db as any).weeklyScrumReports = [];
 
-  const userStandups = (db as any).dailyStandups.filter((s: any) => s.userId === userId);
-  const totalTasksLogged = userStandups.reduce((acc: number, s: any) => acc + (s.tasksToday?.length || 0) + (s.tasksYesterday?.length || 0), 0);
-  const totalTasksCompleted = userStandups.reduce((acc: number, s: any) => acc + (s.tasksYesterday?.filter((t: any) => t.status === 'completed').length || 0), 0);
-  
-  const completionRate = totalTasksLogged > 0 ? Math.round((totalTasksCompleted / Math.max(1, totalTasksLogged)) * 100) : 85;
+  const userObj =
+    (db.staffUsers || []).find((u: any) => u.id === userId) ||
+    (db.mentors || []).find((m: any) => m.id === userId) ||
+    (db.students || []).find((s: any) => s.id === userId) ||
+    { name: 'Team Member', role: 'Staff' };
+
+  const normEmail = ((userObj as any).email || '').toLowerCase().trim();
+  const userStandups = (db as any).dailyStandups.filter((s: any) => {
+    const matchesUser = s.userId === userId || (normEmail && s.userEmail?.toLowerCase().trim() === normEmail);
+    if (!matchesUser) return false;
+    if (!s.date) return true;
+    return s.date >= effectiveStartDate && s.date <= effectiveEndDate;
+  });
+
+  const completedTasks: string[] = [];
+  const inProgressTasks: string[] = [];
+  const blockers: string[] = [];
+
+  userStandups.forEach((s: any) => {
+    (Array.isArray(s.tasksYesterday) ? s.tasksYesterday : []).forEach((t: any) => {
+      if (!t?.description?.trim()) return;
+      if (t.status === 'completed') completedTasks.push(t.description.trim());
+      else inProgressTasks.push(t.description.trim());
+    });
+    (Array.isArray(s.tasksToday) ? s.tasksToday : []).forEach((t: any) => {
+      if (!t?.description?.trim()) return;
+      if (t.status === 'completed') completedTasks.push(t.description.trim());
+      else inProgressTasks.push(t.description.trim());
+    });
+    (Array.isArray(s.blockers) ? s.blockers : []).forEach((b: any) => {
+      if (typeof b === 'string' && b.trim()) blockers.push(b.trim());
+    });
+  });
+
+  const totalTasksLogged = completedTasks.length + inProgressTasks.length;
+  const totalTasksCompleted = completedTasks.length;
+
+  const completionRate = totalTasksLogged > 0 ? Math.round((totalTasksCompleted / Math.max(1, totalTasksLogged)) * 100) : 0;
   const daysLogged = Math.min(5, userStandups.length);
-  const consistencyScore = Math.max(20, Math.round((daysLogged / 5) * 100));
-  const blockerScore = userStandups.some((s: any) => s.blockers?.length > 0) ? 80 : 95;
-  const moduleCoverageScore = 90;
+  const consistencyScore = userStandups.length > 0 ? Math.max(20, Math.round((daysLogged / 5) * 100)) : 0;
+  const blockerScore = blockers.length > 0 ? 80 : userStandups.length > 0 ? 95 : 0;
+  const moduleCoverageScore = userStandups.length > 0 ? 90 : 0;
 
   const overallScore = Math.round(
     completionRate * 0.4 +
@@ -9018,15 +9182,7 @@ app.post('/api/scrum/weekly-evaluation', (req: Request, res: Response) => {
 
   const letterGrade = overallScore >= 90 ? 'A+' : overallScore >= 80 ? 'A' : overallScore >= 70 ? 'B' : overallScore >= 60 ? 'C' : 'D';
 
-  const userObj = 
-    (db.staffUsers || []).find((u: any) => u.id === userId) ||
-    (db.mentors || []).find((m: any) => m.id === userId) ||
-    (db.students || []).find((s: any) => s.id === userId) ||
-    { name: 'Team Member', role: 'Staff' };
-
-  // Calculate real module throughput breakdown across user standups
   const moduleBreakdown: Record<string, { tasksPlanned: number; tasksCompleted: number }> = {};
-
   userStandups.forEach((s: any) => {
     if (Array.isArray(s.tasksToday)) {
       s.tasksToday.forEach((t: any) => {
@@ -9034,9 +9190,7 @@ app.post('/api/scrum/weekly-evaluation', (req: Request, res: Response) => {
         const mod = t.moduleId || 'leads';
         if (!moduleBreakdown[mod]) moduleBreakdown[mod] = { tasksPlanned: 0, tasksCompleted: 0 };
         moduleBreakdown[mod].tasksPlanned += 1;
-        if (t.status === 'completed') {
-          moduleBreakdown[mod].tasksCompleted += 1;
-        }
+        if (t.status === 'completed') moduleBreakdown[mod].tasksCompleted += 1;
       });
     }
     if (Array.isArray(s.tasksYesterday)) {
@@ -9054,7 +9208,6 @@ app.post('/api/scrum/weekly-evaluation', (req: Request, res: Response) => {
     }
   });
 
-  // Populate assigned modules with 0/0 if no tasks have been recorded for them yet
   if (Array.isArray((userObj as any).assignedModules)) {
     (userObj as any).assignedModules.forEach((modId: string) => {
       if (!moduleBreakdown[modId]) {
@@ -9067,10 +9220,11 @@ app.post('/api/scrum/weekly-evaluation', (req: Request, res: Response) => {
     id: `scr-rep-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     userId,
     userName: userObj.name,
-    userRole: userObj.roleTitle || userObj.role || 'Staff',
+    userRole: (userObj as any).roleTitle || userObj.role || 'Staff',
+    userEmail: (userObj as any).email || '',
     weekNumber: Math.ceil(new Date().getDate() / 7),
-    weekStartDate: weekStartDate || new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0],
-    weekEndDate: weekEndDate || new Date().toISOString().split('T')[0],
+    weekStartDate: effectiveStartDate,
+    weekEndDate: effectiveEndDate,
     overallScore,
     letterGrade,
     metrics: {
@@ -9081,12 +9235,38 @@ app.post('/api/scrum/weekly-evaluation', (req: Request, res: Response) => {
       totalTasksLogged,
       totalTasksCompleted
     },
+    taskBreakdown: {
+      completed: Array.from(new Set(completedTasks)),
+      inProgress: Array.from(new Set(inProgressTasks)),
+      blocked: Array.from(new Set(blockers)),
+      daysLogged: userStandups.length,
+    },
     moduleBreakdown,
-    aiExecutiveSummary: `Sprint evaluation for ${userObj.name}: High operational execution across assigned modules with consistent daily check-ins and strong closure velocity.`,
-    aiStrengths: ['Proactive daily task logging', 'Rapid deliverable execution', 'High module alignment'],
-    aiGrowthAreas: ['Pre-empt cross-department dependency handoffs', 'Log granular estimated completion hours'],
+    aiExecutiveSummary:
+      userStandups.length > 0
+        ? `Sprint evaluation for ${userObj.name} (${effectiveStartDate} to ${effectiveEndDate}): ${totalTasksCompleted} completed, ${inProgressTasks.length} in progress, ${blockers.length} blocker(s) flagged across ${userStandups.length} standup check-in(s).`
+        : `No daily standup check-ins recorded for ${userObj.name} between ${effectiveStartDate} and ${effectiveEndDate}.`,
+    aiStrengths:
+      userStandups.length > 0
+        ? ['Proactive daily task logging', 'Deliverable execution tracking', 'Module alignment']
+        : ['Pending standup check-in adoption'],
+    aiGrowthAreas:
+      blockers.length > 0
+        ? ['Resolve flagged blockers promptly with department leads', 'Update task closure status daily']
+        : ['Pre-empt cross-department dependency handoffs', 'Log granular estimated completion hours'],
     generatedAt: new Date().toISOString()
   };
+
+  return weeklyReport;
+};
+
+app.post('/api/scrum/weekly-evaluation', (req: Request, res: Response) => {
+  const { userId, weekStartDate, weekEndDate } = req.body;
+  if (!userId) return res.status(400).json({ success: false, message: 'userId is required' });
+
+  const effectiveEndDate = weekEndDate || new Date().toISOString().split('T')[0];
+  const effectiveStartDate = weekStartDate || new Date(Date.now() - 6 * 86400000).toISOString().split('T')[0];
+  const weeklyReport = buildWeeklyEvaluationForUser(userId, effectiveStartDate, effectiveEndDate);
 
   (db as any).weeklyScrumReports.unshift(weeklyReport);
   saveDatabase(db);
@@ -9098,6 +9278,170 @@ app.get('/api/scrum/weekly-reports', (req: Request, res: Response) => {
   if (!Array.isArray((db as any).weeklyScrumReports)) (db as any).weeklyScrumReports = [];
   const list = userId ? (db as any).weeklyScrumReports.filter((r: any) => r.userId === userId) : (db as any).weeklyScrumReports;
   res.json({ success: true, data: list });
+});
+
+const dispatchWeeklyStandupDigest = async (opts?: { weekStartDate?: string; weekEndDate?: string; recipientEmails?: string[] }) => {
+  const effectiveEndDate = opts?.weekEndDate || new Date().toISOString().split('T')[0];
+  const effectiveStartDate = opts?.weekStartDate || new Date(Date.now() - 6 * 86400000).toISOString().split('T')[0];
+
+  const personnelMap = new Map<string, { id: string; name: string; email: string }>();
+  (db.staffUsers || [])
+    .filter((u: any) => u.role !== 'student' && u.isActive !== false && u.status !== 'Deactivated')
+    .forEach((u: any) => {
+      const k = (u.email || u.id).toLowerCase().trim();
+      personnelMap.set(k, { id: u.id, name: u.name, email: u.email });
+    });
+  (db.mentors || [])
+    .filter((m: any) => m.isActive !== false && m.status !== 'Deactivated')
+    .forEach((m: any) => {
+      const k = (m.email || m.id).toLowerCase().trim();
+      if (!personnelMap.has(k)) {
+        personnelMap.set(k, { id: m.id, name: m.name, email: m.email });
+      }
+    });
+
+  const evaluations = Array.from(personnelMap.values()).map(person => {
+    const report = buildWeeklyEvaluationForUser(person.id, effectiveStartDate, effectiveEndDate);
+    if (!Array.isArray((db as any).weeklyScrumReports)) (db as any).weeklyScrumReports = [];
+    (db as any).weeklyScrumReports.unshift(report);
+    return report;
+  });
+
+  const summaryRowsHtml = evaluations
+    .map(r => {
+      const comp = r.taskBreakdown?.completed || [];
+      const prog = r.taskBreakdown?.inProgress || [];
+      const blk = r.taskBreakdown?.blocked || [];
+      return `
+        <tr>
+          <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top;">
+            <strong>${r.userName}</strong><br/>
+            <span style="font-size: 11px; color: #64748b;">${r.userRole}</span>
+          </td>
+          <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center; vertical-align: top;">
+            <strong style="color: #2563eb; font-size: 16px;">${r.letterGrade}</strong><br/>
+            <span style="font-size: 11px; color: #64748b;">${r.overallScore}/100 (${r.taskBreakdown?.daysLogged || 0}d)</span>
+          </td>
+          <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top; font-size: 12px;">
+            <strong style="color: #166534;">Completed (${comp.length}):</strong> ${comp.length ? comp.slice(0, 4).join('; ') : 'None'}<br/>
+            <strong style="color: #1d4ed8;">In Progress (${prog.length}):</strong> ${prog.length ? prog.slice(0, 4).join('; ') : 'None'}<br/>
+            <strong style="color: #b45309;">Blocked (${blk.length}):</strong> ${blk.length ? blk.join('; ') : 'None'}
+          </td>
+        </tr>
+      `;
+    })
+    .join('');
+
+  const defaultAdmins = Array.from(
+    new Set(
+      [
+        ...(Array.isArray(opts?.recipientEmails) ? opts!.recipientEmails : []),
+        'admin@codelab.institute',
+        'abiola@codelab.institute',
+      ]
+        .filter(Boolean)
+        .map(e => e.toLowerCase().trim())
+    )
+  );
+
+  let emailsDispatched = 0;
+  try {
+    const { transporter, from } = await getTransporter();
+
+    // 1. Send Management All-Staff Weekly Digest
+    const digestSubject = `📊 Weekly Staff Standup & AI Evaluation Digest (${effectiveStartDate} – ${effectiveEndDate})`;
+    const digestBody = `
+      <div style="font-family: Arial, sans-serif; color: #0f172a;">
+        <h2 style="margin-bottom: 4px;">Weekly Staff Standup &amp; Evaluation Report</h2>
+        <p style="color: #475569; font-size: 13px; margin-top: 0;">Period: <strong>${effectiveStartDate}</strong> to <strong>${effectiveEndDate}</strong> • Total Personnel Evaluated: <strong>${evaluations.length}</strong></p>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 12px;">
+          <thead>
+            <tr style="background: #f1f5f9; text-align: left; font-size: 12px;">
+              <th style="padding: 10px;">Staff / Faculty</th>
+              <th style="padding: 10px; text-align: center;">Weekly Grade</th>
+              <th style="padding: 10px;">Tasks Breakdown (Completed / In Progress / Blocked)</th>
+            </tr>
+          </thead>
+          <tbody>${summaryRowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+
+    for (const adminEmail of defaultAdmins) {
+      await transporter.sendMail({
+        from,
+        to: adminEmail,
+        subject: digestSubject,
+        html: wrapEmailHtml(digestSubject, digestBody),
+      });
+      emailsDispatched++;
+    }
+
+    // 2. Send individual Weekly Evaluation email to each active staff member with standups
+    for (const ev of evaluations) {
+      if (!ev.userEmail) continue;
+      const comp = ev.taskBreakdown?.completed || [];
+      const prog = ev.taskBreakdown?.inProgress || [];
+      const blk = ev.taskBreakdown?.blocked || [];
+      const indivSubject = `🎯 Your Weekly Scrum Evaluation: Grade ${ev.letterGrade} (${effectiveStartDate} – ${effectiveEndDate})`;
+      const indivBody = `
+        <div style="font-family: Arial, sans-serif; color: #0f172a;">
+          <h3>Hello ${ev.userName},</h3>
+          <p>Your Weekly AI Scrum Evaluation for <strong>${effectiveStartDate} – ${effectiveEndDate}</strong> is ready:</p>
+          <p style="font-size: 18px;"><strong>Grade: ${ev.letterGrade}</strong> (${ev.overallScore}/100) • Completion Rate: <strong>${ev.metrics.completionRatePercent}%</strong></p>
+          <p>${ev.aiExecutiveSummary}</p>
+          <ul>
+            <li><strong>Completed (${comp.length}):</strong> ${comp.length ? comp.join('; ') : 'None logged'}</li>
+            <li><strong>Still In Progress (${prog.length}):</strong> ${prog.length ? prog.join('; ') : 'None'}</li>
+            <li><strong>Blocked (${blk.length}):</strong> ${blk.length ? blk.join('; ') : 'None'}</li>
+          </ul>
+        </div>
+      `;
+      await transporter.sendMail({
+        from,
+        to: ev.userEmail,
+        subject: indivSubject,
+        html: wrapEmailHtml(indivSubject, indivBody),
+      });
+      emailsDispatched++;
+    }
+  } catch (err) {
+    console.warn('Weekly standup digest email dispatch warning:', err);
+  }
+
+  if (!Array.isArray(db.notifications)) db.notifications = [];
+  db.notifications.unshift({
+    id: `notif-weekly-scrum-${Date.now()}`,
+    title: `📊 Weekly Standup & Evaluation Digest Ready`,
+    message: `Evaluated ${evaluations.length} staff/faculty for ${effectiveStartDate} – ${effectiveEndDate}. Dispatched ${emailsDispatched} email report(s).`,
+    timestamp: new Date().toISOString(),
+    read: false,
+    type: 'system',
+    link: '/attendance',
+  });
+
+  if (db.settings) {
+    (db.settings as any).lastWeeklyStandupDigestEndDate = effectiveEndDate;
+  }
+  saveDatabase(db);
+
+  return {
+    weekStartDate: effectiveStartDate,
+    weekEndDate: effectiveEndDate,
+    totalPersonnelEvaluated: evaluations.length,
+    emailsDispatched,
+    evaluations,
+  };
+};
+
+app.post('/api/scrum/send-weekly-digest', async (req: Request, res: Response) => {
+  try {
+    const { weekStartDate, weekEndDate, recipientEmails } = req.body || {};
+    const result = await dispatchWeeklyStandupDigest({ weekStartDate, weekEndDate, recipientEmails });
+    res.status(200).json({ success: true, data: result });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message || 'Failed to dispatch weekly standup digest.' });
+  }
 });
 
 // ----------------------------------------------------

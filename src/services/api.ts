@@ -541,6 +541,18 @@ class ApiService {
     });
   }
 
+  async startTimetableSession(slotId: string) {
+    return this.request<TimetableSlot>(`/timetables/${encodeURIComponent(slotId)}/start-session`, {
+      method: 'POST',
+    });
+  }
+
+  async endTimetableSession(slotId: string) {
+    return this.request<{ slot: TimetableSlot; mentor: Mentor | null; creditedHours: number }>(`/timetables/${encodeURIComponent(slotId)}/end-session`, {
+      method: 'POST',
+    });
+  }
+
   // Student Payment Proof
   async submitProofOfPayment(studentId: string, payload: { amount: number; bankName: string; referenceNumber: string; receiptProofUrl?: string; notes?: string }) {
     return this.request(`/students/${studentId}/proof-of-payment`, {

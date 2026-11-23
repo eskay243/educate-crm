@@ -126,6 +126,17 @@ export const StudentCoursesPage: React.FC = () => {
     });
   }, [allStudentSubmissions, student, activeLesson, activeModule]);
 
+  const otherCourseSubmissions = useMemo(() => {
+    const norm = (s?: string) => (s || '').trim().toLowerCase();
+    const studentNameNorm = norm(student.name);
+    const currentIds = new Set(currentSubmissions.map(s => s.id));
+    return allStudentSubmissions.filter(a => {
+      const matchStudent = (a.studentId && a.studentId === student.id) ||
+        norm(a.studentName) === studentNameNorm;
+      return matchStudent && !currentIds.has(a.id);
+    });
+  }, [allStudentSubmissions, student, currentSubmissions]);
+
   const handleCompleteLesson = async () => {
     if (!activeLesson) return;
     await completeLesson(activeLesson.id);
@@ -659,6 +670,75 @@ export const StudentCoursesPage: React.FC = () => {
                                   <span className="material-symbols-outlined text-[13px]">restart_alt</span>
                                   <span>Prepare Revision</span>
                                 </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Other Course Assignments & Faculty Graded Projects */}
+                  {otherCourseSubmissions.length > 0 && (
+                    <div className="pt-4 border-t border-outline-variant space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-bold text-xs uppercase tracking-wider text-on-surface">
+                          Course Assignments &amp; Faculty Grades
+                        </h4>
+                        <span className="text-[11px] text-secondary">{otherCourseSubmissions.length} record(s)</span>
+                      </div>
+
+                      {otherCourseSubmissions.map((sub, sIdx) => {
+                        const isNeedsRevision = sub.status === 'Needs Revision';
+                        const isPassed = sub.status === 'Passed' || sub.status === 'Exceptional';
+                        return (
+                          <div
+                            key={sub.id || `other-${sIdx}`}
+                            className={`p-4 rounded-xl border transition-all space-y-2 ${
+                              isNeedsRevision
+                                ? 'bg-amber-500/10 border-amber-500/30'
+                                : isPassed
+                                ? 'bg-emerald-500/10 border-emerald-500/30'
+                                : 'bg-surface-container/50 border-outline-variant/80'
+                            }`}
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="material-symbols-outlined text-[20px] text-primary">
+                                  {isPassed ? 'verified' : isNeedsRevision ? 'published_with_changes' : 'assignment'}
+                                </span>
+                                <div>
+                                  <span className="font-bold text-xs text-on-surface">{sub.taskTitle}</span>
+                                  <p className="text-[10px] text-secondary">
+                                    {sub.courseTitle || 'Assigned Coursework'} • {sub.moduleTitle || 'Project'} • {new Date(sub.submittedAt).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              </div>
+                              <span
+                                className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider self-start sm:self-auto ${
+                                  isPassed
+                                    ? 'bg-emerald-600 text-white'
+                                    : isNeedsRevision
+                                    ? 'bg-amber-600 text-white'
+                                    : 'bg-primary/20 text-primary'
+                                }`}
+                              >
+                                {sub.status} {sub.grade ? `• ${sub.grade}%` : ''}
+                              </span>
+                            </div>
+
+                            {sub.mentorFeedback && (
+                              <div className="p-3 rounded-lg bg-surface border border-outline-variant text-xs space-y-1">
+                                <div className="flex items-center justify-between text-[11px]">
+                                  <span className="font-bold text-on-surface flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-[14px] text-primary">rate_review</span>
+                                    <span>Faculty Critique ({sub.reviewedBy || 'Faculty Mentor'}):</span>
+                                  </span>
+                                  {sub.reviewedAt && (
+                                    <span className="text-secondary">{new Date(sub.reviewedAt).toLocaleDateString()}</span>
+                                  )}
+                                </div>
+                                <p className="text-secondary leading-relaxed italic">"{sub.mentorFeedback}"</p>
                               </div>
                             )}
                           </div>

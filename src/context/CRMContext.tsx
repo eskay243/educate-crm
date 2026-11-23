@@ -246,6 +246,8 @@ interface CRMContextType {
     mentorFeedback?: string;
   }) => Promise<{ success: boolean; data?: any }>;
   recalculateMentorLecturedHours: (mentorId?: string) => Promise<{ credited: number; total: number }>;
+  startTimetableSession: (slotId: string) => Promise<void>;
+  endTimetableSession: (slotId: string) => Promise<{ creditedHours: number }>;
   reviewMentorPayout: (requestId: string, status: 'Approved' | 'Rejected', reason?: string) => Promise<boolean>;
   calculateMentorTuitionCommission: (mentorId: string) => {
     totalTuitionPool: number;
@@ -872,7 +874,19 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     refreshUnreadChatCount();
     realtimeClient.connect(currentUser);
 
-    const unsubMessage = realtimeClient.subscribe('chat:message', () => {
+    const unsubMessage = realtimeClient.subscribe('chat:message', (payload: any) => {
+      if (!currentUser) return;
+      if (payload?.senderId && payload.senderId === currentUser.id) return;
+      const participants: string[] = Array.isArray(payload?.participants) ? payload.participants : [];
+      if (participants.length > 0) {
+        const normEmail = currentUser.email?.toLowerCase().trim();
+        const isParticipant = participants.some(
+          p => p === currentUser.id || (normEmail && p?.toLowerCase().trim() === normEmail)
+        );
+        if (!isParticipant) return;
+      } else if (payload?.conversationType === 'channel' && Array.isArray(payload?.allowedRoles)) {
+        if (currentUser.role !== 'super_admin' && !payload.allowedRoles.includes(currentUser.role)) return;
+      }
       refreshUnreadChatCount();
     });
     const unsubRead = realtimeClient.subscribe('chat:read', () => {
@@ -1218,8 +1232,15 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const unreadNotificationCount = useMemo(() => {
-    return notifications.filter(n => !n.read).length;
-  }, [notifications]);
+    return notifications.filter(n => {
+      if (n.read) return false;
+      const targetId = (n as any).userId || (n as any).targetUserId;
+      if (targetId && currentUser && targetId !== currentUser.id && targetId !== currentUser.email) {
+        return false;
+      }
+      return true;
+    }).length;
+  }, [notifications, currentUser]);
 
   // Super Admin session tracking for role switching & identity lock (e.g. Abiola stays locked to Abiola)
   const [isSuperAdminSession, setIsSuperAdminSession] = useState<boolean>(() => {
@@ -4077,6 +4098,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (options.workMode === 'Remote') {
       geoStatus = 'Remote Verified';
     } else if (options.lat !== undefined && options.lng !== undefined) {
+      const accuracyBuffer = Math.min(options.gpsAccuracyMeters || 0, 350);
       if (options.campusId && matchedCampus) {
         distanceMeters = calculateDistanceMeters(
           options.lat,
@@ -4084,7 +4106,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           matchedCampus.latitude,
           matchedCampus.longitude
         );
-        geoStatus = distanceMeters <= matchedCampus.radiusMeters ? 'Verified On-Site' : 'Location Mismatch';
+        geoStatus = distanceMeters <= matchedCampus.radiusMeters + accuracyBuffer ? 'Verified On-Site' : 'Location Mismatch';
       } else if (activeCampuses.length > 0) {
         const distances = activeCampuses
           .map(c => ({
@@ -4092,7 +4114,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             dist: calculateDistanceMeters(options.lat!, options.lng!, c.latitude, c.longitude),
           }))
           .sort((a, b) => a.dist - b.dist);
-        const inside = distances.find(d => d.dist <= d.campus.radiusMeters);
+        const inside = distances.find(d => d.dist <= d.campus.radiusMeters + accuracyBuffer);
         const chosen = inside || distances[0];
         matchedCampus = chosen.campus;
         distanceMeters = chosen.dist;
@@ -4104,7 +4126,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           fallbackOffice.latitude,
           fallbackOffice.longitude
         );
-        geoStatus = distanceMeters <= fallbackOffice.radiusMeters ? 'Verified On-Site' : 'Location Mismatch';
+        geoStatus = distanceMeters <= fallbackOffice.radiusMeters + accuracyBuffer ? 'Verified On-Site' : 'Location Mismatch';
       }
     } else {
       geoStatus = 'GPS Unavailable';
@@ -4894,29 +4916,36 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     }));
 
+    const targetSub = assignments.find(a => a.id === id);
+    const norm = (v?: string) => (v || '').trim().toLowerCase();
+
     setStudents(prev => prev.map(s => {
-      if (!s.assignmentSubmissions) return s;
-      return {
-        ...s,
-        assignmentSubmissions: s.assignmentSubmissions.map(a => {
-          if (a.id !== id) return a;
-          return {
-            ...a,
-            grade,
-            mentorFeedback,
-            status,
-            reviewedBy: currentUser?.name || 'Faculty Mentor',
-            reviewedAt: new Date().toISOString(),
-          };
-        })
+      const isTargetStudent = targetSub && (
+        (targetSub.studentId && s.id === targetSub.studentId) ||
+        (targetSub.studentName && norm(s.name) === norm(targetSub.studentName))
+      );
+      const existingSubs = s.assignmentSubmissions || [];
+      const idx = existingSubs.findIndex(a => a.id === id);
+      if (idx === -1 && !isTargetStudent) return s;
+
+      const updatedSub = {
+        ...(idx !== -1 ? existingSubs[idx] : targetSub!),
+        grade,
+        mentorFeedback,
+        status,
+        reviewedBy: currentUser?.name || 'Faculty Mentor',
+        reviewedAt: new Date().toISOString(),
       };
+      const nextSubs = idx !== -1
+        ? existingSubs.map(a => a.id === id ? updatedSub : a)
+        : [updatedSub, ...existingSubs];
+      return { ...s, assignmentSubmissions: nextSubs };
     }));
 
     showToast('Evaluation Recorded', `Assignment marked as ${status} with grade ${grade}%.`, 'success');
 
     // Notify student via email
-    const targetSub = assignments.find(a => a.id === id);
-    const targetStudent = students.find(s => s.id === targetSub?.studentId);
+    const targetStudent = students.find(s => s.id === targetSub?.studentId || (targetSub?.studentName && norm(s.name) === norm(targetSub.studentName)));
     if (targetStudent?.email) {
       emailService.sendEmail({
         to: targetStudent.email,
@@ -5910,6 +5939,42 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     showToast('Assignment Created', `Assignment "${payload.taskTitle}" added successfully.`, 'success');
     return { success: true, data: newSub };
+  };
+
+  const startTimetableSession = async (slotId: string) => {
+    const nowIso = new Date().toISOString();
+    setTimetables(prev => prev.map(t => t.id === slotId ? { ...t, startedAt: (t as any).startedAt || nowIso, sessionStatus: 'In Progress' } : t));
+    if (isBackendConnected) {
+      try {
+        await apiService.startTimetableSession(slotId);
+      } catch (err) {
+        console.warn('Start timetable session error:', err);
+      }
+    }
+  };
+
+  const endTimetableSession = async (slotId: string): Promise<{ creditedHours: number }> => {
+    try {
+      const res = await apiService.endTimetableSession(slotId);
+      if (res?.slot) {
+        setTimetables(prev => prev.map(t => t.id === slotId ? res.slot : t));
+      }
+      if (res?.mentor) {
+        setMentors(prev => prev.map(m => m.id === res.mentor!.id ? res.mentor! : m));
+      }
+      const hours = res?.creditedHours || 0;
+      showToast(
+        'Session Ended & Hours Logged',
+        hours > 0
+          ? `Class marked Held and +${hours}h credited to your teaching hours.`
+          : 'Class marked Held (hours already credited).',
+        'success'
+      );
+      return { creditedHours: hours };
+    } catch (err: any) {
+      showToast('Error Ending Session', err?.message || 'Unable to end session.', 'error');
+      return { creditedHours: 0 };
+    }
   };
 
   const recalculateMentorLecturedHours = async (mentorId?: string): Promise<{ credited: number; total: number }> => {
@@ -7381,6 +7446,8 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateFinancialAuditFinding,
         createAssignment,
         recalculateMentorLecturedHours,
+        startTimetableSession,
+        endTimetableSession,
         reviewMentorPayout,
         calculateMentorTuitionCommission,
         selectedPayoutRequestForEdit,

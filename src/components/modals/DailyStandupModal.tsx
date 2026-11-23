@@ -3,6 +3,31 @@ import { useCRM } from '../../context/CRMContext';
 import { DailyStandupTask, WeeklyScrumPerformance } from '../../types/crm';
 import { safeLocalStorage, safeJsonParse } from '../../utils/safeStorage';
 
+const parseIsoDateLocal = (isoDate?: string): Date | null => {
+  if (!isoDate) return null;
+  const match = isoDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  }
+  const parsed = new Date(isoDate);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const formatWeekDateRange = (startStr?: string, endStr?: string): string => {
+  const start = parseIsoDateLocal(startStr);
+  const end = parseIsoDateLocal(endStr);
+  if (!start && !end) return '';
+  const fmtNoYear = (d: Date) =>
+    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const fmtWithYear = (d: Date) =>
+    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  if (start && end) {
+    const sameYear = start.getFullYear() === end.getFullYear();
+    return `${sameYear ? fmtNoYear(start) : fmtWithYear(start)} – ${fmtWithYear(end)}`;
+  }
+  return fmtWithYear((start || end)!);
+};
+
 export interface DailyStandupModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -79,6 +104,35 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
   const [managementReport, setManagementReport] = useState<any | null>(null);
   const [isLoadingReport, setIsLoadingReport] = useState(false);
   const [isTriggeringReminders, setIsTriggeringReminders] = useState(false);
+  const [isSendingWeeklyDigest, setIsSendingWeeklyDigest] = useState(false);
+
+  const handleSendWeeklyDigest = async () => {
+    setIsSendingWeeklyDigest(true);
+    try {
+      const res = await fetch('/api/scrum/send-weekly-digest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(currentUser?.role ? { 'x-user-role': currentUser.role } : {}),
+        },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        showToast(
+          'Weekly Report & Evaluations Dispatched',
+          `Evaluated ${data.data.totalPersonnelEvaluated} staff/faculty (${data.data.weekStartDate} – ${data.data.weekEndDate}) and sent ${data.data.emailsDispatched} email(s).`,
+          'success'
+        );
+      } else {
+        showToast('Digest Error', data.message || 'Could not dispatch weekly digest.', 'error');
+      }
+    } catch (err: any) {
+      showToast('Network Error', err.message || 'Failed to send weekly report.', 'error');
+    } finally {
+      setIsSendingWeeklyDigest(false);
+    }
+  };
 
   const handleTriggerReminders = async () => {
     setIsTriggeringReminders(true);
@@ -944,9 +998,14 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
             <div className="space-y-5">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <h4 className="text-sm sm:text-base font-bold text-on-surface flex items-center gap-2">
+                  <h4 className="text-sm sm:text-base font-bold text-on-surface flex items-center gap-2 flex-wrap">
                     <span className="material-symbols-outlined text-[20px] text-primary">trending_up</span>
                     <span>Weekly Performance &amp; Scrum Velocity</span>
+                    {activeWeeklyReport && (activeWeeklyReport.weekStartDate || activeWeeklyReport.weekEndDate) && (
+                      <span className="text-[11px] font-semibold text-primary bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-full font-data-tabular">
+                        {formatWeekDateRange(activeWeeklyReport.weekStartDate, activeWeeklyReport.weekEndDate)}
+                      </span>
+                    )}
                   </h4>
                   <p className="text-xs text-secondary">
                     Calculated by autonomous AI agent based on completed tasks, module coverage, and blocker resolution
@@ -977,7 +1036,14 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                         <span>{activeWeeklyReport.letterGrade}</span>
                         <span className="text-xs font-normal text-secondary">({activeWeeklyReport.overallScore}/100)</span>
                       </div>
-                      <span className="text-[10px] text-secondary mt-1">Week #{activeWeeklyReport.weekNumber}</span>
+                      <span className="text-[10px] font-semibold text-secondary mt-1">
+                        Week #{activeWeeklyReport.weekNumber}
+                      </span>
+                      {(activeWeeklyReport.weekStartDate || activeWeeklyReport.weekEndDate) && (
+                        <span className="text-[10px] font-semibold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full mt-1 font-data-tabular">
+                          {formatWeekDateRange(activeWeeklyReport.weekStartDate, activeWeeklyReport.weekEndDate)}
+                        </span>
+                      )}
                     </div>
 
                     <div className="p-4 rounded-xl bg-surface border border-outline flex flex-col justify-center shadow-xs">
@@ -1152,6 +1218,19 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                 </div>
 
                 <div className="self-end flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={handleSendWeeklyDigest}
+                    disabled={isSendingWeeklyDigest}
+                    className="px-3.5 py-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                    title="Compile all-staff weekly completed/in-progress/blocked tasks & AI evaluations and dispatch email digest"
+                  >
+                    <span className={`material-symbols-outlined text-[15px] ${isSendingWeeklyDigest ? 'animate-spin' : ''}`}>
+                      {isSendingWeeklyDigest ? 'sync' : 'forward_to_inbox'}
+                    </span>
+                    <span>{isSendingWeeklyDigest ? 'Sending Digest...' : 'Send Weekly Report & Evaluations'}</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={handleTriggerReminders}

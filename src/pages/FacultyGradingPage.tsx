@@ -5,17 +5,57 @@ import { FacultyGradingInbox } from '../components/mentors/FacultyGradingInbox';
 import { PageHeader, SemanticMetricCard } from '../components/common/KineticUI';
 
 export const FacultyGradingPage: React.FC = () => {
-  const { currentUser, assignments } = useCRM();
+  const { currentUser, assignments, mentors, students, courses } = useCRM();
 
   const isMentor = currentUser?.role === 'mentor';
 
+  const scopedAssignments = useMemo(() => {
+    if (!isMentor) return assignments;
+    const norm = (s?: string) => (s || '').trim().toLowerCase();
+    const myMentorProfile = mentors.find(
+      m =>
+        m.id === currentUser?.mentorId ||
+        norm(m.name) === norm(currentUser?.name) ||
+        (currentUser?.email && m.email.toLowerCase() === currentUser.email.toLowerCase())
+    );
+    if (!myMentorProfile) return [];
+
+    const myName = norm(myMentorProfile.name);
+    const myCourseTitles = new Set(
+      courses
+        .filter(c => (c as any).mentorId === myMentorProfile.id || norm((c as any).instructor) === myName)
+        .map(c => norm(c.title))
+    );
+    const myStudents = students.filter(
+      s =>
+        s.mentorId === myMentorProfile.id ||
+        norm(s.mentorName) === myName ||
+        (s.program && myCourseTitles.has(norm(s.program))) ||
+        s.courses?.some((c: any) => myCourseTitles.has(norm(c.courseTitle || c.title || c.name)))
+    );
+    const myStudentIds = new Set(myStudents.map(s => s.id));
+    const myStudentNames = new Set(myStudents.map(s => norm(s.name)));
+
+    return assignments.filter(a => {
+      const matchesMentorDirect =
+        a.mentorId === myMentorProfile.id ||
+        (a.reviewedBy && norm(a.reviewedBy) === myName);
+      const matchesStudent = a.studentId
+        ? myStudentIds.has(a.studentId)
+        : a.studentName
+        ? myStudentNames.has(norm(a.studentName))
+        : false;
+      return matchesMentorDirect || matchesStudent;
+    });
+  }, [isMentor, assignments, mentors, students, currentUser]);
+
   const pendingSubmissions = useMemo(() => {
-    return assignments.filter(a => a.status === 'Pending').length;
-  }, [assignments]);
+    return scopedAssignments.filter(a => a.status === 'Pending').length;
+  }, [scopedAssignments]);
 
   const reviewedSubmissions = useMemo(() => {
-    return assignments.filter(a => a.status === 'Passed' || a.status === 'Exceptional').length;
-  }, [assignments]);
+    return scopedAssignments.filter(a => a.status === 'Passed' || a.status === 'Exceptional').length;
+  }, [scopedAssignments]);
 
   return (
     <div className="space-y-stack-lg max-w-7xl mx-auto pb-12">

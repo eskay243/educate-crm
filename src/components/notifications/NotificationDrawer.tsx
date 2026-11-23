@@ -10,6 +10,7 @@ interface NotificationDrawerProps {
 
 export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, onClose }) => {
   const { 
+    currentUser,
     notifications, 
     markNotificationAsRead, 
     markAllNotificationsAsRead, 
@@ -22,6 +23,10 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
   if (!isOpen) return null;
 
   const filteredNotifications = notifications.filter(n => {
+    const targetId = (n as any).userId || (n as any).targetUserId;
+    if (targetId && currentUser && targetId !== currentUser.id && targetId !== currentUser.email) {
+      return false;
+    }
     if (filter === 'all') return true;
     return n.type === filter;
   });

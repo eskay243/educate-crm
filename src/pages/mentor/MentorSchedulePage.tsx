@@ -9,6 +9,8 @@ export const MentorSchedulePage: React.FC = () => {
     timetables,
     sessions,
     markSessionAttendance,
+    startTimetableSession,
+    endTimetableSession,
     openModal,
     setSelectedMentorForBookingId,
     setSelectedSlotForRecording,
@@ -314,11 +316,45 @@ export const MentorSchedulePage: React.FC = () => {
                         href={item.meetingLink}
                         target="_blank"
                         rel="noreferrer"
+                        onClick={() => {
+                          if (item.type === 'cohort_class') {
+                            startTimetableSession(item.id).catch(() => {});
+                          }
+                        }}
                         className="h-9 px-3.5 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-dark transition-all flex items-center gap-1.5 shadow-xs"
                       >
                         <span className="material-symbols-outlined text-[16px]">videocam</span>
                         <span>{item.meetingLink.includes('sipcore.org') ? 'SIPCore Room' : 'Join Link'}</span>
                       </a>
+                    )}
+                    {item.type === 'cohort_class' && (
+                      (item.rawItem as any)?.hoursCredited || (item.rawItem as any)?.status === 'Held' ? (
+                        <span className="h-9 px-3 rounded-xl bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 text-xs font-bold flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-[16px]">verified</span>
+                          <span>Hours Credited (+{(item.rawItem as any)?.durationHours || 2}h)</span>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              const res = await endTimetableSession(item.id);
+                              showToast(
+                                res.creditedHours > 0
+                                  ? `Session ended — +${res.creditedHours}h credited to your lectured hours`
+                                  : 'Session marked as Held',
+                                'success'
+                              );
+                            } catch (err: any) {
+                              showToast(err?.message || 'Failed to end session', 'error');
+                            }
+                          }}
+                          className="h-9 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">task_alt</span>
+                          <span>End Session &amp; Log Hours</span>
+                        </button>
+                      )
                     )}
 
                     {item.type === 'cohort_class' && (item as any).recordingUrl && (

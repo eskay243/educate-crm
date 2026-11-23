@@ -36,7 +36,7 @@ export const StudentMentorPage: React.FC = () => {
   const [sessionType, setSessionType] = useState('Code Architecture Review');
   const [sessionDate, setSessionDate] = useState('');
   const [sessionTime, setSessionTime] = useState('14:00 - 14:30');
-  const [meetingMode, setMeetingMode] = useState<'Google Meet' | 'Lagos Hub In-Person'>('Google Meet');
+  const [meetingMode, setMeetingMode] = useState<'SIPCore Video (Online)' | 'Google Meet' | 'Lagos Hub In-Person'>('SIPCore Video (Online)');
   const [notes, setNotes] = useState('');
   const [isBooking, setIsBooking] = useState(false);
   const [selectedMeetingLink, setSelectedMeetingLink] = useState<string>('');
@@ -286,6 +286,7 @@ export const StudentMentorPage: React.FC = () => {
                     onChange={e => setMeetingMode(e.target.value as any)}
                     className="w-full px-3 py-2.5 rounded-xl border border-outline-variant bg-surface-container text-xs font-medium focus:ring-2 focus:ring-primary focus:outline-none cursor-pointer"
                   >
+                    <option value="SIPCore Video (Online)">SIPCore Video (Online)</option>
                     <option value="Google Meet">Google Meet (Online Video Call)</option>
                     <option value="Lagos Hub In-Person">Lagos VI Tech Hub (In-Person)</option>
                   </select>

@@ -445,6 +445,7 @@ export const MentorAvailabilityManager: React.FC<MentorAvailabilityManagerProps>
                     onChange={e => setLocationType(e.target.value as any)}
                     className="w-full h-9 px-3 bg-surface border border-outline-variant rounded font-medium text-on-surface outline-none cursor-pointer focus:border-primary"
                   >
+                    <option value="SIPCore Video (Online)">SIPCore Video (Online)</option>
                     <option value="Google Meet (Online)">Google Meet (Online)</option>
                     <option value="Zoom">Zoom</option>
                     <option value="Campus Hub Lab">Lagos VI Campus Hub Lab</option>
