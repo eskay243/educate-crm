@@ -87,6 +87,7 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
     { id: `t-${Date.now()}-1`, description: '', moduleId: 'leads', status: 'in_progress' },
   ]);
   const [blockers, setBlockers] = useState<string[]>(['']);
+  const [blockerError, setBlockerError] = useState<string | null>(null);
   const [selectedModules, setSelectedModules] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEvaluatingWeekly, setIsEvaluatingWeekly] = useState(false);
@@ -227,6 +228,7 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
   // Prefill form states when todayStandup is loaded or auto-rollover yesterday's tasks
   useEffect(() => {
     if (!isOpen) return;
+    setBlockerError(null);
 
     if (todayStandup) {
       if (Array.isArray(todayStandup.tasksYesterday) && todayStandup.tasksYesterday.length > 0) {
@@ -409,6 +411,7 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
 
   const handleRemoveBlocker = (index: number) => {
     setBlockers(prev => prev.filter((_, i) => i !== index));
+    setBlockerError(null);
   };
 
   const handleUpdateBlocker = (index: number, val: string) => {
@@ -417,12 +420,43 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
       next[index] = val;
       return next;
     });
+    if (blockerError) setBlockerError(null);
   };
 
   const toggleModuleSelection = (moduleId: string) => {
     setSelectedModules(prev =>
       prev.includes(moduleId) ? prev.filter(m => m !== moduleId) : [...prev, moduleId]
     );
+  };
+
+  const handleCancelAndDiscard = () => {
+    if (draftKey) {
+      safeLocalStorage.removeItem(draftKey);
+      setHasRestoredDraft(false);
+      setDraftSavedTime(null);
+    }
+    const defaultMod = getDefaultModule(currentUser, []);
+    if (todayStandup) {
+      setTasksYesterday(
+        todayStandup.tasksYesterday?.length > 0
+          ? todayStandup.tasksYesterday
+          : [{ id: `y-${Date.now()}`, description: '', moduleId: defaultMod, status: 'completed' }]
+      );
+      setTasksToday(
+        todayStandup.tasksToday?.length > 0
+          ? todayStandup.tasksToday
+          : [{ id: `t-${Date.now()}`, description: '', moduleId: defaultMod, status: 'in_progress' }]
+      );
+      setBlockers(todayStandup.blockers?.length > 0 ? todayStandup.blockers : ['']);
+      setSelectedModules(todayStandup.taggedModuleIds?.length > 0 ? todayStandup.taggedModuleIds : [defaultMod]);
+    } else {
+      setTasksYesterday([{ id: `y-${Date.now()}`, description: '', moduleId: defaultMod, status: 'completed' }]);
+      setTasksToday([{ id: `t-${Date.now()}`, description: '', moduleId: defaultMod, status: 'in_progress' }]);
+      setBlockers(['']);
+      setSelectedModules([defaultMod]);
+    }
+    setBlockerError(null);
+    onClose();
   };
 
   const handleSubmitStandup = async (e: React.FormEvent) => {
@@ -459,10 +493,65 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
       return;
     }
 
+    // 3. Validate blockers (reject whitespace-only rows or empty added blocker rows)
+    const hasWhitespaceOnlyBlocker = blockers.some(b => b.length > 0 && b.trim().length === 0);
+    if (hasWhitespaceOnlyBlocker) {
+      setBlockerError('Blocker descriptions cannot contain only spaces. Enter a valid blocker or clear/remove the row.');
+      showToast(
+        'Validation Error',
+        'Blocker descriptions cannot contain only whitespace or spaces. Please enter a valid description or remove the empty row.',
+        'warning'
+      );
+      return;
+    }
+
+    const hasEmptyAddedBlocker = blockers.length > 1 && blockers.some(b => b.trim().length === 0);
+    if (hasEmptyAddedBlocker) {
+      setBlockerError('Please fill in all added blocker fields or remove any empty blocker row before submitting.');
+      showToast(
+        'Validation Error',
+        'Please fill in all added blocker fields or remove any empty blocker row before submitting.',
+        'warning'
+      );
+      return;
+    }
+
+    setBlockerError(null);
+
     // Clean blockers
     const cleanBlockers = blockers
       .map(b => b.trim())
       .filter(b => b.length > 0);
+
+    // 3. No-Op Update Check: prevent redundant saves & success toasts when nothing changed
+    if (todayStandup) {
+      const normalizeTasks = (arr: DailyStandupTask[] = []) =>
+        arr
+          .filter(t => (t.description || '').trim().length > 0)
+          .map(t => ({
+            description: t.description.trim(),
+            moduleId: t.moduleId,
+            status: t.status,
+          }));
+      const prevYesterday = normalizeTasks(todayStandup.tasksYesterday);
+      const nextYesterday = normalizeTasks(validYesterday);
+      const prevToday = normalizeTasks(todayStandup.tasksToday);
+      const nextToday = normalizeTasks(validToday);
+      const prevBlockers = (todayStandup.blockers || []).map(b => b.trim()).filter(Boolean);
+      const prevModules = [...(todayStandup.taggedModuleIds || [])].sort();
+      const nextModules = [...selectedModules].sort();
+
+      const isUnchanged =
+        JSON.stringify(prevYesterday) === JSON.stringify(nextYesterday) &&
+        JSON.stringify(prevToday) === JSON.stringify(nextToday) &&
+        JSON.stringify(prevBlockers) === JSON.stringify(cleanBlockers) &&
+        JSON.stringify(prevModules) === JSON.stringify(nextModules);
+
+      if (isUnchanged) {
+        showToast('No Changes to Save', 'No changes were made to your standup tasks, blockers, or module tags.', 'info');
+        return;
+      }
+    }
 
     // Sync state so discarded empty rows don't linger in UI
     const defaultMod = getDefaultModule(currentUser, selectedModules);
@@ -928,8 +1017,17 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                   </div>
 
                   <div className="space-y-2">
-                    {blockers.map((b, idx) => (
-                      <div key={idx} className="flex items-start gap-2 bg-canvas p-2.5 rounded-lg border border-outline w-full">
+                    {blockers.map((b, idx) => {
+                      const isInvalidBlockerRow = Boolean(
+                        blockerError && ((b.length > 0 && b.trim().length === 0) || (blockers.length > 1 && b.trim().length === 0))
+                      );
+                      return (
+                      <div
+                        key={idx}
+                        className={`flex items-start gap-2 bg-canvas p-2.5 rounded-lg border w-full transition-colors ${
+                          isInvalidBlockerRow ? 'border-error ring-1 ring-error/30' : 'border-outline'
+                        }`}
+                      >
                         <span className="material-symbols-outlined text-amber-600 text-[18px] shrink-0 mt-1">warning</span>
                         <textarea
                           rows={1}
@@ -955,8 +1053,15 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                           </button>
                         )}
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
+                  {blockerError && (
+                    <p className="text-xs font-semibold text-error flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[15px]">error</span>
+                      <span>{blockerError}</span>
+                    </p>
+                  )}
                 </div>
 
                 {/* Submit Action Button pinned in form */}
@@ -967,8 +1072,9 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={onClose}
+                      onClick={handleCancelAndDiscard}
                       className="px-4 py-2.5 rounded-lg border border-outline hover:bg-surface-container text-secondary text-xs font-bold transition-all cursor-pointer"
+                      title="Discard unsaved changes and close"
                     >
                       Cancel
                     </button>
@@ -1469,15 +1575,8 @@ export const DailyStandupModal: React.FC<DailyStandupModalProps> = ({ isOpen, on
           )}
         </div>
 
-        {/* Footer Actions */}
-        <div className="shrink-0 p-3 sm:p-4 bg-surface-bright border-t border-outline flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-secondary hover:text-on-surface rounded-lg text-xs font-semibold cursor-pointer"
-          >
-            Close
-          </button>
+        {/* Footer Info Bar */}
+        <div className="shrink-0 p-3 sm:p-4 bg-surface-bright border-t border-outline flex items-center justify-end gap-3">
           <div className="text-[11px] text-secondary">
             CODELAB EDUCARE &bull; Agile Scrum Operations
           </div>

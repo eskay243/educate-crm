@@ -6643,7 +6643,9 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const data = await res.json();
       if (data.success && data.data) {
         setWeeklyScrumReports(prev => [data.data, ...prev.filter(r => r.id !== data.data.id)]);
-        showToast('Weekly Scrum Evaluated', `Evaluation complete: ${data.data.velocityScore}% velocity rating.`, 'success');
+        const score = data.data.overallScore ?? data.data.metrics?.completionRatePercent ?? 0;
+        const gradePrefix = data.data.letterGrade ? `Grade ${data.data.letterGrade} • ` : '';
+        showToast('Weekly Scrum Evaluated', `Evaluation complete: ${gradePrefix}${score}% velocity rating.`, 'success');
         return data.data;
       } else {
         showToast('Evaluation Error', data.error || 'Could not generate weekly evaluation.', 'error');

@@ -48,6 +48,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   const isProgramOfficer = currentUser?.role === 'program_officer';
   const canManageSettings = isSuperAdmin || hasFeaturePermission('canManageSettings') || hasModulePermission('settings');
   const canViewBiodata = isSuperAdmin || hasFeaturePermission('canViewBiodata');
+  const canManageUsers = isSuperAdmin || hasFeaturePermission('canManageUsers');
+  const canAssignRoles = isSuperAdmin || hasFeaturePermission('canAssignRoles');
 
   const pendingPOTopicsCount = (lmsModules || []).reduce((acc, mod) => {
     return acc + (mod.lessons || []).filter(
@@ -64,7 +66,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     { to: '/settings?section=backups', label: 'Backup & Production', icon: 'database', section: 'backups' },
   ] : [
     { to: '/settings?section=profile', label: 'My Profile & KYC', icon: 'person', section: 'profile' },
-    ...(canViewBiodata ? [{ to: '/settings?section=users', label: 'User Directory', icon: 'manage_accounts', section: 'users' }] : []),
+    ...(canManageUsers ? [{ to: '/settings?section=staff', label: 'Staff Accounts', icon: 'badge', section: 'staff' }] : []),
+    ...((canViewBiodata || canManageUsers) ? [{ to: '/settings?section=users', label: 'User Directory', icon: 'manage_accounts', section: 'users' }] : []),
+    ...(canAssignRoles ? [{ to: '/settings?section=roles', label: 'Roles & Permissions', icon: 'admin_panel_settings', section: 'roles' }] : []),
     { to: '/settings?section=security', label: 'Security & Password', icon: 'lock_reset', section: 'security' },
   ];
 

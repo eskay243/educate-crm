@@ -8671,6 +8671,14 @@ app.post('/api/scrum/standup', (req: Request, res: Response) => {
 
   const cleanYesterday = sanitizeTasks(tasksYesterday);
   const cleanToday = sanitizeTasks(tasksToday);
+
+  if (Array.isArray(blockers) && blockers.some((b: any) => typeof b === 'string' && b.trim().length === 0)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Blocker descriptions cannot be empty or contain only whitespace.'
+    });
+  }
+
   const cleanBlockers = Array.isArray(blockers)
     ? blockers
         .filter((b: any) => typeof b === 'string' && b.trim().length > 0)

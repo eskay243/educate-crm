@@ -88,6 +88,8 @@ export const SettingsPage: React.FC = () => {
   const canModifyStudentBiodata = isSuperAdmin || hasFeaturePermission('canModifyStudentBiodata');
   const canModifyMentorBiodata = isSuperAdmin || hasFeaturePermission('canModifyMentorBiodata');
   const canModifyStaffBiodata = isSuperAdmin;
+  const canManageUsers = isSuperAdmin || hasFeaturePermission('canManageUsers');
+  const canAssignRoles = isSuperAdmin || hasFeaturePermission('canAssignRoles');
   const canManageSettings = isSuperAdmin || hasFeaturePermission('canManageSettings') || hasModulePermission('settings');
 
   const rawSection = searchParams.get('section');
@@ -95,9 +97,15 @@ export const SettingsPage: React.FC = () => {
     ? (rawSection || 'general')
     : (rawSection === 'security'
         ? 'security'
-        : (rawSection === 'users' && canViewBiodata
-            ? 'users'
-            : (canManageSettings && rawSection ? rawSection : 'profile')
+        : (rawSection === 'staff' && canManageUsers
+            ? 'staff'
+            : (rawSection === 'users' && (canViewBiodata || canManageUsers)
+                ? 'users'
+                : (rawSection === 'roles' && canAssignRoles
+                    ? 'roles'
+                    : (canManageSettings && rawSection ? rawSection : 'profile')
+                  )
+              )
           )
       );
 
@@ -1899,12 +1907,12 @@ export const SettingsPage: React.FC = () => {
           </div>
 
           {/* Group 2: Access & Governance */}
-          {(isSuperAdmin || canViewBiodata) && (
+          {(isSuperAdmin || canViewBiodata || canManageUsers || canAssignRoles) && (
             <div className="space-y-1 pt-3 border-t border-outline-variant/40">
               <div className="px-3 py-1 text-[10px] font-bold text-secondary/70 uppercase tracking-wider font-label-md">
                 Access &amp; Governance
               </div>
-              {isSuperAdmin && (
+              {canManageUsers && (
                 <button
                   onClick={() => setActiveTab('staff')}
                   className={`w-full text-left px-3.5 py-2.5 rounded-xl font-medium text-xs flex items-center justify-between transition-all duration-150 cursor-pointer ${
@@ -1925,26 +1933,28 @@ export const SettingsPage: React.FC = () => {
                 </button>
               )}
 
-              <button
-                onClick={() => setActiveTab('users')}
-                className={`w-full text-left px-3.5 py-2.5 rounded-xl font-medium text-xs flex items-center justify-between transition-all duration-150 cursor-pointer ${
-                  effectiveSection === 'users'
-                    ? 'bg-primary text-on-primary font-bold shadow-xs'
-                    : 'text-secondary hover:text-on-surface hover:bg-surface-container-low'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
-                  <span>User Directory &amp; Biodata</span>
-                </div>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-data-tabular font-bold ${
-                  effectiveSection === 'users' ? 'bg-white/20 text-white' : 'bg-surface-container text-secondary'
-                }`}>
-                  {unifiedUsers.length}
-                </span>
-              </button>
+              {(canViewBiodata || canManageUsers) && (
+                <button
+                  onClick={() => setActiveTab('users')}
+                  className={`w-full text-left px-3.5 py-2.5 rounded-xl font-medium text-xs flex items-center justify-between transition-all duration-150 cursor-pointer ${
+                    effectiveSection === 'users'
+                      ? 'bg-primary text-on-primary font-bold shadow-xs'
+                      : 'text-secondary hover:text-on-surface hover:bg-surface-container-low'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
+                    <span>User Directory &amp; Biodata</span>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-data-tabular font-bold ${
+                    effectiveSection === 'users' ? 'bg-white/20 text-white' : 'bg-surface-container text-secondary'
+                  }`}>
+                    {unifiedUsers.length}
+                  </span>
+                </button>
+              )}
 
-              {isSuperAdmin && (
+              {canAssignRoles && (
                 <button
                   onClick={() => setActiveTab('roles')}
                   className={`w-full text-left px-3.5 py-2.5 rounded-xl font-medium text-xs flex items-center justify-between transition-all duration-150 cursor-pointer ${
@@ -4834,7 +4844,7 @@ export const SettingsPage: React.FC = () => {
       {/* ========================================================================= */}
       {/* SECTION 3: STAFF & ROLE SECURITY (SUPER ADMIN ONLY) */}
       {/* ========================================================================= */}
-      {isSuperAdmin && effectiveSection === 'staff' && (
+      {canManageUsers && effectiveSection === 'staff' && (
         <div className="space-y-stack-md animate-in fade-in duration-200">
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-4">
             <div className="flex justify-between items-center border-b border-outline-variant pb-3">
@@ -4847,7 +4857,7 @@ export const SettingsPage: React.FC = () => {
                 className="h-9 px-4 rounded-lg bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
               >
                 <span className="material-symbols-outlined text-[16px]">{showAddStaffForm ? 'close' : 'person_add'}</span>
-                <span>{showAddStaffForm ? 'Cancel' : '+ Provision Staff Account'}</span>
+                <span>{showAddStaffForm ? 'Cancel' : '+ Onboard New Staff'}</span>
               </button>
             </div>
 
@@ -5127,8 +5137,8 @@ export const SettingsPage: React.FC = () => {
                 </p>
               </div>
 
-              {/* Quick Summary Pill */}
-              <div className="flex items-center gap-2 text-xs">
+              {/* Quick Summary Pill & Action */}
+              <div className="flex flex-wrap items-center gap-2 text-xs">
                 <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                   {unifiedUsers.filter(u => u.isActive).length} Active
@@ -5140,6 +5150,18 @@ export const SettingsPage: React.FC = () => {
                   <span className="material-symbols-outlined text-[13px]">verified_user</span>
                   {unifiedUsers.filter(u => u.kycStatus === 'Verified').length} KYC Cleared
                 </span>
+                {canManageUsers && (
+                  <button
+                    onClick={() => {
+                      setActiveTab('staff');
+                      setShowAddStaffForm(true);
+                    }}
+                    className="h-8 px-3 rounded-lg bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">person_add</span>
+                    <span>+ Onboard New Staff</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -5414,7 +5436,7 @@ export const SettingsPage: React.FC = () => {
       {/* ========================================================================= */}
       {/* SECTION 5: ROLE & PERMISSION ARCHITECT (SUPER ADMIN ONLY) */}
       {/* ========================================================================= */}
-      {isSuperAdmin && effectiveSection === 'roles' && (
+      {canAssignRoles && effectiveSection === 'roles' && (
         <div className="space-y-stack-md animate-in fade-in duration-200">
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-outline-variant pb-3">
@@ -5653,6 +5675,9 @@ export const SettingsPage: React.FC = () => {
                         { key: 'canRejectMentorPayouts' as const, label: 'Reject Mentor Payout Claims', icon: 'block' },
                         { key: 'canApproveMentorPayouts' as const, label: 'Approve Mentor Payout Claims', icon: 'verified' },
                         { key: 'canAssignRoles' as const, label: 'Assign Staff Roles', icon: 'admin_panel_settings' },
+                        { key: 'canManageUsers' as const, label: 'Onboard & Manage Staff Accounts', icon: 'person_add' },
+                        { key: 'canScheduleClasses' as const, label: 'Schedule Classes & Timetables', icon: 'calendar_month' },
+                        { key: 'canApproveTopics' as const, label: 'Approve Syllabus Topics', icon: 'fact_check' },
                         { key: 'canViewStandupReports' as const, label: 'View Standup Management Reports', icon: 'monitoring' },
                       ].map(({ key, label, icon }) => {
                         const isGranted = role.id === 'super_admin' || Boolean((role.permissions as any)?.[key]);
@@ -5671,6 +5696,7 @@ export const SettingsPage: React.FC = () => {
                                 canManageSettings: false, canManageAttendance: false, canSubmitReports: false,
                                 canViewBiodata: false, canModifyStudentBiodata: false, canModifyMentorBiodata: false, canDisburseApprovedFunds: false,
                                 canEditMentorPayouts: false, canRejectMentorPayouts: false, canApproveMentorPayouts: false, canAssignRoles: false,
+                                canManageUsers: false, canScheduleClasses: false, canApproveTopics: false,
                                 canViewStandupReports: false,
                               };
                               updateRolePermissions(role.id, {
