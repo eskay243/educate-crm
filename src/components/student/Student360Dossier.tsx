@@ -624,7 +624,7 @@ export const Student360Dossier: React.FC<Student360DossierProps> = ({
         </aside>
 
         {/* Right Tab Content Panel */}
-        <main className="flex-1 p-4 sm:p-6 bg-surface-container-lowest min-h-[550px] overflow-y-auto">
+        <section aria-label="Student Dossier Content" className="flex-1 p-4 sm:p-6 bg-surface-container-lowest min-h-[550px] overflow-y-auto">
         
         {/* ------------------------------------------------------------------------- */}
         {/* TAB 1: BASIC INFO & BIODATA (VERTICALLY STACKED DOSSIER CARDS)            */}
@@ -2002,7 +2002,7 @@ export const Student360Dossier: React.FC<Student360DossierProps> = ({
           </div>
         )}
 
-        </main>
+        </section>
       </div>
 
       {/* ========================================================================= */}

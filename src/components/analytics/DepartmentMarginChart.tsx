@@ -103,12 +103,12 @@ export const DepartmentMarginChart: React.FC = () => {
   }
 
   return (
-    <div className="w-full h-72">
+    <div className="w-full h-80">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart 
           data={chartData} 
           layout="vertical"
-          margin={{ top: 10, right: 20, left: 10, bottom: 0 }}
+          margin={{ top: 10, right: 20, left: 8, bottom: 0 }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
           <XAxis 
@@ -121,7 +121,8 @@ export const DepartmentMarginChart: React.FC = () => {
           <YAxis 
             dataKey="department" 
             type="category" 
-            width={110}
+            width={148}
+            tickFormatter={(val: string) => (val && val.length > 22 ? `${val.slice(0, 20)}…` : val)}
             tick={{ fontSize: 11, fill: '#334155' }} 
             axisLine={false}
             tickLine={false}

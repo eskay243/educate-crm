@@ -76,10 +76,15 @@ export const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] overflow-y-auto overscroll-contain bg-inverse-surface/55 backdrop-blur-xs p-3 sm:p-4 md:p-6 flex items-center justify-center animate-in fade-in duration-200">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Requisition Dossier"
+      className="fixed inset-0 z-[100] overflow-y-auto overscroll-contain bg-slate-900/55 backdrop-blur-xs p-3 sm:p-4 md:p-6 flex items-center justify-center animate-in fade-in duration-200"
+    >
       <div className="fixed inset-0" onClick={onClose} />
 
-      <div className="my-auto relative w-full max-w-4xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-3rem)] rounded-2xl shadow-2xl flex flex-col overflow-hidden bg-surface-container-lowest border border-outline-variant z-10 animate-in zoom-in-95 duration-150">
+      <div className="my-auto relative w-full max-w-4xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-3rem)] rounded-2xl shadow-2xl flex flex-col overflow-hidden bg-white border border-outline-variant z-10 animate-in zoom-in-95 duration-150">
         {/* Modal Header */}
         <div className="shrink-0 flex items-center justify-between p-4 sm:p-5 border-b border-outline-variant bg-surface-bright">
           <div className="flex items-center gap-3">

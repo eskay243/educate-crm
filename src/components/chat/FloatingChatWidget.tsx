@@ -515,7 +515,7 @@ export const FloatingChatWidget: React.FC = () => {
   }
 
   return (
-    <aside aria-label="Team Chat" className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-40 flex flex-col items-end pointer-events-none">
+    <aside aria-label="Team Chat" className="hidden md:flex fixed bottom-6 right-6 z-40 flex-col items-end pointer-events-none">
       {/* 1. Discrete Incoming Message Push / Popup Notification */}
       {latestIncomingToast && !isChatPopoutOpen && (
         <div 

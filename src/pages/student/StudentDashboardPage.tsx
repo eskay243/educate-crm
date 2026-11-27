@@ -249,9 +249,9 @@ export const StudentDashboardPage: React.FC = () => {
                 <span className="material-symbols-outlined text-[22px]">menu_book</span>
               </div>
               <div>
-                <h4 className="font-bold text-sm text-blue-950 flex items-center gap-2">
+                <h4 className="font-bold text-sm text-blue-950 flex flex-wrap items-center gap-2">
                   <span>Program Guide, Curriculum &amp; Student Handbook</span>
-                  <span className="px-2 py-0.5 rounded-full bg-blue-200 text-blue-900 text-[10px] font-bold">
+                  <span className="shrink-0 whitespace-nowrap px-2.5 py-0.5 rounded-full bg-blue-200 text-blue-900 text-[10px] font-bold">
                     Official Onboarding Assets
                   </span>
                 </h4>

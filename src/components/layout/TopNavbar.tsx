@@ -87,21 +87,23 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
         </div>
       )}
 
-      <header className="glass-surface flex justify-between items-center h-16 px-gutter w-full sticky top-0 z-30 border-b border-outline-variant/60 transition-colors">
-        {/* Mobile Menu Toggle & Brand */}
-        <div className="flex items-center gap-stack-md md:hidden">
+      <header className="glass-surface flex justify-between items-center gap-2 h-16 px-3 sm:px-gutter w-full sticky top-0 z-30 border-b border-outline-variant/60 transition-colors">
+        {/* Mobile & Tablet Menu Toggle & Brand */}
+        <div className="flex items-center gap-2 lg:hidden min-w-0 shrink">
           <button
             onClick={onOpenMobileSidebar}
-            className="text-on-surface-variant p-2 rounded hover:bg-surface-container-low transition-colors"
+            className="text-on-surface-variant p-2 rounded-lg hover:bg-surface-container-low transition-colors shrink-0"
             aria-label="Toggle navigation menu"
           >
             <span className="material-symbols-outlined">menu</span>
           </button>
-          <BrandLogo size="sm" logoUrl={settings.logoUrl} />
+          <div className="min-w-0 max-w-[155px] sm:max-w-none overflow-hidden">
+            <BrandLogo size="sm" logoUrl={settings.logoUrl} />
+          </div>
         </div>
 
-        {/* Global Search Bar */}
-        <div className="hidden md:flex relative w-72 lg:w-96 items-center">
+        {/* Global Search Bar (Desktop lg+) */}
+        <div className="hidden lg:flex relative w-64 xl:w-96 items-center">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" style={{ fontSize: '20px' }}>
             search
           </span>
@@ -123,16 +125,16 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
         </div>
 
         {/* Actions & Profile */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           {/* Daily Standup / AI Scrum Quick Trigger */}
           {currentUser && (
             <button
               onClick={() => openModal('daily-standup')}
-              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 h-8 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold border border-amber-300 transition-colors cursor-pointer shadow-xs"
+              className="hidden md:inline-flex items-center gap-1.5 px-2.5 xl:px-3 h-8 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold border border-amber-300 transition-colors cursor-pointer shadow-xs whitespace-nowrap"
               title="Open AI Scrum & Daily Standup task logger"
             >
               <span className="material-symbols-outlined text-[16px] text-amber-600">psychology</span>
-              <span className="hidden sm:inline">Daily Standup</span>
+              <span className="hidden xl:inline">Daily Standup</span>
             </button>
           )}
 
@@ -140,11 +142,11 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
           {currentUser && currentUser.role !== 'student' && (
             <button
               onClick={() => openModal('instant-meeting')}
-              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 h-8 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300 transition-colors cursor-pointer shadow-xs"
+              className="hidden md:inline-flex items-center gap-1.5 px-2.5 xl:px-3 h-8 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300 transition-colors cursor-pointer shadow-xs whitespace-nowrap"
               title="Launch instant SIPCore virtual classroom or faculty sync"
             >
               <span className="material-symbols-outlined text-[16px] text-emerald-600">videocam</span>
-              <span className="hidden sm:inline">Instant Class</span>
+              <span className="hidden xl:inline">Instant Class</span>
             </button>
           )}
 
@@ -152,7 +154,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
           {currentUser && currentUser.role !== 'student' && currentUser.role !== 'mentor' && (
             <button
               onClick={() => openModal('create-hub')}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 h-8 rounded-md bg-primary hover:bg-primary-hover text-white text-xs font-semibold transition-colors cursor-pointer"
+              className="hidden md:inline-flex items-center gap-1.5 px-3 h-8 rounded-md bg-primary hover:bg-primary-hover text-white text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap"
             >
               <span className="material-symbols-outlined text-[16px]">add</span>
               <span>New Record</span>
@@ -241,11 +243,11 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
             )
           )}
 
-          {/* Help Center / Settings Quick Link */}
+          {/* Help Center / Settings Quick Link (hidden on xs mobile since accessible via drawer) */}
           {currentUser?.role === 'super_admin' ? (
             <button
               onClick={() => navigate('/settings')}
-              className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded transition-colors"
+              className="hidden sm:inline-flex p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded transition-colors"
               title="Institutional Documentation & Audit Settings"
               aria-label="Settings"
             >
@@ -254,7 +256,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileSidebar }) => 
           ) : (
             <button
               onClick={() => navigate('/tickets')}
-              className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded transition-colors"
+              className="hidden sm:inline-flex p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded transition-colors"
               title="Support Desk & Feedback Tickets"
               aria-label="Support Tickets"
             >

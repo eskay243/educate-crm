@@ -2059,7 +2059,7 @@ export const SettingsPage: React.FC = () => {
         </aside>
 
         {/* Right Main Content Area */}
-        <main className="flex-1 min-w-0 w-full space-y-6">
+        <section aria-label="Settings Panel" className="flex-1 min-w-0 w-full space-y-6">
 
       {/* ========================================================================= */}
       {/* SECTION: MY PROFILE & NIGERIAN STANDARD KYC (ALL ROLES) */}
@@ -6757,7 +6757,7 @@ export const SettingsPage: React.FC = () => {
           </div>
         </div>
       )}
-        </main>
+        </section>
       </div>
 
       {/* ========================================================================= */}

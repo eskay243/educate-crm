@@ -16,6 +16,12 @@ export const ChatPage: React.FC = () => {
 
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
+  const [mobileView, setMobileView] = useState<'list' | 'thread'>('list');
+
+  const handleSelectConversation = (convId: string) => {
+    setActiveConvId(convId);
+    setMobileView('thread');
+  };
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [allowedUsers, setAllowedUsers] = useState<ChatUserTarget[]>([]);
 
@@ -554,13 +560,13 @@ export const ChatPage: React.FC = () => {
   };
 
   return (
-    <div className="h-[calc(100dvh-4.5rem)] flex flex-col -m-4 sm:-m-6 bg-surface overflow-hidden">
+    <div className="h-[calc(100dvh-8.5rem)] md:h-[calc(100dvh-4.5rem)] flex flex-col -m-4 sm:-m-6 bg-surface overflow-hidden">
       {/* Main Container */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden min-h-0">
         {/* ========================================================================= */}
         {/* LEFT SIDEBAR: Channels, Subgroups & Direct Messages                       */}
         {/* ========================================================================= */}
-        <div className="w-80 border-r border-outline-variant bg-surface-container-lowest flex flex-col shrink-0">
+        <div className={`${mobileView === 'thread' ? 'hidden md:flex' : 'flex'} w-full md:w-80 border-r border-outline-variant bg-surface-container-lowest flex-col shrink-0`}>
           {/* Header */}
           <div className="p-4 border-b border-outline-variant flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -619,7 +625,7 @@ export const ChatPage: React.FC = () => {
                     <button
                       key={conv.id}
                       type="button"
-                      onClick={() => setActiveConvId(conv.id)}
+                      onClick={() => handleSelectConversation(conv.id)}
                       className={`w-full text-left px-2.5 py-2 rounded-xl transition-all flex items-center justify-between cursor-pointer group ${
                         isActive
                           ? 'bg-primary text-on-primary shadow-xs font-bold'
@@ -675,7 +681,7 @@ export const ChatPage: React.FC = () => {
                       <button
                         key={conv.id}
                         type="button"
-                        onClick={() => setActiveConvId(conv.id)}
+                        onClick={() => handleSelectConversation(conv.id)}
                         className={`w-full text-left px-2.5 py-2 rounded-xl transition-all flex items-center justify-between cursor-pointer group ${
                           isActive
                             ? 'bg-primary text-on-primary shadow-xs font-bold'
@@ -732,7 +738,7 @@ export const ChatPage: React.FC = () => {
                       <button
                         key={conv.id}
                         type="button"
-                        onClick={() => setActiveConvId(conv.id)}
+                        onClick={() => handleSelectConversation(conv.id)}
                         className={`w-full text-left px-2.5 py-2 rounded-xl transition-all flex items-center justify-between cursor-pointer group ${
                           isActive
                             ? 'bg-primary text-on-primary shadow-xs font-bold'
@@ -772,13 +778,21 @@ export const ChatPage: React.FC = () => {
         {/* ========================================================================= */}
         {/* RIGHT PANE: Message Stream & Input Box                                    */}
         {/* ========================================================================= */}
-        <div className="flex-1 flex flex-col bg-surface overflow-hidden">
+        <div className={`${mobileView === 'list' ? 'hidden md:flex' : 'flex'} flex-1 flex-col bg-surface overflow-hidden min-w-0`}>
           {activeConversation ? (
             <>
               {/* Active Conversation Top Bar */}
-              <div className="shrink-0 p-3.5 px-6 border-b border-outline-variant bg-surface-container-lowest flex items-center justify-between shadow-2xs">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
+              <div className="shrink-0 p-3 sm:p-3.5 sm:px-6 border-b border-outline-variant bg-surface-container-lowest flex items-center justify-between gap-2 shadow-2xs">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => setMobileView('list')}
+                    aria-label="Back to conversations"
+                    className="md:hidden shrink-0 w-8 h-8 rounded-lg border border-outline-variant bg-surface hover:bg-surface-container text-on-surface flex items-center justify-center cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                  </button>
+                  <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
                     {activeConversation.type === 'subgroup' ? (
                       <span className="material-symbols-outlined text-[20px] text-emerald-600">groups</span>
                     ) : activeConversation.type === 'channel' ? (

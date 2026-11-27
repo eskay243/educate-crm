@@ -56,7 +56,7 @@ export const PWAInstallPrompt: React.FC = () => {
       {!isDismissed && (isInstallable || isMobile) && (
         <aside 
           aria-label="Install App Banner"
-          className="fixed top-2.5 left-3 right-3 sm:left-auto sm:right-4 sm:max-w-sm z-50 animate-in slide-in-from-top-4 duration-300"
+          className="fixed bottom-20 md:bottom-4 left-3 right-3 sm:left-auto sm:right-4 sm:max-w-sm z-40 animate-in fade-in duration-300"
         >
           <div className="bg-surface-container-lowest/95 backdrop-blur-md border border-primary/30 rounded-2xl p-3 shadow-2xl flex items-center gap-3">
             <img

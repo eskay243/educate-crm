@@ -138,12 +138,12 @@ export const MentorDashboardPage: React.FC = () => {
       {/* Faculty Hero Banner */}
       <div className="bg-gradient-to-r from-primary/10 via-surface to-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-xs relative overflow-hidden">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
-          <div className="flex items-center gap-4">
-            <div className="relative">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="relative shrink-0">
               <img
                 src={myMentor?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
                 alt={myMentor?.name || 'Mentor'}
-                className="w-16 h-16 rounded-2xl object-cover ring-2 ring-primary/20 shadow-sm"
+                className="w-16 h-16 aspect-square shrink-0 rounded-2xl object-cover ring-2 ring-primary/20 shadow-sm"
               />
               <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-surface flex items-center justify-center text-white" title="Active Faculty">
                 <span className="material-symbols-outlined text-[12px] font-bold">check</span>

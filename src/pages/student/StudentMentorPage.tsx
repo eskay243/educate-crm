@@ -161,7 +161,13 @@ export const StudentMentorPage: React.FC = () => {
                 </div>
                 <div>
                   <div className="text-xs text-on-surface-variant font-medium">Status</div>
-                  <div className="text-base font-extrabold text-emerald-600">{mentor.status || 'Active'}</div>
+                  <div className={`text-base font-extrabold ${
+                    mentor.status === 'Deactivated'
+                      ? 'text-error'
+                      : mentor.status === 'On Leave'
+                      ? 'text-amber-600'
+                      : 'text-emerald-600'
+                  }`}>{mentor.status || 'Active'}</div>
                 </div>
               </div>
 

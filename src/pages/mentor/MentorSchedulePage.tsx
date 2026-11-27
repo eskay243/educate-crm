@@ -156,10 +156,10 @@ export const MentorSchedulePage: React.FC = () => {
 
       {/* Navigation Tabs */}
       <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 border-b border-outline-variant pb-2">
-        <div className="flex items-center gap-2 overflow-x-auto">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1">
           <button
             onClick={() => setActiveTab('all')}
-            className={`px-3 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap px-3 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'all'
                 ? 'bg-primary text-white shadow-xs'
                 : 'text-secondary hover:text-on-surface hover:bg-surface-container'
@@ -171,7 +171,7 @@ export const MentorSchedulePage: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('classes')}
-            className={`px-3 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap px-3 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'classes'
                 ? 'bg-primary text-white shadow-xs'
                 : 'text-secondary hover:text-on-surface hover:bg-surface-container'
@@ -183,7 +183,7 @@ export const MentorSchedulePage: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('sessions')}
-            className={`px-3 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap px-3 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'sessions'
                 ? 'bg-primary text-white shadow-xs'
                 : 'text-secondary hover:text-on-surface hover:bg-surface-container'
@@ -195,14 +195,14 @@ export const MentorSchedulePage: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('availability')}
-            className={`px-3 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap px-3 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'availability'
                 ? 'bg-primary text-white shadow-xs'
                 : 'text-secondary hover:text-on-surface hover:bg-surface-container'
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">schedule</span>
-            <span>Office Hours Settings ({activeOfficeHoursCount} Active)</span>
+            <span>Office Hours ({activeOfficeHoursCount} Active)</span>
           </button>
         </div>
 

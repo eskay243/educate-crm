@@ -53,14 +53,14 @@ export const AppLayout: React.FC = () => {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-transparent text-on-background text-sm">
-      {/* Desktop Sidebar (Fixed) */}
-      <div className="hidden md:flex md:w-64 md:shrink-0">
+      {/* Desktop Sidebar (Fixed on lg+ >= 1024px so tablets get full viewport width + slide-out drawer) */}
+      <div className="hidden lg:flex lg:w-64 lg:shrink-0">
         <Sidebar />
       </div>
 
-      {/* Mobile Sidebar Overlay Drawer */}
+      {/* Mobile & Tablet Sidebar Overlay Drawer */}
       {isMobileSidebarOpen && (
-        <div className="fixed inset-0 z-50 flex md:hidden animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex lg:hidden animate-in fade-in duration-200">
           <div 
             className="fixed inset-0 bg-inverse-surface/50 backdrop-blur-xs"
             onClick={() => setIsMobileSidebarOpen(false)}

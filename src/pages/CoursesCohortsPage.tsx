@@ -572,9 +572,9 @@ export const CoursesCohortsPage: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-stack-md">
-                {filteredCourses.map(course => (
+                {filteredCourses.map((course, idx) => (
                   <div
-                    key={course.id}
+                    key={`${course.id}-${idx}`}
                     className="bg-surface rounded-lg border border-outline-variant p-stack-md flex flex-col justify-between hover:border-primary/60 transition-all shadow-xs"
                   >
                     <div>
